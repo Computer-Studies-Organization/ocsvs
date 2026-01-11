@@ -1,26 +1,27 @@
 {
   "name": "cso-voting",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "Monorepo for CSO Voting application",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "dev": "vite --port=3001",
-    "build": "vite build",
-    "serve": "vite preview",
-    "start": "vite"
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean",
+    "dev:frontend": "pnpm --filter @cso-voting/frontend dev",
+    "dev:backend": "pnpm --filter @cso-voting/backend dev",
+    "build:frontend": "pnpm --filter @cso-voting/frontend build",
+    "build:backend": "pnpm --filter @cso-voting/backend build"
   },
   "devDependencies": {
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
-    "@tanstack/router-plugin": "^1.117.2",
-    "@vitejs/plugin-react": "^4.3.2",
-    "vite": "^6.0.3"
+    "typescript": "^5.9.3"
   },
-  "dependencies": {
-    "@tanstack/react-router": "^1.117.1",
-    "@tanstack/router-devtools": "^1.117.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  }
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
 }

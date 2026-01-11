@@ -12,6 +12,9 @@ dist/
 .netlify
 .wrangler
 
+# Monorepo
+!.gitkeep
+
 # IDE
 .vscode/*
 !.vscode/extensions.json
