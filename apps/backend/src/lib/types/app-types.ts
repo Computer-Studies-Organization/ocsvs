@@ -9,9 +9,9 @@ export interface AppBindings {
   };
 }
 
-export interface Env {
-  DB: D1Database;
-}
+// export interface Env {
+//   DB: D1Database;
+// }
 
 export type AppOpenAPI = OpenAPIHono<AppBindings>;
 

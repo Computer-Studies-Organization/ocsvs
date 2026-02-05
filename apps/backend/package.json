@@ -30,7 +30,6 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.19.0",
-    "@cloudflare/workers-types": "^4.20260205.0",
     "@types/node": "^20.19.27",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.2",
