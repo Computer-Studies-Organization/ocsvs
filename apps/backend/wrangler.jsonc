@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "oogig-service",
+  "name": "ocsvs",
   "main": "src/app.ts",
   "compatibility_date": "2025-08-03",
   "compatibility_flags": [
@@ -31,8 +31,8 @@
   // "ai": {
   //   "binding": "AI"
   // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
 }
