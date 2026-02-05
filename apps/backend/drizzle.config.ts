@@ -1,12 +1,9 @@
-import { defineConfig } from 'drizzle-kit'
-import env from '@/middleware/env'
+import "dotenv/config";
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: './src/database/schema.ts',
-  out: './src/database/migrations',
-  dialect: 'sqlite',
-  dbCredentials: {
-    url: env.DATABASE_URL,
-    token: env.DATABASE_AUTH_TOKEN,
-  },
-})
+  schema: "./src/database/schema.ts",
+  out: "./src/database/migrations",
+  dialect: "sqlite",
+  // driver: "d1-http", // Optional, can use wrangler.toml for auth
+});
