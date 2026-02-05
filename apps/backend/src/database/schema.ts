@@ -3,7 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-const users = sqliteTable("users", {
+export const users = sqliteTable("users", {
   createdAt: integer("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -11,14 +11,14 @@ const users = sqliteTable("users", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   id: text("id").primaryKey(),
-  studentId: text("id").notNull(),
+  studentId: text("student_id").notNull(),
   firstName: text("firstName").notNull(),
   lastName: text("lastName").notNull(),
   email: text("email").notNull(),
   password_hash: text("password_hash").notNull(),
 });
 
-const accounts = sqliteTable("accounts", {
+export const accounts = sqliteTable("accounts", {
   createdAt: integer("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
