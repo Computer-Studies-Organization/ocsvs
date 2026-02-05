@@ -16,7 +16,8 @@ export default function createApp() {
     //   logger(customLogger),
     // )
     .use((c, next) => {
-      c.env = parseEnv(Object.assign(c.env || {}, process.env))
+      const parsed = parseEnv(Object.assign(c.env || {}, process.env))
+      c.env = { ...c.env, ...parsed }
       return next()
     })
     .use(logger())
