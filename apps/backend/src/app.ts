@@ -2,11 +2,11 @@ import type { AppOpenAPI } from './lib/types/app-types'
 import createApp from '@/lib/create-app'
 import configureOpenAPI from '@/lib/openapi-configuration'
 import index from '@/routes/index.route'
-import items from '@/routes/items/items.index'
+// import items from '@/routes/items/items.index'
 
 const app = createApp()
 
-const routes = [index, items]
+const routes = [index]
 
 configureOpenAPI(app as AppOpenAPI)
 
