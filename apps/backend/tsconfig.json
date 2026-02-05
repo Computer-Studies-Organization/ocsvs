@@ -6,16 +6,21 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
     "resolveJsonModule": true,
     "types": [
-      "node"
+      "node",
+      "@cloudflare/workers-types"
     ],
     "strict": true,
     "outDir": "./dist",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
