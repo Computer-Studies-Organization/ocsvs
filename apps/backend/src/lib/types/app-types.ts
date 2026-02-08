@@ -2,10 +2,18 @@ import { Environment } from "@/middleware/env";
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
 export interface AppBindings {
   Bindings: Environment & Omit<Env, keyof Environment>;
   Variables: {
     logger: PinoLogger;
+    authUser: AuthUser;
   };
 }
 

@@ -1,15 +1,8 @@
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
-import type { AppBindings } from "@/lib/types/app-types";
+import type { AppBindings, AuthUser } from "@/lib/types/app-types";
 import { createDb } from "@/config/db";
 import { getSessionIdFromCookie, getSessionAccount } from "@/lib/session";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-}
 
 /**
  * Auth middleware that validates session cookies.
@@ -31,12 +24,14 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
   }
 
   // Store auth user in request context using a simple key
-  (c as any).authUser = {
+  const user: AuthUser = {
     id: result.account.id,
     email: result.account.email,
     username: result.account.username,
     role: result.account.role,
-  } as AuthUser;
+  };
+
+  c.set("authUser", user);
 
   await next();
 });
@@ -45,6 +40,6 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
  * Gets the authenticated user from context.
  * Only call this after requireAuth middleware.
  */
-export function getAuthUser(c: Context): AuthUser {
-  return (c as any).authUser;
+export function getAuthUser(c: Context<AppBindings>): AuthUser {
+  return c.var.authUser;
 }
