@@ -1,9 +1,10 @@
-
 import { createDb } from "@/config/db";
 import { accounts, users } from "@/database/schema";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { createSession, setSessionCookie, deleteSession, clearSessionCookie, getSessionIdFromCookie } from "@/lib/session";
 import { AppRouteHandler } from "@/lib/types/app-types";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
-import { loginRoute, registerRoute } from "@/routes/auth/routes";
+import { loginRoute, logoutRoute, registerRoute } from "@/routes/auth/routes";
 import { eq, or } from "drizzle-orm";
 
 export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
@@ -33,7 +34,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
     }
 
     const accountId = crypto.randomUUID();
-    const passwordHash = password; // TODO: Hash password
+    const passwordHash = await hashPassword(password);
 
     await db
         .insert(accounts)
@@ -84,23 +85,51 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
         .where(eq(accounts.email, email))
         .get();
 
-    if (!account || account.password_hash !== password) {
+    if (!account) {
         return c.json(
-            { message: "Unauthorized" },
+            { message: "Invalid email or password" },
             httpStatusCodes.UNAUTHORIZED
         );
     }
 
+    const isValid = await verifyPassword(password, account.password_hash);
+    if (!isValid) {
+        return c.json(
+            { message: "Invalid email or password" },
+            httpStatusCodes.UNAUTHORIZED
+        );
+    }
+
+    // Create session and set cookie
+    const session = await createSession(db, account.id);
+    setSessionCookie(c, session.id, session.expiresAt);
+
     return c.json(
         {
             message: "User logged in successfully",
-            token: "placeholder-token",
             user: {
                 id: account.id,
                 email: account.email,
                 username: account.username,
+                role: account.role,
             },
         },
+        httpStatusCodes.OK
+    );
+};
+
+export const logout: AppRouteHandler<typeof logoutRoute> = async (c) => {
+    const { db } = createDb(c);
+    const sessionId = getSessionIdFromCookie(c);
+
+    if (sessionId) {
+        await deleteSession(db, sessionId);
+    }
+
+    clearSessionCookie(c);
+
+    return c.json(
+        { message: "Logged out successfully" },
         httpStatusCodes.OK
     );
 };

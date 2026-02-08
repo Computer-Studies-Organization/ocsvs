@@ -37,6 +37,20 @@ export const accounts = sqliteTable("accounts", {
   password_hash: text("password_hash").notNull(),
 });
 
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at")
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 export const SelectUserSchema = createSelectSchema(users);
 
 export const SelectAccountSchema = createSelectSchema(accounts);
+
+export const SelectSessionSchema = createSelectSchema(sessions);
+
