@@ -4,8 +4,9 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSession, setSessionCookie, deleteSession, clearSessionCookie, getSessionIdFromCookie } from "@/lib/session";
 import { AppRouteHandler } from "@/lib/types/app-types";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
-import { loginRoute, logoutRoute, registerRoute } from "@/routes/auth/routes";
+import { loginRoute, logoutRoute, meRoute, registerRoute } from "@/routes/auth/routes";
 import { eq, or } from "drizzle-orm";
+import { getAuthUser } from "@/middleware/auth";
 
 export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
     const {
@@ -130,6 +131,22 @@ export const logout: AppRouteHandler<typeof logoutRoute> = async (c) => {
 
     return c.json(
         { message: "Logged out successfully" },
+        httpStatusCodes.OK
+    );
+};
+
+export const me: AppRouteHandler<typeof meRoute> = async (c) => {
+    const account = getAuthUser(c);
+
+    return c.json(
+        {
+            user: {
+                id: account.id,
+                email: account.email,
+                username: account.username,
+                role: account.role,
+            },
+        },
         httpStatusCodes.OK
     );
 };

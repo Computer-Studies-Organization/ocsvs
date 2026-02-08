@@ -124,5 +124,36 @@ export const logoutRoute = createRoute({
             }),
             'User logged out successfully',
         ),
+        [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+            z.object({
+                message: z.string(),
+            }),
+            'Unauthorized - no active session',
+        ),
+    },
+})
+
+export const meRoute = createRoute({
+    tags: ['Auth'],
+    method: 'get',
+    path: '/me',
+    responses: {
+        [httpStatusCodes.OK]: jsonContent(
+            z.object({
+                user: z.object({
+                    id: z.string(),
+                    email: z.string(),
+                    username: z.string(),
+                    role: z.string(),
+                }),
+            }),
+            'Current authenticated user',
+        ),
+        [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+            z.object({
+                message: z.string(),
+            }),
+            'Unauthorized - no active session',
+        ),
     },
 })
