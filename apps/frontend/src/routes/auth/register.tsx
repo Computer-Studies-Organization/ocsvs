@@ -61,7 +61,7 @@ function RouteComponent() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.studentId.trim() ||
@@ -74,9 +74,9 @@ function RouteComponent() {
       !formData.password.trim())
       return
 
-    register.mutateAsync(formData, {
+    await register.mutateAsync(formData, {
       onSuccess: (data) => {
-        navigate({ to: '/' })
+        navigate({ to: '/auth/login' })
         console.log(data.message)
       },
       onError: (error: any) => {
