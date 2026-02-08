@@ -6,7 +6,6 @@ import { AppRouteHandler } from "@/lib/types/app-types";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 import { loginRoute, logoutRoute, meRoute, registerRoute } from "@/routes/auth/routes";
 import { eq, or } from "drizzle-orm";
-import { getAuthUser } from "@/middleware/auth";
 
 export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
     const {
@@ -136,7 +135,7 @@ export const logout: AppRouteHandler<typeof logoutRoute> = async (c) => {
 };
 
 export const me: AppRouteHandler<typeof meRoute> = async (c) => {
-    const account = getAuthUser(c);
+    const account = c.var.authUser;
 
     return c.json(
         {
