@@ -76,7 +76,7 @@ function RouteComponent() {
 
     register.mutateAsync(formData, {
       onSuccess: (data) => {
-        navigate({ to: '/dashboard' })
+        navigate({ to: '/' })
         console.log(data.message)
       },
       onError: (error: any) => {
