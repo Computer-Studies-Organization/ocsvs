@@ -1,4 +1,4 @@
-import jsonContent from "@/middleware/utils/json-content";
+import jsonContent, { jsonContentRequired } from "@/middleware/utils/json-content";
 import { createRoute, z } from "@hono/zod-openapi";
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -74,7 +74,7 @@ export const loginRoute = createRoute({
     method: 'post',
     path: '/login',
     request: {
-        body: jsonContent(
+        body: jsonContentRequired(
             loginSchema,
             'User login credentials'
         )
