@@ -14,7 +14,7 @@ export const registerSchema = z.object({
 })
 
 export const loginSchema = z.object({
-    email: z.string().email(),
+    identifier: z.string().min(1), // email, username, or studentId
     password: z.string(),
 })
 

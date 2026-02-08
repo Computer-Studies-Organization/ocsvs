@@ -76,18 +76,42 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
 };
 
 export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
-    const { email, password } = c.req.valid("json");
+    const { identifier, password } = c.req.valid("json");
     const { db } = createDb(c);
 
-    const account = await db
+    // Try finding by email or username first
+    let account = await db
         .select()
         .from(accounts)
-        .where(eq(accounts.email, email))
+        .where(or(eq(accounts.email, identifier), eq(accounts.username, identifier)))
         .get();
+
+    // If not found, check studentId via users table (joined)
+    if (!account) {
+        const result = await db
+            .select({
+                id: accounts.id,
+                email: accounts.email,
+                username: accounts.username,
+                password_hash: accounts.password_hash,
+                role: accounts.role,
+                createdAt: accounts.createdAt,
+                updatedAt: accounts.updatedAt,
+                lastLogin: accounts.lastLogin,
+            })
+            .from(users)
+            .innerJoin(accounts, eq(users.accountId, accounts.id))
+            .where(eq(users.studentId, identifier))
+            .get();
+
+        if (result) {
+            account = result;
+        }
+    }
 
     if (!account) {
         return c.json(
-            { message: "Invalid email or password" },
+            { message: "Invalid credentials" },
             httpStatusCodes.UNAUTHORIZED
         );
     }
@@ -95,7 +119,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
     const isValid = await verifyPassword(password, account.password_hash);
     if (!isValid) {
         return c.json(
-            { message: "Invalid email or password" },
+            { message: "Invalid credentials" },
             httpStatusCodes.UNAUTHORIZED
         );
     }
