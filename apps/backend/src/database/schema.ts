@@ -11,10 +11,12 @@ export const users = sqliteTable("users", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   id: text("id").primaryKey(),
-  accountId: text("account_id").notNull(),
-  studentId: text("student_id").notNull(),
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  studentId: text("student_id").notNull().unique(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  yearLevel: text("year_level").notNull(),
+  course: text("course").notNull(),
   hasVoted: integer("has_voted").notNull().default(0),
 });
 
@@ -30,8 +32,8 @@ export const accounts = sqliteTable("accounts", {
     .default(sql`CURRENT_TIMESTAMP`),
   id: text("id").primaryKey(),
   role: text("role").notNull(),
-  username: text("username").notNull(),
-  email: text("email").notNull(),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password_hash: text("password_hash").notNull(),
 });
 
