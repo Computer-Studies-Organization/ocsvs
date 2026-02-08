@@ -1,5 +1,6 @@
 import type { AppBindings, AppOpenAPI } from '@/lib/types/app-types'
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { cors } from 'hono/cors'
 //import { logger } from 'hono/logger'
 import { customLogger } from '@/middleware/custom-logger'
 import logger from '@/middleware/pino-logger'
@@ -21,6 +22,7 @@ export default function createApp() {
       return next()
     })
     .use(logger())
+    .use(cors())
     .use(serveEmojiFavicon('🔥'))
 
   app.notFound(notFound)
