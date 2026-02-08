@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { TLoginUser } from '@/@types'
 import { Eye, EyeOff } from 'lucide-react'
+import { useLoginUserMutation } from '@/hooks/userHooks'
 
 export const Route = createFileRoute('/auth/login')({
   component: RouteComponent,
@@ -10,6 +11,7 @@ export const Route = createFileRoute('/auth/login')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const login = useLoginUserMutation()
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [formData, setFormData] = useState<TLoginUser>({
     identifier: '',
@@ -20,10 +22,18 @@ function RouteComponent() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.identifier.trim() || !formData.password.trim()) return
-    navigate({ to: '/dashboard' })
+    
+    await login.mutateAsync(formData,{
+      onSuccess: (data) => {
+        console.log(data.message)
+      },
+      onError: (error: any) => {
+        if (error.response) console.log(error.response?.data.message)
+      }
+    })
   }
 
   return (
