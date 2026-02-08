@@ -83,14 +83,14 @@ export const loginRoute = createRoute({
         [httpStatusCodes.OK]: jsonContent(
             z.object({
                 message: z.string(),
-                token: z.string(),
                 user: z.object({
                     id: z.string(),
                     email: z.string(),
                     username: z.string(),
+                    role: z.string(),
                 }),
             }),
-            'User logged in successfully',
+            'User logged in successfully (session cookie set)',
         ),
         [httpStatusCodes.BAD_REQUEST]: jsonContent(
             z.object({
@@ -109,6 +109,20 @@ export const loginRoute = createRoute({
                 message: z.string(),
             }),
             'Internal server error',
+        ),
+    },
+})
+
+export const logoutRoute = createRoute({
+    tags: ['Auth'],
+    method: 'post',
+    path: '/logout',
+    responses: {
+        [httpStatusCodes.OK]: jsonContent(
+            z.object({
+                message: z.string(),
+            }),
+            'User logged out successfully',
         ),
     },
 })
