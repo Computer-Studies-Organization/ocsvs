@@ -35,11 +35,3 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
 
   await next();
 });
-
-/**
- * Gets the authenticated user from context.
- * Only call this after requireAuth middleware.
- */
-export function getAuthUser(c: Context<AppBindings>): AuthUser {
-  return c.var.authUser;
-}
