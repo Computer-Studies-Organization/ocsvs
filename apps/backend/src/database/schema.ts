@@ -48,6 +48,32 @@ export const sessions = sqliteTable("sessions", {
     .default(sql`(unixepoch())`),
 });
 
+export const candidates = sqliteTable("candidates", {
+  createdAt: integer("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  position: text("position").notNull(),
+  manifesto: text("manifesto").notNull(),
+})
+
+export const votes = sqliteTable("votes", {
+  createdAt: integer("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  candidateId: text("candidate_id").notNull().references(() => candidates.id),
+})
+
 export const SelectUserSchema = createSelectSchema(users);
 
 export const SelectAccountSchema = createSelectSchema(accounts);
