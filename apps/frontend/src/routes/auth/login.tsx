@@ -25,8 +25,8 @@ function RouteComponent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.identifier.trim() || !formData.password.trim()) return
-    
-    await login.mutateAsync(formData,{
+
+    await login.mutateAsync(formData, {
       onSuccess: (data) => {
         console.log(data.message)
       },
@@ -86,36 +86,38 @@ function RouteComponent() {
             </div>
 
             {/* Password */}
-            <div className="relative space-y-1.5 sm:space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-slate-300"
               >
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={formData.password}
-                name="password"
-                onChange={handleChange}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                required
-                className={cn(
-                  'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                  'text-slate-100 placeholder:text-slate-500',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                  'text-base sm:text-base'
-                )}
-              />
-               <button
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  name="password"
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                  className={cn(
+                    'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                    'text-slate-100 placeholder:text-slate-500',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
+                    'text-base sm:text-base pr-10'
+                  )}
+                />
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-10 text-gray-500/60 hover:text-gray-500/80 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500/60 hover:text-gray-500/80 cursor-pointer"
                 >
-                  {showPassword ? <Eye /> : <EyeOff />}
+                  {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                 </button>
+              </div>
             </div>
 
             <button
@@ -128,7 +130,7 @@ function RouteComponent() {
                 'text-base sm:text-base'
               )}
             >
-             Sign In
+              Sign In
             </button>
           </form>
 
