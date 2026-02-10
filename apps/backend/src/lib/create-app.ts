@@ -22,7 +22,12 @@ export default function createApp() {
       return next()
     })
     .use(logger())
-    .use(cors())
+    .use(
+      cors({
+        origin: ['http://localhost:3001'],
+        credentials: true,
+      }),
+    )
     .use(serveEmojiFavicon('🔥'))
 
   app.notFound(notFound)
