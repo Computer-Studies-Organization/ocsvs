@@ -6,14 +6,15 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-      delete config.headers["Content-Type"]
+    delete config.headers["Content-Type"]
   }
   else {
-      config.headers["Content-Type"] = "application/json"
+    config.headers["Content-Type"] = "application/json"
   }
   return config
 })
