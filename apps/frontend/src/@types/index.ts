@@ -18,3 +18,12 @@ export type TLoginUser = {
     identifier: string;
     password: string;
 }
+
+export type TNominee = {
+    id: string
+    name: string
+    course: string
+    position: string
+    manifesto: string
+    votes?: number
+}
