@@ -6,6 +6,7 @@ import { AppRouteHandler } from "@/lib/types/app-types";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 import { loginRoute, logoutRoute, meRoute, registerRoute } from "@/routes/auth/routes";
 import { eq, or } from "drizzle-orm";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
     const {
@@ -28,7 +29,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
 
     if (existing) {
         return c.json(
-            { message: "User already exists" },
+            { message: ERROR_MESSAGES.USER_ALREADY_EXISTS },
             httpStatusCodes.CONFLICT
         );
     }
@@ -62,7 +63,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
 
     return c.json(
         {
-            message: "User registered successfully",
+            message: ERROR_MESSAGES.USER_REGISTERED_SUCCESSFULLY,
             user: {
                 id: accountId,
                 email,
@@ -111,7 +112,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
     if (!account) {
         return c.json(
-            { message: "Invalid credentials" },
+            { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
             httpStatusCodes.UNAUTHORIZED
         );
     }
@@ -119,7 +120,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
     const isValid = await verifyPassword(password, account.password_hash);
     if (!isValid) {
         return c.json(
-            { message: "Invalid credentials" },
+            { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
             httpStatusCodes.UNAUTHORIZED
         );
     }
@@ -130,7 +131,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
     return c.json(
         {
-            message: "User logged in successfully",
+            message: ERROR_MESSAGES.USER_LOGGED_IN_SUCCESSFULLY,
             user: {
                 id: account.id,
                 email: account.email,
@@ -153,7 +154,7 @@ export const logout: AppRouteHandler<typeof logoutRoute> = async (c) => {
     clearSessionCookie(c);
 
     return c.json(
-        { message: "Logged out successfully" },
+        { message: ERROR_MESSAGES.LOGGED_OUT_SUCCESSFULLY },
         httpStatusCodes.OK
     );
 };
