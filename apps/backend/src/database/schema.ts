@@ -60,6 +60,7 @@ export const candidates = sqliteTable("candidates", {
   accountId: text("account_id").notNull().references(() => accounts.id),
   position: text("position").notNull(),
   manifesto: text("manifesto").notNull(),
+  isActive: integer("is_active").notNull().default(1),
 })
 
 export const votes = sqliteTable("votes", {
