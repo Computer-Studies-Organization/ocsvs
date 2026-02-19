@@ -83,3 +83,5 @@ export const SelectSessionSchema = createSelectSchema(sessions);
 
 export const SelectCandidateSchema = createSelectSchema(candidates);
 
+export const SelectVoteSchema = createSelectSchema(votes);
+

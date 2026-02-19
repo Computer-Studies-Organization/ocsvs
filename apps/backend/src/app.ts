@@ -5,10 +5,11 @@ import index from '@/routes/index.route'
 import auth from '@/routes/auth/auth.index'
 import users from '@/routes/users'
 import candidates from '@/routes/candidates'
+import votes from '@/routes/votes'
 
 const app = createApp()
 
-const routes = [index, auth, users, candidates]
+const routes = [index, auth, users, candidates, votes]
 
 configureOpenAPI(app as AppOpenAPI)
 
