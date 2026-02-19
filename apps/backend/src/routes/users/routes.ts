@@ -1,4 +1,4 @@
-import { SelectUserSchema } from "@/database/schema";
+import { SelectUserSchema } from "@/database/openapi-schemas";
 import jsonContent from "@/middleware/utils/json-content";
 import { createRoute, z } from "@hono/zod-openapi";
 import * as httpStatusCodes from '@/openapi/http-status-codes'
