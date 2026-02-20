@@ -3,6 +3,8 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "@hono/zod-openapi";
 
+export const ROLES = z.enum(["user", "admin"]);
+
 export const users = sqliteTable("users", {
   createdAt: integer("created_at")
     .notNull()
@@ -31,7 +33,7 @@ export const accounts = sqliteTable("accounts", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   id: text("id").primaryKey(),
-  role: text("role").notNull(),
+  role: text("role").notNull().default("user"),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password_hash: text("password_hash").notNull(),
