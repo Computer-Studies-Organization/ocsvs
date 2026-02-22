@@ -4,9 +4,14 @@ import { cn } from '@/lib/utils'
 import type { TRegisterUser } from '@/@types'
 import { Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRegisterUserMutation } from '@/hooks/userHooks'
+import { PublicRoute } from '@/middleware'
 
 export const Route = createFileRoute('/auth/register')({
-  component: RouteComponent,
+  component: () => (
+    <PublicRoute>
+      <RouteComponent />
+    </PublicRoute>
+  ),
 })
 
 const YEAR_LEVELS = [
