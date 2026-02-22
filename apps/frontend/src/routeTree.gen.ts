@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboard/index'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardIndexRoute = AdminDashboardIndexRouteImport.update({
+  id: '/admin-dashboard/',
+  path: '/admin-dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
@@ -34,39 +41,71 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardMyBallotIndexRoute = DashboardMyBallotIndexRouteImport.update({
+  id: '/dashboard/my-ballot/',
+  path: '/dashboard/my-ballot/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/my-ballot': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/my-ballot': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/my-ballot/': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/login' | '/auth/register' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth/login'
+    | '/auth/register'
+    | '/admin-dashboard'
+    | '/dashboard'
+    | '/dashboard/my-ballot'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/login' | '/auth/register' | '/dashboard'
-  id: '__root__' | '/' | '/auth/login' | '/auth/register' | '/dashboard/'
+  to:
+    | '/'
+    | '/auth/login'
+    | '/auth/register'
+    | '/admin-dashboard'
+    | '/dashboard'
+    | '/dashboard/my-ballot'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth/login'
+    | '/auth/register'
+    | '/admin-dashboard/'
+    | '/dashboard/'
+    | '/dashboard/my-ballot/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardMyBallotIndexRoute: typeof DashboardMyBallotIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin-dashboard/': {
+      id: '/admin-dashboard/'
+      path: '/admin-dashboard'
+      fullPath: '/admin-dashboard'
+      preLoaderRoute: typeof AdminDashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/register': {
       id: '/auth/register'
       path: '/auth/register'
@@ -99,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/my-ballot/': {
+      id: '/dashboard/my-ballot/'
+      path: '/dashboard/my-ballot'
+      fullPath: '/dashboard/my-ballot'
+      preLoaderRoute: typeof DashboardMyBallotIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,7 +159,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  AdminDashboardIndexRoute: AdminDashboardIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardMyBallotIndexRoute: DashboardMyBallotIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
