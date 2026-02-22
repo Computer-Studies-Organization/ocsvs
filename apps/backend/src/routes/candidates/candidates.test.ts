@@ -73,13 +73,13 @@ describe('Candidates Routes', () => {
             expect(body.candidate.position).toBe('President')
         })
 
-        it('should return conflict if candidate already exists for account', async () => {
+        it('should return conflict if candidate already exists for account and position', async () => {
             const testAccountId = 'test-account-id'
             
             // Mock account exists
             mockDb.get
                 .mockResolvedValueOnce({ id: testAccountId }) // Account check
-                .mockResolvedValueOnce({ id: 'existing-candidate', isActive: 1 }) // Existing active candidate
+                .mockResolvedValueOnce({ id: 'existing-candidate', isActive: 1 }) // Existing active candidate for same account & position
             
             const res = await router.request('/candidates', {
                 method: 'POST',
@@ -95,6 +95,35 @@ describe('Candidates Routes', () => {
             expect(res.status).toBe(409)
             const body = await res.json() as any
             expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS)
+        })
+
+        it('should allow same account to be candidate for different positions', async () => {
+            const testAccountId = 'test-account-id'
+            const testCandidateId = 'test-candidate-id'
+            
+            // Mock account exists
+            mockDb.get
+                .mockResolvedValueOnce({ id: testAccountId }) // Account check
+                .mockResolvedValueOnce(null) // No existing candidate for this position
+            
+            // Mock candidate creation
+            mockDb.run.mockResolvedValue(undefined)
+
+            const res = await router.request('/candidates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName: 'John Doe',
+                    accountId: testAccountId,
+                    position: 'Vice President', // Different position
+                    manifesto: 'I will support the team'
+                })
+            })
+
+            expect(res.status).toBe(200)
+            const body = await res.json() as any
+            expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY)
+            expect(body.candidate.position).toBe('Vice President')
         })
 
         it('should return bad request if account does not exist', async () => {

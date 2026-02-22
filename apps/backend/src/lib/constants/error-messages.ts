@@ -15,7 +15,7 @@ export const ERROR_MESSAGES = {
   VOTE_NOT_FOUND: "No votes found for this user",
 
   // Conflict errors
-  CANDIDATE_ALREADY_EXISTS: "Candidate already exists for this account",
+  CANDIDATE_ALREADY_EXISTS: "Candidate already exists for this position",
   USER_ALREADY_EXISTS: "User already exists",
   VOTE_ALREADY_CAST: "You have already voted",
 

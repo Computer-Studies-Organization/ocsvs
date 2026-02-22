@@ -30,12 +30,13 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
         );
     }
 
-    // Check if a candidate already exists for this account
+    // Check if this account already has a candidate for this position
     const existingCandidate = await db
         .select()
         .from(candidates)
         .where(and(
             eq(candidates.accountId, accountId),
+            eq(candidates.position, position),
             eq(candidates.isActive, 1)
         ))
         .get();
