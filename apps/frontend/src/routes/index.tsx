@@ -1,13 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { PublicRoute } from '@/middleware'
 
 export const Route = createFileRoute('/')({
-  component: HomeComponent,
+  component: () => (
+    <PublicRoute>
+      <HomeComponent />
+    </PublicRoute>
+  )
 })
 
 function HomeComponent() {
 
   const navigate = useNavigate()
-  
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-slate-900">
       <div className="absolute top-[-10%] left-[-10%] w-125 h-125 rounded-full bg-blue-600/20 blur-[120px]" />
@@ -27,7 +32,7 @@ function HomeComponent() {
 
           <h1 className="text-5xl flex flex-col md:text-7xl font-black mb-4 uppercase">
             <span className="text-blue-500">ACLC</span>
-            <span className="text-red-500 text-3xl">COMPUTER STUDIES ORGANIZATION</span>
+            <span className="text-red-500 text-2xl md:text-3xl">COMPUTER STUDIES ORGANIZATION</span>
           </h1>
 
           <p className="text-slate-400 text-lg mb-10 font-medium tracking-wide">
