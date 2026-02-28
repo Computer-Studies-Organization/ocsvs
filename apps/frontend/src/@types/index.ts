@@ -63,3 +63,43 @@ export type TPositionGroup = {
     description: string
     candidates: TCandidate[]
   }
+
+
+export type TVoteRequest = {
+    votes: Array<{
+        candidateId: string;
+    }>;
+}
+
+export type TVoteResponse = {
+    id: string;
+    userId: string;
+    candidateId: string;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export type TVoteStatus = {
+    hasVoted: boolean;
+    votes: TVoteResponse[];
+}
+
+export type TVoteCount = {
+    candidateId: string;
+    candidateName: string;
+    position: string;
+    voteCount: number;
+}
+
+export type TVoteResults = {
+    position: string;
+    candidates: TVoteCount[];
+}
+
+export type TVoteResultsResponse = {
+    results: TVoteResults[];
+    meta: {
+        totalVotes: number;
+        totalPositions: number;
+    };
+}
