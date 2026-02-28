@@ -15,6 +15,7 @@ import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboar
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
+import { Route as AdminDashboardViewResultsIndexRouteImport } from './routes/admin-dashboard/view-results/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,12 @@ const DashboardMyBallotIndexRoute = DashboardMyBallotIndexRouteImport.update({
   path: '/dashboard/my-ballot/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDashboardViewResultsIndexRoute =
+  AdminDashboardViewResultsIndexRouteImport.update({
+    id: '/admin-dashboard/view-results/',
+    path: '/admin-dashboard/view-results/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/admin-dashboard/view-results': typeof AdminDashboardViewResultsIndexRoute
   '/dashboard/my-ballot': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +69,7 @@ export interface FileRoutesByTo {
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/admin-dashboard/view-results': typeof AdminDashboardViewResultsIndexRoute
   '/dashboard/my-ballot': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRoutesById {
@@ -70,6 +79,7 @@ export interface FileRoutesById {
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin-dashboard/view-results/': typeof AdminDashboardViewResultsIndexRoute
   '/dashboard/my-ballot/': typeof DashboardMyBallotIndexRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +90,7 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/admin-dashboard'
     | '/dashboard'
+    | '/admin-dashboard/view-results'
     | '/dashboard/my-ballot'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +99,7 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/admin-dashboard'
     | '/dashboard'
+    | '/admin-dashboard/view-results'
     | '/dashboard/my-ballot'
   id:
     | '__root__'
@@ -96,6 +108,7 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/admin-dashboard/'
     | '/dashboard/'
+    | '/admin-dashboard/view-results/'
     | '/dashboard/my-ballot/'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +118,7 @@ export interface RootRouteChildren {
   AuthRegisterRoute: typeof AuthRegisterRoute
   AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  AdminDashboardViewResultsIndexRoute: typeof AdminDashboardViewResultsIndexRoute
   DashboardMyBallotIndexRoute: typeof DashboardMyBallotIndexRoute
 }
 
@@ -152,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMyBallotIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin-dashboard/view-results/': {
+      id: '/admin-dashboard/view-results/'
+      path: '/admin-dashboard/view-results'
+      fullPath: '/admin-dashboard/view-results'
+      preLoaderRoute: typeof AdminDashboardViewResultsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -161,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRegisterRoute: AuthRegisterRoute,
   AdminDashboardIndexRoute: AdminDashboardIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  AdminDashboardViewResultsIndexRoute: AdminDashboardViewResultsIndexRoute,
   DashboardMyBallotIndexRoute: DashboardMyBallotIndexRoute,
 }
 export const routeTree = rootRouteImport
