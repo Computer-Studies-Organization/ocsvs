@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { ArrowRight, Loader2Icon, Plus, XIcon } from 'lucide-react'
+import { ArrowRight, BarChart3, Loader2Icon, Plus, XIcon } from 'lucide-react'
 import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
 import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
+import { getCandidateVoteCount } from '@/api/votes_api'
 import type { TCandidate, TUsersData } from '@/@types'
 
 export const Route = createFileRoute('/admin-dashboard/')({
@@ -40,23 +41,70 @@ function RouteComponent() {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [message, setMessage] = useState<string>("")
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+  const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
+
+  // Fetch vote counts for all candidates
+  useEffect(() => {
+    const fetchVoteCounts = async () => {
+      if (!candidatesData?.data || !Array.isArray(candidatesData.data)) {
+        return
+      }
+
+      const counts: Record<string, number> = {}
+
+      try {
+        await Promise.all(
+          candidatesData.data.map(async (candidate: TCandidate) => {
+            try {
+              const response = await getCandidateVoteCount(candidate.id)
+              counts[candidate.id] = response.voteCount || 0
+            } catch (error) {
+              console.error(`Error fetching vote count for candidate ${candidate.id}:`, error)
+              counts[candidate.id] = 0
+            }
+          })
+        )
+        setVoteCounts(counts)
+      } catch (error) {
+        console.error('Error fetching vote counts:', error)
+      }
+    }
+
+    if (!isLoadingCandidates && candidatesData?.data) {
+      fetchVoteCounts()
+    }
+  }, [candidatesData, isLoadingCandidates])
 
   const candidates = useMemo(() => {
     if (!candidatesData?.data || !Array.isArray(candidatesData.data)) {
       return []
     }
-    const transformed = candidatesData.data.map((candidate: TCandidate) => ({
+
+    // First, add vote counts to candidates
+    const candidatesWithVotes = candidatesData.data.map((candidate: TCandidate) => ({
       ...candidate,
-      percentage: 0,
+      voteCount: voteCounts[candidate.id] || 0,
     }))
-    
-    if (transformed.length > 0) {
-      const uniquePositions = new Set(transformed.map((c: TCandidate) => c.position))
-      console.log('All candidate positions:', Array.from(uniquePositions))
-    }
-    
+
+    // Group by position and calculate percentages
+    const positionTotals: Record<string, number> = {}
+    candidatesWithVotes.forEach((candidate) => {
+      const position = candidate.position
+      positionTotals[position] = (positionTotals[position] || 0) + candidate.voteCount
+    })
+
+    // Calculate percentages
+    const transformed = candidatesWithVotes.map((candidate) => {
+      const totalVotes = positionTotals[candidate.position] || 0
+      const percentage = totalVotes > 0 ? (candidate.voteCount / totalVotes) * 100 : 0
+      return {
+        ...candidate,
+        percentage: Math.round(percentage * 100) / 100, // Round to 2 decimal places
+      }
+    })
+
     return transformed
-  }, [candidatesData])
+  }, [candidatesData, voteCounts])
 
   const [formData, setFormData] = useState<Omit<TCandidate, "id">>({
     fullName: '',
@@ -166,6 +214,22 @@ function RouteComponent() {
               <p className="mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500">
                 Manage Election Candidates
               </p>
+              <button
+                type="button"
+                onClick={() => navigate({ to: '/admin-dashboard/view-results' })}
+                className={cn(
+                  'inline-flex items-center justify-center rounded-lg mt-2 px-4 py-2 text-sm font-semibold text-white shadow-lg',
+                  'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
+                  'transition-all duration-150'
+                )}
+              >
+                <div className='flex items-center gap-1.5'>
+                  <BarChart3 size={16} />
+                  <span>
+                    View Results
+                  </span>
+                </div>
+              </button>
             </div>
 
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-md shadow-slate-950/40 backdrop-blur">
@@ -183,6 +247,22 @@ function RouteComponent() {
 
           {/* Action buttons */}
           <div className="absolute right-0 flex items-start justify-end gap-3">
+            {/* <button
+              type="button"
+              onClick={() => navigate({ to: '/admin-dashboard/view-results' })}
+              className={cn(
+                'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg',
+                'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
+                'transition-all duration-150'
+              )}
+            >
+              <div className='flex items-center gap-1.5'>
+                <BarChart3 size={16} />
+                <span>
+                  View Results
+                </span>
+              </div>
+            </button> */}
             <button
               type="button"
               onClick={() => {
@@ -271,7 +351,7 @@ function RouteComponent() {
                 const positionGroups = POSITIONS.map((pos) => ({
                   position: pos.value,
                   candidates: candidates.filter(
-                    (candidate: TCandidate & { percentage: number }) =>
+                    (candidate: TCandidate & { percentage: number; voteCount: number }) =>
                       candidate.position === pos.value
                   ),
                 })).filter((group) => group.candidates.length > 0)
@@ -292,7 +372,7 @@ function RouteComponent() {
                     </div>
 
                     <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
-                      {group.candidates.map((candidate: TCandidate & { percentage: number }) => (
+                      {group.candidates.map((candidate: TCandidate & { percentage: number; voteCount: number }) => (
                         <div
                           key={candidate.id}
                           className="flex h-full flex-col rounded-xl border border-white/10 bg-slate-900/40 p-4 sm:p-5 shadow-lg transition-all hover:border-blue-500/30 hover:shadow-xl"
@@ -312,10 +392,10 @@ function RouteComponent() {
                             {candidate.manifesto}
                           </p>
 
-                          {/* Vote percentage */}
+                          {/* Vote count and percentage */}
                           <div className="mt-3">
                             <div className="mb-1 flex items-center justify-between text-[11px] sm:text-xs text-slate-400">
-                              <span>Vote percentage</span>
+                              <span>Votes: {candidate.voteCount ?? 0}</span>
                               <span className="font-semibold text-slate-100">
                                 {candidate.percentage ?? 0}%
                               </span>
