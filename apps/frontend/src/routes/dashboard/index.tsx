@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type React from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAllCandidates } from '@/data'
 import type { TCandidate, TPositionGroup } from '@/@types'
 import {
   ArrowRight,
+  CheckCircle2,
   Loader2Icon,
   LockKeyhole,
   LogOut,
@@ -12,9 +13,12 @@ import {
   Shield,
   Undo2,
   Vote,
+  X,
+  XCircle,
 } from 'lucide-react'
 import { ProtectedRoute } from '@/middleware'
 import { useLogoutUserMutation, UserData } from '@/hooks/userHooks'
+import { useSubmitVotesMutation, useMyVotesQuery } from '@/hooks/voteHooks'
 import { POSITIONS } from '../admin-dashboard'
 
 
@@ -30,8 +34,13 @@ function RouteComponent() {
   const userData = UserData()
   const navigate = useNavigate()
   const logoutUserMutation = useLogoutUserMutation()
+  const submitVotesMutation = useSubmitVotesMutation()
+  const { data: voteStatus } = useMyVotesQuery()
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const hasVoted = voteStatus?.hasVoted ?? false
 
   const positionGroups = useMemo<TPositionGroup[]>(() => {
     const candidatesByPositionMap = new Map<string, TCandidate[]>()
@@ -85,18 +94,41 @@ function RouteComponent() {
   const hasCurrentPositionVote = currentPositionGroup ? selectedCandidateIdsByPositionId[currentPositionGroup.id] !== null : false
 
   const handleSelectCandidate = (positionId: string, candidateId: string) => {
+    if (hasVoted) return // Prevent selection if already voted
     setSelectedCandidateIdsByPositionId(previousVotes => ({ ...previousVotes, [positionId]: candidateId }))
   }
 
-  const handleSubmitVotes = () => {
-    console.log(selectedCandidateIdsByPositionId)
-    console.log('Submitting votes:', selectedCandidateIdsByPositionId)
-    alert('Votes submitted! Your selections have been saved.')
+  const handleSubmitVotes = async () => {
+    setIsLoading(true)
+    const candidateIds = Object.values(selectedCandidateIdsByPositionId).filter(
+      (id): id is string => id !== null
+    )
+    
+    try {
+      await submitVotesMutation.mutateAsync(candidateIds)
+      setToast({ message: 'Votes submitted successfully! Your selections have been saved.', type: 'success' })
+      setTimeout(() => {
+        navigate({ to: '/dashboard/my-ballot' })
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to submit votes:', error)
+      setToast({ message: 'Failed to submit votes. Please try again.', type: 'error' })
+    }
+    setIsLoading(false)
   }
 
   const areAllPositionsVoted = positionGroups.every(
     (positionGroup: TPositionGroup) => selectedCandidateIdsByPositionId[positionGroup.id] !== null,
   )
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   const handleLogoutUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,9 +138,34 @@ function RouteComponent() {
 
   return (
     <>
-      {isLoading && (
+      {(isLoading || submitVotesMutation.isPending) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
           <Loader2Icon className="animate-spin text-blue-400" size={40} />
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-1/2 left-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4">
+          <div
+            className={`flex items-center gap-3 rounded-xl border px-6 py-4 shadow-xl transition-all ${
+              toast.type === 'success'
+                ? 'border-emerald-500/50 bg-slate-900 text-emerald-200'
+                : 'border-red-500/50 bg-slate-900 text-red-200'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-400" />
+            )}
+            <p className="text-sm font-medium">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 rounded-lg p-1 transition hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -127,10 +184,17 @@ function RouteComponent() {
           <header className="relative mb-5 flex items-start justify-between gap-4 border-b border-slate-800/70 pb-4">
             <div className="space-y-3">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300/90">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                  Secure voting session
-                </p>
+                {hasVoted ? (
+                  <p className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-300/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
+                    Voting completed
+                  </p>
+                ) : (
+                  <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                    Secure voting session
+                  </p>
+                )}
               </div>
 
               <div>
@@ -149,10 +213,23 @@ function RouteComponent() {
                     {userData?.user?.username || 'Voter'}
                   </span>
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Please review each position carefully and select <span className="font-semibold text-slate-200">one nominee per role</span>.
-                  You can change your choices anytime before submitting your ballot.
-                </p>
+                {hasVoted ? (
+                  <p className="mt-1 text-xs text-emerald-400">
+                    <span className="font-semibold">Voting completed!</span> You have already submitted your ballot. View your selections in{' '}
+                    <button
+                      onClick={() => navigate({ to: '/dashboard/my-ballot' })}
+                      className="font-semibold text-emerald-300 underline hover:text-emerald-200"
+                    >
+                      My Ballot
+                    </button>
+                    .
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Please review each position carefully and select <span className="font-semibold text-slate-200">one nominee per role</span>.
+                    You can change your choices anytime before submitting your ballot.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -167,7 +244,7 @@ function RouteComponent() {
                 </button>
 
                 {isSettingsOpen && (
-                  <div className="absolute right-0 top-11 w-60 rounded-xl border border-slate-800/80 bg-slate-950/95 p-1.5 text-sm text-slate-100 shadow-xl shadow-slate-950/70 backdrop-blur">
+                  <div className="absolute z-50 right-0 top-11 w-60 rounded-xl border border-slate-800/80 bg-slate-950/95 p-1.5 text-sm text-slate-100 shadow-xl shadow-slate-950/70 backdrop-blur">
                     <div className="px-3 py-2">
                       <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
                         Account
@@ -277,10 +354,13 @@ function RouteComponent() {
                     <button
                       key={candidate.id}
                       type="button"
+                      disabled={hasVoted}
                       onClick={() =>
                         handleSelectCandidate(currentPositionGroup.id, candidate.id)
                       }
-                      className={`group flex w-full items-start justify-between gap-4 rounded-xl border px-4 py-4 text-left transition-all ${isCandidateSelected
+                      className={`group flex w-full items-start justify-between gap-4 rounded-xl border px-4 py-4 text-left transition-all ${hasVoted
+                          ? 'cursor-not-allowed opacity-60 border-slate-800/80 bg-slate-900/80'
+                          : isCandidateSelected
                           ? 'border-sky-400/80 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
                           : 'border-slate-800/80 bg-slate-900/80 hover:border-sky-500/60 hover:bg-slate-900'
                         }`}
@@ -313,8 +393,12 @@ function RouteComponent() {
                   {!isFirstPosition && (
                     <button
                       type="button"
+                      disabled={hasVoted}
                       onClick={() => setCurrentPositionIndex(previousIndex => previousIndex - 1)}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-800"
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition ${hasVoted
+                          ? 'cursor-not-allowed opacity-60'
+                          : 'hover:border-slate-500 hover:bg-slate-800'
+                        }`}
                     >
                       <Undo2 size={18} />
                       Previous position
@@ -324,9 +408,9 @@ function RouteComponent() {
                   {!isLastPosition ? (
                     <button
                       type="button"
-                      disabled={!hasCurrentPositionVote}
+                      disabled={!hasCurrentPositionVote || hasVoted}
                       onClick={() => setCurrentPositionIndex(previousIndex => previousIndex + 1)}
-                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${hasCurrentPositionVote
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${hasCurrentPositionVote && !hasVoted
                           ? 'bg-sky-500 text-white shadow-md shadow-sky-500/40 hover:bg-sky-600'
                           : 'cursor-not-allowed bg-slate-800 text-slate-500'
                         }`}
@@ -337,22 +421,44 @@ function RouteComponent() {
                   ) : (
                     <button
                       type="button"
-                      disabled={!areAllPositionsVoted}
+                      disabled={!areAllPositionsVoted || submitVotesMutation.isPending || hasVoted}
                       onClick={handleSubmitVotes}
-                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${areAllPositionsVoted
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${areAllPositionsVoted && !submitVotesMutation.isPending && !hasVoted
                           ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40 hover:bg-emerald-600'
                           : 'cursor-not-allowed bg-slate-800 text-slate-500'
                         }`}
                     >
-                      Submit ballot
+                      {submitVotesMutation.isPending ? (
+                        <>
+                          <Loader2Icon className="animate-spin" size={18} />
+                          Submitting...
+                        </>
+                      ) : hasVoted ? (
+                        'Already Voted'
+                      ) : (
+                        'Submit ballot'
+                      )}
                     </button>
                   )}
                 </div>
 
                 <div className="mt-3 text-center text-[11px] text-slate-500">
-                  {isLastPosition
-                    ? 'Review your selections. You can see a full summary in My Ballot before final submission.'
-                    : 'You must select a nominee to continue to the next position.'}
+                  {hasVoted ? (
+                    <span className="text-emerald-400">
+                      Voting is complete. You can view your ballot in{' '}
+                      <button
+                        onClick={() => navigate({ to: '/dashboard/my-ballot' })}
+                        className="font-semibold text-emerald-300 underline hover:text-emerald-200"
+                      >
+                        My Ballot
+                      </button>
+                      .
+                    </span>
+                  ) : isLastPosition ? (
+                    'Review your selections. You can see a full summary in My Ballot before final submission.'
+                  ) : (
+                    'You must select a nominee to continue to the next position.'
+                  )}
                 </div>
               </div>
             </section>
@@ -379,9 +485,17 @@ function RouteComponent() {
                   <li className="flex items-start gap-2">
                     <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-sky-400" />
                     <span>
-                      Once submitted, your ballot is <span className="font-semibold text-slate-100">final</span>.
+                      Once submitted, your ballot is <span className="font-semibold text-slate-100">final</span> and cannot be changed.
                     </span>
                   </li>
+                  {hasVoted && (
+                    <li className="flex items-start gap-2">
+                      <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      <span className="text-amber-300">
+                        <span className="font-semibold">You have already voted.</span> Voting is now disabled.
+                      </span>
+                    </li>
+                  )}
                 </ul>
 
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[11px] text-emerald-200">
@@ -396,10 +510,6 @@ function RouteComponent() {
 
           {/* FOOTER */}
           <footer className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500 sm:flex-row">
-            {/* <p>
-              Need to double-check? View a full summary of your selections in{' '}
-              <span className="font-medium text-slate-200">My Ballot</span> before submitting.
-            </p> */}
             <div className="flex items-center gap-2">
               <LockKeyhole size={11} />
               <span>Session secured and monitored to prevent duplicate voting.</span>
