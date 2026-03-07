@@ -4,15 +4,15 @@ import { z } from '@hono/zod-openapi'
 
 /**
  * Creates a standardized error schema for OpenAPI documentation based on Zod validation errors.
- * 
+ *
  * This utility generates a consistent error response schema that includes validation issues
  * from Zod schema validation failures. It's primarily used in route definitions to document
  * error responses for invalid request data.
- * 
+ *
  * @template T - The Zod schema type to create error schema for
  * @param schema - The Zod schema to generate error documentation from
  * @returns A Zod object schema representing the error response structure
- * 
+ *
  * @example
  * ```typescript
  * // In a route definition
@@ -23,7 +23,7 @@ import { z } from '@hono/zod-openapi'
  *   )
  * }
  * ```
- * 
+ *
  * The returned schema structure:
  * ```typescript
  * {

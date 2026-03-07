@@ -14,16 +14,16 @@ The `error-messages.ts` file contains standardized error and success messages us
 ### Usage Example
 
 ```typescript
-import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 
 // In handlers
 return c.json(
   { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
   httpStatusCodes.NOT_FOUND
-);
+)
 
 // In tests
-expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY);
+expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY)
 ```
 
 ### Message Categories
