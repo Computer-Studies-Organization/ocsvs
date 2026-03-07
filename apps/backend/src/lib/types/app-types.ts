@@ -1,29 +1,29 @@
-import { Environment } from "@/middleware/env";
-import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi";
-import type { PinoLogger } from "hono-pino";
+import type { OpenAPIHono, RouteConfig, RouteHandler } from '@hono/zod-openapi'
+import type { PinoLogger } from 'hono-pino'
+import type { Environment } from '@/middleware/env'
 
 export interface AuthUser {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
+  id: string
+  email: string
+  username: string
+  role: string
 }
 
 export interface AppBindings {
-  Bindings: Environment & Omit<Env, keyof Environment>;
+  Bindings: Environment & Omit<Env, keyof Environment>
   Variables: {
-    logger: PinoLogger;
-    authUser: AuthUser;
-  };
+    logger: PinoLogger
+    authUser: AuthUser
+  }
 }
 
 // export interface Env {
 //   DB: D1Database;
 // }
 
-export type AppOpenAPI = OpenAPIHono<AppBindings>;
+export type AppOpenAPI = OpenAPIHono<AppBindings>
 
 export type AppRouteHandler<R extends RouteConfig> = RouteHandler<
   R,
   AppBindings
->;
+>

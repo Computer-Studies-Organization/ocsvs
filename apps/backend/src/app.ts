@@ -1,10 +1,10 @@
 import type { AppOpenAPI } from './lib/types/app-types'
 import createApp from '@/lib/create-app'
 import configureOpenAPI from '@/lib/openapi-configuration'
-import index from '@/routes/index.route'
 import auth from '@/routes/auth/auth.index'
-import users from '@/routes/users'
 import candidates from '@/routes/candidates'
+import index from '@/routes/index.route'
+import users from '@/routes/users'
 import votes from '@/routes/votes'
 
 const app = createApp()

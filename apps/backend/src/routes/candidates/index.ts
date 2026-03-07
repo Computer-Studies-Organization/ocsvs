@@ -1,18 +1,18 @@
-import { createRouter } from '@/lib/create-app'
 import * as handlers from '@/handlers/candidates/candidates.handler'
-import { 
-    createCandidateRoute, 
-    listCandidatesRoute, 
-    getCandidateRoute, 
-    updateCandidateRoute, 
-    deleteCandidateRoute 
-} from './routes'
+import { createRouter } from '@/lib/create-app'
 import { requireAuth } from '@/middleware/auth'
+import {
+  createCandidateRoute,
+  deleteCandidateRoute,
+  getCandidateRoute,
+  listCandidatesRoute,
+  updateCandidateRoute,
+} from './routes'
 
 const router = createRouter()
 
 // Apply authentication middleware to all routes
-router.use("*", requireAuth)
+router.use('*', requireAuth)
 
 // Register routes with handlers
 router.openapi(createCandidateRoute, handlers.createCandidate)

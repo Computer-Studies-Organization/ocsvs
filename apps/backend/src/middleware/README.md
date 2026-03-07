@@ -28,12 +28,13 @@ Provides type-safe environment variable validation and access throughout the app
 ```typescript
 import env from '@/middleware/env'
 
-console.log(env.PORT)        // number (default: 3000)
-console.log(env.NODE_ENV)    // string (default: 'development')
+console.log(env.PORT) // number (default: 3000)
+console.log(env.NODE_ENV) // string (default: 'development')
 console.log(env.DATABASE_URL) // string (required)
 ```
 
 **Environment Variables:**
+
 - `NODE_ENV`: Application environment (default: 'development')
 - `PORT`: Server port (default: 3000)
 - `LOG_LEVEL`: Logging verbosity (default: 'info')
@@ -52,6 +53,7 @@ app.use(logger()) // Pretty logs in dev, JSON in production
 ```
 
 **Features:**
+
 - Environment-aware formatting
 - Configurable log levels
 - Automatic request ID generation
@@ -80,12 +82,14 @@ Creates standardized error schemas for OpenAPI documentation:
 ```typescript
 import createErrorSchema from '@/middleware/utils/create-error-schema'
 
-responses: {
-  [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-    createErrorSchema(insertItemSchema),
-    'Validation error'
-  )
-}
+const route = createRoute({
+  responses: {
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
+      createErrorSchema(insertItemSchema),
+      'Validation error',
+    ),
+  },
+})
 ```
 
 #### JSON Content Helpers (`json-content.ts`)
@@ -96,14 +100,18 @@ Standardizes JSON content objects for OpenAPI:
 import jsonContent, { jsonContentRequired } from '@/middleware/utils/json-content'
 
 // For responses
-responses: {
-  [httpStatusCodes.OK]: jsonContent(itemSchema, 'Item details')
-}
+const readRoute = createRoute({
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(itemSchema, 'Item details'),
+  },
+})
 
 // For required request bodies
-request: {
-  body: jsonContentRequired(createItemSchema, 'Item to create')
-}
+const createRouteDefinition = createRoute({
+  request: {
+    body: jsonContentRequired(createItemSchema, 'Item to create'),
+  },
+})
 ```
 
 #### ID Parameter Validator (`id-params-validator.ts`)
@@ -133,6 +141,7 @@ app.onError(onError)
 ```
 
 **Features:**
+
 - HTTPException handling
 - Environment-aware stack traces
 - Consistent error response format

@@ -58,12 +58,11 @@ const onError: ErrorHandler = (err, c) => {
 
   // For all other errors, return a generic 500 response
   // You can customize this as needed
-  // eslint-disable-next-line node/prefer-global/process
-  const env = c.env?.NODE_ENV || process.env?.NODE_ENV
+  const env = c.env?.NODE_ENV
   return c.json(
     {
       message: 'Internal Server Error',
-      error: err.message,
+      error: env === 'production' ? undefined : err.message,
       stack: env === 'production' ? undefined : err.stack,
     },
     500,

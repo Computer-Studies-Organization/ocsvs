@@ -1,14 +1,14 @@
 import type { AppBindings, AppOpenAPI } from '@/lib/types/app-types'
+import process from 'node:process'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
-//import { logger } from 'hono/logger'
-import { customLogger } from '@/middleware/custom-logger'
+import { parseEnv } from '@/middleware/env'
+// import { logger } from 'hono/logger'
 import logger from '@/middleware/pino-logger'
 import notFound from '@/middleware/utils/not-found'
 import onError from '@/middleware/utils/on-error'
 import serveEmojiFavicon from '@/middleware/utils/serve-emoji-favicon'
 import defaultHook from '@/openapi/default-hook'
-import { parseEnv } from '@/middleware/env'
 
 export default function createApp() {
   const app = createRouter()
