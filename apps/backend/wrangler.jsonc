@@ -22,18 +22,18 @@
   //     "bucket_name": "my-bucket"
   //   }
   // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "csovs",
+      "database_id": "e507110d-b44a-4e30-bc40-d87bd4a93f6e"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1,
-  },
+    "head_sampling_rate": 1
+  }
 }
