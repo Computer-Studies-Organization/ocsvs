@@ -77,47 +77,34 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
 }
 
 export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
-  const { identifier, password } = c.req.valid('json')
+  const { studentNumber, password } = c.req.valid('json')
   const { db } = createDb(c)
 
-  // Try finding by email or username first
-  let account = await db
-    .select()
-    .from(accounts)
-    .where(or(eq(accounts.email, identifier), eq(accounts.username, identifier)))
+  // Only authenticate by studentId via users table (joined)
+  const result = await db
+    .select({
+      id: accounts.id,
+      email: accounts.email,
+      username: accounts.username,
+      password_hash: accounts.password_hash,
+      role: accounts.role,
+      createdAt: accounts.createdAt,
+      updatedAt: accounts.updatedAt,
+      lastLogin: accounts.lastLogin,
+    })
+    .from(users)
+    .innerJoin(accounts, eq(users.accountId, accounts.id))
+    .where(eq(users.studentId, studentNumber))
     .get()
 
-  // If not found, check studentId via users table (joined)
-  if (!account) {
-    const result = await db
-      .select({
-        id: accounts.id,
-        email: accounts.email,
-        username: accounts.username,
-        password_hash: accounts.password_hash,
-        role: accounts.role,
-        createdAt: accounts.createdAt,
-        updatedAt: accounts.updatedAt,
-        lastLogin: accounts.lastLogin,
-      })
-      .from(users)
-      .innerJoin(accounts, eq(users.accountId, accounts.id))
-      .where(eq(users.studentId, identifier))
-      .get()
-
-    if (result) {
-      account = result
-    }
-  }
-
-  if (!account) {
+  if (!result) {
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
       httpStatusCodes.UNAUTHORIZED,
     )
   }
 
-  const isValid = await verifyPassword(password, account.password_hash)
+  const isValid = await verifyPassword(password, result.password_hash)
   if (!isValid) {
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
@@ -126,17 +113,17 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   }
 
   // Create session and set cookie
-  const session = await createSession(db, account.id)
+  const session = await createSession(db, result.id)
   setSessionCookie(c, session.id, session.expiresAt)
 
   return c.json(
     {
       message: ERROR_MESSAGES.USER_LOGGED_IN_SUCCESSFULLY,
       user: {
-        id: account.id,
-        email: account.email,
-        username: account.username,
-        role: account.role,
+        id: result.id,
+        email: result.email,
+        username: result.username,
+        role: result.role,
       },
     },
     httpStatusCodes.OK,

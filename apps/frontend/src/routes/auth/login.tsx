@@ -21,7 +21,7 @@ function RouteComponent() {
   const [message, setMessage] = useState<string>("")
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [formData, setFormData] = useState<TLoginUser>({
-    identifier: '',
+    studentNumber: '',
     password: '',
   })
 
@@ -34,7 +34,7 @@ function RouteComponent() {
     setIsLoading(true)
     setMessage("")
 
-    if (!formData.identifier.trim() || !formData.password.trim()) return
+    if (!formData.studentNumber.trim() || !formData.password.trim()) return
 
     await login.mutateAsync(formData, {
       onSuccess: (data) => {
@@ -76,22 +76,22 @@ function RouteComponent() {
           <p className='text-center text-red-500 text-lg'>{message}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            {/* Username */}
+            {/* Student Number */}
             <div className="space-y-1.5 sm:space-y-2">
               <label
-                htmlFor="username"
+                htmlFor="studentNumber"
                 className="block text-sm font-medium text-slate-300"
               >
-                Username
+                Student Number
               </label>
               <input
-                id="username"
+                id="studentNumber"
                 type="text"
-                value={formData.identifier}
-                name="identifier"
+                value={formData.studentNumber}
+                name="studentNumber"
                 onChange={handleChange}
-                placeholder="Enter your username"
-                autoComplete="username"
+                placeholder="Enter your student number"
+                autoComplete="student-number"
                 required
                 className={cn(
                   'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
@@ -143,7 +143,7 @@ function RouteComponent() {
 
             <button
               type="submit"
-              disabled={!formData.identifier.trim() || !formData.password.trim()}
+              disabled={!formData.studentNumber.trim() || !formData.password.trim()}
               className={cn(
                 'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                 'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
