@@ -18,7 +18,9 @@ export const logoutUser = async () => {
 }
 
 export const authMe = async () => {
-    const response = await api.get("/me");
+    const response = await api.get("/me", {
+        skipUnauthorizedRedirect: true,
+    });
     return response.data
 }
 

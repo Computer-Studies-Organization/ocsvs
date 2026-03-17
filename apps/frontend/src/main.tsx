@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { routeTree } from "./routeTree.gen";
+import { configureUnauthorizedRedirect } from "./lib/authRedirect";
 
 // Set up a Router instance
 const router = createRouter({
@@ -10,6 +11,14 @@ const router = createRouter({
 });
 
 const queryClient = new QueryClient();
+
+configureUnauthorizedRedirect({
+  getCurrentPathname: () => router.state.location.pathname,
+  navigate: ({ replace, to }) => router.navigate({ replace, to }),
+  setQueryData: (key, value) => {
+    queryClient.setQueryData(key, value);
+  },
+});
 
 // Register things for typesafety
 declare module "@tanstack/react-router" {

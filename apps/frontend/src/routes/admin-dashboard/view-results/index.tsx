@@ -4,9 +4,14 @@ import { cn } from '@/lib/utils'
 import { ArrowRight, BarChart3, Loader2Icon, Trophy } from 'lucide-react'
 import { useVoteResultsQuery } from '@/hooks/voteHooks'
 import { UserData } from '@/hooks/userHooks'
+import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard/view-results/')({
-  component: RouteComponent,
+  component: () => (
+    <AdminRoute>
+      <RouteComponent />
+    </AdminRoute>
+  ),
 })
 
 function RouteComponent() {
