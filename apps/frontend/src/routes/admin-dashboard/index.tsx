@@ -6,9 +6,14 @@ import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candi
 import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
 import type { TCandidate, TUsersData } from '@/@types'
+import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard/')({
-  component: RouteComponent,
+  component: () => (
+    <AdminRoute>
+      <RouteComponent />
+    </AdminRoute>
+  ),
 })
 
 export const POSITIONS = [

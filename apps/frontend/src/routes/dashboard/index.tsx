@@ -3,6 +3,7 @@ import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useAllCandidates } from '@/data'
 import type { TCandidate, TPositionGroup } from '@/@types'
+import { UserRole } from '@/@types'
 import {
   ArrowRight,
   CheckCircle2,
@@ -255,7 +256,7 @@ function RouteComponent() {
                     </div>
                     <div className="my-1 h-px bg-slate-800/80" />
 
-                    {userData?.user?.role === 'admin' && (
+                    {userData?.user?.role === UserRole.ADMIN && (
                       <button
                         onClick={() => navigate({ to: '/admin-dashboard' })}
                         className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"

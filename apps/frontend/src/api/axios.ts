@@ -1,5 +1,15 @@
 import axios from "axios";
+import { handleUnauthorizedResponse } from "@/lib/authRedirect";
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    skipUnauthorizedRedirect?: boolean;
+  }
+
+  interface InternalAxiosRequestConfig {
+    skipUnauthorizedRedirect?: boolean;
+  }
+}
 
 export const api = axios.create({
   baseURL: "http://localhost:8787",
@@ -18,3 +28,14 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    await handleUnauthorizedResponse({
+      skipUnauthorizedRedirect: error.config?.skipUnauthorizedRedirect,
+      status: error.response?.status,
+    });
+    return Promise.reject(error);
+  },
+)

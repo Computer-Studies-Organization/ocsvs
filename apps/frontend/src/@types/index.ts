@@ -9,12 +9,17 @@ export type TUser = {
     hasVoted: boolean,
 }
 
+export enum UserRole {
+    ADMIN = "admin",
+    USER = "user",
+}
+
 export type TUserData = {
     user: {
         id: string,
         email: string,
         username: string,
-        role: string,
+        role: UserRole,
     }
 }
 export type TUsersData = {
