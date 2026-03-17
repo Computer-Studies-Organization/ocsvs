@@ -36,7 +36,7 @@ export type TRegisterUser = Omit<TUser, "accountId" | "hasVoted"> & {
 }
 
 export type TLoginUser = {
-    identifier: string;
+    studentNumber: string;
     password: string;
 }
 
