@@ -21,6 +21,7 @@ vi.mock('@/middleware/auth', () => ({
 const mockDb = {
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
+  orderBy: vi.fn().mockReturnThis(),
   limit: vi.fn().mockReturnThis(),
   offset: vi.fn().mockReturnThis(),
   all: vi.fn(),
@@ -36,7 +37,7 @@ describe('users Routes', () => {
     vi.clearAllMocks()
   })
 
-  it('gET /users should return paginated list of users', async () => {
+  it('GET /users should return paginated list of users', async () => {
     const mockUsers = [
       {
         id: '1',
@@ -46,11 +47,12 @@ describe('users Routes', () => {
         accountId: 'acc1',
         yearLevel: '4th Year',
         course: 'BSCS',
-        hasVoted: 0,
+        hasVoted: 1,
         createdAt: 1234567890,
         updatedAt: 1234567890,
       },
     ]
+    const expectedUsers = [{ ...mockUsers[0], hasVoted: true }]
 
     mockDb.all.mockResolvedValue(mockUsers)
     mockDb.get.mockResolvedValue({ count: 1 })
@@ -63,7 +65,7 @@ describe('users Routes', () => {
     const body = await res.json() as any
 
     expect(body).toEqual({
-      data: mockUsers,
+      data: expectedUsers,
       meta: {
         total: 1,
         page: 1,
@@ -77,7 +79,7 @@ describe('users Routes', () => {
     expect(mockDb.offset).toHaveBeenCalledWith(0)
   })
 
-  it('gET /users with defaults should use page 1 and limit 10', async () => {
+  it('GET /users with defaults should use page 1 and limit 10', async () => {
     const mockUsers = [{ id: '1' }]
     mockDb.all.mockResolvedValue(mockUsers)
     mockDb.get.mockResolvedValue({ count: 1 })
@@ -97,7 +99,7 @@ describe('users Routes', () => {
     expect(mockDb.offset).toHaveBeenCalledWith(0)
   })
 
-  it('gET /users with custom params should use provided page and limit', async () => {
+  it('GET /users with custom params should use provided page and limit', async () => {
     mockDb.all.mockResolvedValue([])
     mockDb.get.mockResolvedValue({ count: 20 })
 
@@ -114,5 +116,17 @@ describe('users Routes', () => {
     })
     expect(mockDb.limit).toHaveBeenCalledWith(5)
     expect(mockDb.offset).toHaveBeenCalledWith(5)
+  })
+
+  it('GET /users should request newest users first so fresh registrations appear on page one', async () => {
+    mockDb.all.mockResolvedValue([])
+    mockDb.get.mockResolvedValue({ count: 0 })
+
+    const res = await router.request('/users?page=1&limit=100', {
+      method: 'GET',
+    })
+
+    expect(res.status).toBe(200)
+    expect(mockDb.orderBy).toHaveBeenCalledTimes(1)
   })
 })

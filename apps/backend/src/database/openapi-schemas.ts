@@ -41,9 +41,9 @@ export const UserSchema = z.object({
     description: 'Course/Program',
     example: 'BS Computer Science',
   }),
-  hasVoted: z.number().int().openapi({
-    description: 'Whether the user has voted (0 or 1)',
-    example: 0,
+  hasVoted: z.boolean().openapi({
+    description: 'Whether the user has voted',
+    example: false,
   }),
 })
 
