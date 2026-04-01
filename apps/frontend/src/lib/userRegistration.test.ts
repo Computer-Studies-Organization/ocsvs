@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  CANDIDATE_FIELD_LABELS,
   EMPTY_REGISTER_USER_DRAFT,
-  getRegisterMutationErrorMessage,
+  REGISTER_FIELD_LABELS,
+  getMutationErrorMessage,
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
 } from "./userRegistration";
@@ -42,19 +44,19 @@ test("register draft validation accepts a backend-compatible payload", () => {
 });
 
 test("register mutation errors prefer explicit API messages", () => {
-  const message = getRegisterMutationErrorMessage({
+  const message = getMutationErrorMessage({
     response: {
       data: {
         message: "User already exists",
       },
     },
-  }, "Fallback");
+  }, "Fallback", REGISTER_FIELD_LABELS);
 
   assert.equal(message, "User already exists");
 });
 
 test("register mutation errors format validation issues when the API returns zod details", () => {
-  const message = getRegisterMutationErrorMessage({
+  const message = getMutationErrorMessage({
     response: {
       data: {
         error: {
@@ -67,10 +69,32 @@ test("register mutation errors format validation issues when the API returns zod
         },
       },
     },
-  }, "Fallback");
+  }, "Fallback", REGISTER_FIELD_LABELS);
 
   assert.equal(
     message,
     "Student ID: Too small: expected string to have >=18 characters",
+  );
+});
+
+test("candidate mutation errors use candidate field labels when the API returns zod details", () => {
+  const message = getMutationErrorMessage({
+    response: {
+      data: {
+        error: {
+          issues: [
+            {
+              path: ["fullName"],
+              message: "Too small: expected string to have >=1 characters",
+            },
+          ],
+        },
+      },
+    },
+  }, "Fallback", CANDIDATE_FIELD_LABELS);
+
+  assert.equal(
+    message,
+    "Full name: Too small: expected string to have >=1 characters",
   );
 });

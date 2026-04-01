@@ -2,7 +2,7 @@ import type { TRegisterUser, TRegisterUserDraft } from "@/@types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const FIELD_LABELS: Record<string, string> = {
+export const REGISTER_FIELD_LABELS: Record<string, string> = {
   studentId: "Student ID",
   firstName: "First name",
   lastName: "Last name",
@@ -11,6 +11,13 @@ const FIELD_LABELS: Record<string, string> = {
   email: "Email",
   username: "Username",
   password: "Password",
+};
+
+export const CANDIDATE_FIELD_LABELS: Record<string, string> = {
+  fullName: "Full name",
+  accountId: "User",
+  position: "Position",
+  manifesto: "Manifesto",
 };
 
 type MutationIssue = {
@@ -91,9 +98,10 @@ export const isRegisterUserDraftComplete = (user: TRegisterUserDraft): user is T
   return getRegisterUserDraftValidationMessage(user) === null;
 };
 
-export const getRegisterMutationErrorMessage = (
+export const getMutationErrorMessage = (
   error: unknown,
   fallbackMessage: string,
+  fieldLabels: Record<string, string> = {},
 ) => {
   const responseData = (error as MutationErrorShape)?.response?.data;
 
@@ -104,8 +112,8 @@ export const getRegisterMutationErrorMessage = (
   const firstIssue = responseData?.error?.issues?.[0];
   if (typeof firstIssue?.message === "string" && firstIssue.message.trim()) {
     const rawPath = firstIssue.path?.[0];
-    if (typeof rawPath === "string" && FIELD_LABELS[rawPath]) {
-      return `${FIELD_LABELS[rawPath]}: ${firstIssue.message}`;
+    if (typeof rawPath === "string" && fieldLabels[rawPath]) {
+      return `${fieldLabels[rawPath]}: ${firstIssue.message}`;
     }
     return firstIssue.message;
   }
