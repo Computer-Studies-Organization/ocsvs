@@ -1,11 +1,16 @@
+export type AdminDashboardFeedback = {
+  message: string;
+  isSuccess: boolean;
+};
+
 type AdminDashboardActiveMessageArgs = {
-  candidateMessage: string;
-  userMessage: string;
+  candidateMessage: AdminDashboardFeedback | null;
+  userMessage: AdminDashboardFeedback | null;
   isCandidateModalOpen: boolean;
   isUserModalOpen: boolean;
 };
 
-export const getAdminDashboardActiveMessage = ({
+export const getAdminDashboardActiveFeedback = ({
   candidateMessage,
   userMessage,
   isCandidateModalOpen,

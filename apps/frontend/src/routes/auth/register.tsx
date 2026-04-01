@@ -6,7 +6,8 @@ import { Eye, EyeOff, ChevronLeft, ChevronRight, Loader2Icon } from 'lucide-reac
 import { useRegisterUserMutation } from '@/hooks/userHooks'
 import {
   EMPTY_REGISTER_USER_DRAFT,
-  getRegisterMutationErrorMessage,
+  REGISTER_FIELD_LABELS,
+  getMutationErrorMessage,
   getRegisterUserDraftStepOneValidationMessage,
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
@@ -82,7 +83,7 @@ function RouteComponent() {
         navigate({ to: '/auth/login' })
       },
       onError: (error: unknown) => {
-        setMessage(getRegisterMutationErrorMessage(error, "Failed to create account"))
+        setMessage(getMutationErrorMessage(error, "Failed to create account", REGISTER_FIELD_LABELS))
       }
     })
   }

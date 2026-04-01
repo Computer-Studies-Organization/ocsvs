@@ -6,11 +6,13 @@ import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candi
 import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
-import { getAdminDashboardActiveMessage } from '@/lib/adminFeedback'
+import { getAdminDashboardActiveFeedback, type AdminDashboardFeedback } from '@/lib/adminFeedback'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
 import {
+  CANDIDATE_FIELD_LABELS,
   EMPTY_REGISTER_USER_DRAFT,
-  getRegisterMutationErrorMessage,
+  REGISTER_FIELD_LABELS,
+  getMutationErrorMessage,
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
 } from '@/lib/userRegistration'
@@ -61,12 +63,12 @@ function RouteComponent() {
   const createUser = useRegisterUserMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
-  const [candidateMessage, setCandidateMessage] = useState<string>("")
-  const [userMessage, setUserMessage] = useState<string>("")
+  const [candidateMessage, setCandidateMessage] = useState<AdminDashboardFeedback | null>(null)
+  const [userMessage, setUserMessage] = useState<AdminDashboardFeedback | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
-  const activeMessage = getAdminDashboardActiveMessage({
+  const activeFeedback = getAdminDashboardActiveFeedback({
     candidateMessage,
     userMessage,
     isCandidateModalOpen: isModalOpen,
@@ -171,20 +173,20 @@ function RouteComponent() {
 
   const closeCandidateModal = () => {
     setIsModalOpen(false)
-    setCandidateMessage("")
+    setCandidateMessage(null)
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
   }
 
   const closeUserModal = () => {
     setIsUserModalOpen(false)
-    setUserMessage("")
+    setUserMessage(null)
     setUserFormData(EMPTY_REGISTER_USER_DRAFT)
   }
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const name = e.target.name as keyof typeof EMPTY_REGISTER_USER_DRAFT
     const { value } = e.target
-    setUserMessage("")
+    setUserMessage(null)
     setUserFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -193,12 +195,12 @@ function RouteComponent() {
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCandidateMessage("")
-    setUserMessage("")
+    setCandidateMessage(null)
+    setUserMessage(null)
 
     const validationMessage = getRegisterUserDraftValidationMessage(userFormData)
     if (validationMessage) {
-      setUserMessage(validationMessage)
+      setUserMessage({ message: validationMessage, isSuccess: false })
       return
     }
 
@@ -206,31 +208,37 @@ function RouteComponent() {
 
     await createUser.mutateAsync(userFormData, {
       onSuccess: (data) => {
-        setUserMessage(data.message || "User created successfully")
+        setUserMessage({
+          message: data.message || "User created successfully",
+          isSuccess: true,
+        })
         setUserFormData(EMPTY_REGISTER_USER_DRAFT)
         setIsUserModalOpen(false)
         setTimeout(() => {
-          setUserMessage("")
+          setUserMessage(null)
         }, 2500)
       },
       onError: (error: unknown) => {
-        setUserMessage(getRegisterMutationErrorMessage(error, "Failed to create user"))
+        setUserMessage({
+          message: getMutationErrorMessage(error, "Failed to create user", REGISTER_FIELD_LABELS),
+          isSuccess: false,
+        })
       }
     })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setUserMessage("")
-    setCandidateMessage("")
+    setUserMessage(null)
+    setCandidateMessage(null)
 
     if (!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim()) {
-      setCandidateMessage("All fields are required")
+      setCandidateMessage({ message: "All fields are required", isSuccess: false })
       return
     }
 
     if (!formData.accountId) {
-      setCandidateMessage("Please select a valid user from the list")
+      setCandidateMessage({ message: "Please select a valid user from the list", isSuccess: false })
       return
     }
 
@@ -241,15 +249,21 @@ function RouteComponent() {
       manifesto: formData.manifesto,
     }, {
       onSuccess: (data) => {
-        setCandidateMessage(data.message)
+        setCandidateMessage({
+          message: data.message,
+          isSuccess: true,
+        })
         setFormData(EMPTY_CANDIDATE_FORM_DATA)
         setIsModalOpen(false)
         setTimeout(() => {
-          setCandidateMessage("")
+          setCandidateMessage(null)
         }, 2500)
       },
       onError: (error: unknown) => {
-        setCandidateMessage(getRegisterMutationErrorMessage(error, "Failed to create candidate"))
+        setCandidateMessage({
+          message: getMutationErrorMessage(error, "Failed to create candidate", CANDIDATE_FIELD_LABELS),
+          isSuccess: false,
+        })
       }
     })
   }
@@ -314,8 +328,9 @@ function RouteComponent() {
             <button
               type="button"
               onClick={() => {
-                setCandidateMessage("")
-                setUserMessage("")
+                setCandidateMessage(null)
+                setUserMessage(null)
+                setIsModalOpen(false)
                 setIsUserModalOpen(true)
               }}
               className={cn(
@@ -334,8 +349,9 @@ function RouteComponent() {
             <button
               type="button"
               onClick={() => {
-                setUserMessage("")
-                setCandidateMessage("")
+                setUserMessage(null)
+                setCandidateMessage(null)
+                setIsUserModalOpen(false)
                 setIsModalOpen(true)
               }}
               className={cn(
@@ -367,17 +383,17 @@ function RouteComponent() {
         </header>
 
         {/* Message Banner */}
-        {activeMessage && (
+        {activeFeedback && (
           <div
             className={cn(
               'fixed z-50 bottom-2 right-2 rounded-lg px-4 py-3 text-sm sm:text-base transition-all duration-300',
               'border-2',
-              activeMessage.includes('successfully')
+              activeFeedback.isSuccess
                 ? 'border-emerald-500/40 bg-emerald-500 text-white'
                 : 'border-red-500/40 bg-red-500/10 text-white'
             )}
           >
-            {activeMessage}
+            {activeFeedback.message}
           </div>
         )}
 
@@ -635,7 +651,7 @@ function RouteComponent() {
       {/* Create User Modal */}
       {isUserModalOpen && (
         <div
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
           onClick={() => {
             if (!createUser.isPending) {
               closeUserModal()
