@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
 import { z } from '@hono/zod-openapi'
-import { DbSelectUserSchema } from './schema'
+import { describe, expect, it } from 'vitest'
 import { UserApiSchema } from './openapi-schemas'
+import { DbSelectUserSchema } from './schema'
 
 describe('user schema exports', () => {
   it('uses distinct names for database and API user schemas', () => {
