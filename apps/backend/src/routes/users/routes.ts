@@ -1,5 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi'
-import { SelectUserSchema } from '@/database/openapi-schemas'
+import { UserApiSchema } from '@/database/openapi-schemas'
 import jsonContent from '@/middleware/utils/json-content'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -18,7 +18,7 @@ export const listUsersRoute = createRoute({
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       z.object({
-        data: z.array(SelectUserSchema as any),
+        data: z.array(UserApiSchema as any),
         meta: z.object({
           total: z.number().int(),
           page: z.number().int(),

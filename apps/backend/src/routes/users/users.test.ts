@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import router from './index'
+import { desc } from 'drizzle-orm'
+import { users } from '@/database/schema'
 
 // Mock the auth middleware
 vi.mock('@/middleware/auth', () => ({
@@ -128,5 +130,6 @@ describe('users Routes', () => {
 
     expect(res.status).toBe(200)
     expect(mockDb.orderBy).toHaveBeenCalledTimes(1)
+    expect(mockDb.orderBy).toHaveBeenCalledWith(desc(users.createdAt), desc(users.id))
   })
 })
