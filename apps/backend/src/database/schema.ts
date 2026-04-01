@@ -81,7 +81,7 @@ export const votes = sqliteTable('votes', {
   uniqueIndex('votes_user_position_unique_idx').on(table.userId, table.position),
 ])
 
-export const SelectUserSchema = createSelectSchema(users)
+export const DbSelectUserSchema = createSelectSchema(users)
 
 export const SelectAccountSchema = createSelectSchema(accounts)
 

@@ -4,7 +4,7 @@ import { z } from '@hono/zod-openapi'
 // These schemas mirror the database structure but use @hono/zod-openapi's z
 // which includes OpenAPI metadata support
 
-export const UserSchema = z.object({
+export const UserApiSchema = z.object({
   createdAt: z.number().int().openapi({
     description: 'Creation timestamp',
     example: 1738000000,
@@ -164,7 +164,7 @@ export const VoteSchema = z.object({
 })
 
 // Type aliases for convenience - use these in route definitions
-export const SelectUserSchema = UserSchema
+export const UserOpenApiSchema = UserApiSchema
 export const SelectAccountSchema = AccountSchema
 export const SelectSessionSchema = SessionSchema
 export const SelectCandidateSchema = CandidateSchema
