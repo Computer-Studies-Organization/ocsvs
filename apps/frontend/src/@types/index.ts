@@ -1,10 +1,16 @@
+export const YEAR_LEVEL_VALUES = ['1st Year', '2nd Year', '3rd Year', '4th Year'] as const
+export type TYearLevel = (typeof YEAR_LEVEL_VALUES)[number]
+
+export const COURSE_VALUES = ['BSCS', 'BSIT'] as const
+export type TCourse = (typeof COURSE_VALUES)[number]
+
 export type TUser = {
     studentId: string,
     accountId: string,
     firstName: string,
     lastName: string,
-    yearLevel: string,
-    course: string,
+    yearLevel: TYearLevel,
+    course: TCourse,
     email: string,
     hasVoted: boolean,
 }
@@ -25,6 +31,7 @@ export type TUserData = {
 export type TUsersData = {
     id: string
     accountId: string
+    studentId: string
     fullName: string
     firstName: string
     lastName: string
@@ -33,6 +40,11 @@ export type TUsersData = {
 export type TRegisterUser = Omit<TUser, "accountId" | "hasVoted"> & {
     username: string;
     password: string;
+}
+
+export type TRegisterUserDraft = Omit<TRegisterUser, "yearLevel" | "course"> & {
+    yearLevel: TYearLevel | "";
+    course: TCourse | "";
 }
 
 export type TLoginUser = {
