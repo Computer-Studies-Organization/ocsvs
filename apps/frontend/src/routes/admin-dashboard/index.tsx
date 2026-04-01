@@ -1,11 +1,19 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { ArrowRight, BarChart3, Loader2Icon, Plus, XIcon } from 'lucide-react'
+import { ArrowRight, BarChart3, Loader2Icon, Plus, XIcon, UserPlus } from 'lucide-react'
 import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
-import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
+import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
-import type { TCandidate, TUsersData } from '@/@types'
+import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
+import { getAdminDashboardActiveMessage } from '@/lib/adminFeedback'
+import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
+import {
+  EMPTY_REGISTER_USER_DRAFT,
+  getRegisterMutationErrorMessage,
+  getRegisterUserDraftValidationMessage,
+  isRegisterUserDraftComplete,
+} from '@/lib/userRegistration'
 import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard/')({
@@ -36,17 +44,34 @@ export const POSITIONS = [
   { id: 17, value: "Committee Leader (Gaming)" },
 ]
 
+const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }))
+const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }))
+const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, "id"> = {
+  fullName: '',
+  position: '',
+  manifesto: '',
+  accountId: '',
+}
+
 
 function RouteComponent() {
   const userData = UserData()
   const navigate = useNavigate()
   const createCandidate = useCreateCandidateMutation()
+  const createUser = useRegisterUserMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [message, setMessage] = useState<string>("")
+  const [candidateMessage, setCandidateMessage] = useState<string>("")
+  const [userMessage, setUserMessage] = useState<string>("")
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+  const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
+  const activeMessage = getAdminDashboardActiveMessage({
+    candidateMessage,
+    userMessage,
+    isCandidateModalOpen: isModalOpen,
+    isUserModalOpen: isUserModalOpen,
+  })
 
   // Fetch vote counts for all candidates
   useEffect(() => {
@@ -111,20 +136,17 @@ function RouteComponent() {
     return transformed
   }, [candidatesData, voteCounts])
 
-  const [formData, setFormData] = useState<Omit<TCandidate, "id">>({
-    fullName: '',
-    position: '',
-    manifesto: '',
-    accountId: '',
-  })
+  const [formData, setFormData] = useState<Omit<TCandidate, "id">>(EMPTY_CANDIDATE_FORM_DATA)
+  const [userFormData, setUserFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
 
   const users = useMemo<TUsersData[]>(() => {
     if (!usersData?.data || !Array.isArray(usersData.data)) {
       return []
     }
-    return usersData.data.map((user: { id: string; accountId: string; firstName: string; lastName: string }) => ({
+    return usersData.data.map((user: { id: string; accountId: string; studentId: string; firstName: string; lastName: string }) => ({
       id: user.id,
       accountId: user.accountId,
+      studentId: user.studentId,
       fullName: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -133,32 +155,82 @@ function RouteComponent() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
 
-    if (name === 'fullName') {
-      const selectedUser = users.find((user) => user.fullName === value)
-      if (selectedUser) {
-        setFormData((prev) => ({ ...prev, accountId: selectedUser.accountId }))
-      } else {
-        setFormData((prev) => ({ ...prev, accountId: '' }))
-      }
+    if (name === 'accountId') {
+      const selectedUser = resolveCandidateUserSelection(users, value)
+      setFormData((prev) => ({
+        ...prev,
+        accountId: selectedUser?.accountId ?? '',
+        fullName: selectedUser?.fullName ?? '',
+      }))
+      return
     }
+
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const closeCandidateModal = () => {
+    setIsModalOpen(false)
+    setCandidateMessage("")
+    setFormData(EMPTY_CANDIDATE_FORM_DATA)
+  }
+
+  const closeUserModal = () => {
+    setIsUserModalOpen(false)
+    setUserMessage("")
+    setUserFormData(EMPTY_REGISTER_USER_DRAFT)
+  }
+
+  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const name = e.target.name as keyof typeof EMPTY_REGISTER_USER_DRAFT
+    const { value } = e.target
+    setUserMessage("")
+    setUserFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCandidateMessage("")
+    setUserMessage("")
+
+    const validationMessage = getRegisterUserDraftValidationMessage(userFormData)
+    if (validationMessage) {
+      setUserMessage(validationMessage)
+      return
+    }
+
+    if (!isRegisterUserDraftComplete(userFormData)) return
+
+    await createUser.mutateAsync(userFormData, {
+      onSuccess: (data) => {
+        setUserMessage(data.message || "User created successfully")
+        setUserFormData(EMPTY_REGISTER_USER_DRAFT)
+        setIsUserModalOpen(false)
+        setTimeout(() => {
+          setUserMessage("")
+        }, 2500)
+      },
+      onError: (error: unknown) => {
+        setUserMessage(getRegisterMutationErrorMessage(error, "Failed to create user"))
+      }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setMessage("")
+    setUserMessage("")
+    setCandidateMessage("")
 
     if (!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim()) {
-      setMessage("All fields are required")
-      setIsLoading(false)
+      setCandidateMessage("All fields are required")
       return
     }
 
     if (!formData.accountId) {
-      setMessage("Please select a valid user from the list")
-      setIsLoading(false)
+      setCandidateMessage("Please select a valid user from the list")
       return
     }
 
@@ -169,28 +241,15 @@ function RouteComponent() {
       manifesto: formData.manifesto,
     }, {
       onSuccess: (data) => {
-        setIsLoading(false)
-        setMessage(data.message)
-
-        setTimeout(() => {
-          setMessage("")
-          setFormData({
-            fullName: '',
-            position: '',
-            manifesto: '',
-            accountId: '',
-          })
-        }, 2500)
-
+        setCandidateMessage(data.message)
+        setFormData(EMPTY_CANDIDATE_FORM_DATA)
         setIsModalOpen(false)
+        setTimeout(() => {
+          setCandidateMessage("")
+        }, 2500)
       },
-      onError: (error: any) => {
-        setIsLoading(false)
-        if (error.response) {
-          setMessage(error.response?.data.message || "Failed to create candidate")
-        } else {
-          setMessage("Failed to create candidate")
-        }
+      onError: (error: unknown) => {
+        setCandidateMessage(getRegisterMutationErrorMessage(error, "Failed to create candidate"))
       }
     })
   }
@@ -252,9 +311,13 @@ function RouteComponent() {
 
           {/* Action buttons */}
           <div className="absolute right-0 flex items-start justify-end gap-3">
-            {/* <button
+            <button
               type="button"
-              onClick={() => navigate({ to: '/admin-dashboard/view-results' })}
+              onClick={() => {
+                setCandidateMessage("")
+                setUserMessage("")
+                setIsUserModalOpen(true)
+              }}
               className={cn(
                 'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg',
                 'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
@@ -262,16 +325,17 @@ function RouteComponent() {
               )}
             >
               <div className='flex items-center gap-1.5'>
-                <BarChart3 size={16} />
+                <UserPlus size={16} />
                 <span>
-                  View Results
+                  Create User
                 </span>
               </div>
-            </button> */}
+            </button>
             <button
               type="button"
               onClick={() => {
-                setMessage("")
+                setUserMessage("")
+                setCandidateMessage("")
                 setIsModalOpen(true)
               }}
               className={cn(
@@ -303,17 +367,17 @@ function RouteComponent() {
         </header>
 
         {/* Message Banner */}
-        {message && (
+        {activeMessage && (
           <div
             className={cn(
               'fixed z-50 bottom-2 right-2 rounded-lg px-4 py-3 text-sm sm:text-base transition-all duration-300',
               'border-2',
-              message.includes('successfully')
+              activeMessage.includes('successfully')
                 ? 'border-emerald-500/40 bg-emerald-500 text-white'
                 : 'border-red-500/40 bg-red-500/10 text-white'
             )}
           >
-            {message}
+            {activeMessage}
           </div>
         )}
 
@@ -430,14 +494,23 @@ function RouteComponent() {
 
       {/* Add Candidate Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 sm:p-8 relative">
+        <div
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => {
+            if (!createCandidate.isPending) {
+              closeCandidateModal()
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-xl rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 sm:p-8 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => {
-                if (!isLoading && !createCandidate.isPending) {
-                  setIsModalOpen(false)
-                  setMessage("")
+                if (!createCandidate.isPending) {
+                  closeCandidateModal()
                 }
               }}
               className="absolute right-4 top-4 text-slate-400 hover:text-slate-200 text-sm"
@@ -456,33 +529,31 @@ function RouteComponent() {
               {/* Full Name */}
               <div className="space-y-1.5 sm:space-y-2">
                 <label
-                  htmlFor="fullName"
+                  htmlFor="accountId"
                   className="block text-sm font-medium text-slate-300"
                 >
-                  Full Name
+                  User
                 </label>
                 <select
-                  id="fullName"
-                  value={formData.fullName}
-                  name="fullName"
+                  id="accountId"
+                  value={formData.accountId}
+                  name="accountId"
                   onChange={handleChange}
                   required
                   className={cn(
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100',
-                    message && !message.includes('successfully')
-                      ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
-                      : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
+                    'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
                     'text-base sm:text-base'
                   )}
                 >
-                  <option value="">Select a candidate</option>
+                  <option value="">Select a user</option>
                   {isLoadingUsers ? (
                     <option value="" disabled>Loading users...</option>
                   ) : (
                     users.map((user: TUsersData, index: number) => (
-                      <option key={index} value={user.fullName}>
-                        {user.fullName}
+                      <option key={user.accountId || index} value={user.accountId}>
+                        {getCandidateUserLabel(user)}
                       </option>
                     ))
                   )}
@@ -506,9 +577,7 @@ function RouteComponent() {
                   className={cn(
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100',
-                    message && !message.includes('successfully')
-                      ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
-                      : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
+                    'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
                     'text-base sm:text-base'
                   )}
                 >
@@ -539,9 +608,7 @@ function RouteComponent() {
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100 placeholder:text-slate-500',
                     'resize-none',
-                    message && !message.includes('successfully')
-                      ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
-                      : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
+                    'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
                     'text-base sm:text-base'
                   )}
                 />
@@ -549,7 +616,7 @@ function RouteComponent() {
 
               <button
                 type="submit"
-                disabled={!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim() || !formData.accountId || isLoading}
+                disabled={!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim() || !formData.accountId || createCandidate.isPending}
                 className={cn(
                   'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                   'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
@@ -557,8 +624,286 @@ function RouteComponent() {
                   'text-base sm:text-base'
                 )}
               >
-                {(isLoading || createCandidate.isPending) && <Loader2Icon className='animate-spin' size={20} />}
-                {(isLoading || createCandidate.isPending) ? "Creating..." : "Add Candidate"}
+                {createCandidate.isPending && <Loader2Icon className='animate-spin' size={20} />}
+                {createCandidate.isPending ? "Creating..." : "Add Candidate"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {isUserModalOpen && (
+        <div
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => {
+            if (!createUser.isPending) {
+              closeUserModal()
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-xl rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (!createUser.isPending) {
+                  closeUserModal()
+                }
+              }}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-200 text-sm"
+            >
+              <XIcon size={20} />
+            </button>
+
+            <h2 className="mb-1 text-xl sm:text-2xl font-semibold text-slate-100 text-center">
+              Create New User
+            </h2>
+            <p className="mb-5 text-xs sm:text-sm text-slate-400 text-center">
+              Fill out the details below to create a new user account.
+            </p>
+
+            <form onSubmit={handleUserSubmit} className="space-y-4 sm:space-y-5">
+              {/* Student ID */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <label
+                  htmlFor="studentId"
+                  className="block text-sm font-medium text-slate-300"
+                >
+                  Student ID
+                </label>
+                <input
+                  id="studentId"
+                  name="studentId"
+                  type="text"
+                  value={userFormData.studentId}
+                  onChange={handleUserChange}
+                  placeholder="C23-00-0000-MAN121"
+                  required
+                  className={cn(
+                    'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                    'text-slate-100 placeholder:text-slate-500',
+                    'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                    'text-base sm:text-base'
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-4">
+                {/* First Name */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="firstName"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    First Name
+                  </label>
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    value={userFormData.firstName}
+                    onChange={handleUserChange}
+                    placeholder="Enter first name"
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100 placeholder:text-slate-500',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base'
+                    )}
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="lastName"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    value={userFormData.lastName}
+                    onChange={handleUserChange}
+                    placeholder="Enter last name"
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100 placeholder:text-slate-500',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base'
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-4">
+                {/* Year Level */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="yearLevel"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Year Level
+                  </label>
+                  <select
+                    id="yearLevel"
+                    name="yearLevel"
+                    value={userFormData.yearLevel}
+                    onChange={handleUserChange}
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base appearance-none cursor-pointer',
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                    )}
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      paddingRight: '2.5rem',
+                    }}
+                  >
+                    <option value="" className="bg-slate-800 text-slate-300">Select year level</option>
+                    {YEAR_LEVELS.map((year) => (
+                      <option key={year.value} value={year.value} className="bg-slate-800 text-slate-300">
+                        {year.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Course */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="course"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Course
+                  </label>
+                  <select
+                    id="course"
+                    name="course"
+                    value={userFormData.course}
+                    onChange={handleUserChange}
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base appearance-none cursor-pointer',
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                    )}
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      paddingRight: '2.5rem',
+                    }}
+                  >
+                    <option value="" className="bg-slate-800 text-slate-300">Select course</option>
+                    {COURSES.map((course) => (
+                      <option key={course.value} value={course.value} className="bg-slate-800 text-slate-300">
+                        {course.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-slate-300"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={userFormData.email}
+                  onChange={handleUserChange}
+                  placeholder="Enter email address"
+                  required
+                  className={cn(
+                    'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                    'text-slate-100 placeholder:text-slate-500',
+                    'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                    'text-base sm:text-base'
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-4">
+                {/* Username */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="username"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Username
+                  </label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    value={userFormData.username}
+                    onChange={handleUserChange}
+                    placeholder="Enter username"
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100 placeholder:text-slate-500',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base'
+                    )}
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={userFormData.password}
+                    onChange={handleUserChange}
+                    placeholder="Enter password"
+                    required
+                    className={cn(
+                      'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
+                      'text-slate-100 placeholder:text-slate-500',
+                      'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
+                      'text-base sm:text-base'
+                    )}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!isRegisterUserDraftComplete(userFormData) || createUser.isPending}
+                className={cn(
+                  'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
+                  'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-500',
+                  'text-base sm:text-base'
+                )}
+              >
+                {createUser.isPending && <Loader2Icon className='animate-spin' size={20} />}
+                {createUser.isPending ? "Creating..." : "Create User"}
               </button>
             </form>
           </div>

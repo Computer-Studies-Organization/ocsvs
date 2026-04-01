@@ -1,9 +1,17 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { TRegisterUser } from '@/@types'
-import { Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react'
+import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
+import { Eye, EyeOff, ChevronLeft, ChevronRight, Loader2Icon } from 'lucide-react'
 import { useRegisterUserMutation } from '@/hooks/userHooks'
+import {
+  EMPTY_REGISTER_USER_DRAFT,
+  getRegisterMutationErrorMessage,
+  getRegisterUserDraftStepOneValidationMessage,
+  getRegisterUserDraftValidationMessage,
+  isRegisterUserDraftComplete,
+  isRegisterUserDraftStepOneComplete,
+} from '@/lib/userRegistration'
 import { PublicRoute } from '@/middleware'
 
 export const Route = createFileRoute('/auth/register')({
@@ -14,36 +22,20 @@ export const Route = createFileRoute('/auth/register')({
   ),
 })
 
-const YEAR_LEVELS = [
-  { value: '1st Year', label: '1st Year' },
-  { value: '2nd Year', label: '2nd Year' },
-  { value: '3rd Year', label: '3rd Year' },
-  { value: '4th Year', label: '4th Year' },
-] as const
-
-const COURSES = [
-  { value: 'BSCS', label: 'BSCS' },
-  { value: 'BSIT', label: 'BSIT' },
-] as const
+const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }))
+const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }))
 
 function RouteComponent() {
   const navigate = useNavigate()
   const register = useRegisterUserMutation()
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [showPassword, setShowPassword] = useState<boolean>(false)
-  const [formData, setFormData] = useState<TRegisterUser>({
-    studentId: '',
-    firstName: '',
-    lastName: '',
-    yearLevel: '',
-    course: '',
-    email: '',
-    username: '',
-    password: '',
-  })
+  const [message, setMessage] = useState<string>("")
+  const [formData, setFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    setMessage("")
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -51,41 +43,46 @@ function RouteComponent() {
   }
 
   const validateStep1 = () => {
-    return formData.studentId.trim() && formData.firstName.trim() && formData.lastName.trim()
+    return isRegisterUserDraftStepOneComplete(formData)
   }
 
   const handleNext = () => {
-    if (currentStep === 1 && validateStep1()) {
+    const stepOneMessage = getRegisterUserDraftStepOneValidationMessage(formData)
+    if (currentStep === 1 && !stepOneMessage) {
       setCurrentStep(2)
+      setMessage("")
+      return
+    }
+
+    if (currentStep === 1 && stepOneMessage) {
+      setMessage(stepOneMessage)
     }
   }
 
   const handleBack = () => {
     if (currentStep === 2) {
       setCurrentStep(1)
+      setMessage("")
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.studentId.trim() ||
-      !formData.firstName.trim() ||
-      !formData.lastName.trim() ||
-      !formData.yearLevel ||
-      !formData.course ||
-      !formData.email.trim() ||
-      !formData.username.trim() ||
-      !formData.password.trim())
+    const validationMessage = getRegisterUserDraftValidationMessage(formData)
+    if (validationMessage) {
+      setMessage(validationMessage)
       return
+    }
+
+    if (!isRegisterUserDraftComplete(formData)) return
 
     await register.mutateAsync(formData, {
-      onSuccess: (data) => {
+      onSuccess: () => {
         navigate({ to: '/auth/login' })
-        console.log(data.message)
       },
-      onError: (error: any) => {
-        if (error.response) console.log(error.response?.data.message)
+      onError: (error: unknown) => {
+        setMessage(getRegisterMutationErrorMessage(error, "Failed to create account"))
       }
     })
   }
@@ -132,6 +129,17 @@ function RouteComponent() {
               </div>
             </div>
           </div>
+
+          {message && (
+            <div
+              className={cn(
+                'mb-5 rounded-lg border px-4 py-3 text-sm text-white',
+                'border-red-500/40 bg-red-500/10'
+              )}
+            >
+              {message}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {currentStep === 1 && (
@@ -418,15 +426,16 @@ function RouteComponent() {
                   </button>
                   <button
                     type="submit"
-                    disabled={!formData.yearLevel || !formData.course || !formData.email.trim() || !formData.username.trim() || !formData.password.trim()}
+                    disabled={!isRegisterUserDraftComplete(formData) || register.isPending}
                     className={cn(
-                      'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
+                      'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                       'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                       'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
                       'text-base sm:text-base'
                     )}
                   >
-                    Create Account
+                    {register.isPending && <Loader2Icon className="h-4 w-4 animate-spin" />}
+                    {register.isPending ? 'Creating account...' : 'Create Account'}
                   </button>
                 </div>
               </div>
