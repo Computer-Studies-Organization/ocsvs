@@ -12,8 +12,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "csovs",
-      "database_id": "e507110d-b44a-4e30-bc40-d87bd4a93f6e"
+      "database_name": "cso-voting-db",
+      "database_id": "5b4fd3f8-f44e-4cc8-a517-e851269757dc"
     }
   ],
   "vars": {
