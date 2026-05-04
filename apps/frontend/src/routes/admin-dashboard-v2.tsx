@@ -76,7 +76,7 @@ function RouteComponent() {
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
   const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set(POSITIONS.map(p => p.value)))
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const activeFeedback = getAdminDashboardActiveFeedback({
     candidateMessage,
     userMessage,
@@ -329,30 +329,70 @@ function RouteComponent() {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 bottom-0 w-64 border-r flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-50 transition-all duration-300 ${
+          isSidebarOpen ? 'w-64' : 'w-0 lg:w-16'
         }`}
         style={{
           background: 'oklch(0.18 0.022 250)',
           borderColor: 'oklch(0.25 0.025 250)'
         }}
       >
-        <div className="p-6 border-b" style={{ borderColor: 'oklch(0.25 0.025 250)' }}>
-          <h1 
-            className="text-xl font-black tracking-tight"
-            style={{ color: 'oklch(0.95 0.008 250)' }}
-          >
-            OCSVS Admin
-          </h1>
-          <p 
-            className="text-xs font-semibold mt-1"
-            style={{ color: 'oklch(0.60 0.015 250)' }}
-          >
-            Election Control Panel
-          </p>
+        <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'oklch(0.25 0.025 250)' }}>
+          {isSidebarOpen && (
+            <>
+              <div>
+                <h1 
+                  className="text-xl font-black tracking-tight"
+                  style={{ color: 'oklch(0.95 0.008 250)' }}
+                >
+                  OCSVS Admin
+                </h1>
+                <p 
+                  className="text-xs font-semibold mt-1"
+                  style={{ color: 'oklch(0.60 0.015 250)' }}
+                >
+                  Election Control Panel
+                </p>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="hidden lg:block p-1.5 rounded-lg transition-colors"
+                style={{ color: 'oklch(0.60 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+                }}
+              >
+                <ChevronDown size={20} strokeWidth={2.5} style={{ transform: 'rotate(-90deg)' }} />
+              </button>
+            </>
+          )}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="hidden lg:block p-1.5 rounded-lg transition-colors mx-auto"
+              style={{ color: 'oklch(0.60 0.015 250)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+              }}
+            >
+              <ChevronDown size={20} strokeWidth={2.5} style={{ transform: 'rotate(90deg)' }} />
+            </button>
+          )}
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        {isSidebarOpen && (
+          <>
+            <nav className="flex-1 p-4 space-y-2">
           <button
             className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-all"
             style={{
@@ -422,10 +462,12 @@ function RouteComponent() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </aside>
 
       {/* Main Content */}
-      <div className="lg:ml-64">
+      <div className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-16'}`}>
         {/* Header */}
         <header 
           className="sticky top-0 z-10 border-b"
@@ -738,6 +780,44 @@ function RouteComponent() {
           </div>
           )}
         </div>
+      </div>
+
+      {/* FAB - Mobile only */}
+      <div className="lg:hidden fixed bottom-6 right-6 flex flex-col gap-3 z-30">
+        <button
+          onClick={openUserModal}
+          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all"
+          style={{
+            background: 'oklch(0.70 0.12 140)',
+            color: 'oklch(0.98 0.005 250)',
+            boxShadow: '0 10px 30px -5px oklch(0.70 0.12 140 / 0.5)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <UserPlus size={24} strokeWidth={2.5} />
+        </button>
+        <button
+          onClick={openCreateModal}
+          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all"
+          style={{
+            background: 'oklch(0.55 0.15 250)',
+            color: 'oklch(0.98 0.005 250)',
+            boxShadow: '0 10px 30px -5px oklch(0.55 0.15 250 / 0.5)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <Plus size={24} strokeWidth={2.5} />
+        </button>
       </div>
 
       {/* Add Candidate Modal */}
