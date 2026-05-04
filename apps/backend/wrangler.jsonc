@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cso-voting",
+  "main": "src/app.ts",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "csovs",
+      "database_id": "e507110d-b44a-4e30-bc40-d87bd4a93f6e"
+    }
+  ],
+  "vars": {
+    "NODE_ENV": "development",
+    "LOG_LEVEL": "debug"
+  }
+}
