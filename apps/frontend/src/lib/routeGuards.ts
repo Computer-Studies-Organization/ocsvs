@@ -3,7 +3,8 @@ import { UserRole } from "@/@types";
 
 export const getPublicRouteRedirectPath = (data: TUserData | null | undefined) => {
   if (data) {
-    return "/dashboard";
+    // Redirect admins to admin panel, regular users to dashboard
+    return data.user.role === UserRole.ADMIN ? "/admin-dashboard" : "/dashboard";
   }
 
   return null;
