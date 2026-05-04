@@ -13,6 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboard/index'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLoginV3RouteImport } from './routes/auth/login-v3'
+import { Route as AuthLoginV2RouteImport } from './routes/auth/login-v2'
+import { Route as AuthLoginV1RouteImport } from './routes/auth/login-v1'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
 import { Route as AdminDashboardViewResultsIndexRouteImport } from './routes/admin-dashboard/view-results/index'
@@ -37,6 +40,21 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: '/auth/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthLoginV3Route = AuthLoginV3RouteImport.update({
+  id: '/auth/login-v3',
+  path: '/auth/login-v3',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginV2Route = AuthLoginV2RouteImport.update({
+  id: '/auth/login-v2',
+  path: '/auth/login-v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginV1Route = AuthLoginV1RouteImport.update({
+  id: '/auth/login-v1',
+  path: '/auth/login-v1',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -57,6 +75,9 @@ const AdminDashboardViewResultsIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/login-v1': typeof AuthLoginV1Route
+  '/auth/login-v2': typeof AuthLoginV2Route
+  '/auth/login-v3': typeof AuthLoginV3Route
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -66,6 +87,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/login-v1': typeof AuthLoginV1Route
+  '/auth/login-v2': typeof AuthLoginV2Route
+  '/auth/login-v3': typeof AuthLoginV3Route
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -76,6 +100,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/login-v1': typeof AuthLoginV1Route
+  '/auth/login-v2': typeof AuthLoginV2Route
+  '/auth/login-v3': typeof AuthLoginV3Route
   '/auth/register': typeof AuthRegisterRoute
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -87,6 +114,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth/login'
+    | '/auth/login-v1'
+    | '/auth/login-v2'
+    | '/auth/login-v3'
     | '/auth/register'
     | '/admin-dashboard'
     | '/dashboard'
@@ -96,6 +126,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth/login'
+    | '/auth/login-v1'
+    | '/auth/login-v2'
+    | '/auth/login-v3'
     | '/auth/register'
     | '/admin-dashboard'
     | '/dashboard'
@@ -105,6 +138,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth/login'
+    | '/auth/login-v1'
+    | '/auth/login-v2'
+    | '/auth/login-v3'
     | '/auth/register'
     | '/admin-dashboard/'
     | '/dashboard/'
@@ -115,6 +151,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthLoginV1Route: typeof AuthLoginV1Route
+  AuthLoginV2Route: typeof AuthLoginV2Route
+  AuthLoginV3Route: typeof AuthLoginV3Route
   AuthRegisterRoute: typeof AuthRegisterRoute
   AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -152,6 +191,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/login-v3': {
+      id: '/auth/login-v3'
+      path: '/auth/login-v3'
+      fullPath: '/auth/login-v3'
+      preLoaderRoute: typeof AuthLoginV3RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login-v2': {
+      id: '/auth/login-v2'
+      path: '/auth/login-v2'
+      fullPath: '/auth/login-v2'
+      preLoaderRoute: typeof AuthLoginV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login-v1': {
+      id: '/auth/login-v1'
+      path: '/auth/login-v1'
+      fullPath: '/auth/login-v1'
+      preLoaderRoute: typeof AuthLoginV1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -179,6 +239,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthLoginV1Route: AuthLoginV1Route,
+  AuthLoginV2Route: AuthLoginV2Route,
+  AuthLoginV3Route: AuthLoginV3Route,
   AuthRegisterRoute: AuthRegisterRoute,
   AdminDashboardIndexRoute: AdminDashboardIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
