@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AdminDashboardV2RouteImport } from './routes/admin-dashboard-v2'
+import { Route as AdminDashboardV1RouteImport } from './routes/admin-dashboard-v1'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboard/index'
@@ -20,6 +22,16 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
 import { Route as AdminDashboardViewResultsIndexRouteImport } from './routes/admin-dashboard/view-results/index'
 
+const AdminDashboardV2Route = AdminDashboardV2RouteImport.update({
+  id: '/admin-dashboard-v2',
+  path: '/admin-dashboard-v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardV1Route = AdminDashboardV1RouteImport.update({
+  id: '/admin-dashboard-v1',
+  path: '/admin-dashboard-v1',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -74,6 +86,8 @@ const AdminDashboardViewResultsIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin-dashboard-v1': typeof AdminDashboardV1Route
+  '/admin-dashboard-v2': typeof AdminDashboardV2Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -86,6 +100,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin-dashboard-v1': typeof AdminDashboardV1Route
+  '/admin-dashboard-v2': typeof AdminDashboardV2Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -99,6 +115,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin-dashboard-v1': typeof AdminDashboardV1Route
+  '/admin-dashboard-v2': typeof AdminDashboardV2Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -113,6 +131,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin-dashboard-v1'
+    | '/admin-dashboard-v2'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -125,6 +145,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin-dashboard-v1'
+    | '/admin-dashboard-v2'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -137,6 +159,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin-dashboard-v1'
+    | '/admin-dashboard-v2'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -150,6 +174,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminDashboardV1Route: typeof AdminDashboardV1Route
+  AdminDashboardV2Route: typeof AdminDashboardV2Route
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLoginV1Route: typeof AuthLoginV1Route
   AuthLoginV2Route: typeof AuthLoginV2Route
@@ -163,6 +189,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin-dashboard-v2': {
+      id: '/admin-dashboard-v2'
+      path: '/admin-dashboard-v2'
+      fullPath: '/admin-dashboard-v2'
+      preLoaderRoute: typeof AdminDashboardV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-dashboard-v1': {
+      id: '/admin-dashboard-v1'
+      path: '/admin-dashboard-v1'
+      fullPath: '/admin-dashboard-v1'
+      preLoaderRoute: typeof AdminDashboardV1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -238,6 +278,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminDashboardV1Route: AdminDashboardV1Route,
+  AdminDashboardV2Route: AdminDashboardV2Route,
   AuthLoginRoute: AuthLoginRoute,
   AuthLoginV1Route: AuthLoginV1Route,
   AuthLoginV2Route: AuthLoginV2Route,
