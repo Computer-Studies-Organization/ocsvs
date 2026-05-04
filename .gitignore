@@ -21,5 +21,6 @@ dist/
 .idea
 
 .env
-.dev.varsapps/backend/wrangler.jsonc
 .dev.vars
+
+
