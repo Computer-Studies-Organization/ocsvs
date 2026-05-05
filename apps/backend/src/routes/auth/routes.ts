@@ -5,7 +5,7 @@ import * as httpStatusCodes from '@/openapi/http-status-codes'
 export const registerSchema = z.object({
   firstName: z.string().min(3),
   lastName: z.string().min(2),
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
   username: z.string().min(3).max(20),
   password: z.string().min(8),
   studentId: z.string().length(18),
