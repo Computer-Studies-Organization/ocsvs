@@ -85,6 +85,8 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   const { studentNumber, password } = c.req.valid('json')
   const { db } = createDb(c)
 
+  c.var.logger.info({ studentNumber, passwordLength: password.length }, 'Login attempt')
+
   // Only authenticate by studentId via users table (joined)
   const result = await db
     .select({
@@ -103,7 +105,16 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
     .where(eq(users.studentId, studentNumber))
     .get()
 
-  if (!result || result.deletedAt !== null) {
+  if (!result) {
+    c.var.logger.warn({ studentNumber }, 'User not found')
+    return c.json(
+      { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
+      httpStatusCodes.UNAUTHORIZED,
+    )
+  }
+
+  if (result.deletedAt !== null) {
+    c.var.logger.warn({ studentNumber }, 'User deleted')
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
       httpStatusCodes.UNAUTHORIZED,
@@ -111,6 +122,8 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   }
 
   const isValid = await verifyPassword(password, result.password_hash)
+  c.var.logger.info({ isValid, hashLength: result.password_hash.length }, 'Password verification')
+  
   if (!isValid) {
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
