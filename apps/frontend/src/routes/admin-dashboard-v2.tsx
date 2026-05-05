@@ -1223,7 +1223,7 @@ function RouteComponent() {
               {/* Email */}
               <div className="space-y-2">
                 <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                  Email
+                  Email <span className="text-xs font-normal opacity-60">(Optional)</span>
                 </label>
                 <input
                   name="email"
@@ -1231,7 +1231,6 @@ function RouteComponent() {
                   value={userFormData.email}
                   onChange={handleUserChange}
                   placeholder="Enter email address"
-                  required
                   className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
                   style={{
                     background: 'oklch(0.16 0.020 250)',
