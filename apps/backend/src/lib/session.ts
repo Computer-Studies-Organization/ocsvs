@@ -1,6 +1,6 @@
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { Context } from 'hono'
-import { and, eq, gt } from 'drizzle-orm'
+import { and, eq, gt, isNull } from 'drizzle-orm'
 import { accounts, sessions } from '@/database/schema'
 
 const SESSION_DURATION_DAYS = 7
@@ -70,7 +70,11 @@ export async function getSessionAccount(db: Database, sessionId: string) {
     })
     .from(sessions)
     .innerJoin(accounts, eq(sessions.accountId, accounts.id))
-    .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, now)))
+    .where(and(
+      eq(sessions.id, sessionId),
+      gt(sessions.expiresAt, now),
+      isNull(accounts.deletedAt)
+    ))
     .get()
 
   return result
