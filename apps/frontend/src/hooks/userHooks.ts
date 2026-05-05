@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authMe, loginUser, logoutUser, registerUser, fetchUsers } from "@/api/user_api";
+import { authMe, deleteUser, fetchUser, fetchUsers, loginUser, logoutUser, registerUser, restoreUser, updateUser } from "@/api/user_api";
 import { TUserData } from "@/@types";
 
 export const UserData = (): TUserData | null => {
@@ -52,9 +52,58 @@ export const useAuthMe = () => {
     })
 }
 
-export const useAllUsersQuery = (page: number = 1, limit: number = 100) => {
+export const useAllUsersQuery = (
+    page: number = 1,
+    limit: number = 100,
+    search?: string,
+    yearLevel?: string,
+    course?: string,
+    includeDeleted?: boolean
+) => {
     return useQuery({
-        queryFn: () => fetchUsers(page, limit),
-        queryKey: ["users", page, limit],
+        queryFn: () => fetchUsers(page, limit, search, yearLevel, course, includeDeleted),
+        queryKey: ["users", page, limit, search, yearLevel, course, includeDeleted],
+    })
+}
+
+export const useUserQuery = (userId: string) => {
+    return useQuery({
+        queryFn: () => fetchUser(userId),
+        queryKey: ["user", userId],
+        enabled: !!userId,
+    })
+}
+
+export const useUpdateUserMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ userId, data }: { userId: string; data: any }) => updateUser(userId, data),
+        mutationKey: ["updateUser"],
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+            queryClient.invalidateQueries({ queryKey: ["user"] });
+        }
+    })
+}
+
+export const useDeleteUserMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: deleteUser,
+        mutationKey: ["deleteUser"],
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+        }
+    })
+}
+
+export const useRestoreUserMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: restoreUser,
+        mutationKey: ["restoreUser"],
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+        }
     })
 }

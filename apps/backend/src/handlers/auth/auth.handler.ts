@@ -1,6 +1,6 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
-import { eq, or } from 'drizzle-orm'
+import { eq, isNull, or } from 'drizzle-orm'
 import { createDb } from '@/config/db'
 import { accounts, users } from '@/database/schema'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
@@ -96,13 +96,14 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
       lastLogin: accounts.lastLogin,
+      deletedAt: accounts.deletedAt,
     })
     .from(users)
     .innerJoin(accounts, eq(users.accountId, accounts.id))
     .where(eq(users.studentId, studentNumber))
     .get()
 
-  if (!result) {
+  if (!result || result.deletedAt !== null) {
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },
       httpStatusCodes.UNAUTHORIZED,
