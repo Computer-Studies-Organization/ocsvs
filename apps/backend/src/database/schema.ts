@@ -15,6 +15,7 @@ export const accounts = sqliteTable('accounts', {
   lastLogin: integer('last_login')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  deletedAt: integer('deleted_at'),
   id: text('id').primaryKey(),
   role: text('role').notNull().default('user'),
   username: text('username').notNull().unique(),
