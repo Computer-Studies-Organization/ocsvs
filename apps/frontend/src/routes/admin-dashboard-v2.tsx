@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, X, TrendingUp, Users2, Award, ChevronDown, Loader2Icon, UserPlus, BarChart3, ArrowRight, Menu } from 'lucide-react'
+import { Plus, X, TrendingUp, Users2, Award, ChevronDown, Loader2Icon, UserPlus, BarChart3, ArrowRight, Menu, Dices, Eye, EyeOff } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
 import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
 import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
@@ -149,6 +149,7 @@ function RouteComponent() {
 
   const [formData, setFormData] = useState<Omit<TCandidate, "id">>(EMPTY_CANDIDATE_FORM_DATA)
   const [userFormData, setUserFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
+  const [showPassword, setShowPassword] = useState(false)
 
   const users = useMemo<TUsersData[]>(() => {
     if (!usersData?.data || !Array.isArray(usersData.data)) {
@@ -210,6 +211,7 @@ function RouteComponent() {
     setIsUserModalOpen(false)
     setUserMessage(null)
     setUserFormData(EMPTY_REGISTER_USER_DRAFT)
+    setShowPassword(false)
   }
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -311,6 +313,16 @@ function RouteComponent() {
     setIsModalOpen(false)
     setUserFormData(EMPTY_REGISTER_USER_DRAFT)
     setIsUserModalOpen(true)
+  }
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+    const length = 12
+    let password = ''
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setUserFormData((prev) => ({ ...prev, password }))
   }
 
   return (
@@ -1260,22 +1272,60 @@ function RouteComponent() {
                   <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
                     Password
                   </label>
-                  <input
-                    name="password"
-                    type="password"
-                    value={userFormData.password}
-                    onChange={handleUserChange}
-                    placeholder="Enter password"
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  />
+                  <div className="relative">
+                    <input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={userFormData.password}
+                      onChange={handleUserChange}
+                      placeholder="Enter password"
+                      required
+                      className="w-full px-4 py-3.5 pr-20 rounded-xl border-2 font-semibold transition-all"
+                      style={{
+                        background: 'oklch(0.16 0.020 250)',
+                        borderColor: 'oklch(0.28 0.025 250)',
+                        color: 'oklch(0.95 0.008 250)'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
+                      onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'oklch(0.60 0.015 250)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                          e.currentTarget.style.color = 'oklch(0.70 0.12 280)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+                        }}
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={generateRandomPassword}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'oklch(0.60 0.015 250)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                          e.currentTarget.style.color = 'oklch(0.70 0.12 140)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+                        }}
+                        title="Generate random password"
+                      >
+                        <Dices size={18} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
