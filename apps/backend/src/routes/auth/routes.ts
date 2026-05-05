@@ -8,13 +8,13 @@ export const registerSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   username: z.string().min(3).max(20),
   password: z.string().min(8),
-  studentId: z.string().length(18),
+  studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/, 'Invalid Student ID format'),
   course: z.enum(['BSCS', 'BSIT']),
   yearLevel: z.enum(['1st Year', '2nd Year', '3rd Year', '4th Year']),
 })
 
 export const loginSchema = z.object({
-  studentNumber: z.string().length(18),
+  studentNumber: z.string().regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/, 'Invalid Student ID format'),
   password: z.string(),
 })
 
@@ -34,7 +34,7 @@ export const registerRoute = createRoute({
         message: z.string(),
         user: z.object({
           id: z.string(),
-          email: z.string(),
+          email: z.string().optional(),
           username: z.string(),
           role: z.string(),
           studentId: z.string(),
@@ -85,7 +85,7 @@ export const loginRoute = createRoute({
         message: z.string(),
         user: z.object({
           id: z.string(),
-          email: z.string(),
+          email: z.string().optional(),
           username: z.string(),
           role: z.string(),
         }),
@@ -142,7 +142,7 @@ export const meRoute = createRoute({
       z.object({
         user: z.object({
           id: z.string(),
-          email: z.string(),
+          email: z.string().optional(),
           username: z.string(),
           role: z.string(),
         }),

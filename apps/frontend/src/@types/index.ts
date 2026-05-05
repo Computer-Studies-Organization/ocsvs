@@ -11,7 +11,7 @@ export type TUser = {
     lastName: string,
     yearLevel: TYearLevel,
     course: TCourse,
-    email: string,
+    email?: string,
     hasVoted: boolean,
 }
 

@@ -10,7 +10,7 @@ import {
   isRegisterUserDraftComplete,
 } from "./userRegistration";
 
-test("register draft validation requires an 18 character student ID", () => {
+test("register draft validation rejects invalid student ID format", () => {
   const message = getRegisterUserDraftValidationMessage({
     ...EMPTY_REGISTER_USER_DRAFT,
     studentId: "short-id",
@@ -23,7 +23,7 @@ test("register draft validation requires an 18 character student ID", () => {
     password: "password123",
   });
 
-  assert.equal(message, "Student ID must be exactly 18 characters");
+  assert.equal(message, "Invalid Student ID format (e.g. C25-01-10306-MAN121)");
 });
 
 test("register draft validation accepts a backend-compatible payload", () => {

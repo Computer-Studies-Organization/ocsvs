@@ -21,10 +21,15 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   } = c.req.valid('json')
   const { db } = createDb(c)
 
+  const conditions = [eq(accounts.username, username)]
+  if (email && email.trim()) {
+    conditions.push(eq(accounts.email, email))
+  }
+
   const existing = await db
     .select()
     .from(accounts)
-    .where(or(eq(accounts.email, email), eq(accounts.username, username)))
+    .where(or(...conditions))
     .get()
 
   if (existing) {
@@ -42,7 +47,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
     .values({
       id: accountId,
       username,
-      email,
+      email: email && email.trim() ? email : null,
       password_hash: passwordHash,
       role: 'user',
     })

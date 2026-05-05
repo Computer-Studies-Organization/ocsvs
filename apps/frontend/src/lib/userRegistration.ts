@@ -1,6 +1,7 @@
 import type { TRegisterUser, TRegisterUserDraft } from "@/@types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STUDENT_ID_PATTERN = /^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/;
 
 export const REGISTER_FIELD_LABELS: Record<string, string> = {
   studentId: "Student ID",
@@ -52,7 +53,7 @@ export const getRegisterUserDraftStepOneValidationMessage = (
 ) => {
   const studentId = user.studentId.trim();
   if (!studentId) return "Student ID is required";
-  if (studentId.length !== 18) return "Student ID must be exactly 18 characters";
+  if (!STUDENT_ID_PATTERN.test(studentId)) return "Invalid Student ID format (e.g. C25-01-10306-MAN121)";
 
   const firstName = user.firstName.trim();
   if (!firstName) return "First name is required";
@@ -78,9 +79,8 @@ export const getRegisterUserDraftValidationMessage = (user: TRegisterUserDraft) 
   if (!user.yearLevel) return "Year level is required";
   if (!user.course) return "Course is required";
 
-  const email = user.email.trim();
-  if (!email) return "Email is required";
-  if (!EMAIL_PATTERN.test(email)) return "Enter a valid email address";
+  const email = (user.email || "").trim();
+  if (email && !EMAIL_PATTERN.test(email)) return "Enter a valid email address";
 
   const username = user.username.trim();
   if (!username) return "Username is required";
