@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Loader2Icon, Search, X, Eye, Edit, Archive, RotateCcw, Menu, ChevronDown } from 'lucide-react'
+import { Loader2Icon, X, Menu, ChevronDown } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
 import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation } from '@/hooks/userHooks'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
+import { UsersTable } from './users-table'
 
 export const Route = createFileRoute('/admin-dashboard/users')({
   component: () => (
@@ -18,10 +19,6 @@ type ModalType = 'view' | 'edit' | 'archive' | 'restore' | null
 function RouteComponent() {
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const [yearLevel, setYearLevel] = useState<string>('')
-  const [course, setCourse] = useState<string>('')
   const [includeDeleted, setIncludeDeleted] = useState(false)
   const [modalType, setModalType] = useState<ModalType>(null)
   const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -29,11 +26,11 @@ function RouteComponent() {
   const [message, setMessage] = useState<{ text: string; isSuccess: boolean } | null>(null)
 
   const { data: usersData, isLoading } = useAllUsersQuery(
-    page,
-    25,
-    search || undefined,
-    yearLevel || undefined,
-    course || undefined,
+    1,
+    100, // Max allowed by backend
+    undefined,
+    undefined,
+    undefined,
     includeDeleted
   )
 
@@ -42,7 +39,7 @@ function RouteComponent() {
   const restoreUser = useRestoreUserMutation()
 
   const users = usersData?.data || []
-  const meta = usersData?.meta || { total: 0, page: 1, limit: 25, totalPages: 0 }
+  const meta = usersData?.meta || { total: 0, page: 1, limit: 100, totalPages: 0 }
 
   const openModal = (type: ModalType, user: any) => {
     setSelectedUser(user)
@@ -340,298 +337,18 @@ function RouteComponent() {
         </div>
       </header>
 
-      {/* Search & Filters */}
-      <div 
-        className="border-b"
-        style={{ borderColor: 'oklch(0.25 0.025 250)' }}
-      >
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search 
-                size={18} 
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'oklch(0.60 0.015 250)' }}
-              />
-              <input
-                type="text"
-                placeholder="Search by name, student ID, or username..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 font-medium transition-all"
-                style={{
-                  background: 'oklch(0.18 0.022 250)',
-                  borderColor: 'oklch(0.28 0.025 250)',
-                  color: 'oklch(0.95 0.008 250)'
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
-                onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-              />
-            </div>
-
-            {/* Year Level Filter */}
-            <select
-              value={yearLevel}
-              onChange={(e) => setYearLevel(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border-2 font-semibold transition-all"
-              style={{
-                background: 'oklch(0.18 0.022 250)',
-                borderColor: 'oklch(0.28 0.025 250)',
-                color: 'oklch(0.95 0.008 250)'
-              }}
-            >
-              <option value="">All Years</option>
-              {YEAR_LEVEL_VALUES.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-
-            {/* Course Filter */}
-            <select
-              value={course}
-              onChange={(e) => setCourse(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border-2 font-semibold transition-all"
-              style={{
-                background: 'oklch(0.18 0.022 250)',
-                borderColor: 'oklch(0.28 0.025 250)',
-                color: 'oklch(0.95 0.008 250)'
-              }}
-            >
-              <option value="">All Courses</option>
-              {COURSE_VALUES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-
-            {/* Show Archived Toggle */}
-            <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-semibold cursor-pointer transition-all"
-              style={{
-                background: includeDeleted ? 'oklch(0.25 0.025 250)' : 'oklch(0.18 0.022 250)',
-                borderColor: 'oklch(0.28 0.025 250)',
-                color: 'oklch(0.95 0.008 250)'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={includeDeleted}
-                onChange={(e) => setIncludeDeleted(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span>Show archived</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Users List */}
+      {/* Users Table */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {isLoading ? (
-          <div className="rounded-2xl border p-8" style={{
-            background: 'oklch(0.20 0.022 250)',
-            borderColor: 'oklch(0.25 0.025 250)'
-          }}>
-            <div className="flex items-center justify-center gap-3">
-              <Loader2Icon className="animate-spin" size={24} style={{ color: 'oklch(0.55 0.15 250)' }} />
-              <p className="text-sm font-medium" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                Loading users...
-              </p>
-            </div>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="rounded-2xl border p-8" style={{
-            background: 'oklch(0.20 0.022 250)',
-            borderColor: 'oklch(0.25 0.025 250)'
-          }}>
-            <p className="text-sm text-center" style={{ color: 'oklch(0.70 0.015 250)' }}>
-              No users found.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {users.map((user: any) => (
-              <div
-                key={user.id}
-                className="p-5 rounded-2xl border transition-all"
-                style={{
-                  background: user.deletedAt ? 'oklch(0.18 0.022 250)' : 'oklch(0.20 0.022 250)',
-                  borderColor: 'oklch(0.25 0.025 250)',
-                  opacity: user.deletedAt ? 0.6 : 1
-                }}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 
-                        className="font-bold text-base"
-                        style={{ color: 'oklch(0.95 0.008 250)' }}
-                      >
-                        {user.firstName} {user.lastName}
-                      </h3>
-                      {user.deletedAt && (
-                        <span 
-                          className="px-2 py-0.5 rounded text-xs font-bold"
-                          style={{
-                            background: 'oklch(0.70 0.12 30)',
-                            color: 'oklch(0.98 0.005 250)'
-                          }}
-                        >
-                          ARCHIVED
-                        </span>
-                      )}
-                      {user.hasVoted && (
-                        <span 
-                          className="px-2 py-0.5 rounded text-xs font-bold"
-                          style={{
-                            background: 'oklch(0.70 0.12 140)',
-                            color: 'oklch(0.98 0.005 250)'
-                          }}
-                        >
-                          VOTED
-                        </span>
-                      )}
-                    </div>
-                    <p 
-                      className="text-sm font-medium"
-                      style={{ color: 'oklch(0.70 0.015 250)' }}
-                    >
-                      {user.studentId} • {user.username}
-                    </p>
-                    <p 
-                      className="text-sm font-medium mt-1"
-                      style={{ color: 'oklch(0.60 0.015 250)' }}
-                    >
-                      {user.yearLevel} • {user.course}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {user.deletedAt ? (
-                      <>
-                        <button
-                          onClick={() => openModal('view', user)}
-                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
-                          style={{
-                            background: 'oklch(0.25 0.025 250)',
-                            color: 'oklch(0.95 0.008 250)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.30 0.025 250)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                          }}
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => openModal('restore', user)}
-                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
-                          style={{
-                            background: 'oklch(0.70 0.12 140)',
-                            color: 'oklch(0.98 0.005 250)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.75 0.13 140)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.70 0.12 140)'
-                          }}
-                        >
-                          <RotateCcw size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => openModal('view', user)}
-                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
-                          style={{
-                            background: 'oklch(0.25 0.025 250)',
-                            color: 'oklch(0.95 0.008 250)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.30 0.025 250)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                          }}
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => openModal('edit', user)}
-                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
-                          style={{
-                            background: 'oklch(0.55 0.15 250)',
-                            color: 'oklch(0.98 0.005 250)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.60 0.16 250)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.55 0.15 250)'
-                          }}
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => openModal('archive', user)}
-                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
-                          style={{
-                            background: 'oklch(0.70 0.12 30)',
-                            color: 'oklch(0.98 0.005 250)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.75 0.13 30)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'oklch(0.70 0.12 30)'
-                          }}
-                        >
-                          <Archive size={16} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {meta.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-30"
-              style={{
-                background: 'oklch(0.25 0.025 250)',
-                color: 'oklch(0.95 0.008 250)'
-              }}
-            >
-              ←
-            </button>
-            <span 
-              className="px-4 py-2 font-bold"
-              style={{ color: 'oklch(0.95 0.008 250)' }}
-            >
-              {page} / {meta.totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
-              disabled={page === meta.totalPages}
-              className="px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-30"
-              style={{
-                background: 'oklch(0.25 0.025 250)',
-                color: 'oklch(0.95 0.008 250)'
-              }}
-            >
-              →
-            </button>
-          </div>
-        )}
+        <UsersTable
+          users={users}
+          isLoading={isLoading}
+          includeDeleted={includeDeleted}
+          onIncludeDeletedChange={setIncludeDeleted}
+          onView={(user) => openModal('view', user)}
+          onEdit={(user) => openModal('edit', user)}
+          onArchive={(user) => openModal('archive', user)}
+          onRestore={(user) => openModal('restore', user)}
+        />
       </div>
 
       {/* Modals */}
