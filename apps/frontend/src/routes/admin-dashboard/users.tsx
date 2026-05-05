@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Loader2Icon, Search, X, Eye, Edit, Archive, RotateCcw } from 'lucide-react'
+import { Loader2Icon, Search, X, Eye, Edit, Archive, RotateCcw, Menu, ChevronDown } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
 import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation } from '@/hooks/userHooks'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
@@ -16,6 +16,8 @@ export const Route = createFileRoute('/admin-dashboard/users')({
 type ModalType = 'view' | 'edit' | 'archive' | 'restore' | null
 
 function RouteComponent() {
+  const navigate = useNavigate()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [yearLevel, setYearLevel] = useState<string>('')
@@ -130,6 +132,171 @@ function RouteComponent() {
       className="min-h-screen"
       style={{ background: 'oklch(0.16 0.020 250)' }}
     >
+      {/* Mobile overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ background: 'oklch(0.10 0.015 250 / 0.8)' }}
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside 
+        className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-50 transition-all duration-300 ${
+          isSidebarOpen ? 'w-64' : 'w-0 lg:w-16'
+        }`}
+        style={{
+          background: 'oklch(0.18 0.022 250)',
+          borderColor: 'oklch(0.25 0.025 250)'
+        }}
+      >
+        <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'oklch(0.25 0.025 250)' }}>
+          {isSidebarOpen && (
+            <>
+              <div>
+                <h1 
+                  className="text-xl font-black tracking-tight"
+                  style={{ color: 'oklch(0.95 0.008 250)' }}
+                >
+                  OCSVS Admin
+                </h1>
+                <p 
+                  className="text-xs font-semibold mt-1"
+                  style={{ color: 'oklch(0.60 0.015 250)' }}
+                >
+                  Election Control Panel
+                </p>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="hidden lg:block p-1.5 rounded-lg transition-colors"
+                style={{ color: 'oklch(0.60 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+                }}
+              >
+                <ChevronDown size={20} strokeWidth={2.5} style={{ transform: 'rotate(-90deg)' }} />
+              </button>
+            </>
+          )}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="hidden lg:block p-1.5 rounded-lg transition-colors mx-auto"
+              style={{ color: 'oklch(0.60 0.015 250)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
+              }}
+            >
+              <ChevronDown size={20} strokeWidth={2.5} style={{ transform: 'rotate(90deg)' }} />
+            </button>
+          )}
+        </div>
+
+        {isSidebarOpen && (
+          <>
+            <nav className="flex-1 p-4 space-y-2">
+              <button
+                onClick={() => navigate({ to: '/admin-dashboard-v2' })}
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Candidates
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-all"
+                style={{
+                  background: 'oklch(0.55 0.15 250)',
+                  color: 'oklch(0.98 0.005 250)'
+                }}
+              >
+                Users
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Results
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Settings
+              </button>
+            </nav>
+
+            <div 
+              className="p-4 m-4 rounded-xl"
+              style={{ background: 'oklch(0.20 0.022 250)' }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-black"
+                  style={{
+                    background: 'oklch(0.55 0.15 250)',
+                    color: 'oklch(0.98 0.005 250)'
+                  }}
+                >
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p 
+                    className="font-bold text-sm truncate"
+                    style={{ color: 'oklch(0.95 0.008 250)' }}
+                  >
+                    Admin User
+                  </p>
+                  <p 
+                    className="text-xs truncate"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    admin@ocsvs.edu
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </aside>
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-16'}`}>
       {/* Header */}
       <header 
         className="border-b"
@@ -139,19 +306,36 @@ function RouteComponent() {
         }}
       >
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div>
-            <h1 
-              className="text-3xl font-black"
-              style={{ color: 'oklch(0.95 0.008 250)' }}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl transition-colors"
+              style={{ color: 'oklch(0.70 0.015 250)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+              }}
             >
-              User Management
-            </h1>
-            <p 
-              className="text-sm font-medium mt-1"
-              style={{ color: 'oklch(0.65 0.015 250)' }}
-            >
-              {meta.total} registered users
-            </p>
+              <Menu size={24} strokeWidth={2.5} />
+            </button>
+            <div>
+              <h1 
+                className="text-3xl font-black"
+                style={{ color: 'oklch(0.95 0.008 250)' }}
+              >
+                User Management
+              </h1>
+              <p 
+                className="text-sm font-medium mt-1"
+                style={{ color: 'oklch(0.65 0.015 250)' }}
+              >
+                {meta.total} registered users
+              </p>
+            </div>
           </div>
         </div>
       </header>
@@ -886,6 +1070,7 @@ function RouteComponent() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
