@@ -1,6 +1,6 @@
+import * as handlers from '@/handlers/profile/profile.handler'
 import { createRouter } from '@/lib/create-app'
 import { requireAuth } from '@/middleware/auth'
-import * as handlers from '@/handlers/profile/profile.handler'
 import * as routes from './routes'
 
 const router = createRouter()
