@@ -1,0 +1,891 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Loader2Icon, Search, X, Eye, Edit, Archive, RotateCcw } from 'lucide-react'
+import { AdminRoute } from '@/middleware'
+import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation } from '@/hooks/userHooks'
+import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
+
+export const Route = createFileRoute('/admin-dashboard/users')({
+  component: () => (
+    <AdminRoute>
+      <RouteComponent />
+    </AdminRoute>
+  ),
+})
+
+type ModalType = 'view' | 'edit' | 'archive' | 'restore' | null
+
+function RouteComponent() {
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [yearLevel, setYearLevel] = useState<string>('')
+  const [course, setCourse] = useState<string>('')
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [modalType, setModalType] = useState<ModalType>(null)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [editForm, setEditForm] = useState<any>({})
+  const [message, setMessage] = useState<{ text: string; isSuccess: boolean } | null>(null)
+
+  const { data: usersData, isLoading } = useAllUsersQuery(
+    page,
+    25,
+    search || undefined,
+    yearLevel || undefined,
+    course || undefined,
+    includeDeleted
+  )
+
+  const updateUser = useUpdateUserMutation()
+  const deleteUser = useDeleteUserMutation()
+  const restoreUser = useRestoreUserMutation()
+
+  const users = usersData?.data || []
+  const meta = usersData?.meta || { total: 0, page: 1, limit: 25, totalPages: 0 }
+
+  const openModal = (type: ModalType, user: any) => {
+    setSelectedUser(user)
+    setModalType(type)
+    if (type === 'edit') {
+      setEditForm({
+        username: user.username,
+        email: user.email || '',
+        firstName: user.firstName,
+        lastName: user.lastName,
+        yearLevel: user.yearLevel,
+        course: user.course,
+      })
+    }
+  }
+
+  const closeModal = () => {
+    setModalType(null)
+    setSelectedUser(null)
+    setEditForm({})
+    setMessage(null)
+  }
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedUser) return
+
+    await updateUser.mutateAsync(
+      { userId: selectedUser.id, data: editForm },
+      {
+        onSuccess: () => {
+          setMessage({ text: 'User updated successfully', isSuccess: true })
+          setTimeout(() => {
+            closeModal()
+          }, 1500)
+        },
+        onError: (error: any) => {
+          setMessage({ 
+            text: error.response?.data?.message || 'Failed to update user', 
+            isSuccess: false 
+          })
+        }
+      }
+    )
+  }
+
+  const handleArchive = async () => {
+    if (!selectedUser) return
+
+    await deleteUser.mutateAsync(selectedUser.id, {
+      onSuccess: () => {
+        setMessage({ text: 'User archived successfully', isSuccess: true })
+        setTimeout(() => {
+          closeModal()
+        }, 1500)
+      },
+      onError: (error: any) => {
+        setMessage({ 
+          text: error.response?.data?.message || 'Failed to archive user', 
+          isSuccess: false 
+        })
+      }
+    })
+  }
+
+  const handleRestore = async () => {
+    if (!selectedUser) return
+
+    await restoreUser.mutateAsync(selectedUser.id, {
+      onSuccess: () => {
+        setMessage({ text: 'User restored successfully', isSuccess: true })
+        setTimeout(() => {
+          closeModal()
+        }, 1500)
+      },
+      onError: (error: any) => {
+        setMessage({ 
+          text: error.response?.data?.message || 'Failed to restore user', 
+          isSuccess: false 
+        })
+      }
+    })
+  }
+
+  return (
+    <div 
+      className="min-h-screen"
+      style={{ background: 'oklch(0.16 0.020 250)' }}
+    >
+      {/* Header */}
+      <header 
+        className="border-b"
+        style={{
+          background: 'oklch(0.18 0.022 250)',
+          borderColor: 'oklch(0.25 0.025 250)'
+        }}
+      >
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
+          <div>
+            <h1 
+              className="text-3xl font-black"
+              style={{ color: 'oklch(0.95 0.008 250)' }}
+            >
+              User Management
+            </h1>
+            <p 
+              className="text-sm font-medium mt-1"
+              style={{ color: 'oklch(0.65 0.015 250)' }}
+            >
+              {meta.total} registered users
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {/* Search & Filters */}
+      <div 
+        className="border-b"
+        style={{ borderColor: 'oklch(0.25 0.025 250)' }}
+      >
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search 
+                size={18} 
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'oklch(0.60 0.015 250)' }}
+              />
+              <input
+                type="text"
+                placeholder="Search by name, student ID, or username..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 font-medium transition-all"
+                style={{
+                  background: 'oklch(0.18 0.022 250)',
+                  borderColor: 'oklch(0.28 0.025 250)',
+                  color: 'oklch(0.95 0.008 250)'
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
+                onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+              />
+            </div>
+
+            {/* Year Level Filter */}
+            <select
+              value={yearLevel}
+              onChange={(e) => setYearLevel(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border-2 font-semibold transition-all"
+              style={{
+                background: 'oklch(0.18 0.022 250)',
+                borderColor: 'oklch(0.28 0.025 250)',
+                color: 'oklch(0.95 0.008 250)'
+              }}
+            >
+              <option value="">All Years</option>
+              {YEAR_LEVEL_VALUES.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+
+            {/* Course Filter */}
+            <select
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border-2 font-semibold transition-all"
+              style={{
+                background: 'oklch(0.18 0.022 250)',
+                borderColor: 'oklch(0.28 0.025 250)',
+                color: 'oklch(0.95 0.008 250)'
+              }}
+            >
+              <option value="">All Courses</option>
+              {COURSE_VALUES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            {/* Show Archived Toggle */}
+            <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-semibold cursor-pointer transition-all"
+              style={{
+                background: includeDeleted ? 'oklch(0.25 0.025 250)' : 'oklch(0.18 0.022 250)',
+                borderColor: 'oklch(0.28 0.025 250)',
+                color: 'oklch(0.95 0.008 250)'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={includeDeleted}
+                onChange={(e) => setIncludeDeleted(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span>Show archived</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Users List */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {isLoading ? (
+          <div className="rounded-2xl border p-8" style={{
+            background: 'oklch(0.20 0.022 250)',
+            borderColor: 'oklch(0.25 0.025 250)'
+          }}>
+            <div className="flex items-center justify-center gap-3">
+              <Loader2Icon className="animate-spin" size={24} style={{ color: 'oklch(0.55 0.15 250)' }} />
+              <p className="text-sm font-medium" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                Loading users...
+              </p>
+            </div>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="rounded-2xl border p-8" style={{
+            background: 'oklch(0.20 0.022 250)',
+            borderColor: 'oklch(0.25 0.025 250)'
+          }}>
+            <p className="text-sm text-center" style={{ color: 'oklch(0.70 0.015 250)' }}>
+              No users found.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {users.map((user: any) => (
+              <div
+                key={user.id}
+                className="p-5 rounded-2xl border transition-all"
+                style={{
+                  background: user.deletedAt ? 'oklch(0.18 0.022 250)' : 'oklch(0.20 0.022 250)',
+                  borderColor: 'oklch(0.25 0.025 250)',
+                  opacity: user.deletedAt ? 0.6 : 1
+                }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 
+                        className="font-bold text-base"
+                        style={{ color: 'oklch(0.95 0.008 250)' }}
+                      >
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      {user.deletedAt && (
+                        <span 
+                          className="px-2 py-0.5 rounded text-xs font-bold"
+                          style={{
+                            background: 'oklch(0.70 0.12 30)',
+                            color: 'oklch(0.98 0.005 250)'
+                          }}
+                        >
+                          ARCHIVED
+                        </span>
+                      )}
+                      {user.hasVoted && (
+                        <span 
+                          className="px-2 py-0.5 rounded text-xs font-bold"
+                          style={{
+                            background: 'oklch(0.70 0.12 140)',
+                            color: 'oklch(0.98 0.005 250)'
+                          }}
+                        >
+                          VOTED
+                        </span>
+                      )}
+                    </div>
+                    <p 
+                      className="text-sm font-medium"
+                      style={{ color: 'oklch(0.70 0.015 250)' }}
+                    >
+                      {user.studentId} • {user.username}
+                    </p>
+                    <p 
+                      className="text-sm font-medium mt-1"
+                      style={{ color: 'oklch(0.60 0.015 250)' }}
+                    >
+                      {user.yearLevel} • {user.course}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {user.deletedAt ? (
+                      <>
+                        <button
+                          onClick={() => openModal('view', user)}
+                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
+                          style={{
+                            background: 'oklch(0.25 0.025 250)',
+                            color: 'oklch(0.95 0.008 250)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.30 0.025 250)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => openModal('restore', user)}
+                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
+                          style={{
+                            background: 'oklch(0.70 0.12 140)',
+                            color: 'oklch(0.98 0.005 250)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.75 0.13 140)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.70 0.12 140)'
+                          }}
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => openModal('view', user)}
+                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
+                          style={{
+                            background: 'oklch(0.25 0.025 250)',
+                            color: 'oklch(0.95 0.008 250)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.30 0.025 250)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => openModal('edit', user)}
+                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
+                          style={{
+                            background: 'oklch(0.55 0.15 250)',
+                            color: 'oklch(0.98 0.005 250)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.60 0.16 250)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.55 0.15 250)'
+                          }}
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => openModal('archive', user)}
+                          className="px-3 py-1.5 rounded-lg font-bold text-sm transition-all"
+                          style={{
+                            background: 'oklch(0.70 0.12 30)',
+                            color: 'oklch(0.98 0.005 250)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.75 0.13 30)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'oklch(0.70 0.12 30)'
+                          }}
+                        >
+                          <Archive size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {meta.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-30"
+              style={{
+                background: 'oklch(0.25 0.025 250)',
+                color: 'oklch(0.95 0.008 250)'
+              }}
+            >
+              ←
+            </button>
+            <span 
+              className="px-4 py-2 font-bold"
+              style={{ color: 'oklch(0.95 0.008 250)' }}
+            >
+              {page} / {meta.totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+              disabled={page === meta.totalPages}
+              className="px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-30"
+              style={{
+                background: 'oklch(0.25 0.025 250)',
+                color: 'oklch(0.95 0.008 250)'
+              }}
+            >
+              →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {modalType && selectedUser && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'oklch(0.10 0.015 250 / 0.8)' }}
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto border"
+            style={{
+              background: 'oklch(0.20 0.022 250)',
+              borderColor: 'oklch(0.30 0.025 250)',
+              boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* View Modal */}
+            {modalType === 'view' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    User Details
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    <X size={24} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                      Student ID
+                    </p>
+                    <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                      {selectedUser.studentId}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        First Name
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.firstName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Last Name
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.lastName}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Username
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.username}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Email
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.email || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Year Level
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.yearLevel}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Course
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.course}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Has Voted
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.hasVoted ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Role
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                        {selectedUser.role}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedUser.deletedAt && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'oklch(0.60 0.015 250)' }}>
+                        Archived At
+                      </p>
+                      <p className="font-semibold" style={{ color: 'oklch(0.70 0.12 30)' }}>
+                        {new Date(selectedUser.deletedAt * 1000).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Edit Modal */}
+            {modalType === 'edit' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Edit User
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    <X size={24} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <form onSubmit={handleEdit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.username}
+                        onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.firstName}
+                        onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.lastName}
+                        onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Year Level
+                      </label>
+                      <select
+                        value={editForm.yearLevel}
+                        onChange={(e) => setEditForm({ ...editForm, yearLevel: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      >
+                        {YEAR_LEVEL_VALUES.map((year) => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Course
+                      </label>
+                      <select
+                        value={editForm.course}
+                        onChange={(e) => setEditForm({ ...editForm, course: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      >
+                        {COURSE_VALUES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {message && (
+                    <div
+                      className="px-4 py-3 rounded-xl font-bold text-sm"
+                      style={{
+                        background: message.isSuccess ? 'oklch(0.70 0.12 140)' : 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.70 0.015 250)'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updateUser.isPending}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                      style={{
+                        background: 'oklch(0.55 0.15 250)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {updateUser.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                      {updateUser.isPending ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* Archive Modal */}
+            {modalType === 'archive' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Archive User?
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    <X size={24} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Archive {selectedUser.firstName} {selectedUser.lastName} ({selectedUser.studentId})?
+                  </p>
+                  <div className="p-4 rounded-xl" style={{ background: 'oklch(0.18 0.022 250)' }}>
+                    <p className="text-sm font-medium mb-2" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                      This user will:
+                    </p>
+                    <ul className="text-sm space-y-1" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      <li>• No longer appear in active users list</li>
+                      <li>• Be unable to log in</li>
+                      <li>• Retain all voting records</li>
+                      <li>• Can be restored later</li>
+                    </ul>
+                  </div>
+                  {message && (
+                    <div
+                      className="px-4 py-3 rounded-xl font-bold text-sm"
+                      style={{
+                        background: message.isSuccess ? 'oklch(0.70 0.12 140)' : 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.70 0.015 250)'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleArchive}
+                      disabled={deleteUser.isPending}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                      style={{
+                        background: 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {deleteUser.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                      {deleteUser.isPending ? 'Archiving...' : 'Archive User'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Restore Modal */}
+            {modalType === 'restore' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Restore User?
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    <X size={24} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <p className="font-semibold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Restore {selectedUser.firstName} {selectedUser.lastName} ({selectedUser.studentId})?
+                  </p>
+                  <div className="p-4 rounded-xl" style={{ background: 'oklch(0.18 0.022 250)' }}>
+                    <p className="text-sm font-medium mb-2" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                      This user will:
+                    </p>
+                    <ul className="text-sm space-y-1" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      <li>• Appear in active users list</li>
+                      <li>• Be able to log in again</li>
+                      <li>• Retain all previous data and votes</li>
+                    </ul>
+                  </div>
+                  {message && (
+                    <div
+                      className="px-4 py-3 rounded-xl font-bold text-sm"
+                      style={{
+                        background: message.isSuccess ? 'oklch(0.70 0.12 140)' : 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.70 0.015 250)'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleRestore}
+                      disabled={restoreUser.isPending}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                      style={{
+                        background: 'oklch(0.70 0.12 140)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {restoreUser.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                      {restoreUser.isPending ? 'Restoring...' : 'Restore User'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

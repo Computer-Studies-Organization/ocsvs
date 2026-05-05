@@ -19,6 +19,7 @@ import { Route as AuthLoginV3RouteImport } from './routes/auth/login-v3'
 import { Route as AuthLoginV2RouteImport } from './routes/auth/login-v2'
 import { Route as AuthLoginV1RouteImport } from './routes/auth/login-v1'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AdminDashboardUsersRouteImport } from './routes/admin-dashboard/users'
 import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
 import { Route as AdminDashboardViewResultsIndexRouteImport } from './routes/admin-dashboard/view-results/index'
 
@@ -72,6 +73,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDashboardUsersRoute = AdminDashboardUsersRouteImport.update({
+  id: '/admin-dashboard/users',
+  path: '/admin-dashboard/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardMyBallotIndexRoute = DashboardMyBallotIndexRouteImport.update({
   id: '/dashboard/my-ballot/',
   path: '/dashboard/my-ballot/',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
   '/auth/login-v2': typeof AuthLoginV2Route
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
     | '/auth/login-v2'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminDashboardV1Route: typeof AdminDashboardV1Route
   AdminDashboardV2Route: typeof AdminDashboardV2Route
+  AdminDashboardUsersRoute: typeof AdminDashboardUsersRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLoginV1Route: typeof AuthLoginV1Route
   AuthLoginV2Route: typeof AuthLoginV2Route
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin-dashboard/users': {
+      id: '/admin-dashboard/users'
+      path: '/admin-dashboard/users'
+      fullPath: '/admin-dashboard/users'
+      preLoaderRoute: typeof AdminDashboardUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/my-ballot/': {
       id: '/dashboard/my-ballot/'
       path: '/dashboard/my-ballot'
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminDashboardV1Route: AdminDashboardV1Route,
   AdminDashboardV2Route: AdminDashboardV2Route,
+  AdminDashboardUsersRoute: AdminDashboardUsersRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLoginV1Route: AuthLoginV1Route,
   AuthLoginV2Route: AuthLoginV2Route,

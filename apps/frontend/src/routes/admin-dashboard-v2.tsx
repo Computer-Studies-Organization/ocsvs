@@ -415,6 +415,21 @@ function RouteComponent() {
             Candidates
           </button>
           <button
+            onClick={() => navigate({ to: '/admin-dashboard/users' })}
+            className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+            style={{ color: 'oklch(0.70 0.015 250)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+              e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+            }}
+          >
+            Users
+          </button>
+          <button
             className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
             style={{ color: 'oklch(0.70 0.015 250)' }}
             onMouseEnter={(e) => {
