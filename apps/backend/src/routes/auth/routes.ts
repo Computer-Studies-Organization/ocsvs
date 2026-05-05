@@ -85,7 +85,7 @@ export const loginRoute = createRoute({
         message: z.string(),
         user: z.object({
           id: z.string(),
-          email: z.string().optional(),
+          email: z.string().nullable(),
           username: z.string(),
           role: z.string(),
         }),
@@ -142,7 +142,7 @@ export const meRoute = createRoute({
       z.object({
         user: z.object({
           id: z.string(),
-          email: z.string().optional(),
+          email: z.string().nullable(),
           username: z.string(),
           role: z.string(),
         }),

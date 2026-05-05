@@ -267,6 +267,14 @@ function RouteComponent() {
                     )}
 
                     <button
+                      onClick={() => navigate({ to: '/settings' })}
+                      className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"
+                    >
+                      <span>Profile Settings</span>
+                      <Settings size={18} className="text-sky-400" />
+                    </button>
+
+                    <button
                       onClick={() => navigate({ to: '/dashboard/my-ballot' })}
                       className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"
                     >
