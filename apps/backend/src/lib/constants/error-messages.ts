@@ -18,6 +18,7 @@ export const ERROR_MESSAGES = {
   // Conflict errors
   CANDIDATE_ALREADY_EXISTS: 'Candidate already exists for this position',
   USER_ALREADY_EXISTS: 'User already exists',
+  USERNAME_ALREADY_EXISTS: 'Username already exists',
   VOTE_ALREADY_CAST: 'You have already voted',
 
   // Validation errors
@@ -26,6 +27,8 @@ export const ERROR_MESSAGES = {
   INVALID_CANDIDATE: 'Invalid candidate',
   CANDIDATE_INACTIVE: 'Candidate is not active',
   DUPLICATE_POSITION_VOTE: 'Cannot vote for multiple candidates in the same position',
+  CURRENT_PASSWORD_INCORRECT: 'Current password is incorrect',
+  PASSWORD_TOO_SHORT: 'Password must be at least 8 characters',
 
   // Success messages
   CANDIDATE_CREATED_SUCCESSFULLY: 'Candidate created successfully',
@@ -36,6 +39,8 @@ export const ERROR_MESSAGES = {
   LOGGED_OUT_SUCCESSFULLY: 'Logged out successfully',
   VOTE_SUBMITTED_SUCCESSFULLY: 'Vote submitted successfully',
   VOTE_WITHDRAWN_SUCCESSFULLY: 'Vote withdrawn successfully',
+  PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully',
+  PASSWORD_CHANGED_SUCCESSFULLY: 'Password changed successfully',
 
   // Server errors
   INTERNAL_SERVER_ERROR: 'Internal server error',

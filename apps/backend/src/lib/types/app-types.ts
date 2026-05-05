@@ -4,7 +4,7 @@ import type { Environment } from '@/middleware/env'
 
 export interface AuthUser {
   id: string
-  email: string
+  email: string | null
   username: string
   role: string
 }

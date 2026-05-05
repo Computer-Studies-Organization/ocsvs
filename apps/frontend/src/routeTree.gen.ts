@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AdminDashboardV2RouteImport } from './routes/admin-dashboard-v2'
 import { Route as AdminDashboardV1RouteImport } from './routes/admin-dashboard-v1'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ import { Route as AdminDashboardUsersRouteImport } from './routes/admin-dashboar
 import { Route as DashboardMyBallotIndexRouteImport } from './routes/dashboard/my-ballot/index'
 import { Route as AdminDashboardViewResultsIndexRouteImport } from './routes/admin-dashboard/view-results/index'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDashboardV2Route = AdminDashboardV2RouteImport.update({
   id: '/admin-dashboard-v2',
   path: '/admin-dashboard-v2',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/settings': typeof SettingsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/settings': typeof SettingsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin-dashboard-v1': typeof AdminDashboardV1Route
   '/admin-dashboard-v2': typeof AdminDashboardV2Route
+  '/settings': typeof SettingsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/login-v1': typeof AuthLoginV1Route
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/settings'
     | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/settings'
     | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-dashboard-v1'
     | '/admin-dashboard-v2'
+    | '/settings'
     | '/admin-dashboard/users'
     | '/auth/login'
     | '/auth/login-v1'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminDashboardV1Route: typeof AdminDashboardV1Route
   AdminDashboardV2Route: typeof AdminDashboardV2Route
+  SettingsRoute: typeof SettingsRoute
   AdminDashboardUsersRoute: typeof AdminDashboardUsersRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLoginV1Route: typeof AuthLoginV1Route
@@ -202,6 +215,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin-dashboard-v2': {
       id: '/admin-dashboard-v2'
       path: '/admin-dashboard-v2'
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminDashboardV1Route: AdminDashboardV1Route,
   AdminDashboardV2Route: AdminDashboardV2Route,
+  SettingsRoute: SettingsRoute,
   AdminDashboardUsersRoute: AdminDashboardUsersRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLoginV1Route: AuthLoginV1Route,
