@@ -1,20 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, X, TrendingUp, Users2, Award, ChevronDown, Loader2Icon, UserPlus, BarChart3, ArrowRight, Menu, Dices, Eye, EyeOff } from 'lucide-react'
+import { Plus, X, TrendingUp, Users2, Award, ChevronDown, Loader2Icon, BarChart3, Menu } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
 import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
-import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
+import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
 import { getAdminDashboardActiveFeedback, type AdminDashboardFeedback } from '@/lib/adminFeedback'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
 import {
   CANDIDATE_FIELD_LABELS,
-  EMPTY_REGISTER_USER_DRAFT,
-  REGISTER_FIELD_LABELS,
   getMutationErrorMessage,
-  getRegisterUserDraftValidationMessage,
-  isRegisterUserDraftComplete,
 } from '@/lib/userRegistration'
 import { cn } from '@/lib/utils'
 
@@ -67,21 +63,18 @@ function RouteComponent() {
   const userData = UserData()
   const navigate = useNavigate()
   const createCandidate = useCreateCandidateMutation()
-  const createUser = useRegisterUserMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
   const [candidateMessage, setCandidateMessage] = useState<AdminDashboardFeedback | null>(null)
-  const [userMessage, setUserMessage] = useState<AdminDashboardFeedback | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
   const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set(POSITIONS.map(p => p.value)))
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const activeFeedback = getAdminDashboardActiveFeedback({
     candidateMessage,
-    userMessage,
+    userMessage: null,
     isCandidateModalOpen: isModalOpen,
-    isUserModalOpen: isUserModalOpen,
+    isUserModalOpen: false,
   })
 
   // Fetch vote counts for all candidates
@@ -148,8 +141,6 @@ function RouteComponent() {
   }, [candidatesData, voteCounts])
 
   const [formData, setFormData] = useState<Omit<TCandidate, "id">>(EMPTY_CANDIDATE_FORM_DATA)
-  const [userFormData, setUserFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
-  const [showPassword, setShowPassword] = useState(false)
 
   const users = useMemo<TUsersData[]>(() => {
     if (!usersData?.data || !Array.isArray(usersData.data)) {
@@ -207,60 +198,8 @@ function RouteComponent() {
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
   }
 
-  const closeUserModal = () => {
-    setIsUserModalOpen(false)
-    setUserMessage(null)
-    setUserFormData(EMPTY_REGISTER_USER_DRAFT)
-    setShowPassword(false)
-  }
-
-  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const name = e.target.name as keyof typeof EMPTY_REGISTER_USER_DRAFT
-    const { value } = e.target
-    setUserMessage(null)
-    setUserFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCandidateMessage(null)
-    setUserMessage(null)
-
-    const validationMessage = getRegisterUserDraftValidationMessage(userFormData)
-    if (validationMessage) {
-      setUserMessage({ message: validationMessage, isSuccess: false })
-      return
-    }
-
-    if (!isRegisterUserDraftComplete(userFormData)) return
-
-    await createUser.mutateAsync(userFormData, {
-      onSuccess: (data) => {
-        setUserMessage({
-          message: data.message || "User created successfully",
-          isSuccess: true,
-        })
-        setUserFormData(EMPTY_REGISTER_USER_DRAFT)
-        setIsUserModalOpen(false)
-        setTimeout(() => {
-          setUserMessage(null)
-        }, 2500)
-      },
-      onError: (error: unknown) => {
-        setUserMessage({
-          message: getMutationErrorMessage(error, "Failed to create user", REGISTER_FIELD_LABELS),
-          isSuccess: false,
-        })
-      }
-    })
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setUserMessage(null)
     setCandidateMessage(null)
 
     if (!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim()) {
@@ -301,28 +240,8 @@ function RouteComponent() {
 
   const openCreateModal = () => {
     setCandidateMessage(null)
-    setUserMessage(null)
-    setIsUserModalOpen(false)
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
     setIsModalOpen(true)
-  }
-
-  const openUserModal = () => {
-    setUserMessage(null)
-    setCandidateMessage(null)
-    setIsModalOpen(false)
-    setUserFormData(EMPTY_REGISTER_USER_DRAFT)
-    setIsUserModalOpen(true)
-  }
-
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-    const length = 12
-    let password = ''
-    for (let i = 0; i < length; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    setUserFormData((prev) => ({ ...prev, password }))
   }
 
   return (
@@ -444,6 +363,7 @@ function RouteComponent() {
             Results
           </button>
           <button
+            onClick={() => navigate({ to: '/settings' })}
             className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
             style={{ color: 'oklch(0.70 0.015 250)' }}
             onMouseEnter={(e) => {
@@ -460,8 +380,15 @@ function RouteComponent() {
         </nav>
 
         <div 
-          className="p-4 m-4 rounded-xl"
+          className="p-4 m-4 rounded-xl cursor-pointer transition-colors"
           style={{ background: 'oklch(0.20 0.022 250)' }}
+          onClick={() => navigate({ to: '/settings' })}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'oklch(0.22 0.024 250)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+          }}
         >
           <div className="flex items-center gap-3 mb-3">
             <div 
@@ -537,26 +464,6 @@ function RouteComponent() {
                 </div>
               </div>
               <div className="hidden lg:flex gap-3">
-                <button
-                  onClick={openUserModal}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg"
-                  style={{
-                    background: 'oklch(0.70 0.12 140)',
-                    color: 'oklch(0.98 0.005 250)',
-                    boxShadow: '0 10px 25px -5px oklch(0.70 0.12 140 / 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'oklch(0.75 0.13 140)'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'oklch(0.70 0.12 140)'
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }}
-                >
-                  <UserPlus size={18} strokeWidth={2.5} />
-                  <span className="hidden sm:inline">Create User</span>
-                </button>
                 <button
                   onClick={() => navigate({ to: '/admin-dashboard/view-results' })}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg"
@@ -810,24 +717,7 @@ function RouteComponent() {
       </div>
 
       {/* FAB - Mobile only */}
-      <div className="lg:hidden fixed bottom-6 right-6 flex flex-col gap-3 z-30">
-        <button
-          onClick={openUserModal}
-          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all"
-          style={{
-            background: 'oklch(0.70 0.12 140)',
-            color: 'oklch(0.98 0.005 250)',
-            boxShadow: '0 10px 30px -5px oklch(0.70 0.12 140 / 0.5)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.1)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)'
-          }}
-        >
-          <UserPlus size={24} strokeWidth={2.5} />
-        </button>
+      <div className="lg:hidden fixed bottom-6 right-6 z-30">
         <button
           onClick={openCreateModal}
           className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all"
@@ -1054,341 +944,6 @@ function RouteComponent() {
                 >
                   {createCandidate.isPending && <Loader2Icon className='animate-spin' size={20} />}
                   {createCandidate.isPending ? "Creating..." : "Add Candidate"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Create User Modal - Same styling as V1 but adapted to V2 design */}
-      {isUserModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'oklch(0.10 0.015 250 / 0.8)' }}
-          onClick={() => {
-            if (!createUser.isPending) {
-              closeUserModal()
-            }
-          }}
-        >
-          <div
-            className="w-full max-w-2xl rounded-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto border"
-            style={{
-              background: 'oklch(0.20 0.022 250)',
-              borderColor: 'oklch(0.30 0.025 250)',
-              boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 
-                className="text-2xl font-black"
-                style={{ color: 'oklch(0.95 0.008 250)' }}
-              >
-                Create New User
-              </h2>
-              <button
-                onClick={() => {
-                  if (!createUser.isPending) {
-                    closeUserModal()
-                  }
-                }}
-                className="p-2 rounded-xl transition-colors"
-                style={{ color: 'oklch(0.60 0.015 250)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
-                }}
-              >
-                <X size={24} strokeWidth={2.5} />
-              </button>
-            </div>
-
-            <form onSubmit={handleUserSubmit} className="space-y-5">
-              {/* Student ID */}
-              <div className="space-y-2">
-                <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                  Student ID
-                </label>
-                <input
-                  name="studentId"
-                  type="text"
-                  value={userFormData.studentId}
-                  onChange={handleUserChange}
-                  placeholder="C23-00-0000-MAN121"
-                  required
-                  className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                  style={{
-                    background: 'oklch(0.16 0.020 250)',
-                    borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* First Name */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    First Name
-                  </label>
-                  <input
-                    name="firstName"
-                    type="text"
-                    value={userFormData.firstName}
-                    onChange={handleUserChange}
-                    placeholder="Enter first name"
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  />
-                </div>
-
-                {/* Last Name */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    Last Name
-                  </label>
-                  <input
-                    name="lastName"
-                    type="text"
-                    value={userFormData.lastName}
-                    onChange={handleUserChange}
-                    placeholder="Enter last name"
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Year Level */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    Year Level
-                  </label>
-                  <select
-                    name="yearLevel"
-                    value={userFormData.yearLevel}
-                    onChange={handleUserChange}
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  >
-                    <option value="">Select year level</option>
-                    {YEAR_LEVELS.map((year) => (
-                      <option key={year.value} value={year.value}>{year.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Course */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    Course
-                  </label>
-                  <select
-                    name="course"
-                    value={userFormData.course}
-                    onChange={handleUserChange}
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  >
-                    <option value="">Select course</option>
-                    {COURSES.map((course) => (
-                      <option key={course.value} value={course.value}>{course.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                  Email <span className="text-xs font-normal opacity-60">(Optional)</span>
-                </label>
-                <input
-                  name="email"
-                  type="email"
-                  value={userFormData.email}
-                  onChange={handleUserChange}
-                  placeholder="Enter email address"
-                  className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                  style={{
-                    background: 'oklch(0.16 0.020 250)',
-                    borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Username */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    Username
-                  </label>
-                  <input
-                    name="username"
-                    type="text"
-                    value={userFormData.username}
-                    onChange={handleUserChange}
-                    placeholder="Enter username"
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all"
-                    style={{
-                      background: 'oklch(0.16 0.020 250)',
-                      borderColor: 'oklch(0.28 0.025 250)',
-                      color: 'oklch(0.95 0.008 250)'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                    onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      value={userFormData.password}
-                      onChange={handleUserChange}
-                      placeholder="Enter password"
-                      required
-                      className="w-full px-4 py-3.5 pr-20 rounded-xl border-2 font-semibold transition-all"
-                      style={{
-                        background: 'oklch(0.16 0.020 250)',
-                        borderColor: 'oklch(0.28 0.025 250)',
-                        color: 'oklch(0.95 0.008 250)'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = 'oklch(0.70 0.12 140)'}
-                      onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
-                    />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: 'oklch(0.60 0.015 250)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                          e.currentTarget.style.color = 'oklch(0.70 0.12 280)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
-                        }}
-                        title={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={generateRandomPassword}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: 'oklch(0.60 0.015 250)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                          e.currentTarget.style.color = 'oklch(0.70 0.12 140)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.color = 'oklch(0.60 0.015 250)'
-                        }}
-                        title="Generate random password"
-                      >
-                        <Dices size={18} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!createUser.isPending) {
-                      closeUserModal()
-                    }
-                  }}
-                  className="flex-1 px-4 py-3.5 rounded-xl font-bold transition-all"
-                  style={{
-                    background: 'oklch(0.25 0.025 250)',
-                    color: 'oklch(0.70 0.015 250)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'oklch(0.28 0.025 250)'
-                    e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                    e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isRegisterUserDraftComplete(userFormData) || createUser.isPending}
-                  className="flex-1 px-4 py-3.5 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2"
-                  style={{
-                    background: 'oklch(0.70 0.12 140)',
-                    color: 'oklch(0.98 0.005 250)',
-                    boxShadow: '0 10px 25px -5px oklch(0.70 0.12 140 / 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!createUser.isPending) {
-                      e.currentTarget.style.background = 'oklch(0.75 0.13 140)'
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'oklch(0.70 0.12 140)'
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }}
-                >
-                  {createUser.isPending && <Loader2Icon className='animate-spin' size={20} />}
-                  {createUser.isPending ? "Creating..." : "Create User"}
                 </button>
               </div>
             </form>

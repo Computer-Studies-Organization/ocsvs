@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Loader2Icon, X, Menu, ChevronDown } from 'lucide-react'
+import { Loader2Icon, X, Menu, ChevronDown, UserPlus, Eye, EyeOff, Dices } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
-import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation } from '@/hooks/userHooks'
+import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation, useRegisterUserMutation } from '@/hooks/userHooks'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
 import { UsersTable } from './users-table'
 
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/admin-dashboard/users')({
   ),
 })
 
-type ModalType = 'view' | 'edit' | 'archive' | 'restore' | null
+type ModalType = 'view' | 'edit' | 'archive' | 'restore' | 'create' | null
 
 function RouteComponent() {
   const navigate = useNavigate()
@@ -23,6 +23,17 @@ function RouteComponent() {
   const [modalType, setModalType] = useState<ModalType>(null)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [editForm, setEditForm] = useState<any>({})
+  const [createForm, setCreateForm] = useState({
+    firstName: '',
+    lastName: '',
+    studentId: '',
+    yearLevel: '',
+    course: '',
+    email: '',
+    username: '',
+    password: '',
+  })
+  const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<{ text: string; isSuccess: boolean } | null>(null)
 
   const { data: usersData, isLoading } = useAllUsersQuery(
@@ -37,6 +48,7 @@ function RouteComponent() {
   const updateUser = useUpdateUserMutation()
   const deleteUser = useDeleteUserMutation()
   const restoreUser = useRestoreUserMutation()
+  const createUser = useRegisterUserMutation()
 
   const users = usersData?.data || []
   const meta = usersData?.meta || { total: 0, page: 1, limit: 100, totalPages: 0 }
@@ -122,6 +134,34 @@ function RouteComponent() {
         })
       }
     })
+  }
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    await createUser.mutateAsync(createForm, {
+      onSuccess: () => {
+        setMessage({ text: 'User created successfully', isSuccess: true })
+        setTimeout(() => {
+          closeModal()
+        }, 1500)
+      },
+      onError: (error: any) => {
+        setMessage({ 
+          text: error.response?.data?.message || 'Failed to create user', 
+          isSuccess: false 
+        })
+      }
+    })
+  }
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+    let password = ''
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setCreateForm(prev => ({ ...prev, password }))
   }
 
   return (
@@ -303,36 +343,58 @@ function RouteComponent() {
         }}
       >
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-xl transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                <Menu size={24} strokeWidth={2.5} />
+              </button>
+              <div>
+                <h1 
+                  className="text-3xl font-black"
+                  style={{ color: 'oklch(0.95 0.008 250)' }}
+                >
+                  User Management
+                </h1>
+                <p 
+                  className="text-sm font-medium mt-1"
+                  style={{ color: 'oklch(0.65 0.015 250)' }}
+                >
+                  {meta.total} registered users
+                </p>
+              </div>
+            </div>
             <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl transition-colors"
-              style={{ color: 'oklch(0.70 0.015 250)' }}
+              onClick={() => openModal('create', null)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg"
+              style={{
+                background: 'oklch(0.70 0.12 140)',
+                color: 'oklch(0.98 0.005 250)',
+                boxShadow: '0 10px 25px -5px oklch(0.70 0.12 140 / 0.3)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
-                e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                e.currentTarget.style.background = 'oklch(0.75 0.13 140)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                e.currentTarget.style.background = 'oklch(0.70 0.12 140)'
+                e.currentTarget.style.transform = 'translateY(0)'
               }}
             >
-              <Menu size={24} strokeWidth={2.5} />
+              <UserPlus size={18} strokeWidth={2.5} />
+              <span>Create User</span>
             </button>
-            <div>
-              <h1 
-                className="text-3xl font-black"
-                style={{ color: 'oklch(0.95 0.008 250)' }}
-              >
-                User Management
-              </h1>
-              <p 
-                className="text-sm font-medium mt-1"
-                style={{ color: 'oklch(0.65 0.015 250)' }}
-              >
-                {meta.total} registered users
-              </p>
-            </div>
           </div>
         </div>
       </header>
@@ -782,6 +844,233 @@ function RouteComponent() {
                     </button>
                   </div>
                 </div>
+              </>
+            )}
+
+            {/* Create Modal */}
+            {modalType === 'create' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black" style={{ color: 'oklch(0.95 0.008 250)' }}>
+                    Create New User
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    <X size={24} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <form onSubmit={handleCreate} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={createForm.firstName}
+                        onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={createForm.lastName}
+                        onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      Student ID
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.studentId}
+                      onChange={(e) => setCreateForm({ ...createForm, studentId: e.target.value })}
+                      placeholder="C00-00-00000-XXX000"
+                      className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                      style={{
+                        background: 'oklch(0.16 0.020 250)',
+                        borderColor: 'oklch(0.28 0.025 250)',
+                        color: 'oklch(0.95 0.008 250)'
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Year Level
+                      </label>
+                      <select
+                        value={createForm.yearLevel}
+                        onChange={(e) => setCreateForm({ ...createForm, yearLevel: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      >
+                        <option value="">Select year</option>
+                        {YEAR_LEVEL_VALUES.map((year) => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Course
+                      </label>
+                      <select
+                        value={createForm.course}
+                        onChange={(e) => setCreateForm({ ...createForm, course: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      >
+                        <option value="">Select course</option>
+                        {COURSE_VALUES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      Email <span className="text-xs font-normal opacity-60">(Optional)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                      style={{
+                        background: 'oklch(0.16 0.020 250)',
+                        borderColor: 'oklch(0.28 0.025 250)',
+                        color: 'oklch(0.95 0.008 250)'
+                      }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        value={createForm.username}
+                        onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
+                        style={{
+                          background: 'oklch(0.16 0.020 250)',
+                          borderColor: 'oklch(0.28 0.025 250)',
+                          color: 'oklch(0.95 0.008 250)'
+                        }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={createForm.password}
+                          onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                          className="w-full px-4 py-3 pr-20 rounded-xl border-2 font-semibold transition-all"
+                          style={{
+                            background: 'oklch(0.16 0.020 250)',
+                            borderColor: 'oklch(0.28 0.025 250)',
+                            color: 'oklch(0.95 0.008 250)'
+                          }}
+                          required
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: 'oklch(0.60 0.015 250)' }}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={generatePassword}
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: 'oklch(0.60 0.015 250)' }}
+                            title="Generate password"
+                          >
+                            <Dices size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {message && (
+                    <div
+                      className="px-4 py-3 rounded-xl font-bold text-sm"
+                      style={{
+                        background: message.isSuccess ? 'oklch(0.70 0.12 140)' : 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.70 0.015 250)'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createUser.isPending}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                      style={{
+                        background: 'oklch(0.70 0.12 140)',
+                        color: 'oklch(0.98 0.005 250)'
+                      }}
+                    >
+                      {createUser.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                      {createUser.isPending ? 'Creating...' : 'Create User'}
+                    </button>
+                  </div>
+                </form>
               </>
             )}
           </div>
