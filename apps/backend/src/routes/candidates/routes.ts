@@ -1,6 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi'
 import { SelectCandidateSchema } from '@/database/openapi-schemas'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
+import { booleanQuery } from '@/lib/validation/boolean-query'
 import jsonContent from '@/middleware/utils/json-content'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -22,7 +23,7 @@ const PaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 })
 export const ListCandidatesQuerySchema = PaginationSchema.extend({
-  includeDeleted: z.coerce.boolean().default(false),
+  includeDeleted: booleanQuery.default('false'),
 })
 
 export const createCandidateRoute = createRoute({

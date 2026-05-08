@@ -1,5 +1,6 @@
 import { createRoute, z } from '@hono/zod-openapi'
 import { UserApiSchema } from '@/database/openapi-schemas'
+import { booleanQuery } from '@/lib/validation/boolean-query'
 import jsonContent from '@/middleware/utils/json-content'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -12,7 +13,7 @@ const ListUsersQuerySchema = PaginationSchema.extend({
   search: z.string().optional(),
   yearLevel: z.string().optional(),
   course: z.string().optional(),
-  includeDeleted: z.coerce.boolean().default(false),
+  includeDeleted: booleanQuery.default('false'),
 })
 
 const UpdateUserSchema = z.object({

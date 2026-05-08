@@ -8,13 +8,13 @@ export const ROLES = z.enum(['user', 'admin'])
 export const accounts = sqliteTable('accounts', {
   createdAt: integer('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   updatedAt: integer('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   lastLogin: integer('last_login')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   deletedAt: integer('deleted_at'),
   id: text('id').primaryKey(),
   role: text('role').notNull().default('user'),
@@ -26,10 +26,10 @@ export const accounts = sqliteTable('accounts', {
 export const users = sqliteTable('users', {
   createdAt: integer('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   updatedAt: integer('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull().references(() => accounts.id),
   studentId: text('student_id').notNull().unique(),
@@ -54,10 +54,10 @@ export const sessions = sqliteTable('sessions', {
 export const candidates = sqliteTable('candidates', {
   createdAt: integer('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   updatedAt: integer('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   id: text('id').primaryKey(),
   fullName: text('full_name').notNull(),
   accountId: text('account_id').notNull().references(() => accounts.id),
@@ -69,10 +69,10 @@ export const candidates = sqliteTable('candidates', {
 export const votes = sqliteTable('votes', {
   createdAt: integer('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   updatedAt: integer('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(unixepoch())`),
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id),
   candidateId: text('candidate_id').notNull().references(() => candidates.id),
