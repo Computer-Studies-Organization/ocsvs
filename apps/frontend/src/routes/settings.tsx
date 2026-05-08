@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { UserRole } from '@/@types'
 import { useChangePasswordMutation, useMyProfileQuery, useUpdateProfileMutation } from '@/hooks/profileHooks'
 import { UserData } from '@/hooks/userHooks'
-import { cn } from '@/lib/utils'
+import { useToast } from '@/lib/toast'
 import { ProtectedRoute } from '@/middleware'
 
 export const Route = createFileRoute('/settings')({
@@ -42,7 +42,7 @@ function RouteComponent() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
+  const { showToast } = useToast()
 
   // Populate form when profile loads
   useEffect(() => {
@@ -69,15 +69,13 @@ function RouteComponent() {
 
     try {
       const result = await updateProfileMutation.mutateAsync(profileForm)
-      setToast({ message: result.message, type: 'success' })
-      setTimeout(() => setToast(null), 3000)
+      showToast({ message: result.message, type: 'success' })
     }
     catch (error: any) {
-      setToast({
+      showToast({
         message: error.response?.data?.message || 'Failed to update profile',
         type: 'error',
       })
-      setTimeout(() => setToast(null), 5000)
     }
   }
 
@@ -86,14 +84,12 @@ function RouteComponent() {
 
     // Client-side validation
     if (passwordForm.newPassword.length < 8) {
-      setToast({ message: 'Password must be at least 8 characters', type: 'error' })
-      setTimeout(() => setToast(null), 5000)
+      showToast({ message: 'Password must be at least 8 characters', type: 'error' })
       return
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setToast({ message: 'Passwords do not match', type: 'error' })
-      setTimeout(() => setToast(null), 5000)
+      showToast({ message: 'Passwords do not match', type: 'error' })
       return
     }
 
@@ -102,16 +98,14 @@ function RouteComponent() {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       })
-      setToast({ message: result.message, type: 'success' })
+      showToast({ message: result.message, type: 'success' })
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      setTimeout(() => setToast(null), 3000)
     }
     catch (error: any) {
-      setToast({
+      showToast({
         message: error.response?.data?.message || 'Failed to change password',
         type: 'error',
       })
-      setTimeout(() => setToast(null), 5000)
     }
   }
 
@@ -158,21 +152,6 @@ function RouteComponent() {
       className="min-h-screen"
       style={{ background: 'oklch(0.16 0.020 250)' }}
     >
-      {/* Toast */}
-      {toast && (
-        <div
-          className={cn(
-            'fixed z-50 bottom-4 right-4 rounded-xl px-6 py-4 text-sm font-bold shadow-2xl transition-all duration-300',
-            'border-2',
-            toast.type === 'success'
-              ? 'border-emerald-500/40 bg-emerald-500 text-white'
-              : 'border-red-500/40 bg-red-500 text-white',
-          )}
-        >
-          {toast.message}
-        </div>
-      )}
-
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
