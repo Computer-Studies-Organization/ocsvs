@@ -73,7 +73,7 @@ export async function getSessionAccount(db: Database, sessionId: string) {
     .where(and(
       eq(sessions.id, sessionId),
       gt(sessions.expiresAt, now),
-      isNull(accounts.deletedAt)
+      isNull(accounts.deletedAt),
     ))
     .get()
 

@@ -1,6 +1,6 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
-import { eq, isNull, or } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { createDb } from '@/config/db'
 import { accounts, users } from '@/database/schema'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
@@ -123,7 +123,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   const isValid = await verifyPassword(password, result.password_hash)
   c.var.logger.info({ isValid, hashLength: result.password_hash.length }, 'Password verification')
-  
+
   if (!isValid) {
     return c.json(
       { message: ERROR_MESSAGES.INVALID_CREDENTIALS },

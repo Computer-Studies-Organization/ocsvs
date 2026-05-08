@@ -108,7 +108,8 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
 
   // Update accounts table if account fields present
   const accountFields: any = {}
-  if (updateData.username !== undefined) accountFields.username = updateData.username
+  if (updateData.username !== undefined)
+    accountFields.username = updateData.username
   if (updateData.email !== undefined) {
     accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null
   }
@@ -124,8 +125,10 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
 
   // Update users table if profile fields present
   const userFields: any = {}
-  if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName
-  if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName
+  if (updateData.firstName !== undefined)
+    userFields.firstName = updateData.firstName
+  if (updateData.lastName !== undefined)
+    userFields.lastName = updateData.lastName
 
   if (Object.keys(userFields).length > 0) {
     userFields.updatedAt = sql`CURRENT_TIMESTAMP`
