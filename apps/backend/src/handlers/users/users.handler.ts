@@ -180,8 +180,10 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 
   // Update accounts table if account fields present
   const accountFields: any = {}
-  if (updateData.username !== undefined) accountFields.username = updateData.username
-  if (updateData.email !== undefined) accountFields.email = updateData.email
+  if (updateData.username !== undefined)
+    accountFields.username = updateData.username
+  if (updateData.email !== undefined)
+    accountFields.email = updateData.email
 
   if (Object.keys(accountFields).length > 0) {
     accountFields.updatedAt = sql`CURRENT_TIMESTAMP`
@@ -194,10 +196,14 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 
   // Update users table if profile fields present
   const userFields: any = {}
-  if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName
-  if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName
-  if (updateData.yearLevel !== undefined) userFields.yearLevel = updateData.yearLevel
-  if (updateData.course !== undefined) userFields.course = updateData.course
+  if (updateData.firstName !== undefined)
+    userFields.firstName = updateData.firstName
+  if (updateData.lastName !== undefined)
+    userFields.lastName = updateData.lastName
+  if (updateData.yearLevel !== undefined)
+    userFields.yearLevel = updateData.yearLevel
+  if (updateData.course !== undefined)
+    userFields.course = updateData.course
 
   if (Object.keys(userFields).length > 0) {
     userFields.updatedAt = sql`CURRENT_TIMESTAMP`
@@ -332,4 +338,3 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
     httpStatusCodes.OK,
   )
 }
-
