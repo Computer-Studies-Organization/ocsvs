@@ -21,6 +21,9 @@ const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 })
+export const ListCandidatesQuerySchema = PaginationSchema.extend({
+  includeDeleted: z.coerce.boolean().default(false),
+})
 
 export const createCandidateRoute = createRoute({
   tags: ['Candidates'],
@@ -84,7 +87,7 @@ export const listCandidatesRoute = createRoute({
   method: 'get',
   path: '/candidates',
   request: {
-    query: PaginationSchema,
+    query: ListCandidatesQuerySchema,
   },
   responses: {
     [httpStatusCodes.OK]: jsonContent(
