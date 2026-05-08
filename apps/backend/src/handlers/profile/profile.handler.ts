@@ -114,8 +114,9 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null
   }
 
+  const now = Math.floor(Date.now() / 1000)
   if (Object.keys(accountFields).length > 0) {
-    accountFields.updatedAt = sql`CURRENT_TIMESTAMP`
+    accountFields.updatedAt = now
     await db
       .update(accounts)
       .set(accountFields)
@@ -131,7 +132,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     userFields.lastName = updateData.lastName
 
   if (Object.keys(userFields).length > 0) {
-    userFields.updatedAt = sql`CURRENT_TIMESTAMP`
+    userFields.updatedAt = now
     await db
       .update(users)
       .set(userFields)
@@ -198,11 +199,12 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   const newPasswordHash = await hashPassword(newPassword)
 
   // Update password
+  const now = Math.floor(Date.now() / 1000)
   await db
     .update(accounts)
     .set({
       password_hash: newPasswordHash,
-      updatedAt: sql`CURRENT_TIMESTAMP`,
+      updatedAt: now,
     })
     .where(eq(accounts.id, authUser.id))
     .run()
