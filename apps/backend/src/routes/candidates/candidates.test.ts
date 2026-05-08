@@ -1,346 +1,315 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
-import router from './index'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import router from "./index";
+import { accounts } from "@/database/schema";
 
 // Mock the auth middleware
-vi.mock('@/middleware/auth', () => ({
-  requireAuth: async (c: any, next: any) => {
-    c.set('authUser', {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      username: 'testuser',
-      role: 'admin',
-    })
-    await next()
-  },
-}))
+vi.mock("@/middleware/auth", () => ({
+	requireAuth: async (c: any, next: any) => {
+		c.set("authUser", {
+			id: "test-user-id",
+			email: "test@example.com",
+			username: "testuser",
+			role: "admin",
+		});
+		await next();
+	},
+}));
 
 // Mock the database
-const mockDb = {
-  select: vi.fn().mockReturnThis(),
-  from: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  offset: vi.fn().mockReturnThis(),
-  all: vi.fn(),
-  get: vi.fn(),
-  insert: vi.fn().mockReturnThis(),
-  values: vi.fn().mockReturnThis(),
-  run: vi.fn(),
-  update: vi.fn().mockReturnThis(),
-  set: vi.fn().mockReturnThis(),
-  delete: vi.fn().mockReturnThis(),
-}
+let mockDb: any;
 
-vi.mock('@/config/db', () => ({
-  createDb: vi.fn(() => ({ db: mockDb })),
-}))
+const createMockDb = () => ({
+	select: vi.fn().mockReturnThis(),
+	from: vi.fn().mockReturnThis(),
+	where: vi.fn().mockReturnThis(),
+	limit: vi.fn().mockReturnThis(),
+	offset: vi.fn().mockReturnThis(),
+	all: vi.fn(),
+	get: vi.fn(),
+	insert: vi.fn().mockReturnThis(),
+	values: vi.fn().mockReturnThis(),
+	run: vi.fn(),
+	update: vi.fn().mockReturnThis(),
+	set: vi.fn().mockReturnThis(),
+	delete: vi.fn().mockReturnThis(),
+	innerJoin: vi.fn().mockReturnThis(),
+	batch: vi.fn().mockResolvedValue(undefined),
+});
 
-describe('candidates Routes', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+mockDb = createMockDb();
 
-  describe('pOST /candidates', () => {
-    it('should create a new candidate', async () => {
-      const testAccountId = 'test-account-id'
+vi.mock("@/config/db", () => ({
+	createDb: vi.fn(() => ({ db: mockDb })),
+}));
 
-      // Mock account exists
-      mockDb.get
-        .mockResolvedValueOnce({ id: testAccountId }) // Account check
-        .mockResolvedValueOnce(null) // Existing candidate check (none)
+// Hoisted mocks
+const {
+	mockExistsActiveForAccountPosition,
+	mockCreate,
+	mockListForAdminTable,
+	mockGetForAdminView,
+	mockUpdate,
+	mockSoftDelete,
+} = vi.hoisted(() => ({
+	mockExistsActiveForAccountPosition: vi.fn(),
+	mockCreate: vi.fn(),
+	mockListForAdminTable: vi.fn(),
+	mockGetForAdminView: vi.fn(),
+	mockUpdate: vi.fn(),
+	mockSoftDelete: vi.fn(),
+}));
 
-      // Mock candidate creation
-      mockDb.run.mockResolvedValue(undefined)
+vi.mock("@/database/repositories/candidates.repository", () => ({
+	candidateRepo: {
+		existsActiveForAccountPosition: mockExistsActiveForAccountPosition,
+		create: mockCreate,
+		listForAdminTable: mockListForAdminTable,
+		getForAdminView: mockGetForAdminView,
+		update: mockUpdate,
+		softDelete: mockSoftDelete,
+	},
+}));
 
-      const res = await router.request('/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Doe',
-          accountId: testAccountId,
-          position: 'President',
-          manifesto: 'I will make things better',
-        }),
-      })
+describe("Candidate Routes (repository)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockDb = createMockDb();
+		mockExistsActiveForAccountPosition.mockReset();
+		mockCreate.mockReset();
+		mockListForAdminTable.mockReset();
+		mockGetForAdminView.mockReset();
+		mockUpdate.mockReset();
+		mockSoftDelete.mockReset();
+	});
 
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY)
-      expect(body.candidate.fullName).toBe('John Doe')
-      expect(body.candidate.position).toBe('President')
-    })
+	describe("POST /candidates (createCandidate)", () => {
+		it("should create a new candidate successfully", async () => {
+			const input = {
+				fullName: "Jane Doe",
+				accountId: "account-123",
+				position: "President",
+				manifesto: "Change the world",
+			};
+			mockExistsActiveForAccountPosition.mockResolvedValue(false);
+			mockCreate.mockResolvedValue("new-candidate-id");
 
-    it('should return conflict if candidate already exists for account and position', async () => {
-      const testAccountId = 'test-account-id'
+			// Mock account lookup: SELECT * FROM accounts WHERE id = ?
+			mockDb.select.mockImplementationOnce(() => mockDb);
+			mockDb.from.mockImplementationOnce((table: any) =>
+				table === accounts ? mockDb : mockDb,
+			);
+			mockDb.where.mockImplementationOnce(() => mockDb);
+			mockDb.get.mockResolvedValueOnce({
+				id: input.accountId,
+				username: "testacc",
+				role: "user",
+			});
 
-      // Mock account exists
-      mockDb.get
-        .mockResolvedValueOnce({ id: testAccountId }) // Account check
-        .mockResolvedValueOnce({ id: 'existing-candidate', isActive: 1 }) // Existing active candidate for same account & position
+			const res = await router.request("/candidates", {
+				method: "POST",
+				body: JSON.stringify(input),
+				headers: { "Content-Type": "application/json" },
+			});
 
-      const res = await router.request('/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Doe',
-          accountId: testAccountId,
-          position: 'President',
-          manifesto: 'I will make things better',
-        }),
-      })
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY);
+			expect(json.candidate).toMatchObject({
+				id: "new-candidate-id",
+				...input,
+			});
+		});
 
-      expect(res.status).toBe(409)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS)
-    })
+		it("should return 409 if candidate already exists for account+position", async () => {
+			const input = {
+				fullName: "Jane Doe",
+				accountId: "account-123",
+				position: "President",
+				manifesto: "Change the world",
+			};
+			mockExistsActiveForAccountPosition.mockResolvedValue(true);
 
-    it('should allow same account to be candidate for different positions', async () => {
-      const testAccountId = 'test-account-id'
+			// Account exists, still need to pass account check to reach existsActive check
+			mockDb.select.mockImplementationOnce(() => mockDb);
+			mockDb.from.mockImplementationOnce((table: any) =>
+				table === accounts ? mockDb : mockDb,
+			);
+			mockDb.where.mockImplementationOnce(() => mockDb);
+			mockDb.get.mockResolvedValueOnce({ id: input.accountId });
 
-      // Mock account exists
-      mockDb.get
-        .mockResolvedValueOnce({ id: testAccountId }) // Account check
-        .mockResolvedValueOnce(null) // No existing candidate for this position
+			const res = await router.request("/candidates", {
+				method: "POST",
+				body: JSON.stringify(input),
+				headers: { "Content-Type": "application/json" },
+			});
 
-      // Mock candidate creation
-      mockDb.run.mockResolvedValue(undefined)
+			expect(res.status).toBe(409);
+			const json = await res.json();
+			expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS);
+		});
+	});
 
-      const res = await router.request('/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Doe',
-          accountId: testAccountId,
-          position: 'Vice President', // Different position
-          manifesto: 'I will support the team',
-        }),
-      })
+	describe("GET /candidates (listCandidates)", () => {
+		it("should list candidates with pagination", async () => {
+			const mockCandidates = [
+				{
+					id: "1",
+					fullName: "Alice",
+					accountId: "acc1",
+					position: "President",
+					manifesto: "...",
+					isActive: 1,
+					createdAt: 1000,
+					updatedAt: 1000,
+				},
+			];
+			mockListForAdminTable.mockResolvedValue({
+				data: mockCandidates,
+				meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+			});
 
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY)
-      expect(body.candidate.position).toBe('Vice President')
-    })
+			const res = await router.request("/candidates?page=1&limit=10", {
+				method: "GET",
+			});
 
-    it('should return bad request if account does not exist', async () => {
-      const testAccountId = 'non-existent-account-id'
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.data).toHaveLength(1);
+			expect(json.meta).toEqual({
+				total: 1,
+				page: 1,
+				limit: 10,
+				totalPages: 1,
+			});
+		});
 
-      // Mock account does not exist
-      mockDb.get.mockResolvedValueOnce(null)
+		it("should include inactive candidates when includeDeleted=true", async () => {
+			const mockCandidates = [
+				{
+					id: "1",
+					fullName: "Alice",
+					isActive: 0,
+					createdAt: 1000,
+					updatedAt: 1000,
+				},
+			];
+			mockListForAdminTable.mockResolvedValue({
+				data: mockCandidates,
+				meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+			});
 
-      const res = await router.request('/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Doe',
-          accountId: testAccountId,
-          position: 'President',
-          manifesto: 'I will make things better',
-        }),
-      })
+			const res = await router.request(
+				"/candidates?page=1&limit=10&includeDeleted=true",
+				{ method: "GET" },
+			);
 
-      expect(res.status).toBe(400)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.ACCOUNT_NOT_FOUND)
-    })
-  })
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.data[0].isActive).toBe(0);
+		});
+	});
 
-  describe('gET /candidates', () => {
-    it('should list candidates with pagination', async () => {
-      const mockCandidates = [
-        {
-          id: '1',
-          fullName: 'John Doe',
-          accountId: 'acc1',
-          position: 'President',
-          manifesto: 'I will make things better',
-          createdAt: 1234567890,
-          updatedAt: 1234567890,
-        },
-        {
-          id: '2',
-          fullName: 'Jane Smith',
-          accountId: 'acc2',
-          position: 'Vice President',
-          manifesto: 'I will support the president',
-          createdAt: 1234567890,
-          updatedAt: 1234567890,
-        },
-      ]
+	describe("GET /candidates/:id (getCandidate)", () => {
+		it("should return candidate by id", async () => {
+			const mockCandidate = {
+				id: "cand-1",
+				fullName: "Bob",
+				accountId: "acc1",
+				position: "Secretary",
+				manifesto: "...",
+				isActive: 1,
+				createdAt: 1000,
+				updatedAt: 1000,
+			};
+			mockGetForAdminView.mockResolvedValue(mockCandidate);
 
-      mockDb.all.mockResolvedValue(mockCandidates)
-      mockDb.get.mockResolvedValue({ count: 2 })
+			const res = await router.request("/candidates/cand-1", { method: "GET" });
 
-      const res = await router.request('/candidates?page=1&limit=10', {
-        method: 'GET',
-      })
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.id).toBe("cand-1");
+		});
 
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.data).toHaveLength(2)
-      expect(body.meta.total).toBe(2)
-      expect(body.meta.page).toBe(1)
-      expect(body.meta.limit).toBe(10)
-      expect(body.meta.totalPages).toBe(1)
-    })
+		it("should return 404 if candidate not found", async () => {
+			mockGetForAdminView.mockResolvedValue(null);
 
-    it('gET /candidates with defaults should use page 1 and limit 10', async () => {
-      const mockCandidates = [{ id: '1' }]
-      mockDb.all.mockResolvedValue(mockCandidates)
-      mockDb.get.mockResolvedValue({ count: 1 })
+			const res = await router.request("/candidates/unknown", {
+				method: "GET",
+			});
 
-      const res = await router.request('/candidates', { method: 'GET' })
+			expect(res.status).toBe(404);
+		});
+	});
 
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.meta).toEqual({
-        total: 1,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-      })
-      expect(mockDb.limit).toHaveBeenCalledWith(10)
-      expect(mockDb.offset).toHaveBeenCalledWith(0)
-    })
-  })
+	describe("PATCH /candidates/:id (updateCandidate)", () => {
+		it("should update candidate successfully", async () => {
+			let getCallCount = 0;
+			mockGetForAdminView.mockImplementation(async () => {
+				getCallCount++;
+				if (getCallCount === 1) {
+					return { id: "cand-1", isActive: 1, accountId: "acc1" };
+				}
+				return {
+					id: "cand-1",
+					fullName: "Updated Name",
+					accountId: "acc1",
+					position: "President",
+					manifesto: "Updated",
+					isActive: 1,
+					createdAt: 1000,
+					updatedAt: 1000,
+				};
+			});
 
-  describe('gET /candidates/:id', () => {
-    it('should get a candidate by ID', async () => {
-      const testCandidateId = 'test-candidate-id'
-      const mockCandidate = {
-        id: testCandidateId,
-        fullName: 'John Doe',
-        accountId: 'acc1',
-        position: 'President',
-        manifesto: 'I will make things better',
-        createdAt: 1234567890,
-        updatedAt: 1234567890,
-      }
+			const res = await router.request("/candidates/cand-1", {
+				method: "PUT",
+				body: JSON.stringify({
+					fullName: "Updated Name",
+					manifesto: "Updated",
+				}),
+				headers: { "Content-Type": "application/json" },
+			});
 
-      mockDb.get.mockResolvedValue(mockCandidate)
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY);
+		});
 
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'GET',
-      })
+		it("should return 404 if candidate not found on update", async () => {
+			mockGetForAdminView.mockResolvedValue(null);
 
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.id).toBe(testCandidateId)
-      expect(body.fullName).toBe('John Doe')
-    })
+			const res = await router.request("/candidates/cand-1", {
+				method: "PUT",
+				body: JSON.stringify({ fullName: "Updated" }),
+				headers: { "Content-Type": "application/json" },
+			});
 
-    it('should return 404 if candidate not found', async () => {
-      const testCandidateId = 'non-existent-id'
-      mockDb.get.mockResolvedValue(null)
+			expect(res.status).toBe(404);
+		});
+	});
 
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'GET',
-      })
+	describe("DELETE /candidates/:id (deleteCandidate)", () => {
+		it("should soft-delete candidate", async () => {
+			mockGetForAdminView.mockResolvedValue({ id: "cand-1", isActive: 1 });
+			mockSoftDelete.mockResolvedValue(true);
 
-      expect(res.status).toBe(404)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND)
-    })
-  })
+			const res = await router.request("/candidates/cand-1", {
+				method: "DELETE",
+			});
 
-  describe('pUT /candidates/:id', () => {
-    it('should update a candidate', async () => {
-      const testCandidateId = 'test-candidate-id'
-      const existingCandidate = {
-        id: testCandidateId,
-        fullName: 'John Doe',
-        accountId: 'acc1',
-        position: 'President',
-        manifesto: 'I will make things better',
-        createdAt: 1234567890,
-        updatedAt: 1234567890,
-      }
+			expect(res.status).toBe(200);
+			const json = await res.json();
+			expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY);
+		});
 
-      const updatedCandidate = {
-        ...existingCandidate,
-        fullName: 'John Updated',
-        position: 'Updated President',
-        updatedAt: expect.any(Number),
-      }
+		it("should return 404 if candidate not found on delete", async () => {
+			mockGetForAdminView.mockImplementation(async () => null);
+			const res = await router.request("/candidates/cand-1", {
+				method: "DELETE",
+			});
 
-      mockDb.get
-        .mockResolvedValueOnce(existingCandidate) // Check if exists
-        .mockResolvedValueOnce(updatedCandidate) // Get updated candidate
-      mockDb.run.mockResolvedValue(undefined)
-
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Updated',
-          position: 'Updated President',
-        }),
-      })
-
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY)
-      expect(body.candidate.fullName).toBe('John Updated')
-      expect(body.candidate.position).toBe('Updated President')
-    })
-
-    it('should return 404 if candidate not found', async () => {
-      const testCandidateId = 'non-existent-id'
-      mockDb.get.mockResolvedValue(null)
-
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: 'John Updated',
-        }),
-      })
-
-      expect(res.status).toBe(404)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND)
-    })
-  })
-
-  describe('dELETE /candidates/:id', () => {
-    it('should delete a candidate', async () => {
-      const testCandidateId = 'test-candidate-id'
-      const existingCandidate = {
-        id: testCandidateId,
-        fullName: 'John Doe',
-        accountId: 'acc1',
-        position: 'President',
-        manifesto: 'I will make things better',
-        createdAt: 1234567890,
-        updatedAt: 1234567890,
-      }
-
-      mockDb.get.mockResolvedValue(existingCandidate)
-      mockDb.update.mockReturnThis()
-      mockDb.set.mockReturnThis()
-      mockDb.run.mockResolvedValue(undefined)
-
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'DELETE',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY)
-    })
-
-    it('should return 404 if candidate not found', async () => {
-      const testCandidateId = 'non-existent-id'
-      mockDb.get.mockResolvedValue(null)
-
-      const res = await router.request(`/candidates/${testCandidateId}`, {
-        method: 'DELETE',
-      })
-
-      expect(res.status).toBe(404)
-      const body = await res.json() as any
-      expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND)
-    })
-  })
-})
+			expect(res.status).toBe(404);
+		});
+	});
+});

@@ -6,9 +6,10 @@ import type {
   submitVoteRoute,
   withdrawVoteRoute,
 } from '@/routes/votes/routes'
-import { and, count, desc, eq, inArray } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { createDb } from '@/config/db'
-import { candidates, users, votes } from '@/database/schema'
+import { candidateRepo } from '@/database/repositories/candidates.repository'
+import { users, votes } from '@/database/schema'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -40,21 +41,11 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   }
 
   // Extract candidate IDs
-  const candidateIds = voteItems.map(v => v.candidateId)
+  const candidateIds = voteItems.map((v: { candidateId: string }) => v.candidateId)
 
-  // Validate all candidates exist and are active
-  const candidatesResult = await db
-    .select()
-    .from(candidates)
-    .where(
-      and(
-        inArray(candidates.id, candidateIds),
-        eq(candidates.isActive, 1),
-      ),
-    )
-    .all()
-
-  if (candidatesResult.length !== candidateIds.length) {
+  // Batch validate all candidates are active
+  const candidateMap = await candidateRepo.findActiveByIds(db, candidateIds)
+  if (candidateMap.size !== candidateIds.length) {
     return c.json(
       { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
       httpStatusCodes.NOT_FOUND,
@@ -62,12 +53,15 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   }
 
   // Check for duplicate positions (user can only vote for one candidate per position)
-  const positions = new Set(candidatesResult.map(c => c.position))
-  if (positions.size !== candidatesResult.length) {
-    return c.json(
-      { message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE },
-      httpStatusCodes.UNPROCESSABLE_ENTITY,
-    )
+  const positions = new Set<string>()
+  for (const candidate of candidateMap.values()) {
+    if (positions.has(candidate.position)) {
+      return c.json(
+        { message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE },
+        httpStatusCodes.UNPROCESSABLE_ENTITY,
+      )
+    }
+    positions.add(candidate.position)
   }
 
   // Double-check no existing votes (in case hasVoted flag is out of sync)
@@ -84,14 +78,14 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
     )
   }
 
-  const now = Date.now()
+  const now = Math.floor(Date.now() / 1000)
   const insertedVotes: typeof votes.$inferInsert[] = []
-  const candidatesById = new Map(candidatesResult.map(candidate => [candidate.id, candidate]))
 
   // Create vote records
   for (const voteItem of voteItems) {
-    const candidate = candidatesById.get(voteItem.candidateId)
+    const candidate = candidateMap.get(voteItem.candidateId)
     if (!candidate) {
+      // Defensive: should not happen given earlier check
       return c.json(
         { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
         httpStatusCodes.NOT_FOUND,
@@ -110,7 +104,6 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   }
 
   // Insert all votes and update user's hasVoted flag
-  // Note: In production with D1, you'd want to use a transaction
   await db.batch([
     db.insert(votes).values(insertedVotes),
     db.update(users)
@@ -180,28 +173,15 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
 
   const { db } = createDb(c)
 
-  // Get all candidates with their vote counts
-  const candidatesWithVotes = await db
-    .select({
-      candidateId: candidates.id,
-      candidateName: candidates.fullName,
-      position: candidates.position,
-      voteCount: count(votes.id),
-    })
-    .from(candidates)
-    .leftJoin(votes, eq(candidates.id, votes.candidateId))
-    .where(eq(candidates.isActive, 1))
-    .groupBy(candidates.id, candidates.fullName, candidates.position)
-    .orderBy(desc(count(votes.id)))
-    .all()
+  // Get all active candidates with their vote counts via repository
+  const candidatesWithVotes = await candidateRepo.listWithVoteCount(db)
 
   // Group by position
-  const resultsMap = new Map<string, typeof candidatesWithVotes>()
-  candidatesWithVotes.forEach((item) => {
-    if (!resultsMap.has(item.position)) {
-      resultsMap.set(item.position, [])
-    }
-    resultsMap.get(item.position)!.push(item)
+  const resultsMap = new Map<string, { candidateId: string, candidateName: string, position: string, voteCount: number }[]>()
+  candidatesWithVotes.forEach((item: { candidateId: string, candidateName: string, position: string, voteCount: number }) => {
+    const arr = resultsMap.get(item.position) || []
+    arr.push(item)
+    resultsMap.set(item.position, arr)
   })
 
   // Format results
@@ -214,7 +194,11 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
   results.sort((a, b) => a.position.localeCompare(b.position))
 
   // Calculate totals
-  const totalVotes = candidatesWithVotes.reduce((sum, item) => sum + Number(item.voteCount), 0)
+  const totalVotes = candidatesWithVotes.reduce(
+    (sum: number, item: { candidateId: string, candidateName: string, position: string, voteCount: number }) =>
+      sum + Number(item.voteCount),
+    0,
+  )
 
   return c.json(
     {
@@ -239,16 +223,8 @@ export const getCandidateVoteCount: AppRouteHandler<typeof getCandidateVoteCount
   const { id } = c.req.valid('param')
   const { db } = createDb(c)
 
-  // Check if candidate exists
-  const candidate = await db
-    .select()
-    .from(candidates)
-    .where(and(
-      eq(candidates.id, id),
-      eq(candidates.isActive, 1),
-    ))
-    .get()
-
+  // Check if candidate exists and is active; we also need fullName
+  const candidate = await candidateRepo.getForAdminView(db, id)
   if (!candidate) {
     return c.json(
       { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
@@ -308,7 +284,7 @@ export const withdrawVote: AppRouteHandler<typeof withdrawVoteRoute> = async (c)
     )
   }
 
-  const now = Date.now()
+  const now = Math.floor(Date.now() / 1000)
 
   // Delete all votes for this user and reset hasVoted flag
   await db.batch([

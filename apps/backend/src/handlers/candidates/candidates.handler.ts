@@ -6,13 +6,16 @@ import type {
   listCandidatesRoute,
   updateCandidateRoute,
 } from '@/routes/candidates/routes'
-import { and, count, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createDb } from '@/config/db'
-import { accounts, candidates } from '@/database/schema'
+import { candidateRepo } from '@/database/repositories/candidates.repository'
+import { accounts } from '@/database/schema'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
-export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = async (c) => {
+export const createCandidate: AppRouteHandler<
+	typeof createCandidateRoute
+> = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
       { message: ERROR_MESSAGES.FORBIDDEN },
@@ -23,7 +26,7 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
   const { fullName, accountId, position, manifesto } = c.req.valid('json')
   const { db } = createDb(c)
 
-  // Check if the account exists
+  // Verify account exists
   const account = await db
     .select()
     .from(accounts)
@@ -37,36 +40,25 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
     )
   }
 
-  // Check if this account already has a candidate for this position
-  const existingCandidate = await db
-    .select()
-    .from(candidates)
-    .where(and(
-      eq(candidates.accountId, accountId),
-      eq(candidates.position, position),
-      eq(candidates.isActive, 1),
-    ))
-    .get()
-
-  if (existingCandidate) {
+  // Ensure no active candidate for same account+position
+  const exists = await candidateRepo.existsActiveForAccountPosition(
+    db,
+    accountId,
+    position,
+  )
+  if (exists) {
     return c.json(
       { message: ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS },
       httpStatusCodes.CONFLICT,
     )
   }
 
-  const candidateId = crypto.randomUUID()
-
-  await db
-    .insert(candidates)
-    .values({
-      id: candidateId,
-      fullName,
-      accountId,
-      position,
-      manifesto,
-    })
-    .run()
+  const candidateId = await candidateRepo.create(db, {
+    fullName,
+    accountId,
+    position,
+    manifesto,
+  })
 
   return c.json(
     {
@@ -83,46 +75,34 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
   )
 }
 
-export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async (c) => {
+export const listCandidates: AppRouteHandler<
+	typeof listCandidatesRoute
+> = async (c) => {
+  const { page, limit, includeDeleted } = c.req.valid('query')
   const { db } = createDb(c)
-  const { page, limit } = c.req.valid('query')
 
-  const offset = (page - 1) * limit
-
-  const [candidatesResult, totalResult] = await Promise.all([
-    db.select().from(candidates).where(eq(candidates.isActive, 1)).limit(limit).offset(offset).all(),
-    db.select({ count: count() }).from(candidates).where(eq(candidates.isActive, 1)).get(),
-  ])
-
-  const total = totalResult?.count ?? 0
-  const totalPages = Math.ceil(total / limit)
+  const result = await candidateRepo.listForAdminTable(db, {
+    page,
+    limit,
+    includeInactive: includeDeleted,
+  })
 
   return c.json(
     {
-      data: candidatesResult,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages,
-      },
+      data: result.data,
+      meta: result.meta,
     },
     httpStatusCodes.OK,
   )
 }
 
-export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c) => {
+export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (
+  c,
+) => {
   const { id } = c.req.valid('param')
   const { db } = createDb(c)
 
-  const candidate = await db
-    .select()
-    .from(candidates)
-    .where(and(
-      eq(candidates.id, id),
-      eq(candidates.isActive, 1),
-    ))
-    .get()
+  const candidate = await candidateRepo.getForAdminView(db, id)
 
   if (!candidate) {
     return c.json(
@@ -134,7 +114,9 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
   return c.json(candidate, httpStatusCodes.OK)
 }
 
-export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = async (c) => {
+export const updateCandidate: AppRouteHandler<
+	typeof updateCandidateRoute
+> = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
       { message: ERROR_MESSAGES.FORBIDDEN },
@@ -146,16 +128,7 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   const updateData = c.req.valid('json')
   const { db } = createDb(c)
 
-  // Check if candidate exists
-  const existingCandidate = await db
-    .select()
-    .from(candidates)
-    .where(and(
-      eq(candidates.id, id),
-      eq(candidates.isActive, 1),
-    ))
-    .get()
-
+  const existingCandidate = await candidateRepo.getForAdminView(db, id)
   if (!existingCandidate) {
     return c.json(
       { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
@@ -163,22 +136,9 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
     )
   }
 
-  // Update candidate
-  await db
-    .update(candidates)
-    .set({
-      ...updateData,
-      updatedAt: Date.now(),
-    })
-    .where(eq(candidates.id, id))
-    .run()
+  await candidateRepo.update(db, id, updateData)
 
-  // Get updated candidate
-  const updatedCandidate = await db
-    .select()
-    .from(candidates)
-    .where(eq(candidates.id, id))
-    .get()
+  const updatedCandidate = await candidateRepo.getForAdminView(db, id)
 
   return c.json(
     {
@@ -189,7 +149,9 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   )
 }
 
-export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = async (c) => {
+export const deleteCandidate: AppRouteHandler<
+	typeof deleteCandidateRoute
+> = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
       { message: ERROR_MESSAGES.FORBIDDEN },
@@ -200,16 +162,7 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
   const { id } = c.req.valid('param')
   const { db } = createDb(c)
 
-  // Check if candidate exists
-  const existingCandidate = await db
-    .select()
-    .from(candidates)
-    .where(and(
-      eq(candidates.id, id),
-      eq(candidates.isActive, 1),
-    ))
-    .get()
-
+  const existingCandidate = await candidateRepo.getForAdminView(db, id)
   if (!existingCandidate) {
     return c.json(
       { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
@@ -217,15 +170,7 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
     )
   }
 
-  // Soft delete candidate
-  await db
-    .update(candidates)
-    .set({
-      isActive: 0,
-      updatedAt: Date.now(),
-    })
-    .where(eq(candidates.id, id))
-    .run()
+  await candidateRepo.softDelete(db, id)
 
   return c.json(
     { message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY },
