@@ -6,13 +6,13 @@ import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candi
 import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
-import { getAdminDashboardActiveFeedback, type AdminDashboardFeedback } from '@/lib/adminFeedback'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
 import {
   CANDIDATE_FIELD_LABELS,
   getMutationErrorMessage,
 } from '@/lib/userRegistration'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/lib/toast'
 
 export const Route = createFileRoute('/admin-dashboard-v2')({
   component: () => (
@@ -65,17 +65,11 @@ function RouteComponent() {
   const createCandidate = useCreateCandidateMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
-  const [candidateMessage, setCandidateMessage] = useState<AdminDashboardFeedback | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
   const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set(POSITIONS.map(p => p.value)))
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const activeFeedback = getAdminDashboardActiveFeedback({
-    candidateMessage,
-    userMessage: null,
-    isCandidateModalOpen: isModalOpen,
-    isUserModalOpen: false,
-  })
+  const { showToast } = useToast()
 
   // Fetch vote counts for all candidates
   useEffect(() => {
@@ -194,21 +188,19 @@ function RouteComponent() {
 
   const closeCandidateModal = () => {
     setIsModalOpen(false)
-    setCandidateMessage(null)
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCandidateMessage(null)
 
     if (!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim()) {
-      setCandidateMessage({ message: "All fields are required", isSuccess: false })
+      showToast({ message: 'All fields are required', type: 'error' })
       return
     }
 
     if (!formData.accountId) {
-      setCandidateMessage({ message: "Please select a valid user from the list", isSuccess: false })
+      showToast({ message: 'Please select a valid user from the list', type: 'error' })
       return
     }
 
@@ -219,27 +211,17 @@ function RouteComponent() {
       manifesto: formData.manifesto,
     }, {
       onSuccess: (data) => {
-        setCandidateMessage({
-          message: data.message,
-          isSuccess: true,
-        })
+        showToast({ message: data.message, type: 'success' })
         setFormData(EMPTY_CANDIDATE_FORM_DATA)
         setIsModalOpen(false)
-        setTimeout(() => {
-          setCandidateMessage(null)
-        }, 2500)
       },
       onError: (error: unknown) => {
-        setCandidateMessage({
-          message: getMutationErrorMessage(error, "Failed to create candidate", CANDIDATE_FIELD_LABELS),
-          isSuccess: false,
-        })
-      }
+        showToast({ message: getMutationErrorMessage(error, 'Failed to create candidate', CANDIDATE_FIELD_LABELS), type: 'error' })
+      },
     })
   }
 
   const openCreateModal = () => {
-    setCandidateMessage(null)
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
     setIsModalOpen(true)
   }
@@ -508,21 +490,6 @@ function RouteComponent() {
             </div>
           </div>
         </header>
-
-        {/* Message Banner */}
-        {activeFeedback && (
-          <div
-            className={cn(
-              'fixed z-50 bottom-4 right-4 rounded-xl px-6 py-4 text-sm font-bold shadow-2xl transition-all duration-300',
-              'border-2',
-              activeFeedback.isSuccess
-                ? 'border-emerald-500/40 bg-emerald-500 text-white'
-                : 'border-red-500/40 bg-red-500 text-white'
-            )}
-          >
-            {activeFeedback.message}
-          </div>
-        )}
 
         {/* Stats Bar */}
         <div 

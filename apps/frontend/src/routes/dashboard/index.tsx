@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAllCandidates } from '@/data'
 import type { TCandidate, TPositionGroup } from '@/@types'
 import { UserRole } from '@/@types'
 import {
   ArrowRight,
-  CheckCircle2,
   Loader2Icon,
   LockKeyhole,
   LogOut,
@@ -14,9 +13,8 @@ import {
   Shield,
   Undo2,
   Vote,
-  X,
-  XCircle,
 } from 'lucide-react'
+import { useToast } from '@/lib/toast'
 import { ProtectedRoute } from '@/middleware'
 import { useLogoutUserMutation, UserData } from '@/hooks/userHooks'
 import { useSubmitVotesMutation, useMyVotesQuery } from '@/hooks/voteHooks'
@@ -39,7 +37,7 @@ function RouteComponent() {
   const { data: voteStatus } = useMyVotesQuery()
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const { showToast } = useToast()
 
   const hasVoted = voteStatus?.hasVoted ?? false
 
@@ -107,13 +105,13 @@ function RouteComponent() {
     
     try {
       await submitVotesMutation.mutateAsync(candidateIds)
-      setToast({ message: 'Votes submitted successfully! Your selections have been saved.', type: 'success' })
+      showToast({ message: 'Votes submitted successfully! Your selections have been saved.', type: 'success' })
       setTimeout(() => {
         navigate({ to: '/dashboard/my-ballot' })
       }, 2000)
     } catch (error) {
       console.error('Failed to submit votes:', error)
-      setToast({ message: 'Failed to submit votes. Please try again.', type: 'error' })
+      showToast({ message: 'Failed to submit votes. Please try again.', type: 'error' })
     }
     setIsLoading(false)
   }
@@ -121,15 +119,6 @@ function RouteComponent() {
   const areAllPositionsVoted = positionGroups.every(
     (positionGroup: TPositionGroup) => selectedCandidateIdsByPositionId[positionGroup.id] !== null,
   )
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null)
-      }, 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleLogoutUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,31 +131,6 @@ function RouteComponent() {
       {(isLoading || submitVotesMutation.isPending) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
           <Loader2Icon className="animate-spin text-blue-400" size={40} />
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed top-1/2 left-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4">
-          <div
-            className={`flex items-center gap-3 rounded-xl border px-6 py-4 shadow-xl transition-all ${
-              toast.type === 'success'
-                ? 'border-emerald-500/50 bg-slate-900 text-emerald-200'
-                : 'border-red-500/50 bg-slate-900 text-red-200'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-            ) : (
-              <XCircle className="h-5 w-5 text-red-400" />
-            )}
-            <p className="text-sm font-medium">{toast.message}</p>
-            <button
-              onClick={() => setToast(null)}
-              className="ml-2 rounded-lg p-1 transition hover:bg-white/10"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
         </div>
       )}
 

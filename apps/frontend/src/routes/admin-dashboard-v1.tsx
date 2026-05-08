@@ -6,7 +6,6 @@ import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candi
 import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
 import { getCandidateVoteCount } from '@/api/votes_api'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
-import { getAdminDashboardActiveFeedback, type AdminDashboardFeedback } from '@/lib/adminFeedback'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
 import {
   CANDIDATE_FIELD_LABELS,
@@ -16,6 +15,7 @@ import {
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
 } from '@/lib/userRegistration'
+import { useToast } from '@/lib/toast'
 import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard-v1')({
@@ -63,17 +63,10 @@ function RouteComponent() {
   const createUser = useRegisterUserMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
-  const [candidateMessage, setCandidateMessage] = useState<AdminDashboardFeedback | null>(null)
-  const [userMessage, setUserMessage] = useState<AdminDashboardFeedback | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
-  const activeFeedback = getAdminDashboardActiveFeedback({
-    candidateMessage,
-    userMessage,
-    isCandidateModalOpen: isModalOpen,
-    isUserModalOpen: isUserModalOpen,
-  })
+  const { showToast } = useToast()
 
   // Fetch vote counts for all candidates
   useEffect(() => {
@@ -173,20 +166,17 @@ function RouteComponent() {
 
   const closeCandidateModal = () => {
     setIsModalOpen(false)
-    setCandidateMessage(null)
     setFormData(EMPTY_CANDIDATE_FORM_DATA)
   }
 
   const closeUserModal = () => {
     setIsUserModalOpen(false)
-    setUserMessage(null)
     setUserFormData(EMPTY_REGISTER_USER_DRAFT)
   }
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const name = e.target.name as keyof typeof EMPTY_REGISTER_USER_DRAFT
     const { value } = e.target
-    setUserMessage(null)
     setUserFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -195,12 +185,10 @@ function RouteComponent() {
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCandidateMessage(null)
-    setUserMessage(null)
 
     const validationMessage = getRegisterUserDraftValidationMessage(userFormData)
     if (validationMessage) {
-      setUserMessage({ message: validationMessage, isSuccess: false })
+      showToast({ message: validationMessage, type: 'error' })
       return
     }
 
@@ -208,37 +196,26 @@ function RouteComponent() {
 
     await createUser.mutateAsync(userFormData, {
       onSuccess: (data) => {
-        setUserMessage({
-          message: data.message || "User created successfully",
-          isSuccess: true,
-        })
+        showToast({ message: data.message || 'User created successfully', type: 'success' })
         setUserFormData(EMPTY_REGISTER_USER_DRAFT)
         setIsUserModalOpen(false)
-        setTimeout(() => {
-          setUserMessage(null)
-        }, 2500)
       },
       onError: (error: unknown) => {
-        setUserMessage({
-          message: getMutationErrorMessage(error, "Failed to create user", REGISTER_FIELD_LABELS),
-          isSuccess: false,
-        })
-      }
+        showToast({ message: getMutationErrorMessage(error, 'Failed to create user', REGISTER_FIELD_LABELS), type: 'error' })
+      },
     })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setUserMessage(null)
-    setCandidateMessage(null)
 
     if (!formData.fullName.trim() || !formData.position.trim() || !formData.manifesto.trim()) {
-      setCandidateMessage({ message: "All fields are required", isSuccess: false })
+      showToast({ message: 'All fields are required', type: 'error' })
       return
     }
 
     if (!formData.accountId) {
-      setCandidateMessage({ message: "Please select a valid user from the list", isSuccess: false })
+      showToast({ message: 'Please select a valid user from the list', type: 'error' })
       return
     }
 
@@ -249,22 +226,13 @@ function RouteComponent() {
       manifesto: formData.manifesto,
     }, {
       onSuccess: (data) => {
-        setCandidateMessage({
-          message: data.message,
-          isSuccess: true,
-        })
+        showToast({ message: data.message, type: 'success' })
         setFormData(EMPTY_CANDIDATE_FORM_DATA)
         setIsModalOpen(false)
-        setTimeout(() => {
-          setCandidateMessage(null)
-        }, 2500)
       },
       onError: (error: unknown) => {
-        setCandidateMessage({
-          message: getMutationErrorMessage(error, "Failed to create candidate", CANDIDATE_FIELD_LABELS),
-          isSuccess: false,
-        })
-      }
+        showToast({ message: getMutationErrorMessage(error, 'Failed to create candidate', CANDIDATE_FIELD_LABELS), type: 'error' })
+      },
     })
   }
 
@@ -328,8 +296,6 @@ function RouteComponent() {
             <button
               type="button"
               onClick={() => {
-                setCandidateMessage(null)
-                setUserMessage(null)
                 setIsModalOpen(false)
                 setIsUserModalOpen(true)
               }}
@@ -349,8 +315,6 @@ function RouteComponent() {
             <button
               type="button"
               onClick={() => {
-                setUserMessage(null)
-                setCandidateMessage(null)
                 setIsUserModalOpen(false)
                 setIsModalOpen(true)
               }}
@@ -381,21 +345,6 @@ function RouteComponent() {
             </button>
           </div>
         </header>
-
-        {/* Message Banner */}
-        {activeFeedback && (
-          <div
-            className={cn(
-              'fixed z-50 bottom-2 right-2 rounded-lg px-4 py-3 text-sm sm:text-base transition-all duration-300',
-              'border-2',
-              activeFeedback.isSuccess
-                ? 'border-emerald-500/40 bg-emerald-500 text-white'
-                : 'border-red-500/40 bg-red-500/10 text-white'
-            )}
-          >
-            {activeFeedback.message}
-          </div>
-        )}
 
         {/* Candidates List */}
         <div className="flex-1 space-y-6">
