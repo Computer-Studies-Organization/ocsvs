@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Loader2Icon, X, Menu, ChevronDown, UserPlus, Eye, EyeOff, Dices } from 'lucide-react'
 import { AdminRoute } from '@/middleware'
 import { useAllUsersQuery, useDeleteUserMutation, useRestoreUserMutation, useUpdateUserMutation, useRegisterUserMutation } from '@/hooks/userHooks'
-import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
+import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TRegisterUser, type TYearLevel, type TCourse } from '@/@types'
 import { UsersTable } from './users-table'
 
 export const Route = createFileRoute('/admin-dashboard/users')({
@@ -27,7 +27,7 @@ function RouteComponent() {
     firstName: '',
     lastName: '',
     studentId: '',
-    yearLevel: '',
+    yearLevel: '' as TYearLevel | '',
     course: '',
     email: '',
     username: '',
@@ -139,7 +139,7 @@ function RouteComponent() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    await createUser.mutateAsync(createForm, {
+    await createUser.mutateAsync(createForm as TRegisterUser, {
       onSuccess: () => {
         setMessage({ text: 'User created successfully', isSuccess: true })
         setTimeout(() => {
@@ -924,7 +924,7 @@ function RouteComponent() {
                       </label>
                       <select
                         value={createForm.yearLevel}
-                        onChange={(e) => setCreateForm({ ...createForm, yearLevel: e.target.value })}
+                        onChange={(e) => setCreateForm({ ...createForm, yearLevel: e.target.value as TYearLevel | '' })}
                         className="w-full px-4 py-3 rounded-xl border-2 font-semibold transition-all"
                         style={{
                           background: 'oklch(0.16 0.020 250)',
