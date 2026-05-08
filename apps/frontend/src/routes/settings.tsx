@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
-import { Eye, EyeOff, Loader2Icon, Save, KeyRound, ArrowLeft } from 'lucide-react'
-import { ProtectedRoute } from '@/middleware'
-import { UserData } from '@/hooks/userHooks'
-import { useMyProfileQuery, useUpdateProfileMutation, useChangePasswordMutation } from '@/hooks/profileHooks'
+import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2Icon, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { UserRole } from '@/@types'
+import { useChangePasswordMutation, useMyProfileQuery, useUpdateProfileMutation } from '@/hooks/profileHooks'
+import { UserData } from '@/hooks/userHooks'
 import { cn } from '@/lib/utils'
+import { ProtectedRoute } from '@/middleware'
 
 export const Route = createFileRoute('/settings')({
   component: () => (
@@ -19,7 +19,7 @@ function RouteComponent() {
   const navigate = useNavigate()
   const userData = UserData()
   const isAdmin = userData?.user?.role === UserRole.ADMIN
-  const { data: profile, isLoading: isLoadingProfile } = useMyProfileQuery()
+  const { data: profile, isLoading: isLoadingProfile, isError, error } = useMyProfileQuery()
   const updateProfileMutation = useUpdateProfileMutation()
   const changePasswordMutation = useChangePasswordMutation()
 
@@ -42,7 +42,7 @@ function RouteComponent() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
   // Populate form when profile loads
   useEffect(() => {
@@ -71,7 +71,8 @@ function RouteComponent() {
       const result = await updateProfileMutation.mutateAsync(profileForm)
       setToast({ message: result.message, type: 'success' })
       setTimeout(() => setToast(null), 3000)
-    } catch (error: any) {
+    }
+    catch (error: any) {
       setToast({
         message: error.response?.data?.message || 'Failed to update profile',
         type: 'error',
@@ -104,7 +105,8 @@ function RouteComponent() {
       setToast({ message: result.message, type: 'success' })
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setTimeout(() => setToast(null), 3000)
-    } catch (error: any) {
+    }
+    catch (error: any) {
       setToast({
         message: error.response?.data?.message || 'Failed to change password',
         type: 'error',
@@ -124,6 +126,33 @@ function RouteComponent() {
     )
   }
 
+  if (isError || !profile) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{ background: 'oklch(0.16 0.020 250)' }}
+      >
+        <div className="text-xl font-bold" style={{ color: 'oklch(0.95 0.008 250)' }}>
+          Failed to load profile
+        </div>
+        <div className="text-sm font-medium" style={{ color: 'oklch(0.65 0.015 250)' }}>
+          {error?.message || 'Unknown error'}
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
+          style={{
+            background: 'oklch(0.55 0.15 250)',
+            color: 'oklch(0.98 0.005 250)',
+            boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)',
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
       className="min-h-screen"
@@ -137,7 +166,7 @@ function RouteComponent() {
             'border-2',
             toast.type === 'success'
               ? 'border-emerald-500/40 bg-emerald-500 text-white'
-              : 'border-red-500/40 bg-red-500 text-white'
+              : 'border-red-500/40 bg-red-500 text-white',
           )}
         >
           {toast.message}
@@ -213,8 +242,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
               </div>
@@ -238,8 +267,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
               </div>
@@ -263,8 +292,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
               </div>
@@ -288,8 +317,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                 />
               </div>
             </div>
@@ -394,17 +423,19 @@ function RouteComponent() {
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                {updateProfileMutation.isPending ? (
-                  <>
-                    <Loader2Icon className="animate-spin" size={18} />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Save Changes
-                  </>
-                )}
+                {updateProfileMutation.isPending
+                  ? (
+                      <>
+                        <Loader2Icon className="animate-spin" size={18} />
+                        Saving...
+                      </>
+                    )
+                  : (
+                      <>
+                        <Save size={18} />
+                        Save Changes
+                      </>
+                    )}
               </button>
             </div>
           </form>
@@ -454,8 +485,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
                 <button
@@ -463,8 +494,8 @@ function RouteComponent() {
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors"
                   style={{ color: 'oklch(0.60 0.015 250)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
                 >
                   {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -491,8 +522,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
                 <button
@@ -500,8 +531,8 @@ function RouteComponent() {
                   onClick={() => setShowNewPassword(!showNewPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors"
                   style={{ color: 'oklch(0.60 0.015 250)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
                 >
                   {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -528,8 +559,8 @@ function RouteComponent() {
                     borderColor: 'oklch(0.28 0.025 250)',
                     color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
+                  onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.15 250)')}
+                  onBlur={e => (e.target.style.borderColor = 'oklch(0.28 0.025 250)')}
                   required
                 />
                 <button
@@ -537,8 +568,8 @@ function RouteComponent() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors"
                   style={{ color: 'oklch(0.60 0.015 250)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'oklch(0.95 0.008 250)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'oklch(0.60 0.015 250)')}
                 >
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -567,17 +598,19 @@ function RouteComponent() {
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                {changePasswordMutation.isPending ? (
-                  <>
-                    <Loader2Icon className="animate-spin" size={18} />
-                    Changing...
-                  </>
-                ) : (
-                  <>
-                    <KeyRound size={18} />
-                    Change Password
-                  </>
-                )}
+                {changePasswordMutation.isPending
+                  ? (
+                      <>
+                        <Loader2Icon className="animate-spin" size={18} />
+                        Changing...
+                      </>
+                    )
+                  : (
+                      <>
+                        <KeyRound size={18} />
+                        Change Password
+                      </>
+                    )}
               </button>
             </div>
           </form>
