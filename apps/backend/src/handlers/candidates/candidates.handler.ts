@@ -14,7 +14,7 @@ import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
 export const createCandidate: AppRouteHandler<
-	typeof createCandidateRoute
+  typeof createCandidateRoute
 > = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
@@ -76,7 +76,7 @@ export const createCandidate: AppRouteHandler<
 }
 
 export const listCandidates: AppRouteHandler<
-	typeof listCandidatesRoute
+  typeof listCandidatesRoute
 > = async (c) => {
   const { page, limit, includeDeleted } = c.req.valid('query')
   const { db } = createDb(c)
@@ -115,7 +115,7 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (
 }
 
 export const updateCandidate: AppRouteHandler<
-	typeof updateCandidateRoute
+  typeof updateCandidateRoute
 > = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
@@ -150,7 +150,7 @@ export const updateCandidate: AppRouteHandler<
 }
 
 export const deleteCandidate: AppRouteHandler<
-	typeof deleteCandidateRoute
+  typeof deleteCandidateRoute
 > = async (c) => {
   if (c.var.authUser.role !== 'admin') {
     return c.json(
