@@ -1,11 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
 import type { TLoginUser } from '@/@types'
-import { Eye, EyeOff } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Eye, EyeOff, Loader2Icon } from 'lucide-react'
+import { useState } from 'react'
 import { useLoginUserMutation } from '@/hooks/userHooks'
+import { cn } from '@/lib/utils'
 import { PublicRoute } from '@/middleware'
-import { Loader2Icon } from 'lucide-react'
 
 export const Route = createFileRoute('/auth/login')({
   component: () => (
@@ -18,7 +17,7 @@ export const Route = createFileRoute('/auth/login')({
 function RouteComponent() {
   const login = useLoginUserMutation()
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [message, setMessage] = useState<string>("")
+  const [message, setMessage] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [formData, setFormData] = useState<TLoginUser>({
     studentNumber: '',
@@ -32,22 +31,21 @@ function RouteComponent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setMessage("")
+    setMessage('')
 
-    if (!formData.studentNumber.trim() || !formData.password.trim()) return
+    if (!formData.studentNumber.trim() || !formData.password.trim())
+      return
 
     await login.mutateAsync(formData, {
-      onSuccess: (data) => {
+      onSuccess: (_data) => {
         setIsLoading(false)
-        console.log(data.message)
       },
       onError: (error: any) => {
         setIsLoading(false)
         if (error.response) {
-          console.log(error.response?.data.message);
           setMessage(error.response?.data.message)
         }
-      }
+      },
     })
   }
 
@@ -73,7 +71,7 @@ function RouteComponent() {
             Sign in to vote
           </p>
 
-          <p className='text-center text-red-500 text-lg'>{message}</p>
+          <p className="text-center text-red-500 text-lg">{message}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {/* Student Number */}
@@ -99,7 +97,7 @@ function RouteComponent() {
                   message
                     ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
                     : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                  'text-base sm:text-base'
+                  'text-base sm:text-base',
                 )}
               />
             </div>
@@ -128,7 +126,7 @@ function RouteComponent() {
                     message
                       ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
                       : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                    'text-base sm:text-base pr-10'
+                    'text-base sm:text-base pr-10',
                   )}
                 />
                 <button
@@ -148,17 +146,18 @@ function RouteComponent() {
                 'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                 'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                'text-base sm:text-base'
+                'text-base sm:text-base',
               )}
             >
-              {(isLoading || login.isPending) && <Loader2Icon className='animate-spin' size={20} />}
-              {(isLoading || login.isPending) ? "Signing..." : "Sign in"}
+              {(isLoading || login.isPending) && <Loader2Icon className="animate-spin" size={20} />}
+              {(isLoading || login.isPending) ? 'Signing...' : 'Sign in'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
-              Don't have an account?{' '}
+              Don't have an account?
+              {' '}
               <Link
                 to="/auth/register"
                 className="text-blue-400 hover:text-blue-300 font-medium transition-colors"

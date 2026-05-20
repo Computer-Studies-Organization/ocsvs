@@ -1,8 +1,8 @@
-import type { TCandidate } from "@/@types"
-import { useAllCandidatesQuery } from "@/hooks/candidateHooks"
-import { useMemo } from "react"
+import type { TCandidate } from '@/@types'
+import { useMemo } from 'react'
+import { useAllCandidatesQuery } from '@/hooks/candidateHooks'
 
-export const useAllCandidates = (): TCandidate[] => {
+export function useAllCandidates(): TCandidate[] {
   const { data } = useAllCandidatesQuery()
 
   return useMemo(() => {
@@ -13,4 +13,3 @@ export const useAllCandidates = (): TCandidate[] => {
     return data.data as TCandidate[]
   }, [data])
 }
-

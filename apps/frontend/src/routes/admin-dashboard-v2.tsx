@@ -1,18 +1,17 @@
+import type { TCandidate, TUsersData } from '@/@types'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useMemo, useEffect } from 'react'
-import { Plus, X, TrendingUp, Users2, Award, ChevronDown, Loader2Icon, BarChart3, Menu } from 'lucide-react'
-import { AdminRoute } from '@/middleware'
-import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
-import { UserData, useAllUsersQuery } from '@/hooks/userHooks'
+import { Award, BarChart3, ChevronDown, Loader2Icon, Menu, Plus, TrendingUp, Users2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { getCandidateVoteCount } from '@/api/votes_api'
-import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
+import { useAllCandidatesQuery, useCreateCandidateMutation } from '@/hooks/candidateHooks'
+import { useAllUsersQuery } from '@/hooks/userHooks'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
+import { useToast } from '@/lib/toast'
 import {
   CANDIDATE_FIELD_LABELS,
   getMutationErrorMessage,
 } from '@/lib/userRegistration'
-import { cn } from '@/lib/utils'
-import { useToast } from '@/lib/toast'
+import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard-v2')({
   component: () => (
@@ -31,28 +30,26 @@ export const Route = createFileRoute('/admin-dashboard-v2')({
  */
 
 export const POSITIONS = [
-  { id: 1, value: "Chairman" },
-  { id: 2, value: "Internal Vice Chairman" },
-  { id: 3, value: "External Vice Chairman" },
-  { id: 4, value: "Internal Secretary" },
-  { id: 5, value: "External Secretary" },
-  { id: 6, value: "Treasurer" },
-  { id: 7, value: "Auditor" },
-  { id: 8, value: "PIOs (Freshman)" },
-  { id: 9, value: "PIOs (Sophomore)" },
-  { id: 10, value: "PIOs (Junior)" },
-  { id: 11, value: "PIOs (Senior)" },
-  { id: 12, value: "Head Committee" },
-  { id: 13, value: "Vice Head Committee" },
-  { id: 14, value: "Committee Leader (Programming)" },
-  { id: 15, value: "Committee Leader (Graphics and Design)" },
-  { id: 16, value: "Committee Leader (Networking)" },
-  { id: 17, value: "Committee Leader (Gaming)" },
+  { id: 1, value: 'Chairman' },
+  { id: 2, value: 'Internal Vice Chairman' },
+  { id: 3, value: 'External Vice Chairman' },
+  { id: 4, value: 'Internal Secretary' },
+  { id: 5, value: 'External Secretary' },
+  { id: 6, value: 'Treasurer' },
+  { id: 7, value: 'Auditor' },
+  { id: 8, value: 'PIOs (Freshman)' },
+  { id: 9, value: 'PIOs (Sophomore)' },
+  { id: 10, value: 'PIOs (Junior)' },
+  { id: 11, value: 'PIOs (Senior)' },
+  { id: 12, value: 'Head Committee' },
+  { id: 13, value: 'Vice Head Committee' },
+  { id: 14, value: 'Committee Leader (Programming)' },
+  { id: 15, value: 'Committee Leader (Graphics and Design)' },
+  { id: 16, value: 'Committee Leader (Networking)' },
+  { id: 17, value: 'Committee Leader (Gaming)' },
 ]
 
-const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }))
-const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }))
-const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, "id"> = {
+const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, 'id'> = {
   fullName: '',
   position: '',
   manifesto: '',
@@ -60,7 +57,6 @@ const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, "id"> = {
 }
 
 function RouteComponent() {
-  const userData = UserData()
   const navigate = useNavigate()
   const createCandidate = useCreateCandidateMutation()
   const { data: candidatesData, isLoading: isLoadingCandidates } = useAllCandidatesQuery()
@@ -86,14 +82,16 @@ function RouteComponent() {
             try {
               const response = await getCandidateVoteCount(candidate.id)
               counts[candidate.id] = response.voteCount || 0
-            } catch (error) {
+            }
+            catch (error) {
               console.error(`Error fetching vote count for candidate ${candidate.id}:`, error)
               counts[candidate.id] = 0
             }
-          })
+          }),
         )
         setVoteCounts(counts)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error fetching vote counts:', error)
       }
     }
@@ -134,13 +132,13 @@ function RouteComponent() {
     return transformed
   }, [candidatesData, voteCounts])
 
-  const [formData, setFormData] = useState<Omit<TCandidate, "id">>(EMPTY_CANDIDATE_FORM_DATA)
+  const [formData, setFormData] = useState<Omit<TCandidate, 'id'>>(EMPTY_CANDIDATE_FORM_DATA)
 
   const users = useMemo<TUsersData[]>(() => {
     if (!usersData?.data || !Array.isArray(usersData.data)) {
       return []
     }
-    return usersData.data.map((user: { id: string; accountId: string; studentId: string; firstName: string; lastName: string }) => ({
+    return usersData.data.map((user: { id: string, accountId: string, studentId: string, firstName: string, lastName: string }) => ({
       id: user.id,
       accountId: user.accountId,
       studentId: user.studentId,
@@ -151,11 +149,12 @@ function RouteComponent() {
   }, [usersData])
 
   const togglePosition = (position: string) => {
-    setExpandedPositions(prev => {
+    setExpandedPositions((prev) => {
       const next = new Set(prev)
       if (next.has(position)) {
         next.delete(position)
-      } else {
+      }
+      else {
         next.add(position)
       }
       return next
@@ -164,7 +163,7 @@ function RouteComponent() {
 
   const groupedCandidates = POSITIONS.map(pos => ({
     position: pos.value,
-    candidates: candidates.filter((c: TCandidate & { percentage: number; voteCount: number }) => c.position === pos.value)
+    candidates: candidates.filter((c: TCandidate & { percentage: number, voteCount: number }) => c.position === pos.value),
   })).filter(group => group.candidates.length > 0)
 
   const totalVotes = candidates.reduce((sum: number, c: TCandidate & { voteCount: number }) => sum + c.voteCount, 0)
@@ -175,7 +174,7 @@ function RouteComponent() {
 
     if (name === 'accountId') {
       const selectedUser = resolveCandidateUserSelection(users, value)
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         accountId: selectedUser?.accountId ?? '',
         fullName: selectedUser?.fullName ?? '',
@@ -183,7 +182,7 @@ function RouteComponent() {
       return
     }
 
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const closeCandidateModal = () => {
@@ -227,7 +226,7 @@ function RouteComponent() {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen"
       style={{ background: 'oklch(0.16 0.020 250)' }}
     >
@@ -241,26 +240,26 @@ function RouteComponent() {
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-50 transition-all duration-300 ${
           isSidebarOpen ? 'w-64' : 'w-0 lg:w-16'
         }`}
         style={{
           background: 'oklch(0.18 0.022 250)',
-          borderColor: 'oklch(0.25 0.025 250)'
+          borderColor: 'oklch(0.25 0.025 250)',
         }}
       >
         <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'oklch(0.25 0.025 250)' }}>
           {isSidebarOpen && (
             <>
               <div>
-                <h1 
+                <h1
                   className="text-xl font-black tracking-tight"
                   style={{ color: 'oklch(0.95 0.008 250)' }}
                 >
                   OCSVS Admin
                 </h1>
-                <p 
+                <p
                   className="text-xs font-semibold mt-1"
                   style={{ color: 'oklch(0.60 0.015 250)' }}
                 >
@@ -306,98 +305,98 @@ function RouteComponent() {
         {isSidebarOpen && (
           <>
             <nav className="flex-1 p-4 space-y-2">
-          <button
-            className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-all"
-            style={{
-              background: 'oklch(0.55 0.15 250)',
-              color: 'oklch(0.98 0.005 250)'
-            }}
-          >
-            Candidates
-          </button>
-          <button
-            onClick={() => navigate({ to: '/admin-dashboard/users' })}
-            className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
-            style={{ color: 'oklch(0.70 0.015 250)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
-              e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
-            }}
-          >
-            Users
-          </button>
-          <button
-            className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
-            style={{ color: 'oklch(0.70 0.015 250)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
-              e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
-            }}
-          >
-            Results
-          </button>
-          <button
-            onClick={() => navigate({ to: '/settings' })}
-            className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
-            style={{ color: 'oklch(0.70 0.015 250)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
-              e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
-            }}
-          >
-            Settings
-          </button>
-        </nav>
+              <button
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-all"
+                style={{
+                  background: 'oklch(0.55 0.15 250)',
+                  color: 'oklch(0.98 0.005 250)',
+                }}
+              >
+                Candidates
+              </button>
+              <button
+                onClick={() => navigate({ to: '/admin-dashboard/users' })}
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Users
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Results
+              </button>
+              <button
+                onClick={() => navigate({ to: '/settings' })}
+                className="w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition-colors"
+                style={{ color: 'oklch(0.70 0.015 250)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
+                  e.currentTarget.style.color = 'oklch(0.95 0.008 250)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'oklch(0.70 0.015 250)'
+                }}
+              >
+                Settings
+              </button>
+            </nav>
 
-        <div 
-          className="p-4 m-4 rounded-xl cursor-pointer transition-colors"
-          style={{ background: 'oklch(0.20 0.022 250)' }}
-          onClick={() => navigate({ to: '/settings' })}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'oklch(0.22 0.024 250)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
-          }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center font-black"
-              style={{
-                background: 'oklch(0.55 0.15 250)',
-                color: 'oklch(0.98 0.005 250)'
+            <div
+              className="p-4 m-4 rounded-xl cursor-pointer transition-colors"
+              style={{ background: 'oklch(0.20 0.022 250)' }}
+              onClick={() => navigate({ to: '/settings' })}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'oklch(0.22 0.024 250)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'oklch(0.20 0.022 250)'
               }}
             >
-              A
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-black"
+                  style={{
+                    background: 'oklch(0.55 0.15 250)',
+                    color: 'oklch(0.98 0.005 250)',
+                  }}
+                >
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="font-bold text-sm truncate"
+                    style={{ color: 'oklch(0.95 0.008 250)' }}
+                  >
+                    Admin User
+                  </p>
+                  <p
+                    className="text-xs truncate"
+                    style={{ color: 'oklch(0.60 0.015 250)' }}
+                  >
+                    admin@ocsvs.edu
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p 
-                className="font-bold text-sm truncate"
-                style={{ color: 'oklch(0.95 0.008 250)' }}
-              >
-                Admin User
-              </p>
-              <p 
-                className="text-xs truncate"
-                style={{ color: 'oklch(0.60 0.015 250)' }}
-              >
-                admin@ocsvs.edu
-              </p>
-            </div>
-          </div>
-        </div>
           </>
         )}
       </aside>
@@ -405,11 +404,11 @@ function RouteComponent() {
       {/* Main Content */}
       <div className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-16'}`}>
         {/* Header */}
-        <header 
+        <header
           className="sticky top-0 z-10 border-b"
           style={{
             background: 'oklch(0.18 0.022 250)',
-            borderColor: 'oklch(0.25 0.025 250)'
+            borderColor: 'oklch(0.25 0.025 250)',
           }}
         >
           <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -431,17 +430,22 @@ function RouteComponent() {
                   <Menu size={24} strokeWidth={2.5} />
                 </button>
                 <div>
-                  <h2 
+                  <h2
                     className="text-2xl font-black"
                     style={{ color: 'oklch(0.95 0.008 250)' }}
                   >
                     Candidate Management
                   </h2>
-                  <p 
+                  <p
                     className="text-sm font-medium mt-0.5"
                     style={{ color: 'oklch(0.65 0.015 250)' }}
                   >
-                    {totalCandidates} candidates across {groupedCandidates.length} positions
+                    {totalCandidates}
+                    {' '}
+                    candidates across
+                    {groupedCandidates.length}
+                    {' '}
+                    positions
                   </p>
                 </div>
               </div>
@@ -452,7 +456,7 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.70 0.12 280)',
                     color: 'oklch(0.98 0.005 250)',
-                    boxShadow: '0 10px 25px -5px oklch(0.70 0.12 280 / 0.3)'
+                    boxShadow: '0 10px 25px -5px oklch(0.70 0.12 280 / 0.3)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'oklch(0.75 0.13 280)'
@@ -472,7 +476,7 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.55 0.15 250)',
                     color: 'oklch(0.98 0.005 250)',
-                    boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+                    boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'oklch(0.60 0.16 250)'
@@ -492,7 +496,7 @@ function RouteComponent() {
         </header>
 
         {/* Stats Bar */}
-        <div 
+        <div
           className="border-b"
           style={{ borderColor: 'oklch(0.25 0.025 250)' }}
         >
@@ -508,24 +512,24 @@ function RouteComponent() {
                   className="p-5 rounded-2xl border"
                   style={{
                     background: 'oklch(0.20 0.022 250)',
-                    borderColor: 'oklch(0.25 0.025 250)'
+                    borderColor: 'oklch(0.25 0.025 250)',
                   }}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <div 
+                    <div
                       className="p-2 rounded-lg"
                       style={{ background: `${stat.color} / 0.15` }}
                     >
                       <stat.icon size={20} strokeWidth={2.5} style={{ color: stat.color }} />
                     </div>
-                    <p 
+                    <p
                       className="text-xs font-bold uppercase tracking-wider"
                       style={{ color: 'oklch(0.60 0.015 250)' }}
                     >
                       {stat.label}
                     </p>
                   </div>
-                  <p 
+                  <p
                     className="text-3xl font-black"
                     style={{ color: 'oklch(0.95 0.008 250)' }}
                   >
@@ -539,147 +543,165 @@ function RouteComponent() {
 
         {/* Candidates Grid */}
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          {isLoadingCandidates ? (
-            <div className="rounded-2xl border p-8 shadow-2xl" style={{
-              background: 'oklch(0.20 0.022 250)',
-              borderColor: 'oklch(0.25 0.025 250)'
-            }}>
-              <div className="flex items-center justify-center gap-3">
-                <Loader2Icon className="animate-spin" size={24} style={{ color: 'oklch(0.55 0.15 250)' }} />
-                <p className="text-sm font-medium" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                  Loading candidates...
-                </p>
-              </div>
-            </div>
-          ) : candidates.length === 0 ? (
-            <div className="rounded-2xl border p-8 shadow-2xl" style={{
-              background: 'oklch(0.20 0.022 250)',
-              borderColor: 'oklch(0.25 0.025 250)'
-            }}>
-              <p className="text-sm text-center" style={{ color: 'oklch(0.70 0.015 250)' }}>
-                No candidates yet. Click <span className="font-bold" style={{ color: 'oklch(0.55 0.15 250)' }}>New Candidate</span> to create one.
-              </p>
-            </div>
-          ) : (
-          <div className="space-y-6">
-            {groupedCandidates.map((group) => {
-              const isExpanded = expandedPositions.has(group.position)
-              return (
-              <div key={group.position}>
-                <button
-                  onClick={() => togglePosition(group.position)}
-                  className="w-full flex items-center justify-between mb-4 group"
+          {isLoadingCandidates
+            ? (
+                <div
+                  className="rounded-2xl border p-8 shadow-2xl"
+                  style={{
+                    background: 'oklch(0.20 0.022 250)',
+                    borderColor: 'oklch(0.25 0.025 250)',
+                  }}
                 >
-                  <div className="flex items-center gap-2">
-                    <ChevronDown 
-                      size={20} 
-                      strokeWidth={2.5}
-                      className="transition-transform duration-200"
-                      style={{ 
-                        color: 'oklch(0.70 0.12 250)',
-                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
-                      }}
-                    />
-                    <h3 
-                      className="text-lg font-black transition-colors"
-                      style={{ color: 'oklch(0.95 0.008 250)' }}
-                    >
-                      {group.position}
-                    </h3>
+                  <div className="flex items-center justify-center gap-3">
+                    <Loader2Icon className="animate-spin" size={24} style={{ color: 'oklch(0.55 0.15 250)' }} />
+                    <p className="text-sm font-medium" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      Loading candidates...
+                    </p>
                   </div>
-                  <span 
-                    className="px-3 py-1 rounded-full text-xs font-bold"
+                </div>
+              )
+            : candidates.length === 0
+              ? (
+                  <div
+                    className="rounded-2xl border p-8 shadow-2xl"
                     style={{
-                      background: 'oklch(0.25 0.025 250)',
-                      color: 'oklch(0.70 0.12 250)'
+                      background: 'oklch(0.20 0.022 250)',
+                      borderColor: 'oklch(0.25 0.025 250)',
                     }}
                   >
-                    {group.candidates.length} {group.candidates.length === 1 ? 'candidate' : 'candidates'}
-                  </span>
-                </button>
-
-                {isExpanded && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.candidates.map((candidate) => (
-                    <div
-                      key={candidate.id}
-                      className="p-5 rounded-2xl border transition-all cursor-pointer"
-                      style={{
-                        background: 'oklch(0.20 0.022 250)',
-                        borderColor: 'oklch(0.25 0.025 250)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'oklch(0.55 0.15 250)'
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'oklch(0.25 0.025 250)'
-                        e.currentTarget.style.transform = 'translateY(0)'
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 
-                            className="font-bold text-base truncate"
-                            style={{ color: 'oklch(0.95 0.008 250)' }}
+                    <p className="text-sm text-center" style={{ color: 'oklch(0.70 0.015 250)' }}>
+                      No candidates yet. Click
+                      {' '}
+                      <span className="font-bold" style={{ color: 'oklch(0.55 0.15 250)' }}>New Candidate</span>
+                      {' '}
+                      to create one.
+                    </p>
+                  </div>
+                )
+              : (
+                  <div className="space-y-6">
+                    {groupedCandidates.map((group) => {
+                      const isExpanded = expandedPositions.has(group.position)
+                      return (
+                        <div key={group.position}>
+                          <button
+                            onClick={() => togglePosition(group.position)}
+                            className="w-full flex items-center justify-between mb-4 group"
                           >
-                            {candidate.fullName}
-                          </h4>
-                          <p 
-                            className="text-xs font-medium mt-0.5"
-                            style={{ color: 'oklch(0.60 0.015 250)' }}
-                          >
-                            {candidate.position}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p 
-                        className="text-sm line-clamp-2 mb-4"
-                        style={{ color: 'oklch(0.75 0.015 250)' }}
-                      >
-                        {candidate.manifesto}
-                      </p>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span style={{ color: 'oklch(0.60 0.015 250)' }}>Vote Count</span>
-                          <span 
-                            className="font-bold"
-                            style={{ color: 'oklch(0.95 0.008 250)' }}
-                          >
-                            {candidate.voteCount}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="flex-1 h-2 rounded-full overflow-hidden"
-                            style={{ background: 'oklch(0.25 0.025 250)' }}
-                          >
-                            <div 
-                              className="h-full rounded-full transition-all"
+                            <div className="flex items-center gap-2">
+                              <ChevronDown
+                                size={20}
+                                strokeWidth={2.5}
+                                className="transition-transform duration-200"
+                                style={{
+                                  color: 'oklch(0.70 0.12 250)',
+                                  transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                }}
+                              />
+                              <h3
+                                className="text-lg font-black transition-colors"
+                                style={{ color: 'oklch(0.95 0.008 250)' }}
+                              >
+                                {group.position}
+                              </h3>
+                            </div>
+                            <span
+                              className="px-3 py-1 rounded-full text-xs font-bold"
                               style={{
-                                width: `${candidate.percentage}%`,
-                                background: 'oklch(0.55 0.15 250)'
+                                background: 'oklch(0.25 0.025 250)',
+                                color: 'oklch(0.70 0.12 250)',
                               }}
-                            />
-                          </div>
-                          <span 
-                            className="text-sm font-bold"
-                            style={{ color: 'oklch(0.70 0.12 250)' }}
-                          >
-                            {candidate.percentage}%
-                          </span>
+                            >
+                              {group.candidates.length}
+                              {' '}
+                              {group.candidates.length === 1 ? 'candidate' : 'candidates'}
+                            </span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {group.candidates.map(candidate => (
+                                <div
+                                  key={candidate.id}
+                                  className="p-5 rounded-2xl border transition-all cursor-pointer"
+                                  style={{
+                                    background: 'oklch(0.20 0.022 250)',
+                                    borderColor: 'oklch(0.25 0.025 250)',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'oklch(0.55 0.15 250)'
+                                    e.currentTarget.style.transform = 'translateY(-2px)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'oklch(0.25 0.025 250)'
+                                    e.currentTarget.style.transform = 'translateY(0)'
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1 min-w-0">
+                                      <h4
+                                        className="font-bold text-base truncate"
+                                        style={{ color: 'oklch(0.95 0.008 250)' }}
+                                      >
+                                        {candidate.fullName}
+                                      </h4>
+                                      <p
+                                        className="text-xs font-medium mt-0.5"
+                                        style={{ color: 'oklch(0.60 0.015 250)' }}
+                                      >
+                                        {candidate.position}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <p
+                                    className="text-sm line-clamp-2 mb-4"
+                                    style={{ color: 'oklch(0.75 0.015 250)' }}
+                                  >
+                                    {candidate.manifesto}
+                                  </p>
+
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span style={{ color: 'oklch(0.60 0.015 250)' }}>Vote Count</span>
+                                      <span
+                                        className="font-bold"
+                                        style={{ color: 'oklch(0.95 0.008 250)' }}
+                                      >
+                                        {candidate.voteCount}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="flex-1 h-2 rounded-full overflow-hidden"
+                                        style={{ background: 'oklch(0.25 0.025 250)' }}
+                                      >
+                                        <div
+                                          className="h-full rounded-full transition-all"
+                                          style={{
+                                            width: `${candidate.percentage}%`,
+                                            background: 'oklch(0.55 0.15 250)',
+                                          }}
+                                        />
+                                      </div>
+                                      <span
+                                        className="text-sm font-bold"
+                                        style={{ color: 'oklch(0.70 0.12 250)' }}
+                                      >
+                                        {candidate.percentage}
+                                        %
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      )
+                    })}
+                  </div>
                 )}
-              </div>
-            )})}
-          </div>
-          )}
         </div>
       </div>
 
@@ -691,7 +713,7 @@ function RouteComponent() {
           style={{
             background: 'oklch(0.55 0.15 250)',
             color: 'oklch(0.98 0.005 250)',
-            boxShadow: '0 10px 30px -5px oklch(0.55 0.15 250 / 0.5)'
+            boxShadow: '0 10px 30px -5px oklch(0.55 0.15 250 / 0.5)',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.1)'
@@ -706,7 +728,7 @@ function RouteComponent() {
 
       {/* Add Candidate Modal */}
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'oklch(0.10 0.015 250 / 0.8)' }}
           onClick={() => {
@@ -720,12 +742,12 @@ function RouteComponent() {
             style={{
               background: 'oklch(0.20 0.022 250)',
               borderColor: 'oklch(0.30 0.025 250)',
-              boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)'
+              boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)',
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 
+              <h2
                 className="text-2xl font-black"
                 style={{ color: 'oklch(0.95 0.008 250)' }}
               >
@@ -755,7 +777,7 @@ function RouteComponent() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* User Selection */}
               <div className="space-y-2">
-                <label 
+                <label
                   className="block text-sm font-bold uppercase tracking-wider"
                   style={{ color: 'oklch(0.70 0.015 250)' }}
                 >
@@ -769,28 +791,30 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.16 0.020 250)',
                     borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
+                    color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+                  onFocus={e => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
+                  onBlur={e => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
                   required
                 >
                   <option value="">Select a user</option>
-                  {isLoadingUsers ? (
-                    <option value="" disabled>Loading users...</option>
-                  ) : (
-                    users.map((user: TUsersData) => (
-                      <option key={user.accountId} value={user.accountId}>
-                        {getCandidateUserLabel(user)}
-                      </option>
-                    ))
-                  )}
+                  {isLoadingUsers
+                    ? (
+                        <option value="" disabled>Loading users...</option>
+                      )
+                    : (
+                        users.map((user: TUsersData) => (
+                          <option key={user.accountId} value={user.accountId}>
+                            {getCandidateUserLabel(user)}
+                          </option>
+                        ))
+                      )}
                 </select>
               </div>
 
               {/* Full Name (auto-filled) */}
               <div className="space-y-2">
-                <label 
+                <label
                   className="block text-sm font-bold uppercase tracking-wider"
                   style={{ color: 'oklch(0.70 0.015 250)' }}
                 >
@@ -805,17 +829,17 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.16 0.020 250)',
                     borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
+                    color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+                  onFocus={e => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
+                  onBlur={e => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
                   readOnly
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label 
+                <label
                   className="block text-sm font-bold uppercase tracking-wider"
                   style={{ color: 'oklch(0.70 0.015 250)' }}
                 >
@@ -829,21 +853,21 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.16 0.020 250)',
                     borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
+                    color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+                  onFocus={e => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
+                  onBlur={e => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
                   required
                 >
                   <option value="">Select position</option>
-                  {POSITIONS.map((pos) => (
+                  {POSITIONS.map(pos => (
                     <option key={pos.id} value={pos.value}>{pos.value}</option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label 
+                <label
                   className="block text-sm font-bold uppercase tracking-wider"
                   style={{ color: 'oklch(0.70 0.015 250)' }}
                 >
@@ -851,16 +875,16 @@ function RouteComponent() {
                 </label>
                 <textarea
                   value={formData.manifesto}
-                  onChange={(e) => setFormData({ ...formData, manifesto: e.target.value })}
+                  onChange={e => setFormData({ ...formData, manifesto: e.target.value })}
                   rows={5}
                   className="w-full px-4 py-3.5 rounded-xl border-2 font-semibold transition-all resize-none"
                   style={{
                     background: 'oklch(0.16 0.020 250)',
                     borderColor: 'oklch(0.28 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)'
+                    color: 'oklch(0.95 0.008 250)',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
-                  onBlur={(e) => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
+                  onFocus={e => e.target.style.borderColor = 'oklch(0.55 0.15 250)'}
+                  onBlur={e => e.target.style.borderColor = 'oklch(0.28 0.025 250)'}
                   required
                 />
               </div>
@@ -876,7 +900,7 @@ function RouteComponent() {
                   className="flex-1 px-4 py-3.5 rounded-xl font-bold transition-all"
                   style={{
                     background: 'oklch(0.25 0.025 250)',
-                    color: 'oklch(0.70 0.015 250)'
+                    color: 'oklch(0.70 0.015 250)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'oklch(0.28 0.025 250)'
@@ -896,7 +920,7 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.55 0.15 250)',
                     color: 'oklch(0.98 0.005 250)',
-                    boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+                    boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)',
                   }}
                   onMouseEnter={(e) => {
                     if (!createCandidate.isPending) {
@@ -909,8 +933,8 @@ function RouteComponent() {
                     e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
-                  {createCandidate.isPending && <Loader2Icon className='animate-spin' size={20} />}
-                  {createCandidate.isPending ? "Creating..." : "Add Candidate"}
+                  {createCandidate.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                  {createCandidate.isPending ? 'Creating...' : 'Add Candidate'}
                 </button>
               </div>
             </form>

@@ -6,11 +6,10 @@ export const Route = createFileRoute('/')({
     <PublicRoute>
       <HomeComponent />
     </PublicRoute>
-  )
+  ),
 })
 
 function HomeComponent() {
-
   const navigate = useNavigate()
 
   return (
@@ -24,7 +23,7 @@ function HomeComponent() {
           <div className="relative inline-block mb-8">
             <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-30 rounded-full"></div>
             <img
-              src={"../src/assets/aclcLogo.webp"}
+              src="../src/assets/aclcLogo.webp"
               alt="CSO Organization Logo"
               className="relative h-32 w-auto mx-auto drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
             />

@@ -3,13 +3,13 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 
 type ToastType = 'success' | 'error'
 
-type ToastMessage = {
+interface ToastMessage {
   message: string
   type: ToastType
   duration?: number
 }
 
-type ToastContextValue = {
+interface ToastContextValue {
   showToast: (toast: ToastMessage) => void
 }
 
@@ -20,7 +20,7 @@ const DEFAULT_DURATIONS: Record<ToastType, number> = {
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
-function ToastComponent({ message, type, onDismiss }: { message: string; type: ToastType; onDismiss: () => void }) {
+function ToastComponent({ message, type, onDismiss }: { message: string, type: ToastType, onDismiss: () => void }) {
   const Icon = type === 'success' ? CheckCircle2 : XCircle
   const iconColor = type === 'success' ? 'oklch(0.70 0.12 140)' : 'oklch(0.70 0.12 30)'
 

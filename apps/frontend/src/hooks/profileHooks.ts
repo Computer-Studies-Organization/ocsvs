@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { changePassword, getMyProfile, updateMyProfile, type ChangePasswordData, type UpdateProfileData } from '@/api/profile_api'
+import { changePassword, getMyProfile, updateMyProfile } from '@/api/profile_api'
 
-export const useMyProfileQuery = () => {
+export function useMyProfileQuery() {
   return useQuery({
     queryKey: ['myProfile'],
     queryFn: getMyProfile,
   })
 }
 
-export const useUpdateProfileMutation = () => {
+export function useUpdateProfileMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -20,7 +20,7 @@ export const useUpdateProfileMutation = () => {
   })
 }
 
-export const useChangePasswordMutation = () => {
+export function useChangePasswordMutation() {
   return useMutation({
     mutationFn: changePassword,
   })

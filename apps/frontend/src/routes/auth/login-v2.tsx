@@ -1,13 +1,12 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
 import type { TLoginUser } from '@/@types'
-import { Eye, EyeOff, Vote } from 'lucide-react'
-import { useLoginUserMutation } from '@/hooks/userHooks'
-import { PublicRoute } from '@/middleware'
-import { Loader2Icon } from 'lucide-react'
-import csoLogo from '@/assets/cso-logo.webp'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Eye, EyeOff, Loader2Icon, Vote } from 'lucide-react'
+import { useState } from 'react'
 import aclcLogo from '@/assets/aclcLogo.webp'
+import csoLogo from '@/assets/cso-logo.webp'
+import { useLoginUserMutation } from '@/hooks/userHooks'
+import { cn } from '@/lib/utils'
+import { PublicRoute } from '@/middleware'
 
 export const Route = createFileRoute('/auth/login-v2')({
   component: () => (
@@ -27,7 +26,7 @@ export const Route = createFileRoute('/auth/login-v2')({
 function RouteComponent() {
   const login = useLoginUserMutation()
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [message, setMessage] = useState<string>("")
+  const [message, setMessage] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [formData, setFormData] = useState<TLoginUser>({
     studentNumber: '',
@@ -41,60 +40,59 @@ function RouteComponent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setMessage("")
+    setMessage('')
 
-    if (!formData.studentNumber.trim() || !formData.password.trim()) return
+    if (!formData.studentNumber.trim() || !formData.password.trim())
+      return
 
     await login.mutateAsync(formData, {
-      onSuccess: (data) => {
+      onSuccess: (_data) => {
         setIsLoading(false)
-        console.log(data.message)
       },
       onError: (error: any) => {
         setIsLoading(false)
         if (error.response) {
-          console.log(error.response?.data.message);
           setMessage(error.response?.data.message)
         }
-      }
+      },
     })
   }
 
   return (
-    <div 
+    <div
       className="min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 relative overflow-hidden"
       style={{ background: 'oklch(0.18 0.025 250)' }}
     >
       {/* Layered background depth - not blur, solid shapes */}
-      <div 
+      <div
         className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full opacity-30"
         style={{
           background: 'radial-gradient(circle, oklch(0.35 0.12 250) 0%, transparent 70%)',
-          transform: 'translate(-30%, -30%)'
+          transform: 'translate(-30%, -30%)',
         }}
       />
-      <div 
+      <div
         className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full opacity-25"
         style={{
           background: 'radial-gradient(circle, oklch(0.32 0.10 260) 0%, transparent 70%)',
-          transform: 'translate(25%, 25%)'
+          transform: 'translate(25%, 25%)',
         }}
       />
-      <div 
+      <div
         className="absolute top-1/2 left-1/2 w-[400px] h-[400px] rounded-full opacity-20"
         style={{
           background: 'radial-gradient(circle, oklch(0.28 0.08 245) 0%, transparent 70%)',
-          transform: 'translate(-50%, -50%)'
+          transform: 'translate(-50%, -50%)',
         }}
       />
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-lg">
-        <div 
+        <div
           className="rounded-2xl p-8 sm:p-10 shadow-2xl"
           style={{
             background: 'oklch(0.22 0.020 250)',
-            boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)'
+            boxShadow: '0 25px 50px -12px oklch(0.10 0.015 250 / 0.5)',
           }}
         >
           {/* Dual logo header */}
@@ -104,7 +102,7 @@ function RouteComponent() {
               alt="ACLC Logo"
               className="h-16 w-auto"
             />
-            <div 
+            <div
               className="h-16 w-0.5 rounded-full"
               style={{ background: 'oklch(0.35 0.03 250)' }}
             />
@@ -117,13 +115,13 @@ function RouteComponent() {
 
           {/* Title */}
           <div className="text-center mb-8 space-y-2">
-            <h1 
+            <h1
               className="text-3xl font-bold tracking-tight"
               style={{ color: 'oklch(0.95 0.008 250)' }}
             >
               Cast Your Vote
             </h1>
-            <p 
+            <p
               className="text-base"
               style={{ color: 'oklch(0.65 0.015 250)' }}
             >
@@ -132,18 +130,18 @@ function RouteComponent() {
           </div>
 
           {message && (
-            <div 
+            <div
               className="mb-6 p-4 rounded-xl flex items-start gap-3"
               style={{
                 background: 'oklch(0.25 0.08 25)',
-                border: '1px solid oklch(0.35 0.10 25)'
+                border: '1px solid oklch(0.35 0.10 25)',
               }}
             >
-              <div 
+              <div
                 className="w-1 h-full rounded-full flex-shrink-0 mt-0.5"
                 style={{ background: 'oklch(0.55 0.18 25)' }}
               />
-              <p 
+              <p
                 className="text-sm font-medium flex-1"
                 style={{ color: 'oklch(0.85 0.05 25)' }}
               >
@@ -157,9 +155,9 @@ function RouteComponent() {
               <label
                 htmlFor="studentNumber"
                 className="block text-sm font-semibold tracking-wide uppercase"
-                style={{ 
+                style={{
                   color: 'oklch(0.70 0.015 250)',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.05em',
                 }}
               >
                 Student Number
@@ -177,7 +175,7 @@ function RouteComponent() {
                 style={{
                   background: 'oklch(0.16 0.018 250)',
                   color: 'oklch(0.95 0.008 250)',
-                  border: message ? '2px solid oklch(0.50 0.18 25)' : '2px solid oklch(0.28 0.025 250)'
+                  border: message ? '2px solid oklch(0.50 0.18 25)' : '2px solid oklch(0.28 0.025 250)',
                 }}
                 onFocus={(e) => {
                   if (!message) {
@@ -196,9 +194,9 @@ function RouteComponent() {
               <label
                 htmlFor="password"
                 className="block text-sm font-semibold tracking-wide uppercase"
-                style={{ 
+                style={{
                   color: 'oklch(0.70 0.015 250)',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.05em',
                 }}
               >
                 Password
@@ -217,7 +215,7 @@ function RouteComponent() {
                   style={{
                     background: 'oklch(0.16 0.018 250)',
                     color: 'oklch(0.95 0.008 250)',
-                    border: message ? '2px solid oklch(0.50 0.18 25)' : '2px solid oklch(0.28 0.025 250)'
+                    border: message ? '2px solid oklch(0.50 0.18 25)' : '2px solid oklch(0.28 0.025 250)',
                   }}
                   onFocus={(e) => {
                     if (!message) {
@@ -235,8 +233,8 @@ function RouteComponent() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
                   style={{ color: 'oklch(0.55 0.015 250)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'oklch(0.75 0.015 250)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'oklch(0.55 0.015 250)'}
+                  onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.75 0.015 250)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.55 0.015 250)'}
                 >
                   {showPassword ? <Eye size={20} strokeWidth={2.5} /> : <EyeOff size={20} strokeWidth={2.5} />}
                 </button>
@@ -250,12 +248,12 @@ function RouteComponent() {
                 'w-full py-4 font-bold text-base rounded-xl transition-all mt-7',
                 'flex items-center justify-center gap-2.5',
                 'disabled:opacity-35 disabled:cursor-not-allowed',
-                'shadow-lg'
+                'shadow-lg',
               )}
               style={{
                 background: 'oklch(0.55 0.15 250)',
                 color: 'oklch(0.98 0.005 250)',
-                boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+                boxShadow: '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)',
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
@@ -270,34 +268,37 @@ function RouteComponent() {
                 e.currentTarget.style.boxShadow = '0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
               }}
             >
-              {(isLoading || login.isPending) ? (
-                <>
-                  <Loader2Icon className='animate-spin' size={20} strokeWidth={2.5} />
-                  <span>Authenticating</span>
-                </>
-              ) : (
-                <>
-                  <Vote size={20} strokeWidth={2.5} />
-                  <span>Sign in to vote</span>
-                </>
-              )}
+              {(isLoading || login.isPending)
+                ? (
+                    <>
+                      <Loader2Icon className="animate-spin" size={20} strokeWidth={2.5} />
+                      <span>Authenticating</span>
+                    </>
+                  )
+                : (
+                    <>
+                      <Vote size={20} strokeWidth={2.5} />
+                      <span>Sign in to vote</span>
+                    </>
+                  )}
             </button>
           </form>
 
-          <div 
+          <div
             className="mt-8 pt-6 text-center text-sm"
-            style={{ 
+            style={{
               borderTop: '1px solid oklch(0.28 0.025 250)',
-              color: 'oklch(0.60 0.015 250)'
+              color: 'oklch(0.60 0.015 250)',
             }}
           >
-            First time voter?{' '}
+            First time voter?
+            {' '}
             <Link
               to="/auth/register"
               className="font-bold transition-colors"
               style={{ color: 'oklch(0.70 0.12 250)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'oklch(0.80 0.13 250)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'oklch(0.70 0.12 250)'}
+              onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.80 0.13 250)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.70 0.12 250)'}
             >
               Register now
             </Link>
@@ -305,11 +306,11 @@ function RouteComponent() {
         </div>
 
         {/* Bottom trust badge */}
-        <div 
+        <div
           className="mt-6 text-center text-xs flex items-center justify-center gap-2"
           style={{ color: 'oklch(0.50 0.015 250)' }}
         >
-          <div 
+          <div
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: 'oklch(0.60 0.12 140)' }}
           />

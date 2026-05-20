@@ -1,21 +1,22 @@
+import type { TCandidate, TUsersData } from '@/@types'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useMemo, useEffect } from 'react'
-import { cn } from '@/lib/utils'
-import { ArrowRight, BarChart3, Loader2Icon, Plus, XIcon, UserPlus } from 'lucide-react'
-import { useCreateCandidateMutation, useAllCandidatesQuery } from '@/hooks/candidateHooks'
-import { UserData, useAllUsersQuery, useRegisterUserMutation } from '@/hooks/userHooks'
+import { ArrowRight, BarChart3, Loader2Icon, Plus, UserPlus, XIcon } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
 import { getCandidateVoteCount } from '@/api/votes_api'
-import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TCandidate, type TUsersData } from '@/@types'
+import { useAllCandidatesQuery, useCreateCandidateMutation } from '@/hooks/candidateHooks'
+import { useAllUsersQuery, UserData, useRegisterUserMutation } from '@/hooks/userHooks'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from '@/lib/adminUsers'
+import { useToast } from '@/lib/toast'
 import {
   CANDIDATE_FIELD_LABELS,
   EMPTY_REGISTER_USER_DRAFT,
-  REGISTER_FIELD_LABELS,
   getMutationErrorMessage,
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
+  REGISTER_FIELD_LABELS,
 } from '@/lib/userRegistration'
-import { useToast } from '@/lib/toast'
+import { cn } from '@/lib/utils'
 import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard-v1')({
@@ -27,34 +28,33 @@ export const Route = createFileRoute('/admin-dashboard-v1')({
 })
 
 export const POSITIONS = [
-  { id: 1, value: "Chairman" },
-  { id: 2, value: "Internal Vice Chairman" },
-  { id: 3, value: "External Vice Chairman" },
-  { id: 4, value: "Internal Secretary" },
-  { id: 5, value: "External Secretary" },
-  { id: 6, value: "Treasurer" },
-  { id: 7, value: "Auditor" },
-  { id: 8, value: "PIOs (Freshman)" },
-  { id: 9, value: "PIOs (Sophomore)" },
-  { id: 10, value: "PIOs (Junior)" },
-  { id: 11, value: "PIOs (Senior)" },
-  { id: 12, value: "Head Committee" },
-  { id: 13, value: "Vice Head Committee" },
-  { id: 14, value: "Committee Leader (Programming)" },
-  { id: 15, value: "Committee Leader (Graphics and Design)" },
-  { id: 16, value: "Committee Leader (Networking)" },
-  { id: 17, value: "Committee Leader (Gaming)" },
+  { id: 1, value: 'Chairman' },
+  { id: 2, value: 'Internal Vice Chairman' },
+  { id: 3, value: 'External Vice Chairman' },
+  { id: 4, value: 'Internal Secretary' },
+  { id: 5, value: 'External Secretary' },
+  { id: 6, value: 'Treasurer' },
+  { id: 7, value: 'Auditor' },
+  { id: 8, value: 'PIOs (Freshman)' },
+  { id: 9, value: 'PIOs (Sophomore)' },
+  { id: 10, value: 'PIOs (Junior)' },
+  { id: 11, value: 'PIOs (Senior)' },
+  { id: 12, value: 'Head Committee' },
+  { id: 13, value: 'Vice Head Committee' },
+  { id: 14, value: 'Committee Leader (Programming)' },
+  { id: 15, value: 'Committee Leader (Graphics and Design)' },
+  { id: 16, value: 'Committee Leader (Networking)' },
+  { id: 17, value: 'Committee Leader (Gaming)' },
 ]
 
-const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }))
-const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }))
-const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, "id"> = {
+const YEAR_LEVELS = YEAR_LEVEL_VALUES.map(value => ({ value, label: value }))
+const COURSES = COURSE_VALUES.map(value => ({ value, label: value }))
+const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, 'id'> = {
   fullName: '',
   position: '',
   manifesto: '',
   accountId: '',
 }
-
 
 function RouteComponent() {
   const userData = UserData()
@@ -83,14 +83,16 @@ function RouteComponent() {
             try {
               const response = await getCandidateVoteCount(candidate.id)
               counts[candidate.id] = response.voteCount || 0
-            } catch (error) {
+            }
+            catch (error) {
               console.error(`Error fetching vote count for candidate ${candidate.id}:`, error)
               counts[candidate.id] = 0
             }
-          })
+          }),
         )
         setVoteCounts(counts)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error fetching vote counts:', error)
       }
     }
@@ -131,14 +133,14 @@ function RouteComponent() {
     return transformed
   }, [candidatesData, voteCounts])
 
-  const [formData, setFormData] = useState<Omit<TCandidate, "id">>(EMPTY_CANDIDATE_FORM_DATA)
+  const [formData, setFormData] = useState<Omit<TCandidate, 'id'>>(EMPTY_CANDIDATE_FORM_DATA)
   const [userFormData, setUserFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
 
   const users = useMemo<TUsersData[]>(() => {
     if (!usersData?.data || !Array.isArray(usersData.data)) {
       return []
     }
-    return usersData.data.map((user: { id: string; accountId: string; studentId: string; firstName: string; lastName: string }) => ({
+    return usersData.data.map((user: { id: string, accountId: string, studentId: string, firstName: string, lastName: string }) => ({
       id: user.id,
       accountId: user.accountId,
       studentId: user.studentId,
@@ -153,7 +155,7 @@ function RouteComponent() {
 
     if (name === 'accountId') {
       const selectedUser = resolveCandidateUserSelection(users, value)
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         accountId: selectedUser?.accountId ?? '',
         fullName: selectedUser?.fullName ?? '',
@@ -161,7 +163,7 @@ function RouteComponent() {
       return
     }
 
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const closeCandidateModal = () => {
@@ -177,7 +179,7 @@ function RouteComponent() {
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const name = e.target.name as keyof typeof EMPTY_REGISTER_USER_DRAFT
     const { value } = e.target
-    setUserFormData((prev) => ({
+    setUserFormData(prev => ({
       ...prev,
       [name]: value,
     }))
@@ -192,7 +194,8 @@ function RouteComponent() {
       return
     }
 
-    if (!isRegisterUserDraftComplete(userFormData)) return
+    if (!isRegisterUserDraftComplete(userFormData))
+      return
 
     await createUser.mutateAsync(userFormData, {
       onSuccess: (data) => {
@@ -266,10 +269,10 @@ function RouteComponent() {
                 className={cn(
                   'inline-flex items-center justify-center rounded-lg mt-2 px-4 py-2 text-sm font-semibold text-white shadow-lg',
                   'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
-                  'transition-all duration-150'
+                  'transition-all duration-150',
                 )}
               >
-                <div className='flex items-center gap-1.5'>
+                <div className="flex items-center gap-1.5">
                   <BarChart3 size={16} />
                   <span>
                     View Results
@@ -280,7 +283,8 @@ function RouteComponent() {
 
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-md shadow-slate-950/40 backdrop-blur">
               <p className="text-sm text-slate-200">
-                Welcome,{' '}
+                Welcome,
+                {' '}
                 <span className="font-semibold text-slate-50">
                   {userData?.user?.username || 'Admin'}
                 </span>
@@ -302,10 +306,10 @@ function RouteComponent() {
               className={cn(
                 'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg',
                 'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
-                'transition-all duration-150'
+                'transition-all duration-150',
               )}
             >
-              <div className='flex items-center gap-1.5'>
+              <div className="flex items-center gap-1.5">
                 <UserPlus size={16} />
                 <span>
                   Create User
@@ -321,10 +325,10 @@ function RouteComponent() {
               className={cn(
                 'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg',
                 'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
-                'transition-all duration-150'
+                'transition-all duration-150',
               )}
             >
-              <div className='flex items-center gap-1.5'>
+              <div className="flex items-center gap-1.5">
                 <Plus size={16} />
                 <span>
                   Add Candidate
@@ -337,7 +341,7 @@ function RouteComponent() {
               className={cn(
                 'inline-flex items-center justify-center rounded-lg p-2 text-white shadow-lg',
                 'bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-slate-500/80 focus:ring-offset-2 focus:ring-offset-slate-900',
-                'transition-all duration-150'
+                'transition-all duration-150',
               )}
               aria-label="Back to Dashboard"
             >
@@ -354,106 +358,117 @@ function RouteComponent() {
                 Candidates
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                {isLoadingCandidates ? (
-                  'Loading candidates...'
-                ) : (
-                  `Showing ${candidates.length} ${candidates.length === 1 ? 'candidate' : 'candidates'}.`
-                )}
+                {isLoadingCandidates
+                  ? 'Loading candidates...'
+                  : `Showing ${candidates.length} ${candidates.length === 1 ? 'candidate' : 'candidates'}.`}
               </p>
             </div>
           </div>
 
-          {isLoadingCandidates ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
-              <div className="flex items-center justify-center gap-3">
-                <Loader2Icon className="animate-spin text-blue-400" size={24} />
-                <p className="text-sm sm:text-base text-slate-400">
-                  Loading candidates...
-                </p>
-              </div>
-            </div>
-          ) : candidates.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
-              <p className="text-sm sm:text-base text-slate-400 text-center">
-                No candidates yet. Click <span className="font-semibold text-blue-400">Add Candidate</span> to create one.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {(() => {
-                // Group candidates by position
-                const positionGroups = POSITIONS.map((pos) => ({
-                  position: pos.value,
-                  candidates: candidates.filter(
-                    (candidate: TCandidate & { percentage: number; voteCount: number }) =>
-                      candidate.position === pos.value
-                  ),
-                })).filter((group) => group.candidates.length > 0)
+          {isLoadingCandidates
+            ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
+                  <div className="flex items-center justify-center gap-3">
+                    <Loader2Icon className="animate-spin text-blue-400" size={24} />
+                    <p className="text-sm sm:text-base text-slate-400">
+                      Loading candidates...
+                    </p>
+                  </div>
+                </div>
+              )
+            : candidates.length === 0
+              ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
+                    <p className="text-sm sm:text-base text-slate-400 text-center">
+                      No candidates yet. Click
+                      {' '}
+                      <span className="font-semibold text-blue-400">Add Candidate</span>
+                      {' '}
+                      to create one.
+                    </p>
+                  </div>
+                )
+              : (
+                  <div className="space-y-8">
+                    {(() => {
+                      // Group candidates by position
+                      const positionGroups = POSITIONS.map(pos => ({
+                        position: pos.value,
+                        candidates: candidates.filter(
+                          (candidate: TCandidate & { percentage: number, voteCount: number }) =>
+                            candidate.position === pos.value,
+                        ),
+                      })).filter(group => group.candidates.length > 0)
 
-                return positionGroups.map((group, index) => (
-                  <div
-                    key={`${group.position}-${index}`}
-                    className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-2xl"
-                  >
-                    <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4 gap-4">
-                      <h3 className="text-md sm:text-xl font-bold text-slate-100 min-w-0 flex-1">
-                        {group.position}
-                      </h3>
-                      <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs sm:text-sm font-medium text-blue-300 flex-shrink-0 whitespace-nowrap">
-                        {group.candidates.length}{' '}
-                        {group.candidates.length === 1 ? 'candidate' : 'candidates'}
-                      </span>
-                    </div>
-
-                    <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
-                      {group.candidates.map((candidate: TCandidate & { percentage: number; voteCount: number }) => (
+                      return positionGroups.map((group, index) => (
                         <div
-                          key={candidate.id}
-                          className="flex h-full flex-col rounded-xl border border-white/10 bg-slate-900/40 p-4 sm:p-5 shadow-lg transition-all hover:border-blue-500/30 hover:shadow-xl"
+                          key={`${group.position}-${index}`}
+                          className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-2xl"
                         >
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <div>
-                              <h4 className="text-base sm:text-lg font-semibold text-slate-100">
-                                {candidate.fullName}
-                              </h4>
-                              <p className="text-[11px] sm:text-xs text-slate-400">
-                                {candidate.position}
-                              </p>
-                            </div>
+                          <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4 gap-4">
+                            <h3 className="text-md sm:text-xl font-bold text-slate-100 min-w-0 flex-1">
+                              {group.position}
+                            </h3>
+                            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs sm:text-sm font-medium text-blue-300 flex-shrink-0 whitespace-nowrap">
+                              {group.candidates.length}
+                              {' '}
+                              {group.candidates.length === 1 ? 'candidate' : 'candidates'}
+                            </span>
                           </div>
 
-                          <p className="mt-2 text-xs sm:text-sm text-slate-300 line-clamp-4 whitespace-pre-line">
-                            {candidate.manifesto}
-                          </p>
-
-                          {/* Vote count and percentage */}
-                          <div className="mt-3">
-                            <div className="mb-1 flex items-center justify-between text-[11px] sm:text-xs text-slate-400">
-                              <span>Votes: {candidate.voteCount ?? 0}</span>
-                              <span className="font-semibold text-slate-100">
-                                {candidate.percentage ?? 0}%
-                              </span>
-                            </div>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                          <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+                            {group.candidates.map((candidate: TCandidate & { percentage: number, voteCount: number }) => (
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-300"
-                                style={{
-                                  width: `${Math.min(
-                                    100,
-                                    Math.max(0, candidate.percentage ?? 0)
-                                  )}%`,
-                                }}
-                              />
-                            </div>
+                                key={candidate.id}
+                                className="flex h-full flex-col rounded-xl border border-white/10 bg-slate-900/40 p-4 sm:p-5 shadow-lg transition-all hover:border-blue-500/30 hover:shadow-xl"
+                              >
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <div>
+                                    <h4 className="text-base sm:text-lg font-semibold text-slate-100">
+                                      {candidate.fullName}
+                                    </h4>
+                                    <p className="text-[11px] sm:text-xs text-slate-400">
+                                      {candidate.position}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <p className="mt-2 text-xs sm:text-sm text-slate-300 line-clamp-4 whitespace-pre-line">
+                                  {candidate.manifesto}
+                                </p>
+
+                                {/* Vote count and percentage */}
+                                <div className="mt-3">
+                                  <div className="mb-1 flex items-center justify-between text-[11px] sm:text-xs text-slate-400">
+                                    <span>
+                                      Votes:
+                                      {candidate.voteCount ?? 0}
+                                    </span>
+                                    <span className="font-semibold text-slate-100">
+                                      {candidate.percentage ?? 0}
+                                      %
+                                    </span>
+                                  </div>
+                                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                    <div
+                                      className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-300"
+                                      style={{
+                                        width: `${Math.min(
+                                          100,
+                                          Math.max(0, candidate.percentage ?? 0),
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
+                    })()}
                   </div>
-                ))
-              })()}
-            </div>
-          )}
+                )}
         </div>
       </div>
 
@@ -469,7 +484,7 @@ function RouteComponent() {
         >
           <div
             className="w-full max-w-xl rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 sm:p-8 relative"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <button
               type="button"
@@ -509,19 +524,21 @@ function RouteComponent() {
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100',
                     'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                    'text-base sm:text-base'
+                    'text-base sm:text-base',
                   )}
                 >
                   <option value="">Select a user</option>
-                  {isLoadingUsers ? (
-                    <option value="" disabled>Loading users...</option>
-                  ) : (
-                    users.map((user: TUsersData, index: number) => (
-                      <option key={user.accountId || index} value={user.accountId}>
-                        {getCandidateUserLabel(user)}
-                      </option>
-                    ))
-                  )}
+                  {isLoadingUsers
+                    ? (
+                        <option value="" disabled>Loading users...</option>
+                      )
+                    : (
+                        users.map((user: TUsersData, index: number) => (
+                          <option key={user.accountId || index} value={user.accountId}>
+                            {getCandidateUserLabel(user)}
+                          </option>
+                        ))
+                      )}
                 </select>
               </div>
 
@@ -543,11 +560,11 @@ function RouteComponent() {
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100',
                     'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                    'text-base sm:text-base'
+                    'text-base sm:text-base',
                   )}
                 >
                   <option value="">Select a position</option>
-                  {POSITIONS.map((pos) => (
+                  {POSITIONS.map(pos => (
                     <option key={pos.id} value={pos.value}>{pos.value}</option>
                   ))}
                 </select>
@@ -574,7 +591,7 @@ function RouteComponent() {
                     'text-slate-100 placeholder:text-slate-500',
                     'resize-none',
                     'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                    'text-base sm:text-base'
+                    'text-base sm:text-base',
                   )}
                 />
               </div>
@@ -586,11 +603,11 @@ function RouteComponent() {
                   'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                   'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                  'text-base sm:text-base'
+                  'text-base sm:text-base',
                 )}
               >
-                {createCandidate.isPending && <Loader2Icon className='animate-spin' size={20} />}
-                {createCandidate.isPending ? "Creating..." : "Add Candidate"}
+                {createCandidate.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                {createCandidate.isPending ? 'Creating...' : 'Add Candidate'}
               </button>
             </form>
           </div>
@@ -609,7 +626,7 @@ function RouteComponent() {
         >
           <div
             className="w-full max-w-xl rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <button
               type="button"
@@ -651,7 +668,7 @@ function RouteComponent() {
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100 placeholder:text-slate-500',
                     'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                    'text-base sm:text-base'
+                    'text-base sm:text-base',
                   )}
                 />
               </div>
@@ -677,7 +694,7 @@ function RouteComponent() {
                       'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -702,7 +719,7 @@ function RouteComponent() {
                       'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -728,7 +745,7 @@ function RouteComponent() {
                       'text-slate-100',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
                       'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -736,7 +753,7 @@ function RouteComponent() {
                     }}
                   >
                     <option value="" className="bg-slate-800 text-slate-300">Select year level</option>
-                    {YEAR_LEVELS.map((year) => (
+                    {YEAR_LEVELS.map(year => (
                       <option key={year.value} value={year.value} className="bg-slate-800 text-slate-300">
                         {year.label}
                       </option>
@@ -763,7 +780,7 @@ function RouteComponent() {
                       'text-slate-100',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
                       'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -771,7 +788,7 @@ function RouteComponent() {
                     }}
                   >
                     <option value="" className="bg-slate-800 text-slate-300">Select course</option>
-                    {COURSES.map((course) => (
+                    {COURSES.map(course => (
                       <option key={course.value} value={course.value} className="bg-slate-800 text-slate-300">
                         {course.label}
                       </option>
@@ -800,7 +817,7 @@ function RouteComponent() {
                     'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                     'text-slate-100 placeholder:text-slate-500',
                     'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                    'text-base sm:text-base'
+                    'text-base sm:text-base',
                   )}
                 />
               </div>
@@ -826,7 +843,7 @@ function RouteComponent() {
                       'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -851,7 +868,7 @@ function RouteComponent() {
                       'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'border-white/15 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -864,11 +881,11 @@ function RouteComponent() {
                   'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                   'bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-500',
-                  'text-base sm:text-base'
+                  'text-base sm:text-base',
                 )}
               >
-                {createUser.isPending && <Loader2Icon className='animate-spin' size={20} />}
-                {createUser.isPending ? "Creating..." : "Create User"}
+                {createUser.isPending && <Loader2Icon className="animate-spin" size={20} />}
+                {createUser.isPending ? 'Creating...' : 'Create User'}
               </button>
             </form>
           </div>

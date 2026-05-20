@@ -24,17 +24,17 @@ export interface ChangePasswordData {
   newPassword: string
 }
 
-export const getMyProfile = async (): Promise<ProfileData> => {
+export async function getMyProfile(): Promise<ProfileData> {
   const response = await api.get('/me/profile')
   return response.data
 }
 
-export const updateMyProfile = async (data: UpdateProfileData): Promise<{ message: string; profile: ProfileData }> => {
+export async function updateMyProfile(data: UpdateProfileData): Promise<{ message: string, profile: ProfileData }> {
   const response = await api.patch('/me/profile', data)
   return response.data
 }
 
-export const changePassword = async (data: ChangePasswordData): Promise<{ message: string }> => {
+export async function changePassword(data: ChangePasswordData): Promise<{ message: string }> {
   const response = await api.post('/me/password', data)
   return response.data
 }
