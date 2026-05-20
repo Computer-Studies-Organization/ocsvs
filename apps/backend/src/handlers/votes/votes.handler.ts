@@ -6,9 +6,11 @@ import type {
   submitVoteRoute,
   withdrawVoteRoute,
 } from '@/routes/votes/routes'
-import { count, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createDb } from '@/config/db'
 import { candidateRepo } from '@/database/repositories/candidates.repository'
+import { userRepo } from '@/database/repositories/users.repository'
+import { voteRepo } from '@/database/repositories/votes.repository'
 import { users, votes } from '@/database/schema'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
@@ -19,11 +21,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   const { db } = createDb(c)
 
   // Get the user associated with this account
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.accountId, authUser.id))
-    .get()
+  const user = await userRepo.findByAccountId(db, authUser.id)
 
   if (!user) {
     return c.json(
@@ -65,13 +63,9 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   }
 
   // Double-check no existing votes (in case hasVoted flag is out of sync)
-  const existingVotes = await db
-    .select()
-    .from(votes)
-    .where(eq(votes.userId, user.id))
-    .all()
+  const hasExistingVotes = await voteRepo.existsForUser(db, user.id)
 
-  if (existingVotes.length > 0) {
+  if (hasExistingVotes) {
     return c.json(
       { message: ERROR_MESSAGES.VOTE_ALREADY_CAST },
       httpStatusCodes.CONFLICT,
@@ -103,7 +97,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
     })
   }
 
-  // Insert all votes and update user's hasVoted flag
+  // Insert all votes and update user's hasVoted flag (atomic D1 batch)
   await db.batch([
     db.insert(votes).values(insertedVotes),
     db.update(users)
@@ -112,11 +106,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   ])
 
   // Get the created votes
-  const createdVotes = await db
-    .select()
-    .from(votes)
-    .where(eq(votes.userId, user.id))
-    .all()
+  const createdVotes = await voteRepo.findByUserId(db, user.id)
 
   return c.json(
     {
@@ -132,11 +122,7 @@ export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = asy
   const { db } = createDb(c)
 
   // Get the user associated with this account
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.accountId, authUser.id))
-    .get()
+  const user = await userRepo.findByAccountId(db, authUser.id)
 
   if (!user) {
     return c.json(
@@ -146,11 +132,7 @@ export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = asy
   }
 
   // Get all votes for this user
-  const userVotes = await db
-    .select()
-    .from(votes)
-    .where(eq(votes.userId, user.id))
-    .all()
+  const userVotes = await voteRepo.findByUserId(db, user.id)
 
   const hasVoted = user.hasVoted === 1
 
@@ -164,13 +146,6 @@ export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = asy
 }
 
 export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async (c) => {
-  if (c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
-  }
-
   const { db } = createDb(c)
 
   // Get all active candidates with their vote counts via repository
@@ -213,13 +188,6 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
 }
 
 export const getCandidateVoteCount: AppRouteHandler<typeof getCandidateVoteCountRoute> = async (c) => {
-  if (c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
-  }
-
   const { id } = c.req.valid('param')
   const { db } = createDb(c)
 
@@ -233,13 +201,7 @@ export const getCandidateVoteCount: AppRouteHandler<typeof getCandidateVoteCount
   }
 
   // Get vote count for this candidate
-  const result = await db
-    .select({ voteCount: count() })
-    .from(votes)
-    .where(eq(votes.candidateId, id))
-    .get()
-
-  const voteCount = result?.voteCount ?? 0
+  const voteCount = await voteRepo.countByCandidateId(db, id)
 
   return c.json(
     {
@@ -257,11 +219,7 @@ export const withdrawVote: AppRouteHandler<typeof withdrawVoteRoute> = async (c)
   const { db } = createDb(c)
 
   // Get the user associated with this account
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.accountId, authUser.id))
-    .get()
+  const user = await userRepo.findByAccountId(db, authUser.id)
 
   if (!user) {
     return c.json(
@@ -271,13 +229,9 @@ export const withdrawVote: AppRouteHandler<typeof withdrawVoteRoute> = async (c)
   }
 
   // Check if user has voted
-  const existingVotes = await db
-    .select()
-    .from(votes)
-    .where(eq(votes.userId, user.id))
-    .all()
+  const hasExistingVotes = await voteRepo.existsForUser(db, user.id)
 
-  if (existingVotes.length === 0) {
+  if (!hasExistingVotes) {
     return c.json(
       { message: ERROR_MESSAGES.VOTE_NOT_FOUND },
       httpStatusCodes.NOT_FOUND,
@@ -286,7 +240,7 @@ export const withdrawVote: AppRouteHandler<typeof withdrawVoteRoute> = async (c)
 
   const now = Math.floor(Date.now() / 1000)
 
-  // Delete all votes for this user and reset hasVoted flag
+  // Delete all votes for this user and reset hasVoted flag (atomic D1 batch)
   await db.batch([
     db.delete(votes).where(eq(votes.userId, user.id)),
     db.update(users)

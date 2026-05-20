@@ -1,6 +1,6 @@
 import * as handlers from '@/handlers/votes/votes.handler'
 import { createRouter } from '@/lib/create-app'
-import { requireAuth } from '@/middleware/auth'
+import { requireAdmin, requireAuth } from '@/middleware/auth'
 import {
   getCandidateVoteCountRoute,
   getMyVoteStatusRoute,
@@ -13,6 +13,10 @@ const router = createRouter()
 
 // Apply authentication middleware to all routes
 router.use('*', requireAuth)
+
+// Admin-only routes
+router.use('/votes/results', requireAdmin)
+router.use('/votes/candidates/:id/count', requireAdmin)
 
 // Register routes with handlers
 router.openapi(submitVoteRoute, handlers.submitVote)

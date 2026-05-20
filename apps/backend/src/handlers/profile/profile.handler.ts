@@ -1,8 +1,7 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { changePasswordRoute, getMyProfileRoute, updateMyProfileRoute } from '@/routes/profile/routes'
-import { and, eq, sql } from 'drizzle-orm'
 import { createDb } from '@/config/db'
-import { accounts, users } from '@/database/schema'
+import { authRepo } from '@/database/repositories/auth.repository'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { validateProfanity } from '@/lib/profanity'
@@ -12,22 +11,7 @@ export const getMyProfile: AppRouteHandler<typeof getMyProfileRoute> = async (c)
   const { db } = createDb(c)
   const authUser = c.var.authUser
 
-  const profile = await db
-    .select({
-      id: accounts.id,
-      username: accounts.username,
-      email: accounts.email,
-      role: accounts.role,
-      studentId: users.studentId,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      yearLevel: users.yearLevel,
-      course: users.course,
-    })
-    .from(accounts)
-    .innerJoin(users, eq(users.accountId, accounts.id))
-    .where(eq(accounts.id, authUser.id))
-    .get()
+  const profile = await authRepo.getProfile(db, authUser.id)
 
   if (!profile) {
     return c.json(
@@ -74,17 +58,8 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
       )
     }
 
-    // Check username uniqueness
-    const existing = await db
-      .select()
-      .from(accounts)
-      .where(and(
-        eq(accounts.username, updateData.username),
-        sql`${accounts.id} != ${authUser.id}`,
-      ))
-      .get()
-
-    if (existing) {
+    const usernameTaken = await authRepo.usernameExists(db, updateData.username, authUser.id)
+    if (usernameTaken) {
       return c.json(
         { message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS },
         httpStatusCodes.CONFLICT,
@@ -93,11 +68,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   // Get user's userId for users table update
-  const user = await db
-    .select({ userId: users.id })
-    .from(users)
-    .where(eq(users.accountId, authUser.id))
-    .get()
+  const user = await authRepo.getUserIdByAccountId(db, authUser.id)
 
   if (!user) {
     return c.json(
@@ -107,56 +78,30 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   // Update accounts table if account fields present
-  const accountFields: any = {}
+  const accountFields: Record<string, unknown> = {}
   if (updateData.username !== undefined)
     accountFields.username = updateData.username
   if (updateData.email !== undefined) {
     accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null
   }
 
-  const now = Math.floor(Date.now() / 1000)
   if (Object.keys(accountFields).length > 0) {
-    accountFields.updatedAt = now
-    await db
-      .update(accounts)
-      .set(accountFields)
-      .where(eq(accounts.id, authUser.id))
-      .run()
+    await authRepo.updateAccount(db, authUser.id, accountFields)
   }
 
   // Update users table if profile fields present
-  const userFields: any = {}
+  const userFields: Record<string, unknown> = {}
   if (updateData.firstName !== undefined)
     userFields.firstName = updateData.firstName
   if (updateData.lastName !== undefined)
     userFields.lastName = updateData.lastName
 
   if (Object.keys(userFields).length > 0) {
-    userFields.updatedAt = now
-    await db
-      .update(users)
-      .set(userFields)
-      .where(eq(users.id, user.userId))
-      .run()
+    await authRepo.updateUser(db, user.userId, userFields)
   }
 
   // Fetch updated profile
-  const updatedProfile = await db
-    .select({
-      id: accounts.id,
-      username: accounts.username,
-      email: accounts.email,
-      role: accounts.role,
-      studentId: users.studentId,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      yearLevel: users.yearLevel,
-      course: users.course,
-    })
-    .from(accounts)
-    .innerJoin(users, eq(users.accountId, accounts.id))
-    .where(eq(accounts.id, authUser.id))
-    .get()
+  const updatedProfile = await authRepo.getProfile(db, authUser.id)
 
   return c.json(
     {
@@ -173,11 +118,7 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   const { currentPassword, newPassword } = c.req.valid('json')
 
   // Fetch current password hash
-  const account = await db
-    .select({ password_hash: accounts.password_hash })
-    .from(accounts)
-    .where(eq(accounts.id, authUser.id))
-    .get()
+  const account = await authRepo.getPasswordHash(db, authUser.id)
 
   if (!account) {
     return c.json(
@@ -195,19 +136,9 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
     )
   }
 
-  // Hash new password
+  // Hash new password and update
   const newPasswordHash = await hashPassword(newPassword)
-
-  // Update password
-  const now = Math.floor(Date.now() / 1000)
-  await db
-    .update(accounts)
-    .set({
-      password_hash: newPasswordHash,
-      updatedAt: now,
-    })
-    .where(eq(accounts.id, authUser.id))
-    .run()
+  await authRepo.updatePassword(db, authUser.id, newPasswordHash)
 
   return c.json(
     { message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY },

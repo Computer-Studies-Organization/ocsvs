@@ -1,8 +1,6 @@
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type { Database } from './database.type'
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
 import { candidates, votes } from '@/database/schema'
-
-export type Database = DrizzleD1Database<typeof import('@/database/schema')>
 export type CandidateRow = typeof candidates.$inferSelect
 
 export interface AdminListResult {

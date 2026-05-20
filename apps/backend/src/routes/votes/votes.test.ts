@@ -76,11 +76,15 @@ vi.mock('@/config/db', () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }))
 
-const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView }
+const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockFindByUserId, mockCountByCandidateId }
   = vi.hoisted(() => ({
     mockFindActiveByIds: vi.fn(),
     mockListWithVoteCount: vi.fn(),
     mockGetForAdminView: vi.fn(),
+    mockFindByAccountId: vi.fn(),
+    mockExistsForUser: vi.fn(),
+    mockFindByUserId: vi.fn(),
+    mockCountByCandidateId: vi.fn(),
   }))
 
 vi.mock('@/database/repositories/candidates.repository', () => ({
@@ -88,6 +92,37 @@ vi.mock('@/database/repositories/candidates.repository', () => ({
     findActiveByIds: mockFindActiveByIds,
     listWithVoteCount: mockListWithVoteCount,
     getForAdminView: mockGetForAdminView,
+  },
+}))
+
+vi.mock('@/database/repositories/users.repository', () => ({
+  userRepo: {
+    findByAccountId: mockFindByAccountId,
+    findById: vi.fn(),
+    getAccountId: vi.fn(),
+    getAccountDeleteStatus: vi.fn(),
+    usernameExists: vi.fn(),
+    listForAdmin: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findByStudentId: vi.fn(),
+    accountExists: vi.fn(),
+    create: vi.fn(),
+    updateAccount: vi.fn(),
+    updateUser: vi.fn(),
+    setHasVoted: vi.fn(),
+    getPasswordHash: vi.fn(),
+    getProfile: vi.fn(),
+  },
+}))
+
+vi.mock('@/database/repositories/votes.repository', () => ({
+  voteRepo: {
+    findByUserId: mockFindByUserId,
+    existsForUser: mockExistsForUser,
+    countByCandidateId: mockCountByCandidateId,
+    insertMany: vi.fn(),
+    deleteByUserId: vi.fn(),
   },
 }))
 
@@ -105,6 +140,10 @@ describe('votes Routes (repository)', () => {
     mockFindActiveByIds.mockReset()
     mockListWithVoteCount.mockReset()
     mockGetForAdminView.mockReset()
+    mockFindByAccountId.mockReset()
+    mockExistsForUser.mockReset()
+    mockFindByUserId.mockReset()
+    mockCountByCandidateId.mockReset()
     TEST_USER = {
       id: testUserId,
       accountId: testUserAccountId,
@@ -178,26 +217,21 @@ describe('votes Routes (repository)', () => {
         hasVoted: 0,
       }
 
-      mockDb.get.mockResolvedValueOnce(mockUser) // user fetch
-      mockDb.all.mockResolvedValueOnce([]) // existing votes check
+      mockFindByAccountId.mockResolvedValue(mockUser)
+      mockExistsForUser.mockResolvedValue(false)
       mockFindActiveByIds.mockResolvedValue(
         new Map([
-          // candidates active
           [testCandidateId1, { id: testCandidateId1, position: 'President' }],
-          [
-            testCandidateId2,
-            { id: testCandidateId2, position: 'Vice President' },
-          ],
+          [testCandidateId2, { id: testCandidateId2, position: 'Vice President' }],
         ]),
       )
-      mockDb.insert.mockImplementationOnce(() => mockDb) // batch
+      mockDb.insert.mockImplementationOnce(() => mockDb)
       mockDb.values.mockImplementationOnce(() => mockDb)
       mockDb.run.mockResolvedValueOnce({ changes: 2 })
       mockDb.update.mockImplementationOnce(() => mockDb)
       mockDb.set.mockImplementationOnce(() => mockDb)
       mockDb.run.mockResolvedValueOnce({ changes: 1 })
-      mockDb.all.mockResolvedValueOnce([
-        // created votes
+      mockFindByUserId.mockResolvedValue([
         {
           id: testVoteId1,
           userId: testUserId,
@@ -235,7 +269,7 @@ describe('votes Routes (repository)', () => {
 
     it('should return 409 if user has already voted', async () => {
       setUserVoted()
-      mockDb.get.mockResolvedValueOnce({
+      mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
         hasVoted: 1,
@@ -259,8 +293,8 @@ describe('votes Routes (repository)', () => {
         accountId: testUserAccountId,
         hasVoted: 0,
       }
-      mockDb.get.mockResolvedValueOnce(mockUser)
-      mockDb.all.mockResolvedValueOnce([]) // existing votes empty
+      mockFindByAccountId.mockResolvedValue(mockUser)
+      mockExistsForUser.mockResolvedValue(false)
 
       mockFindActiveByIds.mockResolvedValue(
         new Map([
@@ -292,10 +326,10 @@ describe('votes Routes (repository)', () => {
         accountId: testUserAccountId,
         hasVoted: 0,
       }
-      mockDb.get.mockResolvedValueOnce(mockUser)
-      mockDb.all.mockResolvedValueOnce([]) // existing votes empty
+      mockFindByAccountId.mockResolvedValue(mockUser)
+      mockExistsForUser.mockResolvedValue(false)
 
-      mockFindActiveByIds.mockResolvedValue(new Map()) // no candidates
+      mockFindActiveByIds.mockResolvedValue(new Map())
 
       const res = await router.request('/votes', {
         method: 'POST',
@@ -312,12 +346,12 @@ describe('votes Routes (repository)', () => {
   describe('gET /votes/me - getMyVoteStatus', () => {
     it('should return vote status when user has votes', async () => {
       setUser()
-      mockDb.get.mockResolvedValueOnce({
+      mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
         hasVoted: 1,
       })
-      mockDb.all.mockResolvedValueOnce([
+      mockFindByUserId.mockResolvedValue([
         {
           id: testVoteId1,
           userId: testUserId,
@@ -338,12 +372,12 @@ describe('votes Routes (repository)', () => {
 
     it('should return empty votes when user has not voted', async () => {
       setUser()
-      mockDb.get.mockResolvedValueOnce({
+      mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
         hasVoted: 0,
       })
-      mockDb.all.mockResolvedValueOnce([])
+      mockFindByUserId.mockResolvedValue([])
 
       const res = await router.request('/votes/me', { method: 'GET' })
 
@@ -404,12 +438,12 @@ describe('votes Routes (repository)', () => {
   describe('dELETE /votes/me - withdrawVote', () => {
     it('should successfully withdraw votes', async () => {
       setUser()
-      mockDb.get.mockResolvedValueOnce({
+      mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
         hasVoted: 1,
       })
-      mockDb.all.mockResolvedValueOnce([{ id: 'vote1', userId: testUserId }])
+      mockExistsForUser.mockResolvedValue(true)
       mockDb.delete.mockImplementationOnce(() => mockDb)
       mockDb.where.mockImplementationOnce(() => mockDb)
       mockDb.run.mockResolvedValueOnce({ changes: 1 })
@@ -426,12 +460,12 @@ describe('votes Routes (repository)', () => {
 
     it('should return 404 when no votes found to withdraw', async () => {
       setUser()
-      mockDb.get.mockResolvedValueOnce({
+      mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
         hasVoted: 0,
       })
-      mockDb.all.mockResolvedValueOnce([])
+      mockExistsForUser.mockResolvedValue(false)
 
       const res = await router.request('/votes/me', { method: 'DELETE' })
 

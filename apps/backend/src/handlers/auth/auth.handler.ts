@@ -1,8 +1,7 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
-import { eq, or } from 'drizzle-orm'
 import { createDb } from '@/config/db'
-import { accounts, users } from '@/database/schema'
+import { authRepo } from '@/database/repositories/auth.repository'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { clearSessionCookie, createSession, deleteSession, getSessionIdFromCookie, setSessionCookie } from '@/lib/session'
@@ -21,16 +20,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   } = c.req.valid('json')
   const { db } = createDb(c)
 
-  const conditions = [eq(accounts.username, username)]
-  if (email && email.trim()) {
-    conditions.push(eq(accounts.email, email))
-  }
-
-  const existing = await db
-    .select()
-    .from(accounts)
-    .where(or(...conditions))
-    .get()
+  const existing = await authRepo.accountExists(db, username, email)
 
   if (existing) {
     return c.json(
@@ -42,29 +32,17 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   const accountId = crypto.randomUUID()
   const passwordHash = await hashPassword(password)
 
-  await db
-    .insert(accounts)
-    .values({
-      id: accountId,
-      username,
-      email: email && email.trim() ? email : null,
-      password_hash: passwordHash,
-      role: 'user',
-    })
-    .run()
-
-  await db
-    .insert(users)
-    .values({
-      id: crypto.randomUUID(),
-      accountId,
-      studentId,
-      firstName,
-      lastName,
-      course,
-      yearLevel,
-    })
-    .run()
+  await authRepo.createAccount(db, {
+    accountId,
+    username,
+    email: email && email.trim() ? email : null,
+    passwordHash,
+    studentId,
+    firstName,
+    lastName,
+    course,
+    yearLevel,
+  })
 
   return c.json(
     {
@@ -87,23 +65,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   c.var.logger.info({ studentNumber, passwordLength: password.length }, 'Login attempt')
 
-  // Only authenticate by studentId via users table (joined)
-  const result = await db
-    .select({
-      id: accounts.id,
-      email: accounts.email,
-      username: accounts.username,
-      password_hash: accounts.password_hash,
-      role: accounts.role,
-      createdAt: accounts.createdAt,
-      updatedAt: accounts.updatedAt,
-      lastLogin: accounts.lastLogin,
-      deletedAt: accounts.deletedAt,
-    })
-    .from(users)
-    .innerJoin(accounts, eq(users.accountId, accounts.id))
-    .where(eq(users.studentId, studentNumber))
-    .get()
+  const result = await authRepo.findByStudentId(db, studentNumber)
 
   if (!result) {
     c.var.logger.warn({ studentNumber }, 'User not found')

@@ -6,9 +6,8 @@ import type {
   restoreUserRoute,
   updateUserRoute,
 } from '@/routes/users/routes'
-import { and, count, desc, eq, isNull, like, or, sql } from 'drizzle-orm'
 import { createDb } from '@/config/db'
-import { accounts, users } from '@/database/schema'
+import { userRepo } from '@/database/repositories/users.repository'
 
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -17,75 +16,16 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   const { page, limit, search, yearLevel, course, includeDeleted }
     = c.req.valid('query')
 
-  const offset = (page - 1) * limit
+  const result = await userRepo.listForAdmin(db, {
+    page,
+    limit,
+    search,
+    yearLevel,
+    course,
+    includeDeleted,
+  })
 
-  const conditions = []
-
-  // Filter out deleted users by default
-  if (!includeDeleted) {
-    conditions.push(isNull(accounts.deletedAt))
-  }
-
-  // Search filter
-  if (search) {
-    conditions.push(
-      or(
-        like(users.firstName, `%${search}%`),
-        like(users.lastName, `%${search}%`),
-        like(users.studentId, `%${search}%`),
-        like(accounts.username, `%${search}%`),
-      ),
-    )
-  }
-
-  // Year level filter
-  if (yearLevel) {
-    conditions.push(eq(users.yearLevel, yearLevel))
-  }
-
-  // Course filter
-  if (course) {
-    conditions.push(eq(users.course, course))
-  }
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-
-  const [usersResult, totalResult] = await Promise.all([
-    db
-      .select({
-        id: users.id,
-        accountId: users.accountId,
-        studentId: users.studentId,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        yearLevel: users.yearLevel,
-        course: users.course,
-        hasVoted: users.hasVoted,
-        username: accounts.username,
-        email: accounts.email,
-        role: accounts.role,
-        deletedAt: accounts.deletedAt,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .join(accounts, eq(users.accountId, accounts.id))
-      .where(whereClause)
-      .orderBy(desc(users.createdAt), desc(users.id))
-      .limit(limit)
-      .offset(offset)
-      .all(),
-    db
-      .select({ count: count() })
-      .from(users)
-      .join(accounts, eq(users.accountId, accounts.id))
-      .where(whereClause)
-      .get(),
-  ])
-
-  const total = totalResult?.count ?? 0
-  const totalPages = Math.ceil(total / limit)
-  const normalizedUsers = usersResult.map(user => ({
+  const normalizedUsers = result.data.map(user => ({
     ...user,
     hasVoted: user.hasVoted === 1,
   }))
@@ -93,12 +33,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   return c.json(
     {
       data: normalizedUsers,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages,
-      },
+      meta: result.meta,
     },
     httpStatusCodes.OK,
   )
@@ -108,28 +43,7 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
 
-  const user = await db
-    .select({
-      id: users.id,
-      accountId: users.accountId,
-      studentId: users.studentId,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      yearLevel: users.yearLevel,
-      course: users.course,
-      hasVoted: users.hasVoted,
-      username: accounts.username,
-      email: accounts.email,
-      role: accounts.role,
-      deletedAt: accounts.deletedAt,
-      createdAt: users.createdAt,
-      updatedAt: users.updatedAt,
-      lastLogin: accounts.lastLogin,
-    })
-    .from(users)
-    .join(accounts, eq(users.accountId, accounts.id))
-    .where(eq(users.id, userId))
-    .get()
+  const user = await userRepo.findById(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
@@ -152,11 +66,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
   const updateData = c.req.valid('json')
 
   // Get user's accountId
-  const user = await db
-    .select({ accountId: users.accountId })
-    .from(users)
-    .where(eq(users.id, userId))
-    .get()
+  const user = await userRepo.getAccountId(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
@@ -164,18 +74,13 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
 
   // Check for duplicate username if updating
   if (updateData.username) {
-    const existing = await db
-      .select()
-      .from(accounts)
-      .where(
-        and(
-          eq(accounts.username, updateData.username),
-          sql`${accounts.id} != ${user.accountId}`,
-        ),
-      )
-      .get()
+    const exists = await userRepo.usernameExists(
+      db,
+      updateData.username,
+      user.accountId,
+    )
 
-    if (existing) {
+    if (exists) {
       return c.json(
         { message: 'Username already exists' },
         httpStatusCodes.CONFLICT,
@@ -184,24 +89,18 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
   }
 
   // Update accounts table if account fields present
-  const accountFields: any = {}
+  const accountFields: Record<string, unknown> = {}
   if (updateData.username !== undefined)
     accountFields.username = updateData.username
   if (updateData.email !== undefined)
     accountFields.email = updateData.email
 
-  const now = Math.floor(Date.now() / 1000)
   if (Object.keys(accountFields).length > 0) {
-    accountFields.updatedAt = now
-    await db
-      .update(accounts)
-      .set(accountFields)
-      .where(eq(accounts.id, user.accountId))
-      .run()
+    await userRepo.updateAccount(db, user.accountId, accountFields)
   }
 
   // Update users table if profile fields present
-  const userFields: any = {}
+  const userFields: Record<string, unknown> = {}
   if (updateData.firstName !== undefined)
     userFields.firstName = updateData.firstName
   if (updateData.lastName !== undefined)
@@ -212,32 +111,11 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
     userFields.course = updateData.course
 
   if (Object.keys(userFields).length > 0) {
-    userFields.updatedAt = now
-    await db.update(users).set(userFields).where(eq(users.id, userId)).run()
+    await userRepo.updateUser(db, userId, userFields)
   }
 
   // Fetch updated user
-  const updatedUser = await db
-    .select({
-      id: users.id,
-      accountId: users.accountId,
-      studentId: users.studentId,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      yearLevel: users.yearLevel,
-      course: users.course,
-      hasVoted: users.hasVoted,
-      username: accounts.username,
-      email: accounts.email,
-      role: accounts.role,
-      deletedAt: accounts.deletedAt,
-      createdAt: users.createdAt,
-      updatedAt: users.updatedAt,
-    })
-    .from(users)
-    .join(accounts, eq(users.accountId, accounts.id))
-    .where(eq(users.id, userId))
-    .get()
+  const updatedUser = await userRepo.findById(db, userId)
 
   return c.json(
     {
@@ -258,15 +136,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (
   const { userId } = c.req.valid('param')
 
   // Get user's accountId and check if already deleted
-  const user = await db
-    .select({
-      accountId: users.accountId,
-      deletedAt: accounts.deletedAt,
-    })
-    .from(users)
-    .join(accounts, eq(users.accountId, accounts.id))
-    .where(eq(users.id, userId))
-    .get()
+  const user = await userRepo.getAccountDeleteStatus(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
@@ -279,16 +149,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (
     )
   }
 
-  // Soft delete: set deletedAt timestamp
-  const now = Math.floor(Date.now() / 1000)
-  await db
-    .update(accounts)
-    .set({
-      deletedAt: now,
-      updatedAt: now,
-    })
-    .where(eq(accounts.id, user.accountId))
-    .run()
+  await userRepo.softDelete(db, user.accountId)
 
   return c.json({ message: 'User archived successfully' }, httpStatusCodes.OK)
 }
@@ -300,15 +161,7 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (
   const { userId } = c.req.valid('param')
 
   // Get user's accountId and check if deleted
-  const user = await db
-    .select({
-      accountId: users.accountId,
-      deletedAt: accounts.deletedAt,
-    })
-    .from(users)
-    .join(accounts, eq(users.accountId, accounts.id))
-    .where(eq(users.id, userId))
-    .get()
+  const user = await userRepo.getAccountDeleteStatus(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
@@ -321,16 +174,7 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (
     )
   }
 
-  // Restore: clear deletedAt
-  const now = Math.floor(Date.now() / 1000)
-  await db
-    .update(accounts)
-    .set({
-      deletedAt: null,
-      updatedAt: now,
-    })
-    .where(eq(accounts.id, user.accountId))
-    .run()
+  await userRepo.restore(db, user.accountId)
 
   return c.json({ message: 'User restored successfully' }, httpStatusCodes.OK)
 }

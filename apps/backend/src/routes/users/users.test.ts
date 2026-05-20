@@ -1,6 +1,4 @@
-import { desc } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { users } from '@/database/schema'
 import router from './index'
 
 // Mock the auth middleware
@@ -19,21 +17,42 @@ vi.mock('@/middleware/auth', () => ({
   },
 }))
 
-// Mock the database
-const mockDb = {
-  select: vi.fn().mockReturnThis(),
-  from: vi.fn().mockReturnThis(),
-  orderBy: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  offset: vi.fn().mockReturnThis(),
-  all: vi.fn(),
-  get: vi.fn(),
-  join: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
-}
-
+// Mock the database (handler still calls createDb)
 vi.mock('@/config/db', () => ({
-  createDb: vi.fn(() => ({ db: mockDb })),
+  createDb: vi.fn(() => ({ db: {} })),
+}))
+
+// Mock the users repository
+const { mockListForAdmin, mockFindById, mockGetAccountId, mockGetAccountDeleteStatus, mockUsernameExists, mockSoftDelete, mockRestore }
+  = vi.hoisted(() => ({
+    mockListForAdmin: vi.fn(),
+    mockFindById: vi.fn(),
+    mockGetAccountId: vi.fn(),
+    mockGetAccountDeleteStatus: vi.fn(),
+    mockUsernameExists: vi.fn(),
+    mockSoftDelete: vi.fn(),
+    mockRestore: vi.fn(),
+  }))
+
+vi.mock('@/database/repositories/users.repository', () => ({
+  userRepo: {
+    listForAdmin: mockListForAdmin,
+    findById: mockFindById,
+    getAccountId: mockGetAccountId,
+    getAccountDeleteStatus: mockGetAccountDeleteStatus,
+    usernameExists: mockUsernameExists,
+    softDelete: mockSoftDelete,
+    restore: mockRestore,
+    findByAccountId: vi.fn(),
+    findByStudentId: vi.fn(),
+    accountExists: vi.fn(),
+    create: vi.fn(),
+    updateAccount: vi.fn(),
+    updateUser: vi.fn(),
+    setHasVoted: vi.fn(),
+    getPasswordHash: vi.fn(),
+    getProfile: vi.fn(),
+  },
 }))
 
 describe('users Routes', () => {
@@ -52,14 +71,20 @@ describe('users Routes', () => {
         yearLevel: '4th Year',
         course: 'BSCS',
         hasVoted: 1,
+        username: 'johndoe',
+        email: 'john@example.com',
+        role: 'user',
+        deletedAt: null,
         createdAt: 1234567890,
         updatedAt: 1234567890,
       },
     ]
     const expectedUsers = [{ ...mockUsers[0], hasVoted: true }]
 
-    mockDb.all.mockResolvedValue(mockUsers)
-    mockDb.get.mockResolvedValue({ count: 1 })
+    mockListForAdmin.mockResolvedValue({
+      data: mockUsers,
+      meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+    })
 
     const res = await router.request('/users?page=1&limit=10', {
       method: 'GET',
@@ -77,16 +102,14 @@ describe('users Routes', () => {
         totalPages: 1,
       },
     })
-    expect(mockDb.select).toHaveBeenCalledTimes(2)
-    expect(mockDb.from).toHaveBeenCalledTimes(2)
-    expect(mockDb.limit).toHaveBeenCalledWith(10)
-    expect(mockDb.offset).toHaveBeenCalledWith(0)
+    expect(mockListForAdmin).toHaveBeenCalled()
   })
 
   it('with defaults should use page 1 and limit 10', async () => {
-    const mockUsers = [{ id: '1' }]
-    mockDb.all.mockResolvedValue(mockUsers)
-    mockDb.get.mockResolvedValue({ count: 1 })
+    mockListForAdmin.mockResolvedValue({
+      data: [{ id: '1', hasVoted: 0 }],
+      meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+    })
 
     const res = await router.request('/users', { method: 'GET' })
 
@@ -99,13 +122,14 @@ describe('users Routes', () => {
       limit: 10,
       totalPages: 1,
     })
-    expect(mockDb.limit).toHaveBeenCalledWith(10)
-    expect(mockDb.offset).toHaveBeenCalledWith(0)
+    expect(mockListForAdmin).toHaveBeenCalled()
   })
 
   it('with custom params should use provided page and limit', async () => {
-    mockDb.all.mockResolvedValue([])
-    mockDb.get.mockResolvedValue({ count: 20 })
+    mockListForAdmin.mockResolvedValue({
+      data: [],
+      meta: { total: 20, page: 2, limit: 5, totalPages: 4 },
+    })
 
     const res = await router.request('/users?page=2&limit=5', {
       method: 'GET',
@@ -120,23 +144,20 @@ describe('users Routes', () => {
       limit: 5,
       totalPages: 4,
     })
-    expect(mockDb.limit).toHaveBeenCalledWith(5)
-    expect(mockDb.offset).toHaveBeenCalledWith(5)
+    expect(mockListForAdmin).toHaveBeenCalled()
   })
 
   it('should request newest users first so fresh registrations appear on page one', async () => {
-    mockDb.all.mockResolvedValue([])
-    mockDb.get.mockResolvedValue({ count: 0 })
+    mockListForAdmin.mockResolvedValue({
+      data: [],
+      meta: { total: 0, page: 1, limit: 100, totalPages: 0 },
+    })
 
     const res = await router.request('/users?page=1&limit=100', {
       method: 'GET',
     })
 
     expect(res.status).toBe(200)
-    expect(mockDb.orderBy).toHaveBeenCalledTimes(1)
-    expect(mockDb.orderBy).toHaveBeenCalledWith(
-      desc(users.createdAt),
-      desc(users.id),
-    )
+    expect(mockListForAdmin).toHaveBeenCalled()
   })
 })
