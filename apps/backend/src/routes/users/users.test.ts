@@ -28,6 +28,8 @@ const mockDb = {
   offset: vi.fn().mockReturnThis(),
   all: vi.fn(),
   get: vi.fn(),
+  join: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
 }
 
 vi.mock('@/config/db', () => ({
@@ -64,7 +66,7 @@ describe('users Routes', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(body).toEqual({
       data: expectedUsers,
@@ -89,7 +91,7 @@ describe('users Routes', () => {
     const res = await router.request('/users', { method: 'GET' })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(body.meta).toEqual({
       total: 1,
@@ -105,10 +107,12 @@ describe('users Routes', () => {
     mockDb.all.mockResolvedValue([])
     mockDb.get.mockResolvedValue({ count: 20 })
 
-    const res = await router.request('/users?page=2&limit=5', { method: 'GET' })
+    const res = await router.request('/users?page=2&limit=5', {
+      method: 'GET',
+    })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(body.meta).toEqual({
       total: 20,
@@ -130,6 +134,9 @@ describe('users Routes', () => {
 
     expect(res.status).toBe(200)
     expect(mockDb.orderBy).toHaveBeenCalledTimes(1)
-    expect(mockDb.orderBy).toHaveBeenCalledWith(desc(users.createdAt), desc(users.id))
+    expect(mockDb.orderBy).toHaveBeenCalledWith(
+      desc(users.createdAt),
+      desc(users.id),
+    )
   })
 })
