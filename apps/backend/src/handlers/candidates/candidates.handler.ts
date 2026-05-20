@@ -79,6 +79,14 @@ export const listCandidates: AppRouteHandler<
   typeof listCandidatesRoute
 > = async (c) => {
   const { page, limit, includeDeleted } = c.req.valid('query')
+
+  if (includeDeleted && c.var.authUser.role !== 'admin') {
+    return c.json(
+      { message: ERROR_MESSAGES.FORBIDDEN },
+      httpStatusCodes.FORBIDDEN,
+    )
+  }
+
   const { db } = createDb(c)
 
   const result = await candidateRepo.listForAdminTable(db, {
