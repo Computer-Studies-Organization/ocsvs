@@ -1,10 +1,10 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ProtectedRoute } from '@/middleware'
-import { useAllCandidates } from '@/data'
-import { ArrowRight, CheckCircle2, Loader2Icon, LockKeyhole } from 'lucide-react'
-import { useMyVotesQuery } from '@/hooks/voteHooks'
-import { useMemo } from 'react'
 import type { TCandidate } from '@/@types'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { ArrowRight, CheckCircle2, Loader2Icon, LockKeyhole } from 'lucide-react'
+import { useMemo } from 'react'
+import { useAllCandidates } from '@/data'
+import { useMyVotesQuery } from '@/hooks/voteHooks'
+import { ProtectedRoute } from '@/middleware'
 
 export const Route = createFileRoute('/dashboard/my-ballot/')({
   component: () => (
@@ -21,14 +21,15 @@ function MyBallotComponent() {
 
   // Match votes with candidate data and group by position
   const votesWithCandidates = useMemo(() => {
-    if (!voteStatus?.votes || !candidates.length) return []
+    if (!voteStatus?.votes || !candidates.length)
+      return []
 
     return voteStatus.votes
       .map((vote) => {
-        const candidate = candidates.find((c) => c.id === vote.candidateId)
+        const candidate = candidates.find(c => c.id === vote.candidateId)
         return candidate ? { vote, candidate } : null
       })
-      .filter((item): item is { vote: typeof voteStatus.votes[0]; candidate: TCandidate } => item !== null)
+      .filter((item): item is { vote: typeof voteStatus.votes[0], candidate: TCandidate } => item !== null)
       .sort((a, b) => {
         // Sort by position name
         return a.candidate.position.localeCompare(b.candidate.position)
@@ -38,7 +39,7 @@ function MyBallotComponent() {
   // Group by position
   const votesByPosition = useMemo(() => {
     const grouped = new Map<string, typeof votesWithCandidates>()
-    
+
     votesWithCandidates.forEach((item) => {
       const position = item.candidate.position
       const existing = grouped.get(position) || []
@@ -121,68 +122,72 @@ function MyBallotComponent() {
 
         {/* CONTENT */}
         <main>
-          {!hasVotes ? (
-            <section className="flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-lg shadow-slate-950/60 backdrop-blur">
-              <div className="text-center space-y-4">
-                <p className="text-lg text-slate-400">You haven't voted yet.</p>
-                <p className="text-sm text-slate-500">
-                  Go to the voting dashboard to cast your votes.
-                </p>
-                <button
-                  onClick={() => navigate({ to: '/dashboard' })}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-sky-500/40 hover:bg-sky-600 transition"
-                >
-                  Go to Voting Dashboard
-                </button>
-              </div>
-            </section>
-          ) : (
-            <section className="space-y-4">
-              {votesByPosition.map(({ position, votes }) => (
-                <div
-                  key={position}
-                  className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-lg shadow-slate-950/60 backdrop-blur"
-                >
-                  <div className="mb-4">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                      Position
+          {!hasVotes
+            ? (
+                <section className="flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-lg shadow-slate-950/60 backdrop-blur">
+                  <div className="text-center space-y-4">
+                    <p className="text-lg text-slate-400">You haven't voted yet.</p>
+                    <p className="text-sm text-slate-500">
+                      Go to the voting dashboard to cast your votes.
                     </p>
-                    <h2 className="text-lg font-semibold text-slate-50 sm:text-xl mt-1">
-                      {position}
-                    </h2>
+                    <button
+                      onClick={() => navigate({ to: '/dashboard' })}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-sky-500/40 hover:bg-sky-600 transition"
+                    >
+                      Go to Voting Dashboard
+                    </button>
                   </div>
-
-                  <div className="space-y-3">
-                    {votes.map(({ vote, candidate }) => (
-                      <div
-                        key={vote.id}
-                        className="flex items-start justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-4"
-                      >
-                        <div className="flex-1 space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="text-emerald-400" size={20} />
-                            <p className="text-sm font-semibold text-slate-50">
-                              {candidate.fullName}
-                            </p>
-                          </div>
-                          <p className="text-[11px] text-slate-400">
-                            {candidate.position}
-                          </p>
-                          <p className="text-[11px] italic text-slate-300/85">
-                            "{candidate.manifesto}"
-                          </p>
-                        </div>
-
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-300 border border-emerald-500/30">
-                          Your Vote
-                        </span>
+                </section>
+              )
+            : (
+                <section className="space-y-4">
+                  {votesByPosition.map(({ position, votes }) => (
+                    <div
+                      key={position}
+                      className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-lg shadow-slate-950/60 backdrop-blur"
+                    >
+                      <div className="mb-4">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-500">
+                          Position
+                        </p>
+                        <h2 className="text-lg font-semibold text-slate-50 sm:text-xl mt-1">
+                          {position}
+                        </h2>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
+
+                      <div className="space-y-3">
+                        {votes.map(({ vote, candidate }) => (
+                          <div
+                            key={vote.id}
+                            className="flex items-start justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-4"
+                          >
+                            <div className="flex-1 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="text-emerald-400" size={20} />
+                                <p className="text-sm font-semibold text-slate-50">
+                                  {candidate.fullName}
+                                </p>
+                              </div>
+                              <p className="text-[11px] text-slate-400">
+                                {candidate.position}
+                              </p>
+                              <p className="text-[11px] italic text-slate-300/85">
+                                "
+                                {candidate.manifesto}
+                                "
+                              </p>
+                            </div>
+
+                            <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-300 border border-emerald-500/30">
+                              Your Vote
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
         </main>
 
         {/* FOOTER */}

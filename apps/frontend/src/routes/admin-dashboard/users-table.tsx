@@ -1,17 +1,17 @@
-import { useState } from 'react'
+import type { ColumnDef, ColumnFiltersState, SortingState, VisibilityState } from '@tanstack/react-table'
 import {
+
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+
   useReactTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
+
 } from '@tanstack/react-table'
-import { Eye, Edit, Archive, RotateCcw, ArrowUpDown, Search } from 'lucide-react'
+import { Archive, ArrowUpDown, Edit, Eye, RotateCcw, Search } from 'lucide-react'
+import { useState } from 'react'
 import {
   Table,
   TableBody,
@@ -20,9 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
 
-type User = {
+interface User {
   id: string
   studentId: string
   firstName: string
@@ -36,7 +35,7 @@ type User = {
   deletedAt: number | null
 }
 
-type UsersTableProps = {
+interface UsersTableProps {
   users: User[]
   isLoading: boolean
   includeDeleted: boolean
@@ -193,68 +192,70 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
         const user = row.original
         return (
           <div className="flex gap-2">
-            {user.deletedAt ? (
-              <>
-                <button
-                  onClick={() => onView(user)}
-                  className="p-2 rounded-lg transition-all"
-                  style={{
-                    background: 'oklch(0.25 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)',
-                  }}
-                  title="View"
-                >
-                  <Eye size={16} />
-                </button>
-                <button
-                  onClick={() => onRestore(user)}
-                  className="p-2 rounded-lg transition-all"
-                  style={{
-                    background: 'oklch(0.70 0.12 140)',
-                    color: 'oklch(0.98 0.005 250)',
-                  }}
-                  title="Restore"
-                >
-                  <RotateCcw size={16} />
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => onView(user)}
-                  className="p-2 rounded-lg transition-all"
-                  style={{
-                    background: 'oklch(0.25 0.025 250)',
-                    color: 'oklch(0.95 0.008 250)',
-                  }}
-                  title="View"
-                >
-                  <Eye size={16} />
-                </button>
-                <button
-                  onClick={() => onEdit(user)}
-                  className="p-2 rounded-lg transition-all"
-                  style={{
-                    background: 'oklch(0.55 0.15 250)',
-                    color: 'oklch(0.98 0.005 250)',
-                  }}
-                  title="Edit"
-                >
-                  <Edit size={16} />
-                </button>
-                <button
-                  onClick={() => onArchive(user)}
-                  className="p-2 rounded-lg transition-all"
-                  style={{
-                    background: 'oklch(0.70 0.12 30)',
-                    color: 'oklch(0.98 0.005 250)',
-                  }}
-                  title="Archive"
-                >
-                  <Archive size={16} />
-                </button>
-              </>
-            )}
+            {user.deletedAt
+              ? (
+                  <>
+                    <button
+                      onClick={() => onView(user)}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.95 0.008 250)',
+                      }}
+                      title="View"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => onRestore(user)}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        background: 'oklch(0.70 0.12 140)',
+                        color: 'oklch(0.98 0.005 250)',
+                      }}
+                      title="Restore"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  </>
+                )
+              : (
+                  <>
+                    <button
+                      onClick={() => onView(user)}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        background: 'oklch(0.25 0.025 250)',
+                        color: 'oklch(0.95 0.008 250)',
+                      }}
+                      title="View"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => onEdit(user)}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        background: 'oklch(0.55 0.15 250)',
+                        color: 'oklch(0.98 0.005 250)',
+                      }}
+                      title="Edit"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => onArchive(user)}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        background: 'oklch(0.70 0.12 30)',
+                        color: 'oklch(0.98 0.005 250)',
+                      }}
+                      title="Archive"
+                    >
+                      <Archive size={16} />
+                    </button>
+                  </>
+                )}
           </div>
         )
       },
@@ -299,7 +300,7 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
             type="text"
             placeholder="Search users..."
             value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
+            onChange={e => setGlobalFilter(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 font-medium transition-all"
             style={{
               background: 'oklch(0.18 0.022 250)',
@@ -308,18 +309,18 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
             }}
           />
         </div>
-        <label 
+        <label
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-semibold cursor-pointer transition-all whitespace-nowrap"
           style={{
             background: includeDeleted ? 'oklch(0.25 0.025 250)' : 'oklch(0.18 0.022 250)',
             borderColor: 'oklch(0.28 0.025 250)',
-            color: 'oklch(0.95 0.008 250)'
+            color: 'oklch(0.95 0.008 250)',
           }}
         >
           <input
             type="checkbox"
             checked={includeDeleted}
-            onChange={(e) => onIncludeDeletedChange(e.target.checked)}
+            onChange={e => onIncludeDeletedChange(e.target.checked)}
             className="w-4 h-4"
           />
           <span>Show archived</span>
@@ -336,18 +337,18 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
       >
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow
                 key={headerGroup.id}
                 style={{ borderColor: 'oklch(0.25 0.025 250)' }}
               >
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -355,47 +356,51 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                  style={{ color: 'oklch(0.70 0.015 250)' }}
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  style={{
-                    borderColor: 'oklch(0.25 0.025 250)',
-                    opacity: row.original.deletedAt ? 0.6 : 1,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+            {isLoading
+              ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                      style={{ color: 'oklch(0.70 0.015 250)' }}
+                    >
+                      Loading...
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                  style={{ color: 'oklch(0.70 0.015 250)' }}
-                >
-                  No users found.
-                </TableCell>
-              </TableRow>
-            )}
+                  </TableRow>
+                )
+              : table.getRowModel().rows?.length
+                ? (
+                    table.getRowModel().rows.map(row => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && 'selected'}
+                        style={{
+                          borderColor: 'oklch(0.25 0.025 250)',
+                          opacity: row.original.deletedAt ? 0.6 : 1,
+                        }}
+                      >
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )
+                : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                        style={{ color: 'oklch(0.70 0.015 250)' }}
+                      >
+                        No users found.
+                      </TableCell>
+                    </TableRow>
+                  )}
           </TableBody>
         </Table>
       </div>
@@ -406,7 +411,9 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
           className="text-sm font-medium"
           style={{ color: 'oklch(0.70 0.015 250)' }}
         >
-          {table.getFilteredRowModel().rows.length} user(s)
+          {table.getFilteredRowModel().rows.length}
+          {' '}
+          user(s)
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -424,7 +431,10 @@ export function UsersTable({ users, isLoading, includeDeleted, onIncludeDeletedC
             className="px-4 py-2 font-bold"
             style={{ color: 'oklch(0.95 0.008 250)' }}
           >
-            {table.getState().pagination.pageIndex + 1} /{' '}
+            {table.getState().pagination.pageIndex + 1}
+            {' '}
+            /
+            {' '}
             {table.getPageCount()}
           </span>
           <button

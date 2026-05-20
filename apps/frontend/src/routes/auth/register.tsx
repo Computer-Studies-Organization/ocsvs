@@ -1,18 +1,18 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2Icon } from 'lucide-react'
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
 import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
-import { Eye, EyeOff, ChevronLeft, ChevronRight, Loader2Icon } from 'lucide-react'
 import { useRegisterUserMutation } from '@/hooks/userHooks'
 import {
   EMPTY_REGISTER_USER_DRAFT,
-  REGISTER_FIELD_LABELS,
   getMutationErrorMessage,
   getRegisterUserDraftStepOneValidationMessage,
   getRegisterUserDraftValidationMessage,
   isRegisterUserDraftComplete,
   isRegisterUserDraftStepOneComplete,
+  REGISTER_FIELD_LABELS,
 } from '@/lib/userRegistration'
+import { cn } from '@/lib/utils'
 import { PublicRoute } from '@/middleware'
 
 export const Route = createFileRoute('/auth/register')({
@@ -23,21 +23,21 @@ export const Route = createFileRoute('/auth/register')({
   ),
 })
 
-const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }))
-const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }))
+const YEAR_LEVELS = YEAR_LEVEL_VALUES.map(value => ({ value, label: value }))
+const COURSES = COURSE_VALUES.map(value => ({ value, label: value }))
 
 function RouteComponent() {
   const navigate = useNavigate()
   const register = useRegisterUserMutation()
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [showPassword, setShowPassword] = useState<boolean>(false)
-  const [message, setMessage] = useState<string>("")
+  const [message, setMessage] = useState<string>('')
   const [formData, setFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setMessage("")
-    setFormData((prev) => ({
+    setMessage('')
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }))
@@ -51,7 +51,7 @@ function RouteComponent() {
     const stepOneMessage = getRegisterUserDraftStepOneValidationMessage(formData)
     if (currentStep === 1 && !stepOneMessage) {
       setCurrentStep(2)
-      setMessage("")
+      setMessage('')
       return
     }
 
@@ -63,7 +63,7 @@ function RouteComponent() {
   const handleBack = () => {
     if (currentStep === 2) {
       setCurrentStep(1)
-      setMessage("")
+      setMessage('')
     }
   }
 
@@ -76,15 +76,16 @@ function RouteComponent() {
       return
     }
 
-    if (!isRegisterUserDraftComplete(formData)) return
+    if (!isRegisterUserDraftComplete(formData))
+      return
 
     await register.mutateAsync(formData, {
       onSuccess: () => {
         navigate({ to: '/auth/login' })
       },
       onError: (error: unknown) => {
-        setMessage(getMutationErrorMessage(error, "Failed to create account", REGISTER_FIELD_LABELS))
-      }
+        setMessage(getMutationErrorMessage(error, 'Failed to create account', REGISTER_FIELD_LABELS))
+      },
     })
   }
 
@@ -114,18 +115,21 @@ function RouteComponent() {
             <div className="flex items-center justify-center gap-2 mt-4">
               <div className={cn(
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all',
-                currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400'
-              )}>
+                currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400',
+              )}
+              >
                 1
               </div>
               <div className={cn(
                 'h-0.5 w-12 transition-all',
-                currentStep >= 2 ? 'bg-blue-500' : 'bg-white/10'
-              )} />
+                currentStep >= 2 ? 'bg-blue-500' : 'bg-white/10',
+              )}
+              />
               <div className={cn(
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all',
-                currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400'
-              )}>
+                currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400',
+              )}
+              >
                 2
               </div>
             </div>
@@ -135,7 +139,7 @@ function RouteComponent() {
             <div
               className={cn(
                 'mb-5 rounded-lg border px-4 py-3 text-sm text-white',
-                'border-red-500/40 bg-red-500/10'
+                'border-red-500/40 bg-red-500/10',
               )}
             >
               {message}
@@ -151,7 +155,9 @@ function RouteComponent() {
                     htmlFor="studentId"
                     className="block text-sm font-medium text-slate-300"
                   >
-                    Student ID <span className='text-xs text-slate-400'></span>
+                    Student ID
+                    {' '}
+                    <span className="text-xs text-slate-400"></span>
                   </label>
                   <input
                     id="studentId"
@@ -166,7 +172,7 @@ function RouteComponent() {
                       'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -193,7 +199,7 @@ function RouteComponent() {
                         'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                         'text-slate-100 placeholder:text-slate-500',
                         'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base'
+                        'text-base sm:text-base',
                       )}
                     />
                   </div>
@@ -219,7 +225,7 @@ function RouteComponent() {
                         'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                         'text-slate-100 placeholder:text-slate-500',
                         'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base'
+                        'text-base sm:text-base',
                       )}
                     />
                   </div>
@@ -233,7 +239,7 @@ function RouteComponent() {
                     'w-full py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                     'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                     'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                    'text-base sm:text-base flex items-center justify-center gap-2'
+                    'text-base sm:text-base flex items-center justify-center gap-2',
                   )}
                 >
                   Next
@@ -262,7 +268,7 @@ function RouteComponent() {
                       'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
                       'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -272,7 +278,7 @@ function RouteComponent() {
                     <option value="" className="bg-slate-800 text-slate-300">
                       Select your year level
                     </option>
-                    {YEAR_LEVELS.map((year) => (
+                    {YEAR_LEVELS.map(year => (
                       <option
                         key={year.value}
                         value={year.value}
@@ -302,7 +308,7 @@ function RouteComponent() {
                       'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
                       'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat'
+                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -312,7 +318,7 @@ function RouteComponent() {
                     <option value="" className="bg-slate-800 text-slate-300">
                       Select your course
                     </option>
-                    {COURSES.map((course) => (
+                    {COURSES.map(course => (
                       <option
                         key={course.value}
                         value={course.value}
@@ -345,7 +351,7 @@ function RouteComponent() {
                       'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                       'text-slate-100 placeholder:text-slate-500',
                       'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   />
                 </div>
@@ -373,7 +379,7 @@ function RouteComponent() {
                         'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                         'text-slate-100 placeholder:text-slate-500',
                         'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base'
+                        'text-base sm:text-base',
                       )}
                     />
                   </div>
@@ -399,7 +405,7 @@ function RouteComponent() {
                         'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
                         'text-slate-100 placeholder:text-slate-500',
                         'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base'
+                        'text-base sm:text-base',
                       )}
                     />
                     <button
@@ -419,7 +425,7 @@ function RouteComponent() {
                     className={cn(
                       'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
                       'bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900',
-                      'text-base sm:text-base flex items-center justify-center gap-2'
+                      'text-base sm:text-base flex items-center justify-center gap-2',
                     )}
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -432,7 +438,7 @@ function RouteComponent() {
                       'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                       'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                       'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                      'text-base sm:text-base'
+                      'text-base sm:text-base',
                     )}
                   >
                     {register.isPending && <Loader2Icon className="h-4 w-4 animate-spin" />}
@@ -445,7 +451,8 @@ function RouteComponent() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
-              Already have an account?{' '}
+              Already have an account?
+              {' '}
               <Link
                 to="/auth/login"
                 className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
