@@ -1,5 +1,11 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
-import type { deleteUserRoute, getUserRoute, listUsersRoute, restoreUserRoute, updateUserRoute } from '@/routes/users/routes'
+import type {
+  deleteUserRoute,
+  getUserRoute,
+  listUsersRoute,
+  restoreUserRoute,
+  updateUserRoute,
+} from '@/routes/users/routes'
 import { and, count, desc, eq, isNull, like, or, sql } from 'drizzle-orm'
 import { createDb } from '@/config/db'
 import { accounts, users } from '@/database/schema'
@@ -8,7 +14,8 @@ import * as httpStatusCodes from '@/openapi/http-status-codes'
 
 export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   const { db } = createDb(c)
-  const { page, limit, search, yearLevel, course, includeDeleted } = c.req.valid('query')
+  const { page, limit, search, yearLevel, course, includeDeleted }
+    = c.req.valid('query')
 
   const offset = (page - 1) * limit
 
@@ -62,7 +69,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
         updatedAt: users.updatedAt,
       })
       .from(users)
-      .innerJoin(accounts, eq(users.accountId, accounts.id))
+      .join(accounts, eq(users.accountId, accounts.id))
       .where(whereClause)
       .orderBy(desc(users.createdAt), desc(users.id))
       .limit(limit)
@@ -71,7 +78,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
     db
       .select({ count: count() })
       .from(users)
-      .innerJoin(accounts, eq(users.accountId, accounts.id))
+      .join(accounts, eq(users.accountId, accounts.id))
       .where(whereClause)
       .get(),
   ])
@@ -120,15 +127,12 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
       lastLogin: accounts.lastLogin,
     })
     .from(users)
-    .innerJoin(accounts, eq(users.accountId, accounts.id))
+    .join(accounts, eq(users.accountId, accounts.id))
     .where(eq(users.id, userId))
     .get()
 
   if (!user) {
-    return c.json(
-      { message: 'User not found' },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
   }
 
   return c.json(
@@ -140,7 +144,9 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
   )
 }
 
-export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => {
+export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
+  c,
+) => {
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
   const updateData = c.req.valid('json')
@@ -153,10 +159,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
     .get()
 
   if (!user) {
-    return c.json(
-      { message: 'User not found' },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
   }
 
   // Check for duplicate username if updating
@@ -164,10 +167,12 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
     const existing = await db
       .select()
       .from(accounts)
-      .where(and(
-        eq(accounts.username, updateData.username),
-        sql`${accounts.id} != ${user.accountId}`,
-      ))
+      .where(
+        and(
+          eq(accounts.username, updateData.username),
+          sql`${accounts.id} != ${user.accountId}`,
+        ),
+      )
       .get()
 
     if (existing) {
@@ -208,11 +213,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 
   if (Object.keys(userFields).length > 0) {
     userFields.updatedAt = now
-    await db
-      .update(users)
-      .set(userFields)
-      .where(eq(users.id, userId))
-      .run()
+    await db.update(users).set(userFields).where(eq(users.id, userId)).run()
   }
 
   // Fetch updated user
@@ -234,7 +235,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
       updatedAt: users.updatedAt,
     })
     .from(users)
-    .innerJoin(accounts, eq(users.accountId, accounts.id))
+    .join(accounts, eq(users.accountId, accounts.id))
     .where(eq(users.id, userId))
     .get()
 
@@ -250,7 +251,9 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
   )
 }
 
-export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => {
+export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (
+  c,
+) => {
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
 
@@ -261,15 +264,12 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
       deletedAt: accounts.deletedAt,
     })
     .from(users)
-    .innerJoin(accounts, eq(users.accountId, accounts.id))
+    .join(accounts, eq(users.accountId, accounts.id))
     .where(eq(users.id, userId))
     .get()
 
   if (!user) {
-    return c.json(
-      { message: 'User not found' },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
   }
 
   if (user.deletedAt !== null) {
@@ -290,13 +290,12 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
     .where(eq(accounts.id, user.accountId))
     .run()
 
-  return c.json(
-    { message: 'User archived successfully' },
-    httpStatusCodes.OK,
-  )
+  return c.json({ message: 'User archived successfully' }, httpStatusCodes.OK)
 }
 
-export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) => {
+export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (
+  c,
+) => {
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
 
@@ -307,15 +306,12 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
       deletedAt: accounts.deletedAt,
     })
     .from(users)
-    .innerJoin(accounts, eq(users.accountId, accounts.id))
+    .join(accounts, eq(users.accountId, accounts.id))
     .where(eq(users.id, userId))
     .get()
 
   if (!user) {
-    return c.json(
-      { message: 'User not found' },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
   }
 
   if (user.deletedAt === null) {
@@ -336,8 +332,5 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
     .where(eq(accounts.id, user.accountId))
     .run()
 
-  return c.json(
-    { message: 'User restored successfully' },
-    httpStatusCodes.OK,
-  )
+  return c.json({ message: 'User restored successfully' }, httpStatusCodes.OK)
 }
