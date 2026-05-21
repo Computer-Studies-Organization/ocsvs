@@ -98,14 +98,9 @@ vi.mock('@/database/repositories/candidates.repository', () => ({
 vi.mock('@/database/repositories/users.repository', () => ({
   userRepo: {
     findByAccountId: mockFindByAccountId,
-    findById: vi.fn(),
-    findByStudentId: vi.fn(),
-    listForAdmin: vi.fn(),
     getAccountId: vi.fn(),
-    getAccountDeleteStatus: vi.fn(),
     updateUser: vi.fn(),
     setHasVoted: vi.fn(),
-    getProfile: vi.fn(),
   },
 }))
 

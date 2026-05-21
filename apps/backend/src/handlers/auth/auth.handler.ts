@@ -2,7 +2,7 @@ import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
 import { createDb } from '@/config/db'
 import { accountRepo } from '@/database/repositories/account.repository'
-import { userRepo } from '@/database/repositories/users.repository'
+import { userAccountQueries } from '@/database/queries/user-account.queries'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { clearSessionCookie, createSession, deleteSession, getSessionIdFromCookie, setSessionCookie } from '@/lib/session'
@@ -66,7 +66,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   c.var.logger.info({ studentNumber, passwordLength: password.length }, 'Login attempt')
 
-  const result = await userRepo.findByStudentId(db, studentNumber)
+  const result = await userAccountQueries.findByStudentId(db, studentNumber)
 
   if (!result) {
     c.var.logger.warn({ studentNumber }, 'User not found')

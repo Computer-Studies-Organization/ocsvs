@@ -3,6 +3,7 @@ import type { changePasswordRoute, getMyProfileRoute, updateMyProfileRoute } fro
 import { createDb } from '@/config/db'
 import { accountRepo } from '@/database/repositories/account.repository'
 import { userRepo } from '@/database/repositories/users.repository'
+import { userAccountQueries } from '@/database/queries/user-account.queries'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { validateProfanity } from '@/lib/profanity'
@@ -12,7 +13,7 @@ export const getMyProfile: AppRouteHandler<typeof getMyProfileRoute> = async (c)
   const { db } = createDb(c)
   const authUser = c.var.authUser
 
-  const profile = await userRepo.getProfile(db, authUser.id)
+  const profile = await userAccountQueries.getProfile(db, authUser.id)
 
   if (!profile) {
     return c.json(
@@ -102,7 +103,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   // Fetch updated profile
-  const updatedProfile = await userRepo.getProfile(db, authUser.id)
+  const updatedProfile = await userAccountQueries.getProfile(db, authUser.id)
 
   return c.json(
     {

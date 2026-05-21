@@ -22,25 +22,30 @@ vi.mock('@/config/db', () => ({
   createDb: vi.fn(() => ({ db: {} })),
 }))
 
-// Mock the users repository
-const { mockListForAdmin, mockFindById, mockGetAccountId, mockGetAccountDeleteStatus }
+// Mock the users repository (single-table ops only)
+vi.mock('@/database/repositories/users.repository', () => ({
+  userRepo: {
+    getAccountId: vi.fn(),
+    findByAccountId: vi.fn(),
+    updateUser: vi.fn(),
+    setHasVoted: vi.fn(),
+  },
+}))
+
+// Mock the user account queries (joined queries)
+const { mockListForAdmin, mockFindById, mockGetAccountDeleteStatus }
   = vi.hoisted(() => ({
     mockListForAdmin: vi.fn(),
     mockFindById: vi.fn(),
-    mockGetAccountId: vi.fn(),
     mockGetAccountDeleteStatus: vi.fn(),
   }))
 
-vi.mock('@/database/repositories/users.repository', () => ({
-  userRepo: {
+vi.mock('@/database/queries/user-account.queries', () => ({
+  userAccountQueries: {
     listForAdmin: mockListForAdmin,
     findById: mockFindById,
-    getAccountId: mockGetAccountId,
     getAccountDeleteStatus: mockGetAccountDeleteStatus,
-    findByAccountId: vi.fn(),
     findByStudentId: vi.fn(),
-    updateUser: vi.fn(),
-    setHasVoted: vi.fn(),
     getProfile: vi.fn(),
   },
 }))
@@ -81,7 +86,7 @@ describe('users Routes', () => {
         accountId: 'acc1',
         yearLevel: '4th Year',
         course: 'BSCS',
-        hasVoted: 1,
+        hasVoted: true,
         username: 'johndoe',
         email: 'john@example.com',
         role: 'user',
@@ -90,7 +95,6 @@ describe('users Routes', () => {
         updatedAt: 1234567890,
       },
     ]
-    const expectedUsers = [{ ...mockUsers[0], hasVoted: true }]
 
     mockListForAdmin.mockResolvedValue({
       data: mockUsers,
@@ -105,7 +109,7 @@ describe('users Routes', () => {
     const body = (await res.json()) as any
 
     expect(body).toEqual({
-      data: expectedUsers,
+      data: mockUsers,
       meta: {
         total: 1,
         page: 1,
@@ -118,7 +122,7 @@ describe('users Routes', () => {
 
   it('with defaults should use page 1 and limit 10', async () => {
     mockListForAdmin.mockResolvedValue({
-      data: [{ id: '1', hasVoted: 0 }],
+      data: [{ id: '1', hasVoted: false }],
       meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
     })
 

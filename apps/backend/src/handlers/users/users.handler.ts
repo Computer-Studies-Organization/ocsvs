@@ -9,6 +9,7 @@ import type {
 import { createDb } from '@/config/db'
 import { accountRepo } from '@/database/repositories/account.repository'
 import { userRepo } from '@/database/repositories/users.repository'
+import { userAccountQueries } from '@/database/queries/user-account.queries'
 
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
@@ -17,7 +18,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   const { page, limit, search, yearLevel, course, includeDeleted }
     = c.req.valid('query')
 
-  const result = await userRepo.listForAdmin(db, {
+  const result = await userAccountQueries.listForAdmin(db, {
     page,
     limit,
     search,
@@ -26,14 +27,9 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
     includeDeleted,
   })
 
-  const normalizedUsers = result.data.map(user => ({
-    ...user,
-    hasVoted: user.hasVoted === 1,
-  }))
-
   return c.json(
     {
-      data: normalizedUsers,
+      data: result.data,
       meta: result.meta,
     },
     httpStatusCodes.OK,
@@ -44,19 +40,13 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
 
-  const user = await userRepo.findById(db, userId)
+  const user = await userAccountQueries.findById(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
   }
 
-  return c.json(
-    {
-      ...user,
-      hasVoted: user.hasVoted === 1,
-    },
-    httpStatusCodes.OK,
-  )
+  return c.json(user, httpStatusCodes.OK)
 }
 
 export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
@@ -116,15 +106,12 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
   }
 
   // Fetch updated user
-  const updatedUser = await userRepo.findById(db, userId)
+  const updatedUser = await userAccountQueries.findById(db, userId)
 
   return c.json(
     {
       message: 'User updated successfully',
-      user: {
-        ...updatedUser!,
-        hasVoted: updatedUser!.hasVoted === 1,
-      },
+      user: updatedUser!,
     },
     httpStatusCodes.OK,
   )
@@ -137,7 +124,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (
   const { userId } = c.req.valid('param')
 
   // Get user's accountId and check if already deleted
-  const user = await userRepo.getAccountDeleteStatus(db, userId)
+  const user = await userAccountQueries.getAccountDeleteStatus(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
@@ -161,8 +148,7 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (
   const { db } = createDb(c)
   const { userId } = c.req.valid('param')
 
-  // Get user's accountId and check if deleted
-  const user = await userRepo.getAccountDeleteStatus(db, userId)
+  const user = await userAccountQueries.getAccountDeleteStatus(db, userId)
 
   if (!user) {
     return c.json({ message: 'User not found' }, httpStatusCodes.NOT_FOUND)
