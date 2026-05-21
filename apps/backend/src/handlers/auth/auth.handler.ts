@@ -1,7 +1,8 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
 import { createDb } from '@/config/db'
-import { authRepo } from '@/database/repositories/auth.repository'
+import { accountRepo } from '@/database/repositories/account.repository'
+import { userRepo } from '@/database/repositories/users.repository'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { clearSessionCookie, createSession, deleteSession, getSessionIdFromCookie, setSessionCookie } from '@/lib/session'
@@ -20,7 +21,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   } = c.req.valid('json')
   const { db } = createDb(c)
 
-  const existing = await authRepo.accountExists(db, username, email)
+  const existing = await accountRepo.accountExists(db, username, email)
 
   if (existing) {
     return c.json(
@@ -32,7 +33,7 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   const accountId = crypto.randomUUID()
   const passwordHash = await hashPassword(password)
 
-  await authRepo.createAccount(db, {
+  await accountRepo.create(db, {
     accountId,
     username,
     email: email && email.trim() ? email : null,
@@ -65,7 +66,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   c.var.logger.info({ studentNumber, passwordLength: password.length }, 'Login attempt')
 
-  const result = await authRepo.findByStudentId(db, studentNumber)
+  const result = await userRepo.findByStudentId(db, studentNumber)
 
   if (!result) {
     c.var.logger.warn({ studentNumber }, 'User not found')

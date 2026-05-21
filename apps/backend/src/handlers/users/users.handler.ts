@@ -7,6 +7,7 @@ import type {
   updateUserRoute,
 } from '@/routes/users/routes'
 import { createDb } from '@/config/db'
+import { accountRepo } from '@/database/repositories/account.repository'
 import { userRepo } from '@/database/repositories/users.repository'
 
 import * as httpStatusCodes from '@/openapi/http-status-codes'
@@ -74,7 +75,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
 
   // Check for duplicate username if updating
   if (updateData.username) {
-    const exists = await userRepo.usernameExists(
+    const exists = await accountRepo.usernameExists(
       db,
       updateData.username,
       user.accountId,
@@ -96,7 +97,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
     accountFields.email = updateData.email
 
   if (Object.keys(accountFields).length > 0) {
-    await userRepo.updateAccount(db, user.accountId, accountFields)
+    await accountRepo.updateAccount(db, user.accountId, accountFields)
   }
 
   // Update users table if profile fields present
@@ -149,7 +150,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (
     )
   }
 
-  await userRepo.softDelete(db, user.accountId)
+  await accountRepo.softDelete(db, user.accountId)
 
   return c.json({ message: 'User archived successfully' }, httpStatusCodes.OK)
 }
@@ -174,7 +175,7 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (
     )
   }
 
-  await userRepo.restore(db, user.accountId)
+  await accountRepo.restore(db, user.accountId)
 
   return c.json({ message: 'User restored successfully' }, httpStatusCodes.OK)
 }

@@ -23,15 +23,12 @@ vi.mock('@/config/db', () => ({
 }))
 
 // Mock the users repository
-const { mockListForAdmin, mockFindById, mockGetAccountId, mockGetAccountDeleteStatus, mockUsernameExists, mockSoftDelete, mockRestore }
+const { mockListForAdmin, mockFindById, mockGetAccountId, mockGetAccountDeleteStatus }
   = vi.hoisted(() => ({
     mockListForAdmin: vi.fn(),
     mockFindById: vi.fn(),
     mockGetAccountId: vi.fn(),
     mockGetAccountDeleteStatus: vi.fn(),
-    mockUsernameExists: vi.fn(),
-    mockSoftDelete: vi.fn(),
-    mockRestore: vi.fn(),
   }))
 
 vi.mock('@/database/repositories/users.repository', () => ({
@@ -40,18 +37,32 @@ vi.mock('@/database/repositories/users.repository', () => ({
     findById: mockFindById,
     getAccountId: mockGetAccountId,
     getAccountDeleteStatus: mockGetAccountDeleteStatus,
-    usernameExists: mockUsernameExists,
-    softDelete: mockSoftDelete,
-    restore: mockRestore,
     findByAccountId: vi.fn(),
     findByStudentId: vi.fn(),
-    accountExists: vi.fn(),
-    create: vi.fn(),
-    updateAccount: vi.fn(),
     updateUser: vi.fn(),
     setHasVoted: vi.fn(),
-    getPasswordHash: vi.fn(),
     getProfile: vi.fn(),
+  },
+}))
+
+const { mockUsernameExists, mockUpdateAccount, mockSoftDelete, mockRestore }
+  = vi.hoisted(() => ({
+    mockUsernameExists: vi.fn(),
+    mockUpdateAccount: vi.fn(),
+    mockSoftDelete: vi.fn(),
+    mockRestore: vi.fn(),
+  }))
+
+vi.mock('@/database/repositories/account.repository', () => ({
+  accountRepo: {
+    accountExists: vi.fn(),
+    usernameExists: mockUsernameExists,
+    create: vi.fn(),
+    updateAccount: mockUpdateAccount,
+    updatePassword: vi.fn(),
+    getPasswordHash: vi.fn(),
+    softDelete: mockSoftDelete,
+    restore: mockRestore,
   },
 }))
 

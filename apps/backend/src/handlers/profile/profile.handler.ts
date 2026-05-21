@@ -1,7 +1,8 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { changePasswordRoute, getMyProfileRoute, updateMyProfileRoute } from '@/routes/profile/routes'
 import { createDb } from '@/config/db'
-import { authRepo } from '@/database/repositories/auth.repository'
+import { accountRepo } from '@/database/repositories/account.repository'
+import { userRepo } from '@/database/repositories/users.repository'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { validateProfanity } from '@/lib/profanity'
@@ -11,7 +12,7 @@ export const getMyProfile: AppRouteHandler<typeof getMyProfileRoute> = async (c)
   const { db } = createDb(c)
   const authUser = c.var.authUser
 
-  const profile = await authRepo.getProfile(db, authUser.id)
+  const profile = await userRepo.getProfile(db, authUser.id)
 
   if (!profile) {
     return c.json(
@@ -58,7 +59,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
       )
     }
 
-    const usernameTaken = await authRepo.usernameExists(db, updateData.username, authUser.id)
+    const usernameTaken = await accountRepo.usernameExists(db, updateData.username, authUser.id)
     if (usernameTaken) {
       return c.json(
         { message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS },
@@ -67,8 +68,8 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     }
   }
 
-  // Get user's userId for users table update
-  const user = await authRepo.getUserIdByAccountId(db, authUser.id)
+  // Get user record by account ID for users table update
+  const user = await userRepo.findByAccountId(db, authUser.id)
 
   if (!user) {
     return c.json(
@@ -86,7 +87,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   if (Object.keys(accountFields).length > 0) {
-    await authRepo.updateAccount(db, authUser.id, accountFields)
+    await accountRepo.updateAccount(db, authUser.id, accountFields)
   }
 
   // Update users table if profile fields present
@@ -97,11 +98,11 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     userFields.lastName = updateData.lastName
 
   if (Object.keys(userFields).length > 0) {
-    await authRepo.updateUser(db, user.userId, userFields)
+    await userRepo.updateUser(db, user.id, userFields)
   }
 
   // Fetch updated profile
-  const updatedProfile = await authRepo.getProfile(db, authUser.id)
+  const updatedProfile = await userRepo.getProfile(db, authUser.id)
 
   return c.json(
     {
@@ -118,7 +119,7 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   const { currentPassword, newPassword } = c.req.valid('json')
 
   // Fetch current password hash
-  const account = await authRepo.getPasswordHash(db, authUser.id)
+  const account = await accountRepo.getPasswordHash(db, authUser.id)
 
   if (!account) {
     return c.json(
@@ -138,7 +139,7 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
 
   // Hash new password and update
   const newPasswordHash = await hashPassword(newPassword)
-  await authRepo.updatePassword(db, authUser.id, newPasswordHash)
+  await accountRepo.updatePassword(db, authUser.id, newPasswordHash)
 
   return c.json(
     { message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY },
