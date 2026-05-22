@@ -4,6 +4,7 @@ import { createDb } from '@/config/db'
 import { accountRepo } from '@/database/repositories/account.repository'
 import { userAccountQueries } from '@/database/queries/user-account.queries'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
+import { isUniqueConstraintError } from '@/lib/errors'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { clearSessionCookie, createSession, deleteSession, getSessionIdFromCookie, setSessionCookie } from '@/lib/session'
 import * as httpStatusCodes from '@/openapi/http-status-codes'
@@ -33,17 +34,27 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   const accountId = crypto.randomUUID()
   const passwordHash = await hashPassword(password)
 
-  await accountRepo.create(db, {
-    accountId,
-    username,
-    email: email && email.trim() ? email : null,
-    passwordHash,
-    studentId,
-    firstName,
-    lastName,
-    course,
-    yearLevel,
-  })
+  try {
+    await accountRepo.create(db, {
+      accountId,
+      username,
+      email: email && email.trim() ? email : null,
+      passwordHash,
+      studentId,
+      firstName,
+      lastName,
+      course,
+      yearLevel,
+    })
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return c.json(
+        { message: ERROR_MESSAGES.USER_ALREADY_EXISTS },
+        httpStatusCodes.CONFLICT,
+      )
+    }
+    throw error
+  }
 
   return c.json(
     {

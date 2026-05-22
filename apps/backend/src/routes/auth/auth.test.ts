@@ -221,6 +221,62 @@ describe('auth Routes', () => {
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
+  it('should return 409 when batch insert hits UNIQUE constraint (race condition)', async () => {
+    mockAccountExists.mockResolvedValue(false)
+    mockCreate.mockRejectedValue(
+      new Error('UNIQUE constraint failed: accounts.username'),
+    )
+
+    const res = await router.request('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        username: 'johndoe',
+        password: 'password123',
+        studentId: 'C23-01-1234-CSA001',
+        course: 'BSCS',
+        yearLevel: '1st Year',
+      }),
+    })
+
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as any
+    expect(body.message).toBe('User already exists')
+    expect(mockAccountExists).toHaveBeenCalled()
+    expect(mockCreate).toHaveBeenCalled()
+  })
+
+  it('should return 409 when batch insert hits UNIQUE constraint on studentId', async () => {
+    mockAccountExists.mockResolvedValue(false)
+    mockCreate.mockRejectedValue(
+      new Error('UNIQUE constraint failed: users.student_id'),
+    )
+
+    const res = await router.request('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@example.com',
+        username: 'janedoe',
+        password: 'password123',
+        studentId: 'C23-01-5678-CSA001',
+        course: 'BSCS',
+        yearLevel: '1st Year',
+      }),
+    })
+
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as any
+    expect(body.message).toBe('User already exists')
+    expect(mockAccountExists).toHaveBeenCalled()
+    expect(mockCreate).toHaveBeenCalled()
+  })
+
   it('should reject login when user not found', async () => {
     mockFindByStudentId.mockResolvedValue(null)
 

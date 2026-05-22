@@ -54,20 +54,15 @@ export const accountRepo = {
       yearLevel: string
     },
   ): Promise<void> {
-    await db
-      .insert(accounts)
-      .values({
+    await db.batch([
+      db.insert(accounts).values({
         id: data.accountId,
         username: data.username,
         email: data.email,
         password_hash: data.passwordHash,
         role: 'user',
-      })
-      .run()
-
-    await db
-      .insert(users)
-      .values({
+      }),
+      db.insert(users).values({
         id: crypto.randomUUID(),
         accountId: data.accountId,
         studentId: data.studentId,
@@ -75,8 +70,8 @@ export const accountRepo = {
         lastName: data.lastName,
         course: data.course,
         yearLevel: data.yearLevel,
-      })
-      .run()
+      }),
+    ])
   },
 
   // Update account fields
