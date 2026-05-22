@@ -17,6 +17,7 @@ import {
   REGISTER_FIELD_LABELS,
 } from '@/lib/userRegistration'
 import { cn } from '@/lib/utils'
+import { POSITIONS } from '@/lib/constants/positions'
 import { AdminRoute } from '@/middleware'
 
 export const Route = createFileRoute('/admin-dashboard-v1')({
@@ -26,26 +27,6 @@ export const Route = createFileRoute('/admin-dashboard-v1')({
     </AdminRoute>
   ),
 })
-
-export const POSITIONS = [
-  { id: 1, value: 'Chairman' },
-  { id: 2, value: 'Internal Vice Chairman' },
-  { id: 3, value: 'External Vice Chairman' },
-  { id: 4, value: 'Internal Secretary' },
-  { id: 5, value: 'External Secretary' },
-  { id: 6, value: 'Treasurer' },
-  { id: 7, value: 'Auditor' },
-  { id: 8, value: 'PIOs (Freshman)' },
-  { id: 9, value: 'PIOs (Sophomore)' },
-  { id: 10, value: 'PIOs (Junior)' },
-  { id: 11, value: 'PIOs (Senior)' },
-  { id: 12, value: 'Head Committee' },
-  { id: 13, value: 'Vice Head Committee' },
-  { id: 14, value: 'Committee Leader (Programming)' },
-  { id: 15, value: 'Committee Leader (Graphics and Design)' },
-  { id: 16, value: 'Committee Leader (Networking)' },
-  { id: 17, value: 'Committee Leader (Gaming)' },
-]
 
 const YEAR_LEVELS = YEAR_LEVEL_VALUES.map(value => ({ value, label: value }))
 const COURSES = COURSE_VALUES.map(value => ({ value, label: value }))
@@ -392,11 +373,11 @@ function RouteComponent() {
                   <div className="space-y-8">
                     {(() => {
                       // Group candidates by position
-                      const positionGroups = POSITIONS.map(pos => ({
-                        position: pos.value,
+                      const positionGroups = POSITIONS.map((pos) => ({
+                        position: pos,
                         candidates: candidates.filter(
                           (candidate: TCandidate & { percentage: number, voteCount: number }) =>
-                            candidate.position === pos.value,
+                            candidate.position === pos,
                         ),
                       })).filter(group => group.candidates.length > 0)
 
@@ -564,8 +545,8 @@ function RouteComponent() {
                   )}
                 >
                   <option value="">Select a position</option>
-                  {POSITIONS.map(pos => (
-                    <option key={pos.id} value={pos.value}>{pos.value}</option>
+                  {POSITIONS.map((pos, index) => (
+                    <option key={index} value={pos}>{pos}</option>
                   ))}
                 </select>
               </div>

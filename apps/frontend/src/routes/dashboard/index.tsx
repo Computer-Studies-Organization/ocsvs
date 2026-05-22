@@ -18,7 +18,7 @@ import { useLogoutUserMutation, UserData } from '@/hooks/userHooks'
 import { useMyVotesQuery, useSubmitVotesMutation } from '@/hooks/voteHooks'
 import { useToast } from '@/lib/toast'
 import { ProtectedRoute } from '@/middleware'
-import { POSITIONS } from '../admin-dashboard'
+import { POSITIONS, type TPosition } from '@/lib/constants/positions'
 
 export const Route = createFileRoute('/dashboard/')({
   component: () => (
@@ -63,8 +63,8 @@ function RouteComponent() {
 
     // Sort positions according to POSITIONS array order
     return groupedPositions.sort((positionGroupA, positionGroupB) => {
-      const positionIndexA = POSITIONS.findIndex(pos => pos.value === positionGroupA.title)
-      const positionIndexB = POSITIONS.findIndex(pos => pos.value === positionGroupB.title)
+      const positionIndexA = POSITIONS.indexOf(positionGroupA.title as TPosition)
+      const positionIndexB = POSITIONS.indexOf(positionGroupB.title as TPosition)
 
       // If position is not in POSITIONS array, put it at the end
       if (positionIndexA === -1 && positionIndexB === -1)

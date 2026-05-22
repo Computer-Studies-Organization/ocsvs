@@ -12,6 +12,7 @@ import {
   getMutationErrorMessage,
 } from '@/lib/userRegistration'
 import { AdminRoute } from '@/middleware'
+import { POSITIONS } from '@/lib/constants/positions'
 
 export const Route = createFileRoute('/admin-dashboard-v2')({
   component: () => (
@@ -29,26 +30,6 @@ export const Route = createFileRoute('/admin-dashboard-v2')({
  * Features: Real API integration, vote counting, user management
  */
 
-export const POSITIONS = [
-  { id: 1, value: 'Chairman' },
-  { id: 2, value: 'Internal Vice Chairman' },
-  { id: 3, value: 'External Vice Chairman' },
-  { id: 4, value: 'Internal Secretary' },
-  { id: 5, value: 'External Secretary' },
-  { id: 6, value: 'Treasurer' },
-  { id: 7, value: 'Auditor' },
-  { id: 8, value: 'PIOs (Freshman)' },
-  { id: 9, value: 'PIOs (Sophomore)' },
-  { id: 10, value: 'PIOs (Junior)' },
-  { id: 11, value: 'PIOs (Senior)' },
-  { id: 12, value: 'Head Committee' },
-  { id: 13, value: 'Vice Head Committee' },
-  { id: 14, value: 'Committee Leader (Programming)' },
-  { id: 15, value: 'Committee Leader (Graphics and Design)' },
-  { id: 16, value: 'Committee Leader (Networking)' },
-  { id: 17, value: 'Committee Leader (Gaming)' },
-]
-
 const EMPTY_CANDIDATE_FORM_DATA: Omit<TCandidate, 'id'> = {
   fullName: '',
   position: '',
@@ -63,7 +44,7 @@ function RouteComponent() {
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsersQuery(1, 100)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({})
-  const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set(POSITIONS.map(p => p.value)))
+  const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set(POSITIONS))
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { showToast } = useToast()
 
@@ -162,8 +143,8 @@ function RouteComponent() {
   }
 
   const groupedCandidates = POSITIONS.map(pos => ({
-    position: pos.value,
-    candidates: candidates.filter((c: TCandidate & { percentage: number, voteCount: number }) => c.position === pos.value),
+    position: pos,
+    candidates: candidates.filter((c: TCandidate & { percentage: number, voteCount: number }) => c.position === pos),
   })).filter(group => group.candidates.length > 0)
 
   const totalVotes = candidates.reduce((sum: number, c: TCandidate & { voteCount: number }) => sum + c.voteCount, 0)
@@ -861,7 +842,7 @@ function RouteComponent() {
                 >
                   <option value="">Select position</option>
                   {POSITIONS.map(pos => (
-                    <option key={pos.id} value={pos.value}>{pos.value}</option>
+                    <option key={pos} value={pos}>{pos}</option>
                   ))}
                 </select>
               </div>
