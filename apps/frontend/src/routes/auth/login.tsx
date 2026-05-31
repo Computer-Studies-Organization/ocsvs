@@ -1,7 +1,9 @@
 import type { TLoginUser } from '@/@types'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Eye, EyeOff, Loader2Icon } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2Icon } from 'lucide-react'
 import { useState } from 'react'
+import aclcLogo from '@/assets/aclcLogo.webp'
+import csoLogo from '@/assets/cso-logo.webp'
 import { useLoginUserMutation } from '@/hooks/userHooks'
 import { cn } from '@/lib/utils'
 import { PublicRoute } from '@/middleware'
@@ -14,6 +16,13 @@ export const Route = createFileRoute('/auth/login')({
   ),
 })
 
+/**
+ * V3: Editorial typographic with color drenched accent
+ * Asymmetric layout with bold color block
+ * Strategy: Full palette — navy base + saturated blue accent + amber trust signal
+ * Theme: Light mode with high-contrast color zones
+ * Avoids: centered card grid, uses editorial asymmetry instead
+ */
 function RouteComponent() {
   const login = useLoginUserMutation()
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -50,37 +59,76 @@ function RouteComponent() {
   }
 
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-slate-900 px-4 py-6 sm:px-6 sm:py-8">
-      {/* Background orbs - same as home */}
-      <div className="absolute top-[-10%] left-[-10%] w-[80vw] sm:w-96 h-96 rounded-full bg-blue-600/20 blur-[100px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[80vw] sm:w-96 h-96 rounded-full bg-red-600/20 blur-[100px]" />
-
-      <div className="relative z-10 w-full max-w-xl">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 md:p-10">
-          {/* Logo */}
-          <div className="relative inline-flex w-full flex justify-center mb-6 sm:mb-8">
-            <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-30 rounded-full" />
-            <img
-              src="../../../src/assets/aclcLogo.webp"
-              alt="ACLC Computer Studies Organization Logo"
-              className="relative h-20 w-auto sm:h-24 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-            />
+    <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row">
+      {/* Left - Form section */}
+      <div
+        className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-16"
+        style={{ background: 'oklch(0.97 0.003 250)' }}
+      >
+        <div className="w-full max-w-md">
+          {/* Logo stack */}
+          <div className="mb-12 space-y-6">
+            <div className="flex items-center gap-5">
+              <img
+                src={aclcLogo}
+                alt="ACLC Logo"
+                className="h-14 w-auto"
+              />
+              <img
+                src={csoLogo}
+                alt="CSO Logo"
+                className="h-14 w-auto"
+              />
+            </div>
+            <div>
+              <h1
+                className="text-5xl font-black tracking-tight mb-3"
+                style={{
+                  color: 'oklch(0.20 0.025 250)',
+                  lineHeight: '1.1',
+                }}
+              >
+                Student
+                <br />
+                Elections
+              </h1>
+              <p
+                className="text-lg font-medium"
+                style={{ color: 'oklch(0.45 0.015 250)' }}
+              >
+                Authenticate to access your ballot
+              </p>
+            </div>
           </div>
 
-          <p className="text-slate-400 text-sm sm:text-base text-center mb-6 sm:mb-8">
-            Sign in to vote
-          </p>
+          {message && (
+            <div
+              className="mb-7 p-5 rounded-2xl"
+              style={{
+                background: 'oklch(0.92 0.04 25)',
+                border: '2px solid oklch(0.75 0.12 25)',
+              }}
+            >
+              <p
+                className="text-sm font-bold"
+                style={{ color: 'oklch(0.35 0.15 25)' }}
+              >
+                {message}
+              </p>
+            </div>
+          )}
 
-          <p className="text-center text-red-500 text-lg">{message}</p>
-
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            {/* Student Number */}
-            <div className="space-y-1.5 sm:space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
               <label
                 htmlFor="studentNumber"
-                className="block text-sm font-medium text-slate-300"
+                className="block text-xs font-black uppercase tracking-wider"
+                style={{
+                  color: 'oklch(0.40 0.015 250)',
+                  letterSpacing: '0.1em',
+                }}
               >
-                Student Number
+                Student ID
               </label>
               <input
                 id="studentNumber"
@@ -88,25 +136,36 @@ function RouteComponent() {
                 value={formData.studentNumber}
                 name="studentNumber"
                 onChange={handleChange}
-                placeholder="Enter your student number"
-                autoComplete="student-number"
+                placeholder="20XX-XXXXX"
+                autoComplete="username"
                 required
-                className={cn(
-                  'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                  'text-slate-100 placeholder:text-slate-500',
-                  message
-                    ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
-                    : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                  'text-base sm:text-base',
-                )}
+                className="w-full rounded-2xl px-5 py-4 text-lg font-semibold transition-all focus:outline-none border-2"
+                style={{
+                  background: 'oklch(1 0 0)',
+                  color: 'oklch(0.20 0.020 250)',
+                  borderColor: message ? 'oklch(0.60 0.15 25)' : 'oklch(0.85 0.008 250)',
+                }}
+                onFocus={(e) => {
+                  if (!message) {
+                    e.target.style.borderColor = 'oklch(0.50 0.18 250)'
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!message) {
+                    e.target.style.borderColor = 'oklch(0.85 0.008 250)'
+                  }
+                }}
               />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-3">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-slate-300"
+                className="block text-xs font-black uppercase tracking-wider"
+                style={{
+                  color: 'oklch(0.40 0.015 250)',
+                  letterSpacing: '0.1em',
+                }}
               >
                 Password
               </label>
@@ -117,54 +176,195 @@ function RouteComponent() {
                   value={formData.password}
                   name="password"
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder="Enter password"
                   autoComplete="current-password"
                   required
-                  className={cn(
-                    'w-full rounded-lg border bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                    'text-slate-100 placeholder:text-slate-500',
-                    message
-                      ? 'border-red-500/50 ring-2 ring-red-500/60 focus:ring-red-500/60 focus:border-red-500/50'
-                      : 'border-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                    'text-base sm:text-base pr-10',
-                  )}
+                  className="w-full rounded-2xl px-5 py-4 pr-14 text-lg font-semibold transition-all focus:outline-none border-2"
+                  style={{
+                    background: 'oklch(1 0 0)',
+                    color: 'oklch(0.20 0.020 250)',
+                    borderColor: message ? 'oklch(0.60 0.15 25)' : 'oklch(0.85 0.008 250)',
+                  }}
+                  onFocus={(e) => {
+                    if (!message) {
+                      e.target.style.borderColor = 'oklch(0.50 0.18 250)'
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!message) {
+                      e.target.style.borderColor = 'oklch(0.85 0.008 250)'
+                    }
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500/60 hover:text-gray-500/80 cursor-pointer"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'oklch(0.50 0.015 250)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.30 0.020 250)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.50 0.015 250)'}
                 >
-                  {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                  {showPassword ? <Eye size={22} strokeWidth={2.5} /> : <EyeOff size={22} strokeWidth={2.5} />}
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={!formData.studentNumber.trim() || !formData.password.trim()}
+              disabled={!formData.studentNumber.trim() || !formData.password.trim() || isLoading || login.isPending}
               className={cn(
-                'w-full py-3 flex flex-row justify-center items-center gap-1.5 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
-                'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
-                'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                'text-base sm:text-base',
+                'w-full py-5 font-black text-lg rounded-2xl transition-all mt-8',
+                'flex items-center justify-center gap-3',
+                'disabled:opacity-30 disabled:cursor-not-allowed',
+                'group',
               )}
+              style={{
+                background: 'oklch(0.25 0.025 250)',
+                color: 'oklch(0.98 0.003 250)',
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.background = 'oklch(0.20 0.030 250)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'oklch(0.25 0.025 250)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
             >
-              {(isLoading || login.isPending) && <Loader2Icon className="animate-spin" size={20} />}
-              {(isLoading || login.isPending) ? 'Signing...' : 'Sign in'}
+              {(isLoading || login.isPending)
+                ? (
+                    <>
+                      <Loader2Icon className="animate-spin" size={22} strokeWidth={3} />
+                      <span>AUTHENTICATING</span>
+                    </>
+                  )
+                : (
+                    <>
+                      <span>SIGN IN</span>
+                      <ArrowRight
+                        size={22}
+                        strokeWidth={3}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </>
+                  )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-400">
-              Don't have an account?
-              {' '}
-              <Link
-                to="/auth/register"
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-              >
-                Create account to vote
-              </Link>
+          <div
+            className="mt-10 text-sm font-semibold"
+            style={{ color: 'oklch(0.50 0.015 250)' }}
+          >
+            New voter?
+            {' '}
+            <Link
+              to="/auth/register"
+              className="font-black transition-colors inline-flex items-center gap-1.5"
+              style={{ color: 'oklch(0.50 0.18 250)' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.40 0.20 250)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.50 0.18 250)'}
+            >
+              Create account
+              <ArrowRight size={16} strokeWidth={3} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Right - Color drenched brand panel */}
+      <div
+        className="lg:w-[42%] relative overflow-hidden flex items-center justify-center p-10 lg:p-16 min-h-[40vh] lg:min-h-0"
+        style={{
+          background: 'linear-gradient(165deg, oklch(0.50 0.18 250) 0%, oklch(0.45 0.20 255) 100%)',
+        }}
+      >
+        {/* Decorative elements */}
+        <div
+          className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-20"
+          style={{
+            background: 'radial-gradient(circle, oklch(0.70 0.15 250) 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-15"
+          style={{
+            background: 'radial-gradient(circle, oklch(0.35 0.22 260) 0%, transparent 70%)',
+            transform: 'translate(-25%, 25%)',
+          }}
+        />
+
+        <div className="relative z-10 max-w-md space-y-10">
+          <div className="space-y-5">
+            <h2
+              className="text-4xl lg:text-5xl font-black tracking-tight leading-tight"
+              style={{ color: 'oklch(0.98 0.005 250)' }}
+            >
+              Your voice
+              <br />
+              shapes our
+              <br />
+              community
+            </h2>
+            <p
+              className="text-lg font-medium leading-relaxed"
+              style={{ color: 'oklch(0.88 0.008 250)' }}
+            >
+              Participate in transparent, secure elections that determine the future of the Computer Studies Organization.
             </p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              'End-to-end encrypted voting',
+              'One student, one vote guarantee',
+              'Real-time result transparency',
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3"
+              >
+                <CheckCircle2
+                  size={24}
+                  strokeWidth={2.5}
+                  style={{
+                    color: 'oklch(0.75 0.15 140)',
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  className="text-base font-bold"
+                  style={{ color: 'oklch(0.95 0.005 250)' }}
+                >
+                  {feature}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust badge */}
+          <div
+            className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full"
+            style={{
+              background: 'oklch(0.40 0.20 250)',
+              border: '2px solid oklch(0.60 0.15 250)',
+            }}
+          >
+            <div
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ background: 'oklch(0.75 0.15 140)' }}
+            />
+            <span
+              className="text-sm font-black uppercase tracking-wider"
+              style={{
+                color: 'oklch(0.98 0.005 250)',
+                letterSpacing: '0.08em',
+              }}
+            >
+              System Active
+            </span>
           </div>
         </div>
       </div>
