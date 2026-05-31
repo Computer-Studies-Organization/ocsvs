@@ -7,7 +7,7 @@
     "typecheck": "tsc --noEmit",
     "dev": "vite --port=3001",
     "build": "vite build",
-    "test": "tsx --test src/lib/*.test.ts",
+    "test": "node --experimental-test-module-mocks --import tsx --test src/lib/*.test.ts src/hooks/*.test.ts",
     "lint": "eslint .",
     "serve": "vite preview",
     "start": "vite"
