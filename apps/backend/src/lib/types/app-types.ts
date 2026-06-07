@@ -10,16 +10,12 @@ export interface AuthUser {
 }
 
 export interface AppBindings {
-  Bindings: Environment & Omit<Env, keyof Environment>
+  Bindings: Environment & Omit<CloudflareBindings, keyof Environment>
   Variables: {
     logger: PinoLogger
     authUser: AuthUser
   }
 }
-
-// export interface Env {
-//   DB: D1Database;
-// }
 
 export type AppOpenAPI = OpenAPIHono<AppBindings>
 
