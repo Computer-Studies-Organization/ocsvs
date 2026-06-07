@@ -82,11 +82,11 @@ export const candidateRepo = {
     db: Database,
     id: string,
   ): Promise<{ id: string, position: string } | null> {
-    return await db
+    return (await db
       .select({ id: candidates.id, position: candidates.position })
       .from(candidates)
       .where(and(eq(candidates.id, id), eq(candidates.isActive, 1)))
-      .get()
+      .get()) ?? null
   },
 
   // Single-candidate full view for admin (optionally include inactive)
@@ -100,7 +100,7 @@ export const candidateRepo = {
       ? eq(candidates.id, id)
       : and(eq(candidates.id, id), eq(candidates.isActive, 1))
 
-    return await db
+    return (await db
       .select({
         id: candidates.id,
         fullName: candidates.fullName,
@@ -113,7 +113,7 @@ export const candidateRepo = {
       })
       .from(candidates)
       .where(whereClause)
-      .get()
+      .get()) ?? null
   },
 
   // Count of active candidates
@@ -190,7 +190,7 @@ export const candidateRepo = {
       .set(updateSet)
       .where(eq(candidates.id, id))
       .run()
-    return result.changes > 0
+    return result.rowsAffected > 0
   },
 
   // Soft-delete: set isActive = 0
@@ -200,7 +200,7 @@ export const candidateRepo = {
       .set({ isActive: 0, updatedAt: Math.floor(Date.now() / 1000) })
       .where(eq(candidates.id, id))
       .run()
-    return result.changes > 0
+    return result.rowsAffected > 0
   },
 
   // Check if active candidate exists for the given account+position (used in create)
@@ -221,7 +221,7 @@ export const candidateRepo = {
       )
       .limit(1)
       .get()
-    return res !== null
+    return res !== undefined
   },
 
   // Specialized query for vote results: active candidates with vote counts

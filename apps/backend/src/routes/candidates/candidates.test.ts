@@ -115,7 +115,7 @@ describe('candidate Routes (repository)', () => {
       })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY)
       expect(json.candidate).toMatchObject({
         id: 'new-candidate-id',
@@ -147,7 +147,7 @@ describe('candidate Routes (repository)', () => {
       })
 
       expect(res.status).toBe(409)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS)
     })
   })
@@ -176,7 +176,7 @@ describe('candidate Routes (repository)', () => {
       })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.data).toHaveLength(1)
       expect(json.meta).toEqual({
         total: 1,
@@ -207,7 +207,7 @@ describe('candidate Routes (repository)', () => {
       )
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.data[0].isActive).toBe(0)
     })
   })
@@ -229,7 +229,7 @@ describe('candidate Routes (repository)', () => {
       const res = await router.request('/candidates/cand-1', { method: 'GET' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.id).toBe('cand-1')
     })
 
@@ -274,7 +274,7 @@ describe('candidate Routes (repository)', () => {
       })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY)
     })
 
@@ -301,7 +301,7 @@ describe('candidate Routes (repository)', () => {
       })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY)
     })
 

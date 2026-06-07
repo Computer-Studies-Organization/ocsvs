@@ -1,4 +1,4 @@
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import type { Context } from 'hono'
 import { and, eq, gt, isNull } from 'drizzle-orm'
 import { accounts, sessions } from '@/database/schema'
@@ -6,7 +6,7 @@ import { accounts, sessions } from '@/database/schema'
 const SESSION_DURATION_DAYS = 7
 const COOKIE_NAME = 'session_id'
 
-type Database = DrizzleD1Database<typeof import('@/database/schema')>
+type Database = LibSQLDatabase<typeof import('@/database/schema')>
 
 export interface SessionData {
   id: string
