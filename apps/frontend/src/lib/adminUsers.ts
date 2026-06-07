@@ -1,4 +1,4 @@
-import type { TUsersData } from '@/@types'
+import type { TUsersData } from '$lib/types'
 
 export function resolveCandidateUserSelection(users: TUsersData[], accountId: string) {
   return users.find(user => user.accountId === accountId) ?? null

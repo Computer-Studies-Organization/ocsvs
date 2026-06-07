@@ -95,7 +95,8 @@ export const userAccountQueries = {
       .where(eq(users.id, userId))
       .get()
 
-    if (!row) return null
+    if (!row)
+      return null
 
     return { ...row, hasVoted: row.hasVoted === 1 }
   },

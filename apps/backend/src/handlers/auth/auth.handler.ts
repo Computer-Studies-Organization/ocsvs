@@ -1,8 +1,8 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type { loginRoute, logoutRoute, meRoute, registerRoute } from '@/routes/auth/routes'
 import { createDb } from '@/config/db'
-import { accountRepo } from '@/database/repositories/account.repository'
 import { userAccountQueries } from '@/database/queries/user-account.queries'
+import { accountRepo } from '@/database/repositories/account.repository'
 import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
 import { isUniqueConstraintError } from '@/lib/errors'
 import { hashPassword, verifyPassword } from '@/lib/password'
@@ -46,7 +46,8 @@ export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
       course,
       yearLevel,
     })
-  } catch (error) {
+  }
+  catch (error) {
     if (isUniqueConstraintError(error)) {
       return c.json(
         { message: ERROR_MESSAGES.USER_ALREADY_EXISTS },

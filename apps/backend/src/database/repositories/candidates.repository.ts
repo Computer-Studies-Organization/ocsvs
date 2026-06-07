@@ -1,6 +1,7 @@
 import type { Database } from './database.type'
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
 import { candidates, votes } from '@/database/schema'
+
 export type CandidateRow = typeof candidates.$inferSelect
 
 export interface AdminListResult {
