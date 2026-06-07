@@ -52,8 +52,8 @@ const EnvSchema = z.object({
     .default('info'),
   TURSO_DATABASE_URL: z.string().min(1),
   TURSO_AUTH_TOKEN: z.preprocess(
-    (val) => val === '' ? undefined : val,
-    z.string().optional()
+    val => val === '' ? undefined : val,
+    z.string().optional(),
   ),
 })
 

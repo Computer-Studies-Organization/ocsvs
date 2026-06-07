@@ -1,6 +1,6 @@
-import type { TRegisterUser, TRegisterUserDraft } from '@/@types'
+import type { TRegisterUser, TRegisterUserDraft } from '$lib/types'
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
 const STUDENT_ID_PATTERN = /^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/
 
 export const REGISTER_FIELD_LABELS: Record<string, string> = {

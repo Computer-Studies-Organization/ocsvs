@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { UserRole } from '@/@types'
 import {
   getAdminRouteRedirectPath,
   getProtectedRouteRedirectPath,
   getPublicRouteRedirectPath,
 } from './routeGuards'
+import { UserRole } from './types'
 
 const adminUser = {
   user: {
@@ -39,7 +39,7 @@ test('public routes allow unauthenticated users to continue', () => {
 })
 
 test('protected routes redirect unauthenticated users to login', () => {
-  assert.equal(getProtectedRouteRedirectPath(null), '/auth/login')
+  assert.equal(getProtectedRouteRedirectPath(null), '/auth')
 })
 
 test('protected routes allow authenticated users to continue', () => {
@@ -47,7 +47,7 @@ test('protected routes allow authenticated users to continue', () => {
 })
 
 test('admin routes redirect unauthenticated users to login', () => {
-  assert.equal(getAdminRouteRedirectPath(null), '/auth/login')
+  assert.equal(getAdminRouteRedirectPath(null), '/auth')
 })
 
 test('admin routes redirect non-admin users to the dashboard', () => {

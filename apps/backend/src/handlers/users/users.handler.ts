@@ -7,9 +7,9 @@ import type {
   updateUserRoute,
 } from '@/routes/users/routes'
 import { createDb } from '@/config/db'
+import { userAccountQueries } from '@/database/queries/user-account.queries'
 import { accountRepo } from '@/database/repositories/account.repository'
 import { userRepo } from '@/database/repositories/users.repository'
-import { userAccountQueries } from '@/database/queries/user-account.queries'
 
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 

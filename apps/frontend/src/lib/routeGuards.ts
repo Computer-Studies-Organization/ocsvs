@@ -1,31 +1,26 @@
-import type { TUserData } from '@/@types'
-import { UserRole } from '@/@types'
+import type { TUserData } from '$lib/types'
+import { UserRole } from '$lib/types'
 
 export function getPublicRouteRedirectPath(data: TUserData | null | undefined) {
   if (data) {
-    // Redirect admins to admin panel, regular users to dashboard
     return data.user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'
   }
-
   return null
 }
 
 export function getProtectedRouteRedirectPath(data: TUserData | null | undefined) {
   if (!data) {
-    return '/auth/login'
+    return '/auth'
   }
-
   return null
 }
 
 export function getAdminRouteRedirectPath(data: TUserData | null | undefined) {
   if (!data) {
-    return '/auth/login'
+    return '/auth'
   }
-
   if (data.user.role !== UserRole.ADMIN) {
     return '/dashboard'
   }
-
   return null
 }
