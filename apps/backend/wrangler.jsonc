@@ -9,13 +9,6 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "cso-voting-db",
-      "database_id": "5b4fd3f8-f44e-4cc8-a517-e851269757dc"
-    }
-  ],
   "vars": {
     "NODE_ENV": "development",
     "LOG_LEVEL": "debug"
