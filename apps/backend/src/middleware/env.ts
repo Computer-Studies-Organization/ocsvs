@@ -23,7 +23,8 @@ import { z } from 'zod'
  *
  * console.log(env.PORT) // number (default: 3000)
  * console.log(env.NODE_ENV) // string (default: 'development')
- * console.log(env.DATABASE_URL) // string (required, must be valid URL)
+ * console.log(env.TURSO_DATABASE_URL) // string (required)
+ * console.log(env.TURSO_AUTH_TOKEN) // string (optional)
  * ```
  */
 
@@ -33,7 +34,10 @@ expand(config())
  * Zod schema defining the structure and validation rules for environment variables.
  *
  * Required variables:
- * - DATABASE_URL: Must be a valid URL format
+ * - TURSO_DATABASE_URL: Must be a non-empty string (supports libSQL URLs, local file paths, or :memory:)
+ *
+ * Optional variables:
+ * - TURSO_AUTH_TOKEN: Optional authorization token for Turso
  *
  * Optional variables with defaults:
  * - NODE_ENV: Defaults to 'development'
@@ -46,23 +50,12 @@ const EnvSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
-  // DATABASE_URL: z.string().url(),
-  // ACCOUNT_ID: z.string().uuid(),
-  // DATABASE_NAME: z.string(),
-  // DATABASE_ID: z.string().uuid(),
-  // DATABASE_AUTH_TOKEN: z.string().optional(),
+  TURSO_DATABASE_URL: z.string().min(1),
+  TURSO_AUTH_TOKEN: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().optional()
+  ),
 })
-// .superRefine((input, ctx) => {
-//   if (input.NODE_ENV === 'production' && !input.DATABASE_AUTH_TOKEN) {
-//     ctx.addIssue({
-//       code: z.ZodIssueCode.invalid_type,
-//       expected: 'string',
-//       received: 'undefined',
-//       path: ['DATABASE_AUTH_TOKEN'],
-//       message: 'DATABASE_AUTH_TOKEN is required in production',
-//     })
-//   }
-// })
 
 /**
  * TypeScript type representing the validated environment configuration.

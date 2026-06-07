@@ -1,4 +1,5 @@
 import type { ErrorHandler } from 'hono'
+import process from 'node:process'
 import { HTTPException } from 'hono/http-exception'
 
 /**
@@ -58,7 +59,7 @@ const onError: ErrorHandler = (err, c) => {
 
   // For all other errors, return a generic 500 response
   // You can customize this as needed
-  const env = c.env?.NODE_ENV
+  const env = c.env?.NODE_ENV || process.env.NODE_ENV
   return c.json(
     {
       message: 'Internal Server Error',
