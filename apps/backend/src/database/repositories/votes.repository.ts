@@ -26,7 +26,7 @@ export const voteRepo = {
       .where(eq(votes.userId, userId))
       .limit(1)
       .get()
-    return result !== null
+    return result !== undefined
   },
 
   // Get vote count for a candidate

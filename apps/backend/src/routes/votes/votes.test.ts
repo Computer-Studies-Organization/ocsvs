@@ -250,7 +250,7 @@ describe('votes Routes (repository)', () => {
       })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY)
       expect(json.votes).toHaveLength(2)
     })
@@ -270,7 +270,7 @@ describe('votes Routes (repository)', () => {
       })
 
       expect(res.status).toBe(409)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST)
     })
 
@@ -303,7 +303,7 @@ describe('votes Routes (repository)', () => {
       })
 
       expect(res.status).toBe(422)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.DUPLICATE_POSITION_VOTE)
     })
 
@@ -326,7 +326,7 @@ describe('votes Routes (repository)', () => {
       })
 
       expect(res.status).toBe(404)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND)
     })
   })
@@ -353,7 +353,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/me', { method: 'GET' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.hasVoted).toBe(true)
       expect(json.votes).toHaveLength(1)
     })
@@ -370,7 +370,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/me', { method: 'GET' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json).toEqual({ hasVoted: false, votes: [] })
     })
   })
@@ -397,7 +397,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/results', { method: 'GET' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.results).toHaveLength(2)
       expect(json.meta.totalVotes).toBe(8)
       expect(json.meta.totalPositions).toBe(2)
@@ -418,7 +418,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/results', { method: 'GET' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.results[0].candidates[0].voteCount).toBe(0)
     })
   })
@@ -442,7 +442,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/me', { method: 'DELETE' })
 
       expect(res.status).toBe(200)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_WITHDRAWN_SUCCESSFULLY)
     })
 
@@ -458,7 +458,7 @@ describe('votes Routes (repository)', () => {
       const res = await router.request('/votes/me', { method: 'DELETE' })
 
       expect(res.status).toBe(404)
-      const json = await res.json()
+      const json = (await res.json()) as any
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_NOT_FOUND)
     })
   })
