@@ -1,35 +1,14 @@
 import type { AppBindings, AppOpenAPI } from '@/lib/types/app-types'
-import type { Environment } from '@/middleware/env'
-import process from 'node:process'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
-import { parseEnv } from '@/middleware/env'
-// import { logger } from 'hono/logger'
 import logger from '@/middleware/pino-logger'
 import notFound from '@/middleware/utils/not-found'
 import onError from '@/middleware/utils/on-error'
 import serveEmojiFavicon from '@/middleware/utils/serve-emoji-favicon'
 import defaultHook from '@/openapi/default-hook'
 
-let cachedParsedEnv: Environment | null = null
-
 export default function createApp() {
   const app = createRouter()
-    // Use any of the following logger middlewares
-    // .use(
-    //   logger(customLogger),
-    // )
-    .use((c, next) => {
-      if (!cachedParsedEnv) {
-        cachedParsedEnv = parseEnv({ ...process.env, ...c.env })
-      }
-      Object.defineProperty(c, 'env', {
-        value: { ...c.env, ...cachedParsedEnv },
-        writable: false,
-        configurable: true,
-      })
-      return next()
-    })
     .use(logger())
     .use(
       cors({
