@@ -132,7 +132,7 @@
         firstName: editForm.firstName,
         lastName: editForm.lastName,
         username: editForm.username,
-        email: editForm.email || undefined,
+        email: editForm.email.trim(),
         yearLevel: editForm.yearLevel || undefined,
         course: editForm.course || undefined,
       })

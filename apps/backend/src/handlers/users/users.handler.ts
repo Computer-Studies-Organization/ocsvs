@@ -83,8 +83,9 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (
   const accountFields: Record<string, unknown> = {}
   if (updateData.username !== undefined)
     accountFields.username = updateData.username
-  if (updateData.email !== undefined)
-    accountFields.email = updateData.email
+  if (updateData.email !== undefined) {
+    accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null
+  }
 
   if (Object.keys(accountFields).length > 0) {
     await accountRepo.updateAccount(db, user.accountId, accountFields)

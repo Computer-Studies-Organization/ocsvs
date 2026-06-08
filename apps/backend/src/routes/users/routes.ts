@@ -18,7 +18,7 @@ const ListUsersQuerySchema = PaginationSchema.extend({
 
 const UpdateUserSchema = z.object({
   username: z.string().min(3).optional(),
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal('')),
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
   yearLevel: z.string().optional(),

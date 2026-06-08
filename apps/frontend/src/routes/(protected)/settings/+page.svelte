@@ -57,9 +57,12 @@
     isSavingProfile = true
     profileMsg = null
     try {
-      const payload: UpdateProfileData = { firstName, lastName, username }
-      if (email)
-        payload.email = email
+      const payload: UpdateProfileData = {
+        firstName,
+        lastName,
+        username,
+        email: email.trim(),
+      }
       await updateMyProfile(payload)
       profileMsg = { text: 'Profile updated successfully.', ok: true }
     }
