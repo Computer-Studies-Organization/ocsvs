@@ -19,35 +19,48 @@
   } from 'lucide-svelte'
   import { onMount } from 'svelte'
 
-  interface AdminUser extends TUsersData {
-    username?: string
-    email?: string | null
-    yearLevel?: string
-    course?: string
-    role?: string
-    hasVoted?: boolean
-    deletedAt?: number | null
+  type SortableKey = 'studentId' | 'firstName' | 'lastName' | 'username' | 'yearLevel' | 'course'
+  const SORTABLE_KEYS: SortableKey[] = ['studentId', 'firstName', 'lastName', 'username', 'yearLevel', 'course']
+  const SORTABLE_LABELS: Record<SortableKey, string> = {
+    studentId: 'Student ID',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    username: 'Username',
+    yearLevel: 'Year',
+    course: 'Course',
   }
 
+  type EditField = 'firstName' | 'lastName' | 'username' | 'email' | 'yearLevel' | 'course'
+  const EDIT_FIELDS: EditField[] = ['firstName', 'lastName', 'username', 'email', 'yearLevel', 'course']
+  const EDIT_LABELS: Record<EditField, string> = {
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    username: 'Username',
+    email: 'Email',
+    yearLevel: 'Year Level',
+    course: 'Course',
+  }
+  type EditForm = Record<EditField, string>
+
   // State
-  let users = $state<AdminUser[]>([])
+  let users = $state<TUsersData[]>([])
   let isLoading = $state(true)
   let errorMsg = $state('')
   let includeDeleted = $state(false)
   let search = $state('')
-  let sortKey = $state<keyof AdminUser>('studentId')
+  let sortKey = $state<SortableKey>('studentId')
   let sortAsc = $state(true)
   let pageIndex = $state(0)
   const pageSize = 25
 
   // Modals
-  let viewUser = $state<AdminUser | null>(null)
-  let editUser = $state<AdminUser | null>(null)
-  let editForm = $state({ firstName: '', lastName: '', username: '', email: '', yearLevel: '', course: '' })
+  let viewUser = $state<TUsersData | null>(null)
+  let editUser = $state<TUsersData | null>(null)
+  let editForm = $state<EditForm>({ firstName: '', lastName: '', username: '', email: '', yearLevel: '', course: '' })
   let isEditSaving = $state(false)
   let editMsg = $state('')
-  let archiveConfirmUser = $state<AdminUser | null>(null)
-  let restoreConfirmUser = $state<AdminUser | null>(null)
+  let archiveConfirmUser = $state<TUsersData | null>(null)
+  let restoreConfirmUser = $state<TUsersData | null>(null)
   let isActionLoading = $state(false)
   let actionMsg = $state('')
 
@@ -56,7 +69,7 @@
     errorMsg = ''
     try {
       const res = await fetchUsers({ limit: 500, includeDeleted })
-      users = res.data as AdminUser[]
+      users = res.data
     }
     catch (e: any) {
       errorMsg = e.message || 'Failed to load users'
@@ -83,13 +96,13 @@
         const studentIdMatch = u.studentId?.toLowerCase().includes(q)
         const firstNameMatch = u.firstName?.toLowerCase().includes(q)
         const lastNameMatch = u.lastName?.toLowerCase().includes(q)
-        const usernameMatch = (u as any).username?.toLowerCase().includes(q)
+        const usernameMatch = u.username?.toLowerCase().includes(q)
         return studentIdMatch || firstNameMatch || lastNameMatch || usernameMatch
       })
     }
     list = [...list].sort((a, b) => {
-      const av = String((a as any)[sortKey] ?? '')
-      const bv = String((b as any)[sortKey] ?? '')
+      const av = String(a[sortKey] ?? '')
+      const bv = String(b[sortKey] ?? '')
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
     return list
@@ -98,7 +111,7 @@
   const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)))
   const paginated = $derived(filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize))
 
-  function toggleSort(key: keyof AdminUser) {
+  function toggleSort(key: SortableKey) {
     if (sortKey === key) {
       sortAsc = !sortAsc
     }
@@ -109,15 +122,15 @@
     pageIndex = 0
   }
 
-  function openEdit(u: AdminUser) {
+  function openEdit(u: TUsersData) {
     editUser = u
     editForm = {
       firstName: u.firstName ?? '',
       lastName: u.lastName ?? '',
-      username: (u as any).username ?? '',
-      email: (u as any).email ?? '',
-      yearLevel: (u as any).yearLevel ?? '',
-      course: (u as any).course ?? '',
+      username: u.username ?? '',
+      email: u.email ?? '',
+      yearLevel: u.yearLevel ?? '',
+      course: u.course ?? '',
     }
     editMsg = ''
   }
@@ -267,10 +280,10 @@
           <table class='w-full text-sm'>
             <thead>
               <tr class='border-b border-slate-800 bg-slate-950/50'>
-                {#each [['studentId', 'Student ID'], ['firstName', 'First Name'], ['lastName', 'Last Name'], ['username', 'Username'], ['yearLevel', 'Year'], ['course', 'Course']] as [key, label]}
+                {#each SORTABLE_KEYS as key}
                   <th class='px-4 py-3 text-left'>
-                    <button onclick={() => toggleSort(key as keyof AdminUser)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
-                      {label}
+                    <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
+                      {SORTABLE_LABELS[key]}
                       <ArrowUpDown size={12} />
                     </button>
                   </th>
@@ -285,15 +298,15 @@
                   <td class='px-4 py-3 font-semibold text-slate-50'>{u.studentId}</td>
                   <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
                   <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
-                  <td class='px-4 py-3 text-slate-300'>{(u as any).username ?? '—'}</td>
-                  <td class='px-4 py-3 text-slate-300'>{(u as any).yearLevel ?? '—'}</td>
-                  <td class='px-4 py-3 text-slate-300'>{(u as any).course ?? '—'}</td>
+                  <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
+                  <td class='px-4 py-3 text-slate-300'>{u.yearLevel ?? '—'}</td>
+                  <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
                   <td class='px-4 py-3'>
                     <div class='flex flex-wrap gap-1'>
                       {#if u.deletedAt}
                         <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
                       {/if}
-                      {#if (u as any).hasVoted}
+                      {#if u.hasVoted}
                         <span class='rounded bg-emerald-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>VOTED</span>
                       {/if}
                     </div>
@@ -349,7 +362,7 @@
         <button onclick={() => viewUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
       </div>
       <div class='space-y-2 text-sm'>
-        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', (viewUser as any).username ?? '—'], ['Email', (viewUser as any).email ?? '—'], ['Year Level', (viewUser as any).yearLevel ?? '—'], ['Course', (viewUser as any).course ?? '—'], ['Role', (viewUser as any).role ?? '—'], ['Has Voted', (viewUser as any).hasVoted ? 'Yes' : 'No'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
+        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Has Voted', viewUser.hasVoted ? 'Yes' : 'No'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
           <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
             <span class='text-slate-400'>{label}</span>
             <span class='font-semibold text-slate-50'>{val}</span>
@@ -369,12 +382,13 @@
         <button onclick={() => editUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
       </div>
       <div class='space-y-3'>
-        {#each [['First Name', 'firstName'], ['Last Name', 'lastName'], ['Username', 'username'], ['Email', 'email'], ['Year Level', 'yearLevel'], ['Course', 'course']] as [label, field]}
+        {#each EDIT_FIELDS as field}
           <div>
-            <label class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{label}</label>
+            <label class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
             <input
               type='text'
-              bind:value={(editForm as any)[field]}
+              value={editForm[field]}
+              oninput={e => editForm[field] = e.currentTarget.value}
               class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
             />
           </div>

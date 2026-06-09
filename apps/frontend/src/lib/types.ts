@@ -33,9 +33,19 @@ export interface TUsersData {
   id: string
   accountId: string
   studentId: string
-  fullName: string
   firstName: string
   lastName: string
+  fullName: string
+  username: string
+  email: string | null
+  yearLevel: string
+  course: string
+  role: string
+  hasVoted: boolean
+  deletedAt: number | null
+  createdAt: number
+  updatedAt: number
+  lastLogin: number | null
 }
 
 export type TRegisterUser = Omit<TUser, 'accountId' | 'hasVoted'> & {
