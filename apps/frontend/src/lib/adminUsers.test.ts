@@ -1,9 +1,23 @@
+import type { TUsersData } from './types'
 import assert from 'node:assert/strict'
-import test from 'node:test'
 
+import test from 'node:test'
 import { getCandidateUserLabel, resolveCandidateUserSelection } from './adminUsers'
 
-const duplicateNameUsers = [
+const baseUser = {
+  username: 'alex.cruz',
+  email: null,
+  yearLevel: '3rd Year',
+  course: 'BSCS',
+  role: 'user',
+  hasVoted: false,
+  deletedAt: null,
+  createdAt: 1_700_000_000,
+  updatedAt: 1_700_000_000,
+  lastLogin: null,
+} as const
+
+const duplicateNameUsers: TUsersData[] = [
   {
     id: 'user-1',
     accountId: 'account-1',
@@ -11,6 +25,7 @@ const duplicateNameUsers = [
     fullName: 'Alex Cruz',
     firstName: 'Alex',
     lastName: 'Cruz',
+    ...baseUser,
   },
   {
     id: 'user-2',
@@ -19,6 +34,7 @@ const duplicateNameUsers = [
     fullName: 'Alex Cruz',
     firstName: 'Alex',
     lastName: 'Cruz',
+    ...baseUser,
   },
 ]
 
