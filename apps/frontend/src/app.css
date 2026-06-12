@@ -1,1 +1,6 @@
 @import 'tailwindcss';
+
+@theme {
+  /* Non-standard Tailwind shade used across forms, cards, and tables */
+  --color-slate-850: oklch(0.222 0.016 270);
+}

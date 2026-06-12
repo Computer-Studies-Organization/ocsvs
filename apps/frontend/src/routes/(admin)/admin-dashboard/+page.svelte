@@ -68,7 +68,7 @@
     isLoading = true
     errorMsg = ''
     try {
-      const res = await fetchUsers({ limit: 500, includeDeleted })
+      const res = await fetchUsers({ limit: 100, includeDeleted })
       users = res.data
     }
     catch (e: any) {
