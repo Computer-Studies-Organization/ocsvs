@@ -6,8 +6,20 @@ import {
   transitionElectionHandler,
   updateElectionHandler,
 } from '@/handlers/elections/elections.handler'
+import {
+  createPositionHandler,
+  deletePositionHandler,
+  listPositionsHandler,
+  updatePositionHandler,
+} from '@/handlers/elections/positions.handler'
 import { createRouter } from '@/lib/create-app'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
+import {
+  createPositionRoute,
+  deletePositionRoute,
+  listPositionsRoute,
+  updatePositionRoute,
+} from './positions.routes'
 import {
   createElectionRoute,
   getCurrentElectionRoute,
@@ -37,5 +49,13 @@ router.openapi(updateElectionRoute, updateElectionHandler)
 
 router.use('/elections/:id/transitions', requireAdmin)
 router.openapi(transitionElectionRoute, transitionElectionHandler)
+
+router.use('/elections/:id/positions', requireAuth)
+router.openapi(listPositionsRoute, listPositionsHandler)
+
+router.use('/elections/:id/positions', requireAdmin)
+router.openapi(createPositionRoute, createPositionHandler)
+router.openapi(updatePositionRoute, updatePositionHandler)
+router.openapi(deletePositionRoute, deletePositionHandler)
 
 export default router

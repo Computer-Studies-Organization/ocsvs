@@ -128,6 +128,24 @@ export const candidateRepo = {
     return (res as { count: number } | null)?.count ?? 0
   },
 
+  // Count of candidates for a position (active-only by default)
+  async countByPositionId(
+    db: Database,
+    positionId: string,
+    opts: { includeInactive?: boolean } = {},
+  ): Promise<number> {
+    const includeInactive = opts.includeInactive ?? false
+    const where = includeInactive
+      ? eq(candidates.positionId, positionId)
+      : and(eq(candidates.positionId, positionId), eq(candidates.isActive, 1))
+    const row = await db
+      .select({ count: count() })
+      .from(candidates)
+      .where(where)
+      .get()
+    return (row as { count: number } | null)?.count ?? 0
+  },
+
   // Batch find active candidates by IDs — returns Map for O(1) lookup
   async findActiveByIds(
     db: Database,

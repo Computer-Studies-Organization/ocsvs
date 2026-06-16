@@ -292,3 +292,25 @@ export const ListElectionsQuerySchema = z.object({
     example: 'open',
   }),
 }).openapi('ListElectionsQuery')
+
+export const CreatePositionBodySchema = z.object({
+  name: z.string().min(1).max(200).openapi({
+    description: 'Position name',
+    example: 'President',
+  }),
+  displayOrder: z.number().int().optional().openapi({
+    description: 'Display order for the position',
+    example: 0,
+  }),
+}).openapi('CreatePositionBody')
+
+export const UpdatePositionBodySchema = z.object({
+  name: z.string().min(1).max(200).optional().openapi({
+    description: 'Position name',
+    example: 'President',
+  }),
+  displayOrder: z.number().int().optional().openapi({
+    description: 'Display order for the position',
+    example: 0,
+  }),
+}).openapi('UpdatePositionBody')
