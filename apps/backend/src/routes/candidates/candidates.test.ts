@@ -90,7 +90,7 @@ describe('candidate Routes (repository)', () => {
       const input = {
         fullName: 'Jane Doe',
         accountId: 'account-123',
-        position: 'President',
+        positionId: 'pos-101',
         manifesto: 'Change the world',
       }
       mockExistsActiveForAccountPosition.mockResolvedValue(false)
@@ -127,7 +127,7 @@ describe('candidate Routes (repository)', () => {
       const input = {
         fullName: 'Jane Doe',
         accountId: 'account-123',
-        position: 'President',
+        positionId: 'pos-101',
         manifesto: 'Change the world',
       }
       mockExistsActiveForAccountPosition.mockResolvedValue(true)
@@ -159,7 +159,7 @@ describe('candidate Routes (repository)', () => {
           id: '1',
           fullName: 'Alice',
           accountId: 'acc1',
-          position: 'President',
+          positionId: 'pos-101',
           manifesto: '...',
           isActive: 1,
           createdAt: 1000,
@@ -218,7 +218,7 @@ describe('candidate Routes (repository)', () => {
         id: 'cand-1',
         fullName: 'Bob',
         accountId: 'acc1',
-        position: 'Secretary',
+        positionId: 'pos-101',
         manifesto: '...',
         isActive: 1,
         createdAt: 1000,
@@ -256,7 +256,7 @@ describe('candidate Routes (repository)', () => {
           id: 'cand-1',
           fullName: 'Updated Name',
           accountId: 'acc1',
-          position: 'President',
+          positionId: 'pos-101',
           manifesto: 'Updated',
           isActive: 1,
           createdAt: 1000,

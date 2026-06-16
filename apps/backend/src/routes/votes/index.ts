@@ -6,7 +6,6 @@ import {
   getMyVoteStatusRoute,
   getVoteResultsRoute,
   submitVoteRoute,
-  withdrawVoteRoute,
 } from './routes'
 
 const router = createRouter()
@@ -23,6 +22,5 @@ router.openapi(submitVoteRoute, handlers.submitVote)
 router.openapi(getMyVoteStatusRoute, handlers.getMyVoteStatus)
 router.openapi(getVoteResultsRoute, handlers.getVoteResults)
 router.openapi(getCandidateVoteCountRoute, handlers.getCandidateVoteCount)
-router.openapi(withdrawVoteRoute, handlers.withdrawVote)
 
 export default router

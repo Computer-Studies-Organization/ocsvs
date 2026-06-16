@@ -23,7 +23,7 @@ export const createCandidate: AppRouteHandler<
     )
   }
 
-  const { fullName, accountId, position, manifesto } = c.req.valid('json')
+  const { fullName, accountId, positionId, manifesto } = c.req.valid('json')
   const { db } = createDb(c)
 
   // Verify account exists
@@ -44,7 +44,7 @@ export const createCandidate: AppRouteHandler<
   const exists = await candidateRepo.existsActiveForAccountPosition(
     db,
     accountId,
-    position,
+    positionId,
   )
   if (exists) {
     return c.json(
@@ -56,7 +56,7 @@ export const createCandidate: AppRouteHandler<
   const candidateId = await candidateRepo.create(db, {
     fullName,
     accountId,
-    position,
+    positionId,
     manifesto,
   })
 
@@ -67,7 +67,7 @@ export const createCandidate: AppRouteHandler<
         id: candidateId,
         fullName,
         accountId,
-        position,
+        positionId,
         manifesto,
       },
     },

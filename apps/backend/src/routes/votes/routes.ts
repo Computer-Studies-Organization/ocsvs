@@ -4,20 +4,27 @@ import jsonContent, { jsonContentRequired } from '@/middleware/utils/json-conten
 import * as httpStatusCodes from '@/openapi/http-status-codes'
 
 export const submitVoteSchema = z.object({
+  electionId: z.string().openapi({
+    description: 'Election the votes are cast in',
+    example: 'elec_202mno',
+  }),
   votes: z.array(z.object({
     candidateId: z.string(),
+    positionId: z.string(),
   })).min(1),
 })
 
 export const VoteItemSchema = z.object({
   candidateId: z.string(),
+  positionId: z.string(),
 })
 
 export const VoteResponseSchema = z.object({
   id: z.string(),
   userId: z.string(),
   candidateId: z.string(),
-  position: z.string(),
+  positionId: z.string(),
+  electionId: z.string(),
   createdAt: z.number(),
   updatedAt: z.number(),
 })
@@ -27,20 +34,29 @@ export const SubmitVoteResponseSchema = z.object({
   votes: z.array(VoteResponseSchema),
 })
 
+/** Response for /votes/me: the voter's picks for the current open election. */
 export const VoteStatusSchema = z.object({
-  hasVoted: z.boolean(),
-  votes: z.array(VoteResponseSchema),
+  electionId: z.string().nullable().openapi({
+    description: 'Election the votes are for; null when no election is open',
+    example: 'elec_202mno',
+  }),
+  votes: z.array(z.object({
+    candidateId: z.string(),
+    positionId: z.string(),
+  })),
 })
 
 export const VoteCountSchema = z.object({
   candidateId: z.string(),
   candidateName: z.string(),
-  position: z.string(),
+  positionId: z.string(),
+  positionName: z.string(),
   voteCount: z.number().int(),
 })
 
 export const VoteResultsSchema = z.object({
-  position: z.string(),
+  positionId: z.string(),
+  positionName: z.string(),
   candidates: z.array(VoteCountSchema),
 })
 
@@ -179,44 +195,6 @@ export const getCandidateVoteCountRoute = createRoute({
         message: z.string(),
       }),
       ERROR_MESSAGES.FORBIDDEN,
-    ),
-  },
-})
-
-export const withdrawVoteRoute = createRoute({
-  tags: ['Votes'],
-  method: 'delete',
-  path: '/votes/me',
-  responses: {
-    [httpStatusCodes.OK]: jsonContent(
-      z.object({
-        message: z.string(),
-      }),
-      ERROR_MESSAGES.VOTE_WITHDRAWN_SUCCESSFULLY,
-    ),
-    [httpStatusCodes.BAD_REQUEST]: jsonContent(
-      z.object({
-        message: z.string(),
-      }),
-      ERROR_MESSAGES.USER_NOT_FOUND,
-    ),
-    [httpStatusCodes.NOT_FOUND]: jsonContent(
-      z.object({
-        message: z.string(),
-      }),
-      ERROR_MESSAGES.VOTE_NOT_FOUND,
-    ),
-    [httpStatusCodes.UNAUTHORIZED]: jsonContent(
-      z.object({
-        message: z.string(),
-      }),
-      ERROR_MESSAGES.UNAUTHORIZED,
-    ),
-    [httpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
-      z.object({
-        message: z.string(),
-      }),
-      ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
     ),
   },
 })

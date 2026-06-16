@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import { describe, expect, it } from 'vitest'
 import { UserApiSchema } from './openapi-schemas'
-import { DbSelectUserSchema } from './schema'
+import { DbSelectUserSchema, elections, positions } from './schema'
 
 describe('user schema exports', () => {
   it('uses distinct names for database and API user schemas', () => {
@@ -9,7 +9,7 @@ describe('user schema exports', () => {
     expect(UserApiSchema).toBeDefined()
   })
 
-  it('keeps integer storage in the database schema and boolean shape in the API schema', () => {
+  it('keeps integer storage in the database schema and does not leak hasVoted into the API', () => {
     const baseUser = {
       createdAt: 1,
       updatedAt: 1,
@@ -22,14 +22,24 @@ describe('user schema exports', () => {
       course: 'BSCS',
     }
 
-    expect(DbSelectUserSchema.parse({ ...baseUser, hasVoted: 1 }).hasVoted).toBe(1)
-    expect(() => DbSelectUserSchema.parse({ ...baseUser, hasVoted: true })).toThrow()
+    // DB select: only the persisted integer columns; no hasVoted in DB or API
+    const dbRow = DbSelectUserSchema.parse(baseUser)
+    expect(dbRow).toEqual(baseUser)
+    expect((dbRow as { hasVoted?: unknown }).hasVoted).toBeUndefined()
 
-    expect(UserApiSchema.parse({ ...baseUser, hasVoted: true }).hasVoted).toBe(true)
-    expect(() => UserApiSchema.parse({ ...baseUser, hasVoted: 1 })).toThrow()
+    // API schema: also has no hasVoted (votes table is the source of truth)
+    const apiRow = UserApiSchema.parse(baseUser)
+    expect((apiRow as { hasVoted?: unknown }).hasVoted).toBeUndefined()
   })
 
   it('produces an OpenAPI-capable zod schema for API routes', () => {
     expect(UserApiSchema).toBeInstanceOf(z.ZodObject)
+  })
+})
+
+describe('election management schema', () => {
+  it('exports the new elections and positions tables', () => {
+    expect(elections).toBeDefined()
+    expect(positions).toBeDefined()
   })
 })

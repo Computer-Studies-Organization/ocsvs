@@ -8,14 +8,14 @@ import * as httpStatusCodes from '@/openapi/http-status-codes'
 export const createCandidateSchema = z.object({
   fullName: z.string(),
   accountId: z.string(),
-  position: z.string(),
+  positionId: z.string(),
   manifesto: z.string(),
 })
 
 export const updateCandidateSchema = z.object({
   fullName: z.string().optional(),
-  position: z.string().optional(),
   manifesto: z.string().optional(),
+  isActive: z.number().int().optional(),
 })
 
 const PaginationSchema = z.object({
@@ -44,7 +44,7 @@ export const createCandidateRoute = createRoute({
           id: z.string(),
           fullName: z.string(),
           accountId: z.string(),
-          position: z.string(),
+          positionId: z.string(),
           manifesto: z.string(),
         }),
       }),

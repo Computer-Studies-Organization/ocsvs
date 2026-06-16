@@ -54,7 +54,6 @@ vi.mock('@/database/repositories/users.repository', () => ({
     findByAccountId: mockFindByAccountId,
     getAccountId: vi.fn(),
     updateUser: mockUpdateUser,
-    setHasVoted: vi.fn(),
   },
 }))
 

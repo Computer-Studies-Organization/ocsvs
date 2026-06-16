@@ -1,6 +1,6 @@
 import type { Database } from './database.type'
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
-import { candidates, votes } from '@/database/schema'
+import { candidates, positions, votes } from '@/database/schema'
 
 export type CandidateRow = typeof candidates.$inferSelect
 
@@ -17,7 +17,8 @@ export interface AdminListResult {
 export interface VoteCountResult {
   candidateId: string
   candidateName: string
-  position: string
+  positionId: string
+  positionName: string
   voteCount: number
 }
 
@@ -25,12 +26,12 @@ export const candidateRepo = {
   // Ballot: minimal fields, active-only
   async listForBallot(
     db: Database,
-  ): Promise<{ id: string, fullName: string, position: string }[]> {
+  ): Promise<{ id: string, fullName: string, positionId: string }[]> {
     return await db
       .select({
         id: candidates.id,
         fullName: candidates.fullName,
-        position: candidates.position,
+        positionId: candidates.positionId,
       })
       .from(candidates)
       .where(eq(candidates.isActive, 1))
@@ -57,7 +58,7 @@ export const candidateRepo = {
           id: candidates.id,
           fullName: candidates.fullName,
           accountId: candidates.accountId,
-          position: candidates.position,
+          positionId: candidates.positionId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
           createdAt: candidates.createdAt,
@@ -82,9 +83,9 @@ export const candidateRepo = {
   async getForValidation(
     db: Database,
     id: string,
-  ): Promise<{ id: string, position: string } | null> {
+  ): Promise<{ id: string, positionId: string } | null> {
     return (await db
-      .select({ id: candidates.id, position: candidates.position })
+      .select({ id: candidates.id, positionId: candidates.positionId })
       .from(candidates)
       .where(and(eq(candidates.id, id), eq(candidates.isActive, 1)))
       .get()) ?? null
@@ -106,7 +107,7 @@ export const candidateRepo = {
         id: candidates.id,
         fullName: candidates.fullName,
         accountId: candidates.accountId,
-        position: candidates.position,
+        positionId: candidates.positionId,
         manifesto: candidates.manifesto,
         isActive: candidates.isActive,
         createdAt: candidates.createdAt,
@@ -131,14 +132,14 @@ export const candidateRepo = {
   async findActiveByIds(
     db: Database,
     ids: string[],
-  ): Promise<Map<string, { id: string, position: string }>> {
+  ): Promise<Map<string, { id: string, positionId: string }>> {
     const rows = await db
-      .select({ id: candidates.id, position: candidates.position })
+      .select({ id: candidates.id, positionId: candidates.positionId })
       .from(candidates)
       .where(and(inArray(candidates.id, ids), eq(candidates.isActive, 1)))
       .all()
-    return new Map<string, { id: string, position: string }>(
-      rows.map<[string, { id: string, position: string }]>(r => [r.id, r]),
+    return new Map<string, { id: string, positionId: string }>(
+      rows.map<[string, { id: string, positionId: string }]>(r => [r.id, r]),
     )
   },
 
@@ -148,7 +149,7 @@ export const candidateRepo = {
     data: {
       fullName: string
       accountId: string
-      position: string
+      positionId: string
       manifesto: string
     },
   ): Promise<string> {
@@ -160,7 +161,7 @@ export const candidateRepo = {
         id,
         fullName: data.fullName,
         accountId: data.accountId,
-        position: data.position,
+        positionId: data.positionId,
         manifesto: data.manifesto,
         isActive: 1,
         createdAt: now,
@@ -177,7 +178,7 @@ export const candidateRepo = {
     data: Partial<{
       fullName?: string
       accountId?: string
-      position?: string
+      positionId?: string
       manifesto?: string
       isActive?: number
     }>,
@@ -208,7 +209,7 @@ export const candidateRepo = {
   async existsActiveForAccountPosition(
     db: Database,
     accountId: string,
-    position: string,
+    positionId: string,
   ): Promise<boolean> {
     const res = await db
       .select({ id: candidates.id })
@@ -216,7 +217,7 @@ export const candidateRepo = {
       .where(
         and(
           eq(candidates.accountId, accountId),
-          eq(candidates.position, position),
+          eq(candidates.positionId, positionId),
           eq(candidates.isActive, 1),
         ),
       )
@@ -231,13 +232,20 @@ export const candidateRepo = {
       .select({
         candidateId: candidates.id,
         candidateName: candidates.fullName,
-        position: candidates.position,
+        positionId: candidates.positionId,
+        positionName: positions.name,
         voteCount: count(votes.id),
       })
       .from(candidates)
+      .leftJoin(positions, eq(candidates.positionId, positions.id))
       .leftJoin(votes, eq(candidates.id, votes.candidateId))
       .where(eq(candidates.isActive, 1))
-      .groupBy(candidates.id, candidates.fullName, candidates.position)
+      .groupBy(
+        candidates.id,
+        candidates.fullName,
+        candidates.positionId,
+        positions.name,
+      )
       .orderBy(desc(count(votes.id)))
       .all()
     return rows as VoteCountResult[]

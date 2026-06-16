@@ -30,7 +30,7 @@ export interface ProfileView {
   course: string
 }
 
-/** Admin: full user view with boolean hasVoted and deletedAt */
+/** Admin: full user view (voting status is derived from `votes` — not stored on the user row) */
 export interface AdminView {
   id: string
   accountId: string
@@ -39,7 +39,6 @@ export interface AdminView {
   lastName: string
   yearLevel: string
   course: string
-  hasVoted: boolean
   username: string
   email: string | null
   role: string
@@ -67,7 +66,7 @@ export interface DeleteStatus {
 // --- Query module ---
 
 export const userAccountQueries = {
-  /** Find user by user ID — joined with account, boolean hasVoted */
+  /** Find user by user ID — joined with account */
   async findById(
     db: Database,
     userId: string,
@@ -81,7 +80,6 @@ export const userAccountQueries = {
         lastName: users.lastName,
         yearLevel: users.yearLevel,
         course: users.course,
-        hasVoted: users.hasVoted,
         username: accounts.username,
         email: accounts.email,
         role: accounts.role,
@@ -95,10 +93,7 @@ export const userAccountQueries = {
       .where(eq(users.id, userId))
       .get()
 
-    if (!row)
-      return null
-
-    return { ...row, hasVoted: row.hasVoted === 1 }
+    return row ?? null
   },
 
   /** Find by student ID — returns auth fields including password_hash */
@@ -124,7 +119,7 @@ export const userAccountQueries = {
       .get() ?? null
   },
 
-  /** Admin list: paginated, filtered, boolean hasVoted */
+  /** Admin list: paginated, filtered. Voting status is not part of the user row. */
   async listForAdmin(
     db: Database,
     opts: {
@@ -177,7 +172,6 @@ export const userAccountQueries = {
           lastName: users.lastName,
           yearLevel: users.yearLevel,
           course: users.course,
-          hasVoted: users.hasVoted,
           username: accounts.username,
           email: accounts.email,
           role: accounts.role,
@@ -205,7 +199,7 @@ export const userAccountQueries = {
     const totalPages = Math.ceil(total / limit)
 
     return {
-      data: data.map(row => ({ ...row, hasVoted: row.hasVoted === 1 })),
+      data,
       meta: { total, page, limit, totalPages },
     }
   },

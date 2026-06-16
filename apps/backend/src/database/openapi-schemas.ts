@@ -41,10 +41,6 @@ export const UserApiSchema = z.object({
     description: 'Course/Program',
     example: 'BS Computer Science',
   }),
-  hasVoted: z.boolean().openapi({
-    description: 'Whether the user has voted',
-    example: false,
-  }),
 })
 
 export const AccountSchema = z.object({
@@ -122,9 +118,9 @@ export const CandidateSchema = z.object({
     description: 'Associated account ID',
     example: 'acc_456def',
   }),
-  position: z.string().openapi({
-    description: 'Position running for',
-    example: 'President',
+  positionId: z.string().openapi({
+    description: 'Position (FK into positions.id) the candidate is running for',
+    example: 'pos_101jkl',
   }),
   manifesto: z.string().openapi({
     description: 'Candidate manifesto or platform',
@@ -157,9 +153,13 @@ export const VoteSchema = z.object({
     description: 'Candidate who received the vote',
     example: 'cand_101jkl',
   }),
-  position: z.string().openapi({
-    description: 'Candidate position at vote time',
-    example: 'President',
+  positionId: z.string().openapi({
+    description: 'Position (FK into positions.id) the vote was cast for',
+    example: 'pos_101jkl',
+  }),
+  electionId: z.string().openapi({
+    description: 'Election (FK into elections.id) the vote was cast in',
+    example: 'elec_202mno',
   }),
 })
 

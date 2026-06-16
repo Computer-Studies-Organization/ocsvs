@@ -28,7 +28,6 @@ vi.mock('@/database/repositories/users.repository', () => ({
     getAccountId: vi.fn(),
     findByAccountId: vi.fn(),
     updateUser: vi.fn(),
-    setHasVoted: vi.fn(),
   },
 }))
 
@@ -86,7 +85,6 @@ describe('users Routes', () => {
         accountId: 'acc1',
         yearLevel: '4th Year',
         course: 'BSCS',
-        hasVoted: true,
         username: 'johndoe',
         email: 'john@example.com',
         role: 'user',
@@ -122,7 +120,7 @@ describe('users Routes', () => {
 
   it('with defaults should use page 1 and limit 10', async () => {
     mockListForAdmin.mockResolvedValue({
-      data: [{ id: '1', hasVoted: false }],
+      data: [{ id: '1' }],
       meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
     })
 
