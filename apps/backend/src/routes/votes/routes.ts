@@ -37,7 +37,7 @@ export const SubmitVoteResponseSchema = z.object({
 /** Response for /votes/me: the voter's picks for the current open election. */
 export const VoteStatusSchema = z.object({
   electionId: z.string().nullable().openapi({
-    description: 'Election the votes are for; null when no election is open',
+    description: 'Current open election ID, or null if none is open',
     example: 'elec_202mno',
   }),
   votes: z.array(z.object({
@@ -122,14 +122,14 @@ export const submitVoteRoute = createRoute({
   },
 })
 
-export const getMyVoteStatusRoute = createRoute({
+export const getMyVotesRoute = createRoute({
   tags: ['Votes'],
   method: 'get',
   path: '/votes/me',
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       VoteStatusSchema,
-      'User vote status',
+      'My votes for the current open election',
     ),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
       z.object({

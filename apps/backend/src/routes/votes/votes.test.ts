@@ -75,7 +75,7 @@ vi.mock('@/config/db', () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }))
 
-const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockExistsForUserInElection, mockFindByUserId, mockCountByCandidateId }
+const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockExistsForUserInElection, mockFindByUserId, mockFindByUserAndElection, mockCountByCandidateId, mockGetCurrentElection }
   = vi.hoisted(() => ({
     mockFindActiveByIds: vi.fn(),
     mockListWithVoteCount: vi.fn(),
@@ -84,7 +84,9 @@ const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFin
     mockExistsForUser: vi.fn(),
     mockExistsForUserInElection: vi.fn(),
     mockFindByUserId: vi.fn(),
+    mockFindByUserAndElection: vi.fn(),
     mockCountByCandidateId: vi.fn(),
+    mockGetCurrentElection: vi.fn(),
   }))
 
 vi.mock('@/database/repositories/candidates.repository', () => ({
@@ -106,11 +108,18 @@ vi.mock('@/database/repositories/users.repository', () => ({
 vi.mock('@/database/repositories/votes.repository', () => ({
   voteRepo: {
     findByUserId: mockFindByUserId,
+    findByUserAndElection: mockFindByUserAndElection,
     existsForUser: mockExistsForUser,
     existsForUserInElection: mockExistsForUserInElection,
     countByCandidateId: mockCountByCandidateId,
     insertMany: vi.fn(),
     deleteByUserId: vi.fn(),
+  },
+}))
+
+vi.mock('@/database/queries/election.queries', () => ({
+  electionQueries: {
+    getCurrentElection: mockGetCurrentElection,
   },
 }))
 
@@ -135,7 +144,9 @@ describe('votes Routes (repository)', () => {
     mockExistsForUser.mockReset()
     mockExistsForUserInElection.mockReset()
     mockFindByUserId.mockReset()
+    mockFindByUserAndElection.mockReset()
     mockCountByCandidateId.mockReset()
+    mockGetCurrentElection.mockReset()
     TEST_USER = {
       id: testUserId,
       accountId: testUserAccountId,
@@ -345,14 +356,15 @@ describe('votes Routes (repository)', () => {
     })
   })
 
-  describe('gET /votes/me - getMyVoteStatus', () => {
-    it('should return vote picks when user has votes', async () => {
+  describe('gET /votes/me - getMyVotes', () => {
+    it('returns vote picks for the current open election', async () => {
       setUser()
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
       })
-      mockFindByUserId.mockResolvedValue([
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId })
+      mockFindByUserAndElection.mockResolvedValue([
         {
           id: testVoteId1,
           userId: testUserId,
@@ -376,13 +388,41 @@ describe('votes Routes (repository)', () => {
       })
     })
 
-    it('should return empty votes when user has not voted', async () => {
+    it('returns empty votes when there is no open election', async () => {
       setUser()
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
       })
-      mockFindByUserId.mockResolvedValue([])
+      mockGetCurrentElection.mockResolvedValue(null)
+
+      const res = await router.request('/votes/me', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      const json = (await res.json()) as any
+      expect(json).toEqual({ electionId: null, votes: [] })
+    })
+
+    it('returns empty votes when user has not voted in the current election', async () => {
+      setUser()
+      mockFindByAccountId.mockResolvedValue({
+        id: testUserId,
+        accountId: testUserAccountId,
+      })
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId })
+      mockFindByUserAndElection.mockResolvedValue([])
+
+      const res = await router.request('/votes/me', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      const json = (await res.json()) as any
+      expect(json.electionId).toBe(testElectionId)
+      expect(json.votes).toEqual([])
+    })
+
+    it('returns empty votes when user record is missing', async () => {
+      setUser()
+      mockFindByAccountId.mockResolvedValue(null)
 
       const res = await router.request('/votes/me', { method: 'GET' })
 

@@ -1,12 +1,13 @@
 import type { AppRouteHandler } from '@/lib/types/app-types'
 import type {
   getCandidateVoteCountRoute,
-  getMyVoteStatusRoute,
+  getMyVotesRoute,
   getVoteResultsRoute,
   submitVoteRoute,
 } from '@/routes/votes/routes'
 import { eq } from 'drizzle-orm'
 import { createDb } from '@/config/db'
+import { electionQueries } from '@/database/queries/election.queries'
 import { candidateRepo } from '@/database/repositories/candidates.repository'
 import { userRepo } from '@/database/repositories/users.repository'
 import { voteRepo } from '@/database/repositories/votes.repository'
@@ -108,9 +109,9 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   )
 }
 
-export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = async (c) => {
-  const authUser = c.get('authUser')
+export const getMyVotes: AppRouteHandler<typeof getMyVotesRoute> = async (c) => {
   const { db } = createDb(c)
+  const authUser = c.get('authUser')
 
   // Get the user associated with this account
   const user = await userRepo.findByAccountId(db, authUser.id)
@@ -122,17 +123,23 @@ export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = asy
     )
   }
 
-  // Get all votes for this user. electionId is derived from the first vote's
-  // election_id; null if the user has not voted.
-  const userVotes = await voteRepo.findByUserId(db, user.id)
-  const electionId = userVotes.length > 0 ? userVotes[0].electionId : null
+  // Source of truth: the current open election. If none is open, the user has
+  // no "current" votes to return.
+  const current = await electionQueries.getCurrentElection(db)
+  if (!current) {
+    return c.json(
+      { electionId: null, votes: [] },
+      httpStatusCodes.OK,
+    )
+  }
 
+  const rows = await voteRepo.findByUserAndElection(db, user.id, current.id)
   return c.json(
     {
-      electionId,
-      votes: userVotes.map(v => ({
-        candidateId: v.candidateId,
-        positionId: v.positionId,
+      electionId: current.id,
+      votes: rows.map(r => ({
+        candidateId: r.candidateId,
+        positionId: r.positionId,
       })),
     },
     httpStatusCodes.OK,

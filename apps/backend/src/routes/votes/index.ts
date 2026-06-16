@@ -3,7 +3,7 @@ import { createRouter } from '@/lib/create-app'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
 import {
   getCandidateVoteCountRoute,
-  getMyVoteStatusRoute,
+  getMyVotesRoute,
   getVoteResultsRoute,
   submitVoteRoute,
 } from './routes'
@@ -19,7 +19,7 @@ router.use('/votes/candidates/:id/count', requireAdmin)
 
 // Register routes with handlers
 router.openapi(submitVoteRoute, handlers.submitVote)
-router.openapi(getMyVoteStatusRoute, handlers.getMyVoteStatus)
+router.openapi(getMyVotesRoute, handlers.getMyVotes)
 router.openapi(getVoteResultsRoute, handlers.getVoteResults)
 router.openapi(getCandidateVoteCountRoute, handlers.getCandidateVoteCount)
 

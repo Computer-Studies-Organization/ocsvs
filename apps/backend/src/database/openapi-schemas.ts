@@ -314,3 +314,38 @@ export const UpdatePositionBodySchema = z.object({
     example: 0,
   }),
 }).openapi('UpdatePositionBody')
+
+export const ResultsPositionSchema = z.object({
+  positionId: z.string().openapi({
+    description: 'Position ID',
+    example: 'pos_303pqr',
+  }),
+  positionName: z.string().openapi({
+    description: 'Position name',
+    example: 'President',
+  }),
+  totalVotes: z.number().int().openapi({
+    description: 'Total votes cast for this position',
+    example: 42,
+  }),
+  candidates: z.array(z.object({
+    candidateId: z.string().openapi({
+      description: 'Candidate ID',
+      example: 'cand_101jkl',
+    }),
+    fullName: z.string().openapi({
+      description: 'Full name of the candidate',
+      example: 'Jane Smith',
+    }),
+    voteCount: z.number().int().openapi({
+      description: 'Number of votes for this candidate',
+      example: 21,
+    }),
+    percentage: z.number().openapi({
+      description: 'Percentage of position votes (0-100, 2 decimals)',
+      example: 50.0,
+    }),
+  })),
+}).openapi('ResultsPosition')
+
+export const ResultsResponseSchema = z.array(ResultsPositionSchema)
