@@ -32,7 +32,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   // Source of truth for "has voted" is the votes table (unique index on
   // (user_id, position_id, election_id)). The legacy users.has_voted column
   // is gone.
-  const hasExistingVotes = await voteRepo.existsForUser(db, user.id)
+  const hasExistingVotes = await voteRepo.existsForUserInElection(db, user.id, electionId)
 
   if (hasExistingVotes) {
     return c.json(

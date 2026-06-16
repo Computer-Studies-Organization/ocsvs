@@ -75,13 +75,14 @@ vi.mock('@/config/db', () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }))
 
-const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockFindByUserId, mockCountByCandidateId }
+const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockExistsForUserInElection, mockFindByUserId, mockCountByCandidateId }
   = vi.hoisted(() => ({
     mockFindActiveByIds: vi.fn(),
     mockListWithVoteCount: vi.fn(),
     mockGetForAdminView: vi.fn(),
     mockFindByAccountId: vi.fn(),
     mockExistsForUser: vi.fn(),
+    mockExistsForUserInElection: vi.fn(),
     mockFindByUserId: vi.fn(),
     mockCountByCandidateId: vi.fn(),
   }))
@@ -106,6 +107,7 @@ vi.mock('@/database/repositories/votes.repository', () => ({
   voteRepo: {
     findByUserId: mockFindByUserId,
     existsForUser: mockExistsForUser,
+    existsForUserInElection: mockExistsForUserInElection,
     countByCandidateId: mockCountByCandidateId,
     insertMany: vi.fn(),
     deleteByUserId: vi.fn(),
@@ -131,6 +133,7 @@ describe('votes Routes (repository)', () => {
     mockGetForAdminView.mockReset()
     mockFindByAccountId.mockReset()
     mockExistsForUser.mockReset()
+    mockExistsForUserInElection.mockReset()
     mockFindByUserId.mockReset()
     mockCountByCandidateId.mockReset()
     TEST_USER = {
@@ -193,7 +196,7 @@ describe('votes Routes (repository)', () => {
       const mockUser = { id: testUserId, accountId: testUserAccountId }
 
       mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+      mockExistsForUserInElection.mockResolvedValue(false)
       mockFindActiveByIds.mockResolvedValue(
         new Map([
           [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
@@ -248,7 +251,7 @@ describe('votes Routes (repository)', () => {
         id: testUserId,
         accountId: testUserAccountId,
       })
-      mockExistsForUser.mockResolvedValue(true)
+      mockExistsForUserInElection.mockResolvedValue(true)
 
       const res = await router.request('/votes', {
         method: 'POST',
@@ -268,7 +271,7 @@ describe('votes Routes (repository)', () => {
       setUser()
       const mockUser = { id: testUserId, accountId: testUserAccountId }
       mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+      mockExistsForUserInElection.mockResolvedValue(false)
 
       mockFindActiveByIds.mockResolvedValue(
         new Map([
@@ -298,7 +301,7 @@ describe('votes Routes (repository)', () => {
       setUser()
       const mockUser = { id: testUserId, accountId: testUserAccountId }
       mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+      mockExistsForUserInElection.mockResolvedValue(false)
 
       mockFindActiveByIds.mockResolvedValue(new Map())
 
@@ -320,7 +323,7 @@ describe('votes Routes (repository)', () => {
       setUser()
       const mockUser = { id: testUserId, accountId: testUserAccountId }
       mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+      mockExistsForUserInElection.mockResolvedValue(false)
       mockFindActiveByIds.mockResolvedValue(
         new Map([
           [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
