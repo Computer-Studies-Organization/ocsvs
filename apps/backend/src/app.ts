@@ -3,6 +3,7 @@ import createApp from '@/lib/create-app'
 import configureOpenAPI from '@/lib/openapi-configuration'
 import auth from '@/routes/auth/auth.index'
 import candidates from '@/routes/candidates'
+import elections from '@/routes/elections'
 import index from '@/routes/index.route'
 import profile from '@/routes/profile'
 import users from '@/routes/users'
@@ -10,7 +11,7 @@ import votes from '@/routes/votes'
 
 const app = createApp()
 
-const routes = [index, auth, profile, users, candidates, votes]
+const routes = [index, auth, profile, users, candidates, votes, elections]
 
 configureOpenAPI(app as AppOpenAPI)
 

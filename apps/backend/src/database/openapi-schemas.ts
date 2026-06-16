@@ -169,3 +169,126 @@ export const SelectAccountSchema = AccountSchema
 export const SelectSessionSchema = SessionSchema
 export const SelectCandidateSchema = CandidateSchema
 export const SelectVoteSchema = VoteSchema
+
+// Election schemas
+export const ElectionSchema = z.object({
+  createdAt: z.number().int().openapi({
+    description: 'Creation timestamp',
+    example: 1738000000,
+  }),
+  updatedAt: z.number().int().openapi({
+    description: 'Last update timestamp',
+    example: 1738000000,
+  }),
+  id: z.string().openapi({
+    description: 'Election ID',
+    example: 'elec_202mno',
+  }),
+  name: z.string().openapi({
+    description: 'Election name',
+    example: 'CSO General Elections 2026',
+  }),
+  description: z.string().nullable().openapi({
+    description: 'Election description',
+    example: 'Annual student council elections',
+  }),
+  status: z.string().openapi({
+    description: 'Election lifecycle status (draft, open, closed, archived)',
+    example: 'draft',
+  }),
+  opensAt: z.number().int().nullable().openapi({
+    description: 'Election opens at (Unix seconds)',
+    example: 1738000000,
+  }),
+  closesAt: z.number().int().nullable().openapi({
+    description: 'Election closes at (Unix seconds)',
+    example: 1738604800,
+  }),
+})
+
+export const PositionSchema = z.object({
+  createdAt: z.number().int().openapi({
+    description: 'Creation timestamp',
+    example: 1738000000,
+  }),
+  updatedAt: z.number().int().openapi({
+    description: 'Last update timestamp',
+    example: 1738000000,
+  }),
+  id: z.string().openapi({
+    description: 'Position ID',
+    example: 'pos_303pqr',
+  }),
+  electionId: z.string().openapi({
+    description: 'Election ID this position belongs to',
+    example: 'elec_202mno',
+  }),
+  name: z.string().openapi({
+    description: 'Position name',
+    example: 'President',
+  }),
+  displayOrder: z.number().int().openapi({
+    description: 'Display order for the position',
+    example: 0,
+  }),
+})
+
+export const CreateElectionBodySchema = z.object({
+  name: z.string().min(1).max(200).openapi({
+    description: 'Election name',
+    example: 'CSO General Elections 2026',
+  }),
+  description: z.string().optional().openapi({
+    description: 'Election description',
+    example: 'Annual student council elections',
+  }),
+  opensAt: z.number().int().optional().openapi({
+    description: 'Election opens at (Unix seconds)',
+    example: 1738000000,
+  }),
+  closesAt: z.number().int().optional().openapi({
+    description: 'Election closes at (Unix seconds)',
+    example: 1738604800,
+  }),
+}).openapi('CreateElectionBody')
+
+export const UpdateElectionBodySchema = z.object({
+  name: z.string().min(1).max(200).optional().openapi({
+    description: 'Election name',
+    example: 'CSO General Elections 2026',
+  }),
+  description: z.string().nullable().optional().openapi({
+    description: 'Election description',
+    example: 'Annual student council elections',
+  }),
+  opensAt: z.number().int().nullable().optional().openapi({
+    description: 'Election opens at (Unix seconds)',
+    example: 1738000000,
+  }),
+  closesAt: z.number().int().nullable().optional().openapi({
+    description: 'Election closes at (Unix seconds)',
+    example: 1738604800,
+  }),
+}).openapi('UpdateElectionBody')
+
+export const TransitionBodySchema = z.object({
+  to: z.enum(['draft', 'open', 'closed', 'archived']).openapi({
+    description: 'Target status',
+    example: 'open',
+  }),
+  opensAt: z.number().int().optional().openapi({
+    description: 'Election opens at (Unix seconds)',
+    example: 1738000000,
+  }),
+  closesAt: z.number().int().optional().openapi({
+    description: 'Election closes at (Unix seconds)',
+    example: 1738604800,
+  }),
+}).openapi('TransitionBody')
+
+export const ListElectionsQuerySchema = z.object({
+  status: z.enum(['draft', 'open', 'closed', 'archived']).optional().openapi({
+    description: 'Filter by status',
+    example: 'open',
+  }),
+}).openapi('ListElectionsQuery')
