@@ -67,20 +67,14 @@ export interface TCandidate {
   id: string
   fullName: string
   accountId: string
-  position: string
+  positionId: string
   manifesto: string
+  isActive: number
 }
 
 export interface TVote {
   user_id: string
   candidate_id: string
-}
-
-export interface TPositionGroup {
-  id: string
-  title: string
-  description: string
-  candidates: TCandidate[]
 }
 
 export interface TVoteRequest {
