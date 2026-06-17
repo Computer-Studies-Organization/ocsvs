@@ -24,3 +24,13 @@ export function getAdminRouteRedirectPath(data: TUserData | null | undefined) {
   }
   return null
 }
+
+export function getAdminElectionsRouteRedirectPath(data: TUserData | null | undefined) {
+  if (!data) {
+    return '/auth'
+  }
+  if (data.user.role !== UserRole.ADMIN) {
+    return '/dashboard'
+  }
+  return null
+}

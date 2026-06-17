@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  getAdminElectionsRouteRedirectPath,
   getAdminRouteRedirectPath,
   getProtectedRouteRedirectPath,
   getPublicRouteRedirectPath,
@@ -56,4 +57,16 @@ test('admin routes redirect non-admin users to the dashboard', () => {
 
 test('admin routes allow admins to continue', () => {
   assert.equal(getAdminRouteRedirectPath(adminUser), null)
+})
+
+test('admin-elections routes redirect unauthenticated users to login', () => {
+  assert.equal(getAdminElectionsRouteRedirectPath(null), '/auth')
+})
+
+test('admin-elections routes redirect non-admin users to the dashboard', () => {
+  assert.equal(getAdminElectionsRouteRedirectPath(standardUser), '/dashboard')
+})
+
+test('admin-elections routes allow admins to continue', () => {
+  assert.equal(getAdminElectionsRouteRedirectPath(adminUser), null)
 })
