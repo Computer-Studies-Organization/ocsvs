@@ -1,11 +1,11 @@
-import type { TPositionGroup } from './voting-stepper-logic'
+import type { TStepperPosition } from './voting-stepper-logic'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   allPositionsVoted,
   createVotingState,
-  getSelectedCandidateIds,
   getSelectedCount,
+  getSelectedVotes,
   goNext,
   goPrevious,
   hasCurrentVote,
@@ -15,35 +15,35 @@ import {
 
 } from './voting-stepper-logic'
 
-const groups: TPositionGroup[] = [
-  { id: 'president', title: 'President', description: 'President', candidates: [{ id: 'c1', fullName: 'Alice', accountId: 'a1', position: 'president', manifesto: '' }, { id: 'c2', fullName: 'Bob', accountId: 'a2', position: 'president', manifesto: '' }] },
-  { id: 'vice-president', title: 'Vice President', description: 'Vice President', candidates: [{ id: 'c3', fullName: 'Charlie', accountId: 'a3', position: 'vice-president', manifesto: '' }, { id: 'c4', fullName: 'Dave', accountId: 'a4', position: 'vice-president', manifesto: '' }] },
-  { id: 'secretary', title: 'Secretary', description: 'Secretary', candidates: [{ id: 'c5', fullName: 'Eve', accountId: 'a5', position: 'secretary', manifesto: '' }] },
+const positions: TStepperPosition[] = [
+  { id: 'pos-1', name: 'President', displayOrder: 0, candidates: [{ id: 'c1', fullName: 'Alice' }, { id: 'c2', fullName: 'Bob' }] },
+  { id: 'pos-2', name: 'Vice President', displayOrder: 1, candidates: [{ id: 'c3', fullName: 'Charlie' }, { id: 'c4', fullName: 'Dave' }] },
+  { id: 'pos-3', name: 'Secretary', displayOrder: 2, candidates: [{ id: 'c5', fullName: 'Eve' }] },
 ]
 
 test('createVotingState initializes all positions to null and index to 0', () => {
-  const state = createVotingState(groups)
-  assert.deepEqual(state.selectedVotes, { 'president': null, 'vice-president': null, 'secretary': null })
+  const state = createVotingState(positions)
+  assert.deepEqual(state.selectedVotes, { 'pos-1': null, 'pos-2': null, 'pos-3': null })
   assert.equal(state.currentPositionIndex, 0)
 })
 
 test('selectCandidate sets vote for correct position', () => {
-  const state = createVotingState(groups)
-  const next = selectCandidate(state, 'president', 'c1')
-  assert.equal(next.selectedVotes.president, 'c1')
-  assert.equal(next.selectedVotes['vice-president'], null)
+  const state = createVotingState(positions)
+  const next = selectCandidate(state, 'pos-1', 'c1')
+  assert.equal(next.selectedVotes['pos-1'], 'c1')
+  assert.equal(next.selectedVotes['pos-2'], null)
 })
 
 test('selectCandidate can change an existing vote', () => {
-  let state = createVotingState(groups)
-  state = selectCandidate(state, 'president', 'c1')
-  state = selectCandidate(state, 'president', 'c2')
-  assert.equal(state.selectedVotes.president, 'c2')
+  let state = createVotingState(positions)
+  state = selectCandidate(state, 'pos-1', 'c1')
+  state = selectCandidate(state, 'pos-1', 'c2')
+  assert.equal(state.selectedVotes['pos-1'], 'c2')
 })
 
 test('goNext advances index', () => {
-  const state = createVotingState(groups)
-  const next = goNext(state, groups.length)
+  const state = createVotingState(positions)
+  const next = goNext(state, positions.length)
   assert.equal(next.currentPositionIndex, 1)
 })
 
@@ -82,56 +82,61 @@ test('isLastPosition true at last, false otherwise', () => {
 })
 
 test('hasCurrentVote false when no vote for current position', () => {
-  const state = createVotingState(groups)
-  assert.equal(hasCurrentVote(state, groups), false)
+  const state = createVotingState(positions)
+  assert.equal(hasCurrentVote(state, positions), false)
 })
 
 test('hasCurrentVote true when vote exists for current position', () => {
-  const state = selectCandidate(createVotingState(groups), 'president', 'c1')
-  assert.equal(hasCurrentVote(state, groups), true)
+  const state = selectCandidate(createVotingState(positions), 'pos-1', 'c1')
+  assert.equal(hasCurrentVote(state, positions), true)
 })
 
 test('hasCurrentVote false when current index is out of bounds', () => {
   const state = { selectedVotes: {}, currentPositionIndex: 99 }
-  assert.equal(hasCurrentVote(state, groups), false)
+  assert.equal(hasCurrentVote(state, positions), false)
 })
 
 test('allPositionsVoted false when some positions have no vote', () => {
-  const state = selectCandidate(createVotingState(groups), 'president', 'c1')
-  assert.equal(allPositionsVoted(state, groups), false)
+  const state = selectCandidate(createVotingState(positions), 'pos-1', 'c1')
+  assert.equal(allPositionsVoted(state, positions), false)
 })
 
 test('allPositionsVoted true when all positions have votes', () => {
-  let state = createVotingState(groups)
-  state = selectCandidate(state, 'president', 'c1')
-  state = selectCandidate(state, 'vice-president', 'c3')
-  state = selectCandidate(state, 'secretary', 'c5')
-  assert.equal(allPositionsVoted(state, groups), true)
+  let state = createVotingState(positions)
+  state = selectCandidate(state, 'pos-1', 'c1')
+  state = selectCandidate(state, 'pos-2', 'c3')
+  state = selectCandidate(state, 'pos-3', 'c5')
+  assert.equal(allPositionsVoted(state, positions), true)
 })
 
-test('allPositionsVoted true for empty groups', () => {
+test('allPositionsVoted true for empty positions', () => {
   const state = { selectedVotes: {}, currentPositionIndex: 0 }
   assert.equal(allPositionsVoted(state, []), true)
 })
 
-test('getSelectedCandidateIds returns only non-null selections', () => {
-  const state = selectCandidate(createVotingState(groups), 'president', 'c1')
-  assert.deepEqual(getSelectedCandidateIds(state), ['c1'])
+test('getSelectedVotes returns only non-null selections with positionId and candidateId', () => {
+  let state = createVotingState(positions)
+  state = selectCandidate(state, 'pos-1', 'c1')
+  state = selectCandidate(state, 'pos-3', 'c5')
+  assert.deepEqual(getSelectedVotes(state), [
+    { positionId: 'pos-1', candidateId: 'c1' },
+    { positionId: 'pos-3', candidateId: 'c5' },
+  ])
 })
 
-test('getSelectedCandidateIds returns empty array when nothing selected', () => {
-  const state = createVotingState(groups)
-  assert.deepEqual(getSelectedCandidateIds(state), [])
+test('getSelectedVotes returns empty array when nothing selected', () => {
+  const state = createVotingState(positions)
+  assert.deepEqual(getSelectedVotes(state), [])
 })
 
 test('getSelectedCount counts non-null votes', () => {
-  let state = createVotingState(groups)
-  state = selectCandidate(state, 'president', 'c1')
-  state = selectCandidate(state, 'secretary', 'c5')
+  let state = createVotingState(positions)
+  state = selectCandidate(state, 'pos-1', 'c1')
+  state = selectCandidate(state, 'pos-3', 'c5')
   assert.equal(getSelectedCount(state), 2)
 })
 
 test('getSelectedCount returns 0 when nothing selected', () => {
-  const state = createVotingState(groups)
+  const state = createVotingState(positions)
   assert.equal(getSelectedCount(state), 0)
 })
