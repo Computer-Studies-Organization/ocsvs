@@ -25,7 +25,7 @@
   onMount(async () => {
     try {
       const [candidatesRes, voteStatus] = await Promise.all([
-        allCandidates(),
+        allCandidates({ electionId: '' }),
         getMyVotes(),
       ])
 

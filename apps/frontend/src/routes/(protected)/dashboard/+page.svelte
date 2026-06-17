@@ -1,12 +1,10 @@
 <script lang='ts'>
-  import type { TPosition } from '$lib/constants/positions'
   import type { TCandidate, TPositionGroup } from '$lib/types'
   import { goto } from '$app/navigation'
   import { logout } from '$lib/api/auth'
   import { allCandidates } from '$lib/api/candidates'
   import { getMyVotes, submitVotes } from '$lib/api/votes'
   import Spinner from '$lib/components/ui/spinner.svelte'
-  import { POSITIONS } from '$lib/constants/positions'
   import { authStore } from '$lib/stores/auth'
   import { UserRole } from '$lib/types'
   import {
@@ -20,6 +18,9 @@
     Vote,
   } from 'lucide-svelte'
   import { onMount } from 'svelte'
+
+  // TODO(Slice 3): remove this stub and source position order from the current election.
+  const POSITION_ORDER = ['President', 'Vice President', 'Secretary', 'Treasurer', 'Auditor', 'PRO', 'Representative']
 
   // State
   let candidates = $state<TCandidate[]>([])
@@ -49,8 +50,8 @@
       candidates: cands,
     }))
     return groups.sort((a, b) => {
-      const ia = POSITIONS.indexOf(a.title as TPosition)
-      const ib = POSITIONS.indexOf(b.title as TPosition)
+      const ia = POSITION_ORDER.indexOf(a.title)
+      const ib = POSITION_ORDER.indexOf(b.title)
       if (ia === -1 && ib === -1)
         return 0
       if (ia === -1)
@@ -70,7 +71,7 @@
 
   onMount(async () => {
     try {
-      const [candidateRes, voteRes] = await Promise.all([allCandidates(), getMyVotes()])
+      const [candidateRes, voteRes] = await Promise.all([allCandidates({ electionId: '' }), getMyVotes()])
       candidates = candidateRes.data
       hasVoted = voteRes.hasVoted
 
