@@ -40,6 +40,25 @@ export async function allCandidates(opts: AllCandidatesOpts): Promise<{ data: TC
   }
 }
 
+export async function getCandidate(id: string): Promise<TCandidate> {
+  return apiFetch(`/candidates/${id}`)
+}
+
 export async function createCandidate(data: Omit<TCandidate, 'id'>): Promise<TCandidate> {
   return apiFetch('/candidates', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function updateCandidate(
+  id: string,
+  data: { fullName?: string, manifesto?: string, isActive?: number },
+): Promise<TCandidate> {
+  const res = await apiFetch<{ message: string, candidate: TCandidate }>(`/candidates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+  return res.candidate
+}
+
+export async function deleteCandidate(id: string): Promise<{ message: string }> {
+  return apiFetch(`/candidates/${id}`, { method: 'DELETE' })
 }
