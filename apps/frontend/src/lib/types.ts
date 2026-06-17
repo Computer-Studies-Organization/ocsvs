@@ -143,3 +143,38 @@ export interface ChangePasswordData {
   currentPassword: string
   newPassword: string
 }
+
+export type TElectionStatus = 'draft' | 'open' | 'closed' | 'archived'
+
+export type TElection = {
+  id: string
+  name: string
+  description: string | null
+  status: TElectionStatus
+  opensAt: number | null
+  closesAt: number | null
+  createdAt: number
+  updatedAt: number
+}
+
+export type TPosition = {
+  id: string
+  electionId: string
+  name: string
+  displayOrder: number
+  createdAt: number
+  updatedAt: number
+}
+
+export type TResults = Array<{
+  positionId: string
+  positionName: string
+  totalVotes: number
+  candidates: Array<{ candidateId: string, fullName: string, voteCount: number, percentage: number }>
+}>
+
+export type TTransition = {
+  to: TElectionStatus
+  opensAt?: number
+  closesAt?: number
+}
