@@ -17,6 +17,8 @@
     "build:backend": "pnpm --filter @cso-voting/backend build"
   },
   "devDependencies": {
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
     "typescript": "^5.9.3"
   },
   "engines": {
