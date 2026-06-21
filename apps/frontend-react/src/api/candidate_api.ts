@@ -1,25 +1,25 @@
-import type { TCandidate } from '@/@types'
-import { api } from './axios'
+import type { TCandidate } from "@/@types";
+import { api } from "./axios";
 
 export async function allCandidates() {
-  let allCandidatesData: TCandidate[] = []
-  let page = 1
-  const limit = 100
-  let hasMore = true
+  let allCandidatesData: TCandidate[] = [];
+  let page = 1;
+  const limit = 100;
+  let hasMore = true;
 
   while (hasMore) {
-    const response = await api.get('/candidates', {
+    const response = await api.get("/candidates", {
       params: {
         page,
         limit,
       },
-    })
+    });
 
-    const { data, meta } = response.data
-    allCandidatesData = [...allCandidatesData, ...data]
+    const { data, meta } = response.data;
+    allCandidatesData = [...allCandidatesData, ...data];
 
-    hasMore = page < meta.totalPages
-    page++
+    hasMore = page < meta.totalPages;
+    page++;
   }
 
   return {
@@ -30,10 +30,10 @@ export async function allCandidates() {
       limit: allCandidatesData.length,
       totalPages: 1,
     },
-  }
+  };
 }
 
-export async function createCandidate(data: Omit<TCandidate, 'id'>) {
-  const response = await api.post('/candidates', data)
-  return response.data
+export async function createCandidate(data: Omit<TCandidate, "id">) {
+  const response = await api.post("/candidates", data);
+  return response.data;
 }

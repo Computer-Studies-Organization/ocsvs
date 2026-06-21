@@ -78,9 +78,7 @@
       "indexes": {
         "accounts_username_unique": {
           "name": "accounts_username_unique",
-          "columns": [
-            "username"
-          ],
+          "columns": ["username"],
           "isUnique": true
         }
       },
@@ -158,12 +156,8 @@
           "name": "candidates_account_id_accounts_id_fk",
           "tableFrom": "candidates",
           "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -171,12 +165,8 @@
           "name": "candidates_position_id_positions_id_fk",
           "tableFrom": "candidates",
           "tableTo": "positions",
-          "columnsFrom": [
-            "position_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["position_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -251,9 +241,7 @@
       "indexes": {
         "idx_elections_one_open": {
           "name": "idx_elections_one_open",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": true,
           "where": "\"elections\".\"status\" = 'open'"
         }
@@ -315,10 +303,7 @@
       "indexes": {
         "idx_positions_election_name": {
           "name": "idx_positions_election_name",
-          "columns": [
-            "election_id",
-            "name"
-          ],
+          "columns": ["election_id", "name"],
           "isUnique": true
         }
       },
@@ -327,12 +312,8 @@
           "name": "positions_election_id_elections_id_fk",
           "tableFrom": "positions",
           "tableTo": "elections",
-          "columnsFrom": [
-            "election_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["election_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -380,12 +361,8 @@
           "name": "sessions_account_id_accounts_id_fk",
           "tableFrom": "sessions",
           "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -466,9 +443,7 @@
       "indexes": {
         "users_student_id_unique": {
           "name": "users_student_id_unique",
-          "columns": [
-            "student_id"
-          ],
+          "columns": ["student_id"],
           "isUnique": true
         }
       },
@@ -477,12 +452,8 @@
           "name": "users_account_id_accounts_id_fk",
           "tableFrom": "users",
           "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -549,19 +520,12 @@
       "indexes": {
         "votes_user_candidate_unique_idx": {
           "name": "votes_user_candidate_unique_idx",
-          "columns": [
-            "user_id",
-            "candidate_id"
-          ],
+          "columns": ["user_id", "candidate_id"],
           "isUnique": true
         },
         "votes_user_position_election_unique_idx": {
           "name": "votes_user_position_election_unique_idx",
-          "columns": [
-            "user_id",
-            "position_id",
-            "election_id"
-          ],
+          "columns": ["user_id", "position_id", "election_id"],
           "isUnique": true
         }
       },
@@ -570,12 +534,8 @@
           "name": "votes_user_id_users_id_fk",
           "tableFrom": "votes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -583,12 +543,8 @@
           "name": "votes_candidate_id_candidates_id_fk",
           "tableFrom": "votes",
           "tableTo": "candidates",
-          "columnsFrom": [
-            "candidate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["candidate_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -596,12 +552,8 @@
           "name": "votes_position_id_positions_id_fk",
           "tableFrom": "votes",
           "tableTo": "positions",
-          "columnsFrom": [
-            "position_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["position_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -609,12 +561,8 @@
           "name": "votes_election_id_elections_id_fk",
           "tableFrom": "votes",
           "tableTo": "elections",
-          "columnsFrom": [
-            "election_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["election_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }

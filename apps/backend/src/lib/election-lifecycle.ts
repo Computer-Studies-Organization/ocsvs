@@ -1,36 +1,36 @@
-import { ERROR_MESSAGES } from './constants/error-messages'
-import type { TElectionStatus } from '@/database/schema'
+import { ERROR_MESSAGES } from "./constants/error-messages";
+import type { TElectionStatus } from "@/database/schema";
 
 const TRANSITIONS: ReadonlyArray<readonly [TElectionStatus, TElectionStatus]> = [
-  ['draft', 'open'],
-  ['open', 'closed'],
-  ['closed', 'archived'],
-  ['closed', 'draft'],
-]
+  ["draft", "open"],
+  ["open", "closed"],
+  ["closed", "archived"],
+  ["closed", "draft"],
+];
 
 export type TransitionErrorCode =
-  | 'INVALID_TRANSITION'
-  | 'ELECTION_HAS_NO_POSITIONS'
-  | 'INVALID_TRANSITION_BODY'
+  | "INVALID_TRANSITION"
+  | "ELECTION_HAS_NO_POSITIONS"
+  | "INVALID_TRANSITION_BODY";
 
 export class TransitionError extends Error {
-  readonly code: TransitionErrorCode
-  readonly status: 400 | 409
+  readonly code: TransitionErrorCode;
+  readonly status: 400 | 409;
   constructor(code: TransitionErrorCode, status: 400 | 409) {
-    super(ERROR_MESSAGES[code])
-    this.code = code
-    this.status = status
-    this.name = 'TransitionError'
+    super(ERROR_MESSAGES[code]);
+    this.code = code;
+    this.status = status;
+    this.name = "TransitionError";
   }
 }
 
 export function canTransition(from: TElectionStatus, to: TElectionStatus): boolean {
-  return TRANSITIONS.some(([f, t]) => f === from && t === to)
+  return TRANSITIONS.some(([f, t]) => f === from && t === to);
 }
 
 export interface TransitionBody {
-  opensAt?: number
-  closesAt?: number
+  opensAt?: number;
+  closesAt?: number;
 }
 
 export function assertTransition(
@@ -40,15 +40,15 @@ export function assertTransition(
   positionCount: number,
 ): void {
   if (!canTransition(from, to)) {
-    throw new TransitionError('INVALID_TRANSITION', 409)
+    throw new TransitionError("INVALID_TRANSITION", 409);
   }
-  if (from === 'draft' && to === 'open') {
+  if (from === "draft" && to === "open") {
     if (positionCount === 0) {
-      throw new TransitionError('ELECTION_HAS_NO_POSITIONS', 409)
+      throw new TransitionError("ELECTION_HAS_NO_POSITIONS", 409);
     }
-    const { opensAt, closesAt } = body
-    if (typeof opensAt !== 'number' || typeof closesAt !== 'number' || closesAt <= opensAt) {
-      throw new TransitionError('INVALID_TRANSITION_BODY', 400)
+    const { opensAt, closesAt } = body;
+    if (typeof opensAt !== "number" || typeof closesAt !== "number" || closesAt <= opensAt) {
+      throw new TransitionError("INVALID_TRANSITION_BODY", 400);
     }
   }
 }

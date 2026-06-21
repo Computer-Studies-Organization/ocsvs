@@ -7,10 +7,10 @@
   "assets": {
     "directory": "../frontend/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
   },
   "vars": {
     "NODE_ENV": "development",
-    "LOG_LEVEL": "debug"
-  }
+    "LOG_LEVEL": "debug",
+  },
 }

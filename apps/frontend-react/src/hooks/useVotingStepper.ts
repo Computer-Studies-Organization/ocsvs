@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from "react";
 import {
   createVotingState,
   selectCandidate as selectCandidateLogic,
@@ -12,41 +12,44 @@ import {
   getSelectedCount as getSelectedCountFn,
   type TVotingState,
   type TPositionGroup,
-} from './voting-stepper-logic'
+} from "./voting-stepper-logic";
 
-export type { TPositionGroup }
+export type { TPositionGroup };
 
 export function useVotingStepper(positionGroups: TPositionGroup[]) {
-  const [state, setState] = useState<TVotingState>(() => createVotingState(positionGroups))
+  const [state, setState] = useState<TVotingState>(() => createVotingState(positionGroups));
 
   const selectCandidate = useCallback((positionId: string, candidateId: string) => {
-    setState(prev => selectCandidateLogic(prev, positionId, candidateId))
-  }, [])
+    setState((prev) => selectCandidateLogic(prev, positionId, candidateId));
+  }, []);
 
   const goNext = useCallback(() => {
-    setState(prev => goNextLogic(prev, positionGroups.length))
-  }, [positionGroups.length])
+    setState((prev) => goNextLogic(prev, positionGroups.length));
+  }, [positionGroups.length]);
 
   const goPrevious = useCallback(() => {
-    setState(prev => goPreviousLogic(prev))
-  }, [])
+    setState((prev) => goPreviousLogic(prev));
+  }, []);
 
   const getSelectedCandidateIds = useCallback(() => {
-    return getSelectedCandidateIdsFn(state)
-  }, [state])
+    return getSelectedCandidateIdsFn(state);
+  }, [state]);
 
-  return useMemo(() => ({
-    currentPositionIndex: state.currentPositionIndex,
-    selectedVotes: state.selectedVotes,
-    currentGroup: positionGroups[state.currentPositionIndex],
-    isFirstPosition: isFirstPositionFn(state),
-    isLastPosition: isLastPositionFn(state, positionGroups.length),
-    hasCurrentVote: hasCurrentVoteFn(state, positionGroups),
-    allPositionsVoted: allPositionsVotedFn(state, positionGroups),
-    selectedCount: getSelectedCountFn(state),
-    selectCandidate,
-    goNext,
-    goPrevious,
-    getSelectedCandidateIds,
-  }), [state, positionGroups.length, selectCandidate, goNext, goPrevious, getSelectedCandidateIds])
+  return useMemo(
+    () => ({
+      currentPositionIndex: state.currentPositionIndex,
+      selectedVotes: state.selectedVotes,
+      currentGroup: positionGroups[state.currentPositionIndex],
+      isFirstPosition: isFirstPositionFn(state),
+      isLastPosition: isLastPositionFn(state, positionGroups.length),
+      hasCurrentVote: hasCurrentVoteFn(state, positionGroups),
+      allPositionsVoted: allPositionsVotedFn(state, positionGroups),
+      selectedCount: getSelectedCountFn(state),
+      selectCandidate,
+      goNext,
+      goPrevious,
+      getSelectedCandidateIds,
+    }),
+    [state, positionGroups.length, selectCandidate, goNext, goPrevious, getSelectedCandidateIds],
+  );
 }

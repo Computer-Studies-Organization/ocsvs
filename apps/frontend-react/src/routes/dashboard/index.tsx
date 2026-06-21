@@ -1,6 +1,6 @@
-import type React from 'react'
-import type { TCandidate, TPositionGroup } from '@/@types'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import type React from "react";
+import type { TCandidate, TPositionGroup } from "@/@types";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   Loader2Icon,
@@ -10,126 +10,131 @@ import {
   Shield,
   Undo2,
   Vote,
-} from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { UserRole } from '@/@types'
-import { useAllCandidates } from '@/data'
-import { useLogoutUserMutation, UserData } from '@/hooks/userHooks'
-import { useMyVotesQuery, useSubmitVotesMutation } from '@/hooks/voteHooks'
-import { useToast } from '@/lib/toast'
-import { ProtectedRoute } from '@/middleware'
-import { POSITIONS, type TPosition } from '@/lib/constants/positions'
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { UserRole } from "@/@types";
+import { useAllCandidates } from "@/data";
+import { useLogoutUserMutation, UserData } from "@/hooks/userHooks";
+import { useMyVotesQuery, useSubmitVotesMutation } from "@/hooks/voteHooks";
+import { useToast } from "@/lib/toast";
+import { ProtectedRoute } from "@/middleware";
+import { POSITIONS, type TPosition } from "@/lib/constants/positions";
 
-export const Route = createFileRoute('/dashboard/')({
+export const Route = createFileRoute("/dashboard/")({
   component: () => (
     <ProtectedRoute>
       <RouteComponent />
     </ProtectedRoute>
   ),
-})
+});
 
 function RouteComponent() {
-  const candidates = useAllCandidates()
-  const userData = UserData()
-  const navigate = useNavigate()
-  const logoutUserMutation = useLogoutUserMutation()
-  const submitVotesMutation = useSubmitVotesMutation()
-  const { data: voteStatus } = useMyVotesQuery()
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const { showToast } = useToast()
+  const candidates = useAllCandidates();
+  const userData = UserData();
+  const navigate = useNavigate();
+  const logoutUserMutation = useLogoutUserMutation();
+  const submitVotesMutation = useSubmitVotesMutation();
+  const { data: voteStatus } = useMyVotesQuery();
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { showToast } = useToast();
 
-  const hasVoted = voteStatus?.hasVoted ?? false
+  const hasVoted = voteStatus?.hasVoted ?? false;
 
   const positionGroups = useMemo<TPositionGroup[]>(() => {
-    const candidatesByPositionMap = new Map<string, TCandidate[]>()
+    const candidatesByPositionMap = new Map<string, TCandidate[]>();
 
     candidates.forEach((candidate) => {
-      const positionName = candidate.position || 'Unknown'
-      const candidatesForPosition = candidatesByPositionMap.get(positionName) ?? []
-      candidatesForPosition.push(candidate)
-      candidatesByPositionMap.set(positionName, candidatesForPosition)
-    })
+      const positionName = candidate.position || "Unknown";
+      const candidatesForPosition = candidatesByPositionMap.get(positionName) ?? [];
+      candidatesForPosition.push(candidate);
+      candidatesByPositionMap.set(positionName, candidatesForPosition);
+    });
 
     // Create position groups from the map
     const groupedPositions = Array.from(candidatesByPositionMap.entries()).map(
       ([positionName, candidatesForPosition]) => ({
-        id: positionName.toLowerCase().replace(/\s+/g, '-'),
+        id: positionName.toLowerCase().replace(/\s+/g, "-"),
         title: positionName,
         description: positionName,
         candidates: candidatesForPosition,
       }),
-    )
+    );
 
     // Sort positions according to POSITIONS array order
     return groupedPositions.sort((positionGroupA, positionGroupB) => {
-      const positionIndexA = POSITIONS.indexOf(positionGroupA.title as TPosition)
-      const positionIndexB = POSITIONS.indexOf(positionGroupB.title as TPosition)
+      const positionIndexA = POSITIONS.indexOf(positionGroupA.title as TPosition);
+      const positionIndexB = POSITIONS.indexOf(positionGroupB.title as TPosition);
 
       // If position is not in POSITIONS array, put it at the end
-      if (positionIndexA === -1 && positionIndexB === -1)
-        return 0
-      if (positionIndexA === -1)
-        return 1
-      if (positionIndexB === -1)
-        return -1
+      if (positionIndexA === -1 && positionIndexB === -1) return 0;
+      if (positionIndexA === -1) return 1;
+      if (positionIndexB === -1) return -1;
 
-      return positionIndexA - positionIndexB
-    })
-  }, [candidates])
+      return positionIndexA - positionIndexB;
+    });
+  }, [candidates]);
 
-  const [selectedCandidateIdsByPositionId, setSelectedCandidateIdsByPositionId] = useState<Record<string, string | null>>(() => {
+  const [selectedCandidateIdsByPositionId, setSelectedCandidateIdsByPositionId] = useState<
+    Record<string, string | null>
+  >(() => {
     return positionGroups.reduce(
       (accumulator: Record<string, string | null>, positionGroup: TPositionGroup) => ({
         ...accumulator,
         [positionGroup.id]: null,
       }),
       {} as Record<string, string | null>,
-    )
-  })
+    );
+  });
 
-  const [currentPositionIndex, setCurrentPositionIndex] = useState(0)
+  const [currentPositionIndex, setCurrentPositionIndex] = useState(0);
 
-  const currentPositionGroup = positionGroups[currentPositionIndex]
-  const isFirstPosition = currentPositionIndex === 0
-  const isLastPosition = currentPositionIndex === positionGroups.length - 1
-  const hasCurrentPositionVote = currentPositionGroup ? selectedCandidateIdsByPositionId[currentPositionGroup.id] !== null : false
+  const currentPositionGroup = positionGroups[currentPositionIndex];
+  const isFirstPosition = currentPositionIndex === 0;
+  const isLastPosition = currentPositionIndex === positionGroups.length - 1;
+  const hasCurrentPositionVote = currentPositionGroup
+    ? selectedCandidateIdsByPositionId[currentPositionGroup.id] !== null
+    : false;
 
   const handleSelectCandidate = (positionId: string, candidateId: string) => {
-    if (hasVoted)
-      return // Prevent selection if already voted
-    setSelectedCandidateIdsByPositionId(previousVotes => ({ ...previousVotes, [positionId]: candidateId }))
-  }
+    if (hasVoted) return; // Prevent selection if already voted
+    setSelectedCandidateIdsByPositionId((previousVotes) => ({
+      ...previousVotes,
+      [positionId]: candidateId,
+    }));
+  };
 
   const handleSubmitVotes = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     const candidateIds = Object.values(selectedCandidateIdsByPositionId).filter(
       (id): id is string => id !== null,
-    )
+    );
 
     try {
-      await submitVotesMutation.mutateAsync(candidateIds)
-      showToast({ message: 'Votes submitted successfully! Your selections have been saved.', type: 'success' })
+      await submitVotesMutation.mutateAsync(candidateIds);
+      showToast({
+        message: "Votes submitted successfully! Your selections have been saved.",
+        type: "success",
+      });
       setTimeout(() => {
-        navigate({ to: '/dashboard/my-ballot' })
-      }, 2000)
+        navigate({ to: "/dashboard/my-ballot" });
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to submit votes:", error);
+      showToast({ message: "Failed to submit votes. Please try again.", type: "error" });
     }
-    catch (error) {
-      console.error('Failed to submit votes:', error)
-      showToast({ message: 'Failed to submit votes. Please try again.', type: 'error' })
-    }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   const areAllPositionsVoted = positionGroups.every(
     (positionGroup: TPositionGroup) => selectedCandidateIdsByPositionId[positionGroup.id] !== null,
-  )
+  );
 
   const handleLogoutUser = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    await logoutUserMutation.mutateAsync()
-  }
+    e.preventDefault();
+    setIsLoading(true);
+    await logoutUserMutation.mutateAsync();
+  };
 
   return (
     <>
@@ -154,19 +159,17 @@ function RouteComponent() {
           <header className="relative mb-5 flex items-start justify-between gap-4 border-b border-slate-800/70 pb-4">
             <div className="space-y-3">
               <div>
-                {hasVoted
-                  ? (
-                      <p className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-300/90">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
-                        Voting completed
-                      </p>
-                    )
-                  : (
-                      <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300/90">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                        Secure voting session
-                      </p>
-                    )}
+                {hasVoted ? (
+                  <p className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-300/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
+                    Voting completed
+                  </p>
+                ) : (
+                  <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                    Secure voting session
+                  </p>
+                )}
               </div>
 
               <div>
@@ -180,37 +183,30 @@ function RouteComponent() {
 
               <div className="rounded-xl border border-slate-800/80 w-95 bg-slate-900/70 px-4 py-3 shadow-md shadow-slate-950/40 backdrop-blur">
                 <p className="text-sm text-slate-200">
-                  Welcome,
-                  {' '}
+                  Welcome,{" "}
                   <span className="font-semibold text-slate-50">
-                    {userData?.user?.username || 'Voter'}
+                    {userData?.user?.username || "Voter"}
                   </span>
                 </p>
-                {hasVoted
-                  ? (
-                      <p className="mt-1 text-xs text-emerald-400">
-                        <span className="font-semibold">Voting completed!</span>
-                        {' '}
-                        You have already submitted your ballot. View your selections in
-                        {' '}
-                        <button
-                          onClick={() => navigate({ to: '/dashboard/my-ballot' })}
-                          className="font-semibold text-emerald-300 underline hover:text-emerald-200"
-                        >
-                          My Ballot
-                        </button>
-                        .
-                      </p>
-                    )
-                  : (
-                      <p className="mt-1 text-xs text-slate-400">
-                        Please review each position carefully and select
-                        {' '}
-                        <span className="font-semibold text-slate-200">one nominee per role</span>
-                        .
-                        You can change your choices anytime before submitting your ballot.
-                      </p>
-                    )}
+                {hasVoted ? (
+                  <p className="mt-1 text-xs text-emerald-400">
+                    <span className="font-semibold">Voting completed!</span> You have already
+                    submitted your ballot. View your selections in{" "}
+                    <button
+                      onClick={() => navigate({ to: "/dashboard/my-ballot" })}
+                      className="font-semibold text-emerald-300 underline hover:text-emerald-200"
+                    >
+                      My Ballot
+                    </button>
+                    .
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Please review each position carefully and select{" "}
+                    <span className="font-semibold text-slate-200">one nominee per role</span>. You
+                    can change your choices anytime before submitting your ballot.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -218,7 +214,7 @@ function RouteComponent() {
             <div className="absolute right-0 flex items-start justify-end">
               <div className="relative">
                 <button
-                  onClick={() => setIsSettingsOpen(prev => !prev)}
+                  onClick={() => setIsSettingsOpen((prev) => !prev)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-300 shadow-sm shadow-slate-900/60 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-50"
                 >
                   <Settings size={18} />
@@ -231,14 +227,14 @@ function RouteComponent() {
                         Account
                       </p>
                       <p className="mt-1 text-xs font-medium text-slate-200">
-                        {userData?.user?.username || 'Authenticated voter'}
+                        {userData?.user?.username || "Authenticated voter"}
                       </p>
                     </div>
                     <div className="my-1 h-px bg-slate-800/80" />
 
                     {userData?.user?.role === UserRole.ADMIN && (
                       <button
-                        onClick={() => navigate({ to: '/admin-dashboard' })}
+                        onClick={() => navigate({ to: "/admin-dashboard" })}
                         className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"
                       >
                         <span>Admin Dashboard</span>
@@ -247,7 +243,7 @@ function RouteComponent() {
                     )}
 
                     <button
-                      onClick={() => navigate({ to: '/settings' })}
+                      onClick={() => navigate({ to: "/settings" })}
                       className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"
                     >
                       <span>Profile Settings</span>
@@ -255,7 +251,7 @@ function RouteComponent() {
                     </button>
 
                     <button
-                      onClick={() => navigate({ to: '/dashboard/my-ballot' })}
+                      onClick={() => navigate({ to: "/dashboard/my-ballot" })}
                       className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-200 hover:bg-slate-900/90"
                     >
                       <span>My Ballot</span>
@@ -289,11 +285,7 @@ function RouteComponent() {
                   {Object.values(selectedCandidateIdsByPositionId).filter(Boolean).length}
                 </span>
                 <span className="text-[10px] text-slate-500">
-                  of
-                  {' '}
-                  {positionGroups.length}
-                  {' '}
-                  positions
+                  of {positionGroups.length} positions
                 </span>
               </div>
             </div>
@@ -303,11 +295,10 @@ function RouteComponent() {
                 Remaining
               </span>
               <span className="mt-1 text-2xl font-bold text-sky-400">
-                {positionGroups.length - Object.values(selectedCandidateIdsByPositionId).filter(Boolean).length}
+                {positionGroups.length -
+                  Object.values(selectedCandidateIdsByPositionId).filter(Boolean).length}
               </span>
-              <span className="text-[10px] text-slate-500">
-                positions to vote
-              </span>
+              <span className="text-[10px] text-slate-500">positions to vote</span>
             </div>
           </div>
 
@@ -317,19 +308,13 @@ function RouteComponent() {
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                    Position
-                    {' '}
-                    {currentPositionIndex + 1}
-                    {' '}
-                    of
-                    {' '}
-                    {positionGroups.length}
+                    Position {currentPositionIndex + 1} of {positionGroups.length}
                   </p>
                   <h2 className="text-lg font-semibold text-slate-50 sm:text-xl">
-                    {currentPositionGroup?.title || ''}
+                    {currentPositionGroup?.title || ""}
                   </h2>
                   <p className="max-w-xl text-xs text-slate-400">
-                    {currentPositionGroup?.description || ''}
+                    {currentPositionGroup?.description || ""}
                   </p>
                 </div>
 
@@ -346,34 +331,30 @@ function RouteComponent() {
               {/* CANDIDATES */}
               <div className="space-y-3">
                 {currentPositionGroup?.candidates.map((candidate: TCandidate) => {
-                  const isCandidateSelected
-                    = selectedCandidateIdsByPositionId[currentPositionGroup.id] === candidate.id
+                  const isCandidateSelected =
+                    selectedCandidateIdsByPositionId[currentPositionGroup.id] === candidate.id;
 
                   return (
                     <button
                       key={candidate.id}
                       type="button"
                       disabled={hasVoted}
-                      onClick={() =>
-                        handleSelectCandidate(currentPositionGroup.id, candidate.id)}
-                      className={`group flex w-full items-start justify-between gap-4 rounded-xl border px-4 py-4 text-left transition-all ${hasVoted
-                        ? 'cursor-not-allowed opacity-60 border-slate-800/80 bg-slate-900/80'
-                        : isCandidateSelected
-                          ? 'border-sky-400/80 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
-                          : 'border-slate-800/80 bg-slate-900/80 hover:border-sky-500/60 hover:bg-slate-900'
+                      onClick={() => handleSelectCandidate(currentPositionGroup.id, candidate.id)}
+                      className={`group flex w-full items-start justify-between gap-4 rounded-xl border px-4 py-4 text-left transition-all ${
+                        hasVoted
+                          ? "cursor-not-allowed opacity-60 border-slate-800/80 bg-slate-900/80"
+                          : isCandidateSelected
+                            ? "border-sky-400/80 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+                            : "border-slate-800/80 bg-slate-900/80 hover:border-sky-500/60 hover:bg-slate-900"
                       }`}
                     >
                       <div className="space-y-1.5">
-                        <p className="text-sm font-semibold text-slate-50">
-                          {candidate.fullName}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-50">{candidate.fullName}</p>
                         <p className="text-[11px] -mt-1.5 sm:text-xs text-slate-400">
                           {candidate.position}
                         </p>
                         <p className="text-[11px] italic text-slate-300/85">
-                          "
-                          {candidate.manifesto}
-                          "
+                          "{candidate.manifesto}"
                         </p>
                       </div>
 
@@ -383,7 +364,7 @@ function RouteComponent() {
                         </span>
                       )}
                     </button>
-                  )
+                  );
                 })}
               </div>
 
@@ -394,10 +375,11 @@ function RouteComponent() {
                     <button
                       type="button"
                       disabled={hasVoted}
-                      onClick={() => setCurrentPositionIndex(previousIndex => previousIndex - 1)}
-                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition ${hasVoted
-                        ? 'cursor-not-allowed opacity-60'
-                        : 'hover:border-slate-500 hover:bg-slate-800'
+                      onClick={() => setCurrentPositionIndex((previousIndex) => previousIndex - 1)}
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition ${
+                        hasVoted
+                          ? "cursor-not-allowed opacity-60"
+                          : "hover:border-slate-500 hover:bg-slate-800"
                       }`}
                     >
                       <Undo2 size={18} />
@@ -405,71 +387,62 @@ function RouteComponent() {
                     </button>
                   )}
 
-                  {!isLastPosition
-                    ? (
-                        <button
-                          type="button"
-                          disabled={!hasCurrentPositionVote || hasVoted}
-                          onClick={() => setCurrentPositionIndex(previousIndex => previousIndex + 1)}
-                          className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${hasCurrentPositionVote && !hasVoted
-                            ? 'bg-sky-500 text-white shadow-md shadow-sky-500/40 hover:bg-sky-600'
-                            : 'cursor-not-allowed bg-slate-800 text-slate-500'
-                          }`}
-                        >
-                          Next position
-                          <ArrowRight size={18} />
-                        </button>
-                      )
-                    : (
-                        <button
-                          type="button"
-                          disabled={!areAllPositionsVoted || submitVotesMutation.isPending || hasVoted}
-                          onClick={handleSubmitVotes}
-                          className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${areAllPositionsVoted && !submitVotesMutation.isPending && !hasVoted
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40 hover:bg-emerald-600'
-                            : 'cursor-not-allowed bg-slate-800 text-slate-500'
-                          }`}
-                        >
-                          {submitVotesMutation.isPending
-                            ? (
-                                <>
-                                  <Loader2Icon className="animate-spin" size={18} />
-                                  Submitting...
-                                </>
-                              )
-                            : hasVoted
-                              ? (
-                                  'Already Voted'
-                                )
-                              : (
-                                  'Submit ballot'
-                                )}
-                        </button>
+                  {!isLastPosition ? (
+                    <button
+                      type="button"
+                      disabled={!hasCurrentPositionVote || hasVoted}
+                      onClick={() => setCurrentPositionIndex((previousIndex) => previousIndex + 1)}
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                        hasCurrentPositionVote && !hasVoted
+                          ? "bg-sky-500 text-white shadow-md shadow-sky-500/40 hover:bg-sky-600"
+                          : "cursor-not-allowed bg-slate-800 text-slate-500"
+                      }`}
+                    >
+                      Next position
+                      <ArrowRight size={18} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={!areAllPositionsVoted || submitVotesMutation.isPending || hasVoted}
+                      onClick={handleSubmitVotes}
+                      className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                        areAllPositionsVoted && !submitVotesMutation.isPending && !hasVoted
+                          ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/40 hover:bg-emerald-600"
+                          : "cursor-not-allowed bg-slate-800 text-slate-500"
+                      }`}
+                    >
+                      {submitVotesMutation.isPending ? (
+                        <>
+                          <Loader2Icon className="animate-spin" size={18} />
+                          Submitting...
+                        </>
+                      ) : hasVoted ? (
+                        "Already Voted"
+                      ) : (
+                        "Submit ballot"
                       )}
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-3 text-center text-[11px] text-slate-500">
-                  {hasVoted
-                    ? (
-                        <span className="text-emerald-400">
-                          Voting is complete. You can view your ballot in
-                          {' '}
-                          <button
-                            onClick={() => navigate({ to: '/dashboard/my-ballot' })}
-                            className="font-semibold text-emerald-300 underline hover:text-emerald-200"
-                          >
-                            My Ballot
-                          </button>
-                          .
-                        </span>
-                      )
-                    : isLastPosition
-                      ? (
-                          'Review your selections. You can see a full summary in My Ballot before final submission.'
-                        )
-                      : (
-                          'You must select a nominee to continue to the next position.'
-                        )}
+                  {hasVoted ? (
+                    <span className="text-emerald-400">
+                      Voting is complete. You can view your ballot in{" "}
+                      <button
+                        onClick={() => navigate({ to: "/dashboard/my-ballot" })}
+                        className="font-semibold text-emerald-300 underline hover:text-emerald-200"
+                      >
+                        My Ballot
+                      </button>
+                      .
+                    </span>
+                  ) : isLastPosition ? (
+                    "Review your selections. You can see a full summary in My Ballot before final submission."
+                  ) : (
+                    "You must select a nominee to continue to the next position."
+                  )}
                 </div>
               </div>
             </section>
@@ -484,11 +457,8 @@ function RouteComponent() {
                   <li className="flex items-start gap-2">
                     <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-sky-400" />
                     <span>
-                      Select
-                      {' '}
-                      <span className="font-semibold text-slate-100">one nominee</span>
-                      {' '}
-                      for each position.
+                      Select <span className="font-semibold text-slate-100">one nominee</span> for
+                      each position.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -500,20 +470,17 @@ function RouteComponent() {
                   <li className="flex items-start gap-2">
                     <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-sky-400" />
                     <span>
-                      Once submitted, your ballot is
-                      {' '}
-                      <span className="font-semibold text-slate-100">final</span>
-                      {' '}
-                      and cannot be changed.
+                      Once submitted, your ballot is{" "}
+                      <span className="font-semibold text-slate-100">final</span> and cannot be
+                      changed.
                     </span>
                   </li>
                   {hasVoted && (
                     <li className="flex items-start gap-2">
                       <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-amber-400" />
                       <span className="text-amber-300">
-                        <span className="font-semibold">You have already voted.</span>
-                        {' '}
-                        Voting is now disabled.
+                        <span className="font-semibold">You have already voted.</span> Voting is now
+                        disabled.
                       </span>
                     </li>
                   )}
@@ -521,9 +488,7 @@ function RouteComponent() {
 
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[11px] text-emerald-200">
                   <LockKeyhole size={14} />
-                  <p>
-                    All votes are confidential and securely recorded by the system.
-                  </p>
+                  <p>All votes are confidential and securely recorded by the system.</p>
                 </div>
               </section>
             </aside>
@@ -539,5 +504,5 @@ function RouteComponent() {
         </div>
       </div>
     </>
-  )
+  );
 }

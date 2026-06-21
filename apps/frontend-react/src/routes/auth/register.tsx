@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2Icon } from 'lucide-react'
-import { useState } from 'react'
-import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '@/@types'
-import { useRegisterUserMutation } from '@/hooks/userHooks'
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2Icon } from "lucide-react";
+import { useState } from "react";
+import { COURSE_VALUES, YEAR_LEVEL_VALUES } from "@/@types";
+import { useRegisterUserMutation } from "@/hooks/userHooks";
 import {
   EMPTY_REGISTER_USER_DRAFT,
   getMutationErrorMessage,
@@ -11,83 +11,84 @@ import {
   isRegisterUserDraftComplete,
   isRegisterUserDraftStepOneComplete,
   REGISTER_FIELD_LABELS,
-} from '@/lib/userRegistration'
-import { cn } from '@/lib/utils'
-import { PublicRoute } from '@/middleware'
+} from "@/lib/userRegistration";
+import { cn } from "@/lib/utils";
+import { PublicRoute } from "@/middleware";
 
-export const Route = createFileRoute('/auth/register')({
+export const Route = createFileRoute("/auth/register")({
   component: () => (
     <PublicRoute>
       <RouteComponent />
     </PublicRoute>
   ),
-})
+});
 
-const YEAR_LEVELS = YEAR_LEVEL_VALUES.map(value => ({ value, label: value }))
-const COURSES = COURSE_VALUES.map(value => ({ value, label: value }))
+const YEAR_LEVELS = YEAR_LEVEL_VALUES.map((value) => ({ value, label: value }));
+const COURSES = COURSE_VALUES.map((value) => ({ value, label: value }));
 
 function RouteComponent() {
-  const navigate = useNavigate()
-  const register = useRegisterUserMutation()
-  const [currentStep, setCurrentStep] = useState<number>(1)
-  const [showPassword, setShowPassword] = useState<boolean>(false)
-  const [message, setMessage] = useState<string>('')
-  const [formData, setFormData] = useState(EMPTY_REGISTER_USER_DRAFT)
+  const navigate = useNavigate();
+  const register = useRegisterUserMutation();
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>("");
+  const [formData, setFormData] = useState(EMPTY_REGISTER_USER_DRAFT);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setMessage('')
-    setFormData(prev => ({
+    const { name, value } = e.target;
+    setMessage("");
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
+    }));
+  };
 
   const validateStep1 = () => {
-    return isRegisterUserDraftStepOneComplete(formData)
-  }
+    return isRegisterUserDraftStepOneComplete(formData);
+  };
 
   const handleNext = () => {
-    const stepOneMessage = getRegisterUserDraftStepOneValidationMessage(formData)
+    const stepOneMessage = getRegisterUserDraftStepOneValidationMessage(formData);
     if (currentStep === 1 && !stepOneMessage) {
-      setCurrentStep(2)
-      setMessage('')
-      return
+      setCurrentStep(2);
+      setMessage("");
+      return;
     }
 
     if (currentStep === 1 && stepOneMessage) {
-      setMessage(stepOneMessage)
+      setMessage(stepOneMessage);
     }
-  }
+  };
 
   const handleBack = () => {
     if (currentStep === 2) {
-      setCurrentStep(1)
-      setMessage('')
+      setCurrentStep(1);
+      setMessage("");
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const validationMessage = getRegisterUserDraftValidationMessage(formData)
+    const validationMessage = getRegisterUserDraftValidationMessage(formData);
     if (validationMessage) {
-      setMessage(validationMessage)
-      return
+      setMessage(validationMessage);
+      return;
     }
 
-    if (!isRegisterUserDraftComplete(formData))
-      return
+    if (!isRegisterUserDraftComplete(formData)) return;
 
     await register.mutateAsync(formData, {
       onSuccess: () => {
-        navigate({ to: '/auth/login' })
+        navigate({ to: "/auth/login" });
       },
       onError: (error: unknown) => {
-        setMessage(getMutationErrorMessage(error, 'Failed to create account', REGISTER_FIELD_LABELS))
+        setMessage(
+          getMutationErrorMessage(error, "Failed to create account", REGISTER_FIELD_LABELS),
+        );
       },
-    })
-  }
+    });
+  };
 
   return (
     <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-slate-900 px-4 py-6 sm:px-6 sm:py-8">
@@ -113,22 +114,25 @@ function RouteComponent() {
             </p>
             {/* Step indicator */}
             <div className="flex items-center justify-center gap-2 mt-4">
-              <div className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all',
-                currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400',
-              )}
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                  currentStep >= 1 ? "bg-blue-500 text-white" : "bg-white/10 text-slate-400",
+                )}
               >
                 1
               </div>
-              <div className={cn(
-                'h-0.5 w-12 transition-all',
-                currentStep >= 2 ? 'bg-blue-500' : 'bg-white/10',
-              )}
+              <div
+                className={cn(
+                  "h-0.5 w-12 transition-all",
+                  currentStep >= 2 ? "bg-blue-500" : "bg-white/10",
+                )}
               />
-              <div className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all',
-                currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-400',
-              )}
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                  currentStep >= 2 ? "bg-blue-500 text-white" : "bg-white/10 text-slate-400",
+                )}
               >
                 2
               </div>
@@ -138,8 +142,8 @@ function RouteComponent() {
           {message && (
             <div
               className={cn(
-                'mb-5 rounded-lg border px-4 py-3 text-sm text-white',
-                'border-red-500/40 bg-red-500/10',
+                "mb-5 rounded-lg border px-4 py-3 text-sm text-white",
+                "border-red-500/40 bg-red-500/10",
               )}
             >
               {message}
@@ -151,13 +155,8 @@ function RouteComponent() {
               <div className="space-y-4 sm:space-y-5">
                 {/* Student ID */}
                 <div className="space-y-1.5 sm:space-y-2">
-                  <label
-                    htmlFor="studentId"
-                    className="block text-sm font-medium text-slate-300"
-                  >
-                    Student ID
-                    {' '}
-                    <span className="text-xs text-slate-400"></span>
+                  <label htmlFor="studentId" className="block text-sm font-medium text-slate-300">
+                    Student ID <span className="text-xs text-slate-400"></span>
                   </label>
                   <input
                     id="studentId"
@@ -169,10 +168,10 @@ function RouteComponent() {
                     autoComplete="off"
                     required
                     className={cn(
-                      'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                      'text-slate-100 placeholder:text-slate-500',
-                      'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base',
+                      "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                      "text-slate-100 placeholder:text-slate-500",
+                      "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                      "text-base sm:text-base",
                     )}
                   />
                 </div>
@@ -180,10 +179,7 @@ function RouteComponent() {
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-4">
                   {/* First Name */}
                   <div className="space-y-1.5 sm:space-y-2">
-                    <label
-                      htmlFor="firstName"
-                      className="block text-sm font-medium text-slate-300"
-                    >
+                    <label htmlFor="firstName" className="block text-sm font-medium text-slate-300">
                       First Name
                     </label>
                     <input
@@ -196,20 +192,17 @@ function RouteComponent() {
                       autoComplete="given-name"
                       required
                       className={cn(
-                        'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                        'text-slate-100 placeholder:text-slate-500',
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base',
+                        "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                        "text-slate-100 placeholder:text-slate-500",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                        "text-base sm:text-base",
                       )}
                     />
                   </div>
 
                   {/* Last Name */}
                   <div className="space-y-1.5 sm:space-y-2">
-                    <label
-                      htmlFor="lastName"
-                      className="block text-sm font-medium text-slate-300"
-                    >
+                    <label htmlFor="lastName" className="block text-sm font-medium text-slate-300">
                       Last Name
                     </label>
                     <input
@@ -222,10 +215,10 @@ function RouteComponent() {
                       autoComplete="family-name"
                       required
                       className={cn(
-                        'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                        'text-slate-100 placeholder:text-slate-500',
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base',
+                        "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                        "text-slate-100 placeholder:text-slate-500",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                        "text-base sm:text-base",
                       )}
                     />
                   </div>
@@ -236,10 +229,10 @@ function RouteComponent() {
                   onClick={handleNext}
                   disabled={!validateStep1()}
                   className={cn(
-                    'w-full py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
-                    'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
-                    'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                    'text-base sm:text-base flex items-center justify-center gap-2',
+                    "w-full py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200",
+                    "bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900",
+                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500",
+                    "text-base sm:text-base flex items-center justify-center gap-2",
                   )}
                 >
                   Next
@@ -252,10 +245,7 @@ function RouteComponent() {
               <div className="space-y-4 sm:space-y-5">
                 {/* Year Level */}
                 <div className="space-y-1.5 sm:space-y-2">
-                  <label
-                    htmlFor="yearLevel"
-                    className="block text-sm font-medium text-slate-300"
-                  >
+                  <label htmlFor="yearLevel" className="block text-sm font-medium text-slate-300">
                     Year Level
                   </label>
                   <select
@@ -265,20 +255,20 @@ function RouteComponent() {
                     onChange={handleChange}
                     required
                     className={cn(
-                      'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                      'text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
+                      "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                      "text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                      "text-base sm:text-base appearance-none cursor-pointer",
+                      "bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat",
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                      paddingRight: '2.5rem',
+                      paddingRight: "2.5rem",
                     }}
                   >
                     <option value="" className="bg-slate-800 text-slate-300">
                       Select your year level
                     </option>
-                    {YEAR_LEVELS.map(year => (
+                    {YEAR_LEVELS.map((year) => (
                       <option
                         key={year.value}
                         value={year.value}
@@ -292,10 +282,7 @@ function RouteComponent() {
 
                 {/* Course */}
                 <div className="space-y-1.5 sm:space-y-2">
-                  <label
-                    htmlFor="course"
-                    className="block text-sm font-medium text-slate-300"
-                  >
+                  <label htmlFor="course" className="block text-sm font-medium text-slate-300">
                     Course
                   </label>
                   <select
@@ -305,20 +292,20 @@ function RouteComponent() {
                     onChange={handleChange}
                     required
                     className={cn(
-                      'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                      'text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base appearance-none cursor-pointer',
-                      'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',
+                      "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                      "text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                      "text-base sm:text-base appearance-none cursor-pointer",
+                      "bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat",
                     )}
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                      paddingRight: '2.5rem',
+                      paddingRight: "2.5rem",
                     }}
                   >
                     <option value="" className="bg-slate-800 text-slate-300">
                       Select your course
                     </option>
-                    {COURSES.map(course => (
+                    {COURSES.map((course) => (
                       <option
                         key={course.value}
                         value={course.value}
@@ -332,10 +319,7 @@ function RouteComponent() {
 
                 {/* Email */}
                 <div className="space-y-1.5 sm:space-y-2">
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-slate-300"
-                  >
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-300">
                     Email
                   </label>
                   <input
@@ -348,10 +332,10 @@ function RouteComponent() {
                     autoComplete="email"
                     required
                     className={cn(
-                      'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                      'text-slate-100 placeholder:text-slate-500',
-                      'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                      'text-base sm:text-base',
+                      "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                      "text-slate-100 placeholder:text-slate-500",
+                      "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                      "text-base sm:text-base",
                     )}
                   />
                 </div>
@@ -360,10 +344,7 @@ function RouteComponent() {
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-4">
                   {/* Username */}
                   <div className="flex-1 space-y-1.5 sm:space-y-2">
-                    <label
-                      htmlFor="username"
-                      className="block text-sm font-medium text-slate-300"
-                    >
+                    <label htmlFor="username" className="block text-sm font-medium text-slate-300">
                       Username
                     </label>
                     <input
@@ -376,36 +357,33 @@ function RouteComponent() {
                       autoComplete="username"
                       required
                       className={cn(
-                        'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                        'text-slate-100 placeholder:text-slate-500',
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base',
+                        "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                        "text-slate-100 placeholder:text-slate-500",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                        "text-base sm:text-base",
                       )}
                     />
                   </div>
 
                   {/* Password */}
                   <div className="flex-1 space-y-1.5 sm:space-y-2 relative">
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-slate-300"
-                    >
+                    <label htmlFor="password" className="block text-sm font-medium text-slate-300">
                       Password
                     </label>
                     <input
                       id="password"
                       name="password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Enter password"
                       autoComplete="new-password"
                       required
                       className={cn(
-                        'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3',
-                        'text-slate-100 placeholder:text-slate-500',
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50',
-                        'text-base sm:text-base',
+                        "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 sm:px-4 sm:py-3",
+                        "text-slate-100 placeholder:text-slate-500",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/50",
+                        "text-base sm:text-base",
                       )}
                     />
                     <button
@@ -423,9 +401,9 @@ function RouteComponent() {
                     type="button"
                     onClick={handleBack}
                     className={cn(
-                      'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200',
-                      'bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900',
-                      'text-base sm:text-base flex items-center justify-center gap-2',
+                      "flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200",
+                      "bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900",
+                      "text-base sm:text-base flex items-center justify-center gap-2",
                     )}
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -435,14 +413,14 @@ function RouteComponent() {
                     type="submit"
                     disabled={!isRegisterUserDraftComplete(formData) || register.isPending}
                     className={cn(
-                      'flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
-                      'bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900',
-                      'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500',
-                      'text-base sm:text-base',
+                      "flex-1 py-3 sm:py-3.5 font-semibold text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2",
+                      "bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900",
+                      "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500",
+                      "text-base sm:text-base",
                     )}
                   >
                     {register.isPending && <Loader2Icon className="h-4 w-4 animate-spin" />}
-                    {register.isPending ? 'Creating account...' : 'Create Account'}
+                    {register.isPending ? "Creating account..." : "Create Account"}
                   </button>
                 </div>
               </div>
@@ -451,8 +429,7 @@ function RouteComponent() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
-              Already have an account?
-              {' '}
+              Already have an account?{" "}
               <Link
                 to="/auth/login"
                 className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
@@ -464,5 +441,5 @@ function RouteComponent() {
         </div>
       </div>
     </div>
-  )
+  );
 }

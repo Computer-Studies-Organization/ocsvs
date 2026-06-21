@@ -1,41 +1,40 @@
-import axios from 'axios'
-import { handleUnauthorizedResponse } from '@/lib/authRedirect'
+import axios from "axios";
+import { handleUnauthorizedResponse } from "@/lib/authRedirect";
 
-declare module 'axios' {
+declare module "axios" {
   interface AxiosRequestConfig {
-    skipUnauthorizedRedirect?: boolean
+    skipUnauthorizedRedirect?: boolean;
   }
 
   interface InternalAxiosRequestConfig {
-    skipUnauthorizedRedirect?: boolean
+    skipUnauthorizedRedirect?: boolean;
   }
 }
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8787',
+  baseURL: "http://localhost:8787",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   withCredentials: true,
-})
+});
 
 api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    delete config.headers['Content-Type']
+    delete config.headers["Content-Type"];
+  } else {
+    config.headers["Content-Type"] = "application/json";
   }
-  else {
-    config.headers['Content-Type'] = 'application/json'
-  }
-  return config
-})
+  return config;
+});
 
 api.interceptors.response.use(
-  response => response,
+  (response) => response,
   async (error) => {
     await handleUnauthorizedResponse({
       skipUnauthorizedRedirect: error.config?.skipUnauthorizedRedirect,
       status: error.response?.status,
-    })
-    return Promise.reject(error)
+    });
+    return Promise.reject(error);
   },
-)
+);

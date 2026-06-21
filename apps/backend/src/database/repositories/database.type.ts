@@ -1,3 +1,3 @@
-import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
-export type Database = LibSQLDatabase<typeof import('@/database/schema')>
+export type Database = LibSQLDatabase<typeof import("@/database/schema")>;

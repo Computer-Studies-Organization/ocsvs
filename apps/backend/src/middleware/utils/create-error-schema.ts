@@ -1,6 +1,6 @@
-import type { ZodSchema } from '@/lib/types/zod-types'
+import type { ZodSchema } from "@/lib/types/zod-types";
 
-import { z } from '@hono/zod-openapi'
+import { z } from "@hono/zod-openapi";
 
 /**
  * Creates a standardized error schema for OpenAPI documentation based on Zod validation errors.
@@ -41,15 +41,10 @@ import { z } from '@hono/zod-openapi'
  * }
  * ```
  */
-function createErrorSchema<
-  T extends ZodSchema,
->(schema: T) {
+function createErrorSchema<T extends ZodSchema>(schema: T) {
   const { error: _error } = schema.safeParse(
-    schema._def.typeName
-    === z.ZodFirstPartyTypeKind.ZodArray
-      ? []
-      : {},
-  )
+    schema._def.typeName === z.ZodFirstPartyTypeKind.ZodArray ? [] : {},
+  );
   return z.object({
     success: z.boolean().openapi({
       example: false,
@@ -59,9 +54,7 @@ function createErrorSchema<
         issues: z.array(
           z.object({
             code: z.string(),
-            path: z.array(
-              z.union([z.string(), z.number()]),
-            ),
+            path: z.array(z.union([z.string(), z.number()])),
             message: z.string().optional(),
           }),
         ),
@@ -71,15 +64,15 @@ function createErrorSchema<
         example: {
           issues: [
             {
-              code: 'invalid_type',
-              path: ['name'],
-              message: 'Expected string, received number',
+              code: "invalid_type",
+              path: ["name"],
+              message: "Expected string, received number",
             },
           ],
-          name: 'ZodError',
+          name: "ZodError",
         },
       }),
-  })
+  });
 }
 
-export default createErrorSchema
+export default createErrorSchema;

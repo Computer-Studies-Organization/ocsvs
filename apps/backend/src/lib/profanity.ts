@@ -1,10 +1,10 @@
-import { Filter } from 'bad-words'
+import { Filter } from "bad-words";
 
-const filter = new Filter()
+const filter = new Filter();
 
 export interface ProfanityValidationResult {
-  isClean: boolean
-  message?: string
+  isClean: boolean;
+  message?: string;
 }
 
 export function validateProfanity(text: string, fieldName: string): ProfanityValidationResult {
@@ -12,10 +12,10 @@ export function validateProfanity(text: string, fieldName: string): ProfanityVal
     return {
       isClean: false,
       message: `${fieldName} contains inappropriate language`,
-    }
+    };
   }
 
   return {
     isClean: true,
-  }
+  };
 }
