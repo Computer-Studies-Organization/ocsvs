@@ -26,9 +26,9 @@
 
   const navLinks: NavLink[] = [
     { href: '/admin-dashboard', label: 'Dashboard' },
+    { href: '/voting', label: 'Voting' },
     { href: '/admin/elections', label: 'Elections' },
   ]
-
   function isActive(href: string): boolean {
     return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`)
   }

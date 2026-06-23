@@ -1,4 +1,4 @@
-import type { TElection, TElectionStatus, TResults } from "$lib/types";
+import type { TElection, TElectionStatus, TResults, TVotingState } from "$lib/types";
 import { apiFetch } from "./client";
 
 export async function listElections(status?: TElectionStatus): Promise<TElection[]> {
@@ -54,4 +54,8 @@ export async function transitionElection(
 
 export async function listResults(electionId: string): Promise<TResults> {
   return apiFetch<TResults>(`/elections/${electionId}/results`);
+}
+
+export async function getVotingState(): Promise<TVotingState> {
+  return apiFetch<TVotingState>("/elections/state");
 }

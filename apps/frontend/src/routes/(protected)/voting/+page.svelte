@@ -1,9 +1,9 @@
 <script lang='ts'>
   import { onMount } from 'svelte'
   import { allCandidates } from '$lib/api/candidates'
-  import { getCurrentElection } from '$lib/api/elections'
+  import { getVotingState } from '$lib/api/elections'
   import { listPositions } from '$lib/api/positions'
-  import { getMyElectionVotes, submitElectionVotes } from '$lib/api/votes'
+  import { submitElectionVotes } from '$lib/api/votes'
   import {
     allPositionsVoted,
     createVotingState,
@@ -16,10 +16,13 @@
     selectCandidate,
     type TStepperPosition,
   } from '$lib/voting-stepper-logic'
+  import { hasVotedIn, pickEmptyCardVariant, type TEmptyCardVariant } from '$lib/voting-page-state'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import type { TElection, TPosition } from '$lib/types'
+  import { authStore } from '$lib/stores/auth'
+  import { UserRole } from '$lib/types'
+  import type { TElection, TPosition, TVotingState } from '$lib/types'
   import Spinner from '$lib/components/ui/spinner.svelte'
-  import { ArrowLeft, ArrowRight, Vote } from 'lucide-svelte'
+  import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, Vote } from 'lucide-svelte'
 
   let election = $state<TElection | null>(null)
   let positions = $state<TStepperPosition[]>([])
@@ -29,6 +32,8 @@
   let error = $state('')
   let submitMessage = $state('')
   let hasVoted = $state(false)
+  let votingPageState = $state<TVotingState | null>(null)
+  let emptyVariant = $state<TEmptyCardVariant>('none')
 
   const currentPosition = $derived(positions[votingState.currentPositionIndex])
 
@@ -36,18 +41,20 @@
     isLoading = true
     error = ''
     try {
-      const current = await getCurrentElection()
-      if (!current) {
+      const state = await getVotingState()
+      votingPageState = state
+      emptyVariant = pickEmptyCardVariant(state)
+      if (!state.open) {
         election = null
+        positions = []
         return
       }
-      election = current
-      const [allPos, candidatesRes] = await Promise.all([
-        listPositions(current.id),
-        allCandidates({ electionId: current.id }),
+      election = state.open
+      const [candidatesRes, positionsRes] = await Promise.all([
+        allCandidates({ electionId: state.open.id }),
+        listPositions(state.open.id),
       ])
-      const positionsFromBackend: TPosition[] = allPos
-      positions = positionsFromBackend
+      positions = positionsRes
         .slice()
         .sort((a, b) => a.displayOrder - b.displayOrder)
         .map(p => ({
@@ -60,10 +67,7 @@
         }))
         .filter(p => p.candidates.length > 0)
       votingState = createVotingState(positions)
-      const my = await getMyElectionVotes()
-      if (my.electionId === current.id && my.votes.length > 0) {
-        hasVoted = true
-      }
+      hasVoted = hasVotedIn(state, state.open.id)
     }
     catch (e: unknown) {
       error = extractErrorMessage(e, 'Failed to load election')
@@ -94,6 +98,24 @@
       isSubmitting = false
     }
   }
+
+  function formatTimestamp(unixSeconds: number): string {
+    const date = new Date(unixSeconds * 1000)
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date)
+  }
+
+  function formatCountdown(unixSeconds: number): string {
+    const ms = unixSeconds * 1000 - Date.now()
+    if (ms <= 0) return 'opening now'
+    const days = Math.floor(ms / 86_400_000)
+    if (days > 0) return `in ${days} day${days === 1 ? '' : 's'}`
+    const hours = Math.floor(ms / 3_600_000)
+    if (hours > 0) return `in ${hours} hour${hours === 1 ? '' : 's'}`
+    return 'soon'
+  }
 </script>
 
 {#if isLoading}
@@ -107,11 +129,44 @@
 {:else if !election}
   <div class='flex min-h-[60vh] items-center justify-center p-8'>
     <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
-      <Vote size={48} class='mx-auto mb-4 text-slate-400' />
-      <h1 class='text-2xl font-bold text-slate-100'>No active election</h1>
-      <p class='mt-2 text-slate-400'>No active election right now. Check back later.</p>
+      {#if emptyVariant === 'next-draft' && votingPageState?.nextDraft}
+        {@const d = votingPageState.nextDraft}
+        <Calendar size={48} class='mx-auto mb-4 text-sky-400' />
+        <h1 class='text-2xl font-bold text-slate-100'>Next election: {d.name}</h1>
+        <p class='mt-2 text-slate-400'>Opens {formatTimestamp(d.opensAt)} — {formatCountdown(d.opensAt)}.</p>
+      {:else if emptyVariant === 'last-closed' && votingPageState?.lastClosed}
+        {@const c = votingPageState.lastClosed}
+        {@const totalVotes = c.results.reduce((s, r) => s + r.totalVotes, 0)}
+        <CheckCircle size={48} class='mx-auto mb-4 text-emerald-400' />
+        <h1 class='text-2xl font-bold text-slate-100'>{c.name} has ended</h1>
+        <p class='mt-2 text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
+        <a href='/results' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+      {:else if emptyVariant === 'both' && votingPageState?.nextDraft && votingPageState?.lastClosed}
+        {@const d = votingPageState.nextDraft}
+        {@const c = votingPageState.lastClosed}
+        <Info size={48} class='mx-auto mb-4 text-slate-300' />
+        <h1 class='text-2xl font-bold text-slate-100'>No active election</h1>
+        <p class='mt-2 text-slate-400'>
+          Latest: {c.name} (ended {formatTimestamp(c.closesAt)}). Next: {d.name} opens {formatTimestamp(d.opensAt)}.
+        </p>
+        <a href='/results' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+      {:else}
+        <Vote size={48} class='mx-auto mb-4 text-slate-400' />
+        <h1 class='text-2xl font-bold text-slate-100'>No elections scheduled</h1>
+        <p class='mt-2 text-slate-400'>Check back later.</p>
+      {/if}
     </div>
   </div>
+  {#if $authStore.user?.user?.role === UserRole.ADMIN}
+    <div class='mx-auto max-w-md px-8 pb-8'>
+      <div class='border-t border-white/10 pt-4'>
+        <p class='text-xs font-semibold uppercase tracking-wider text-slate-500'>Admin actions</p>
+        <a href='/admin/elections' class='mt-2 inline-block text-blue-400 hover:underline'>
+          Open election management →
+        </a>
+      </div>
+    </div>
+  {/if}
 {:else if hasVoted}
   <div class='flex min-h-[60vh] items-center justify-center p-8'>
     <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>

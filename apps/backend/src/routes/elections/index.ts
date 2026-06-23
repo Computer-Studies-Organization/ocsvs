@@ -13,6 +13,7 @@ import {
   updatePositionHandler,
 } from "@/handlers/elections/positions.handler";
 import { getElectionResultsHandler } from "@/handlers/elections/results.handler";
+import { getVotingStateHandler } from "@/handlers/elections/voting-state.handler";
 import { createRouter } from "@/lib/create-app";
 import { requireAdmin, requireAuth } from "@/middleware/auth";
 import {
@@ -22,6 +23,7 @@ import {
   updatePositionRoute,
 } from "./positions.routes";
 import { getElectionResultsRoute } from "./results.routes";
+import { votingStateRoute } from "./voting-state.routes";
 import {
   createElectionRoute,
   getCurrentElectionRoute,
@@ -42,6 +44,9 @@ router.openapi(createElectionRoute, createElectionHandler);
 
 router.use("/elections/current", requireAuth);
 router.openapi(getCurrentElectionRoute, getCurrentElectionHandler);
+
+router.use("/elections/state", requireAuth);
+router.openapi(votingStateRoute, getVotingStateHandler);
 
 router.use("/elections/:id", requireAuth);
 router.openapi(getElectionRoute, getElectionHandler);

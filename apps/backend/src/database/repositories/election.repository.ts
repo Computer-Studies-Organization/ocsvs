@@ -1,5 +1,5 @@
 import type { Database } from "./database.type";
-import { desc, eq, type SQL } from "drizzle-orm";
+import { asc, desc, eq, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
 export type ElectionRow = typeof elections.$inferSelect;
@@ -79,5 +79,27 @@ export const electionRepo = {
       .where(eq(elections.id, id))
       .run();
     return result.rowsAffected > 0;
+  },
+
+  async findEarliestDraft(db: Database): Promise<ElectionRow | null> {
+    return (
+      (await db
+        .select()
+        .from(elections)
+        .where(eq(elections.status, "draft"))
+        .orderBy(asc(elections.opensAt))
+        .get()) ?? null
+    );
+  },
+
+  async findLatestClosed(db: Database): Promise<ElectionRow | null> {
+    return (
+      (await db
+        .select()
+        .from(elections)
+        .where(eq(elections.status, "closed"))
+        .orderBy(desc(elections.closesAt))
+        .get()) ?? null
+    );
   },
 };

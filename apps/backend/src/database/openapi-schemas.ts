@@ -365,3 +365,48 @@ export const ResultsPositionSchema = z
   .openapi("ResultsPosition");
 
 export const ResultsResponseSchema = z.array(ResultsPositionSchema);
+
+export const NextDraftSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  opensAt: z.number(),
+  closesAt: z.number(),
+});
+
+export const LastClosedResultsItemSchema = z.object({
+  positionId: z.string(),
+  positionName: z.string(),
+  totalVotes: z.number(),
+  candidates: z.array(
+    z.object({
+      candidateId: z.string(),
+      fullName: z.string(),
+      voteCount: z.number(),
+      percentage: z.number(),
+    }),
+  ),
+});
+
+export const LastClosedSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  closesAt: z.number(),
+  results: z.array(LastClosedResultsItemSchema),
+});
+
+export const MyVotesSchema = z.object({
+  electionId: z.string().nullable(),
+  votes: z.array(
+    z.object({
+      candidateId: z.string(),
+      positionId: z.string(),
+    }),
+  ),
+});
+
+export const VotingStateSchema = z.object({
+  open: ElectionSchema.nullable(),
+  nextDraft: NextDraftSchema.nullable(),
+  lastClosed: LastClosedSchema.nullable(),
+  myVotes: MyVotesSchema,
+});

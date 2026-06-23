@@ -177,3 +177,29 @@ export type TTransition = {
   opensAt?: number;
   closesAt?: number;
 };
+
+export type TNextDraft = {
+  id: string;
+  name: string;
+  opensAt: number;
+  closesAt: number;
+};
+
+export type TLastClosed = {
+  id: string;
+  name: string;
+  closesAt: number;
+  results: TResults;
+};
+
+export type TMyVotes = {
+  electionId: string | null;
+  votes: Array<{ candidateId: string; positionId: string }>;
+};
+
+export type TVotingState = {
+  open: TElection | null;
+  nextDraft: TNextDraft | null;
+  lastClosed: TLastClosed | null;
+  myVotes: TMyVotes;
+};
