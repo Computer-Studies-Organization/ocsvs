@@ -47,7 +47,7 @@
   onMount(load)
 
   $effect(() => {
-    electionId
+    void electionId
     load()
   })
 

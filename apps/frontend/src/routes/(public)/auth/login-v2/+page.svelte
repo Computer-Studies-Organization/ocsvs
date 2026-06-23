@@ -51,15 +51,15 @@
   <div
     class='absolute top-0 left-0 w-[600px] h-[600px] rounded-full opacity-30'
     style='background: radial-gradient(circle, oklch(0.35 0.12 250) 0%, transparent 70%); transform: translate(-30%, -30%)'
-  />
+  ></div>
   <div
     class='absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full opacity-25'
     style='background: radial-gradient(circle, oklch(0.32 0.10 260) 0%, transparent 70%); transform: translate(25%, 25%)'
-  />
+  ></div>
   <div
     class='absolute top-1/2 left-1/2 w-[400px] h-[400px] rounded-full opacity-20'
     style='background: radial-gradient(circle, oklch(0.28 0.08 245) 0%, transparent 70%); transform: translate(-50%, -50%)'
-  />
+  ></div>
 
   <!-- Main card -->
   <div class='relative z-10 w-full max-w-lg'>
@@ -70,7 +70,7 @@
       <!-- Dual logo header -->
       <div class='flex items-center justify-center gap-8 mb-8'>
         <img src={aclcLogo} alt='ACLC Logo' class='h-16 w-auto' />
-        <div class='h-16 w-0.5 rounded-full' style='background: oklch(0.35 0.03 250)' />
+        <div class='h-16 w-0.5 rounded-full' style='background: oklch(0.35 0.03 250)'></div>
         <img src={csoLogo} alt='CSO Logo' class='h-16 w-auto' />
       </div>
 
@@ -87,7 +87,7 @@
       <!-- Error message -->
       {#if message}
         <div class='mb-6 flex items-start gap-3'>
-          <div class='w-1 h-8 rounded-full flex-shrink-0 mt-0.5' style='background: oklch(0.55 0.18 25)' />
+          <div class='w-1 h-8 rounded-full flex-shrink-0 mt-0.5' style='background: oklch(0.55 0.18 25)'></div>
           <p class='text-sm font-medium flex-1' style='color: oklch(0.85 0.05 25)'>
             {message}
           </p>
@@ -175,7 +175,7 @@
 
     <!-- Trust badge -->
     <div class='mt-6 text-center text-xs flex items-center justify-center gap-2' style='color: oklch(0.50 0.015 250)'>
-      <div class='w-1.5 h-1.5 rounded-full' style='background: oklch(0.60 0.12 140)' />
+      <div class='w-1.5 h-1.5 rounded-full' style='background: oklch(0.60 0.12 140)'></div>
       <span>Secure authentication &bull; Encrypted ballot submission</span>
     </div>
   </div>

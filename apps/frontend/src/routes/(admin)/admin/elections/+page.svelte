@@ -49,7 +49,7 @@
   onMount(load)
 
   $effect(() => {
-    statusFilter
+    void statusFilter
     load()
   })
 
@@ -223,7 +223,7 @@
         placeholder='Annual student council elections…'
         class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none'
         style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
-      />
+      ></textarea>
     </div>
 
     <div class='flex gap-3 pt-2'>

@@ -12,7 +12,7 @@ export interface TStepperPosition {
   candidates: Array<{ id: string; fullName: string }>;
 }
 
-export function buildPositionsFromElection(election: TElection): TStepperPosition[] {
+export function buildPositionsFromElection(_election: TElection): TStepperPosition[] {
   return [];
 }
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import router from "./index";
 import * as votingStateQueries from "@/database/queries/voting-state.queries";
+import type { VotingState } from "@/database/queries/voting-state.queries";
 
 let TEST_USER = { id: "acc-1", email: "t@e.com", username: "t", role: "user" };
 let AUTH_ENABLED = true;
@@ -68,7 +69,7 @@ describe("GET /elections/state", () => {
       updatedAt: 1,
     };
     getState.mockResolvedValue({
-      open: open as any,
+      open: open as VotingState["open"],
       nextDraft: null,
       lastClosed: null,
       myVotes: { electionId: null, votes: [] },
@@ -76,7 +77,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body.open).toEqual(open);
     expect(body.nextDraft).toBeNull();
     expect(body.lastClosed).toBeNull();
@@ -93,7 +94,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body.nextDraft?.id).toBe("d1");
   });
 
@@ -112,7 +113,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body.lastClosed?.results[0].totalVotes).toBe(10);
   });
 
@@ -130,7 +131,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body.nextDraft?.id).toBe("d1");
     expect(body.lastClosed?.id).toBe("c1");
   });
@@ -144,7 +145,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body).toEqual({
       open: null,
       nextDraft: null,
@@ -163,7 +164,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as VotingState;
     expect(body.myVotes).toEqual({
       electionId: "e-voted",
       votes: [{ candidateId: "c1", positionId: "p1" }],
