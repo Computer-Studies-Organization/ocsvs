@@ -1,19 +1,14 @@
 # OCSVS task runner. Run `just` with no args to list recipes.
 # Most recipes delegate to existing pnpm scripts in package.json.
-
 set shell := ["bash", "-c"]
 
 # Show available recipes
 default:
     @just --list
 
-# ----- Install ---------------------------------------------------------------
-
-# Install all workspace dependencies
+# Install all workspace deps
 install:
     pnpm install
-
-# ----- Dev -------------------------------------------------------------------
 
 # Run both apps in parallel (frontend + backend)
 dev:
@@ -26,8 +21,6 @@ dev-fe:
 # Run backend only (wrangler dev on port 8787)
 dev-be:
     pnpm dev:backend
-
-# ----- Quality ---------------------------------------------------------------
 
 # Run typecheck, lint, and test (matches CI order)
 check: typecheck lint test
@@ -48,8 +41,6 @@ lint-fix:
 test:
     pnpm test
 
-# ----- Build -----------------------------------------------------------------
-
 # Build all workspaces
 build:
     pnpm build
@@ -61,8 +52,6 @@ build-fe:
 # Build backend only
 build-be:
     pnpm build:backend
-
-# ----- Database (backend) ----------------------------------------------------
 
 # Generate a new Drizzle migration from schema changes
 db-generate:
@@ -84,13 +73,9 @@ db-studio:
 cf-typegen:
     cd apps/backend && pnpm cf-typegen
 
-# ----- Deploy ----------------------------------------------------------------
-
 # Deploy backend to Cloudflare Workers (wrangler deploy --minify)
 deploy:
     cd apps/backend && pnpm deploy
-
-# ----- Clean -----------------------------------------------------------------
 
 # Remove build artifacts (dist/, .svelte-kit/, .wrangler/)
 clean:
