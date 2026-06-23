@@ -76,7 +76,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.open).toEqual(open);
     expect(body.nextDraft).toBeNull();
     expect(body.lastClosed).toBeNull();
@@ -93,7 +93,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.nextDraft?.id).toBe("d1");
   });
 
@@ -112,7 +112,7 @@ describe("GET /elections/state", () => {
 
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.lastClosed?.results[0].totalVotes).toBe(10);
   });
 
@@ -130,7 +130,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.nextDraft?.id).toBe("d1");
     expect(body.lastClosed?.id).toBe("c1");
   });
@@ -144,7 +144,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body).toEqual({
       open: null,
       nextDraft: null,
@@ -163,7 +163,7 @@ describe("GET /elections/state", () => {
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.myVotes).toEqual({
       electionId: "e-voted",
       votes: [{ candidateId: "c1", positionId: "p1" }],
