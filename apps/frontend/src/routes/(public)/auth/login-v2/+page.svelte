@@ -33,7 +33,7 @@
       if (userData.user.role === 'admin') {
         goto('/admin-dashboard', { replaceState: true })
       } else {
-        goto('/dashboard', { replaceState: true })
+        goto('/voting', { replaceState: true })
       }
     } catch (err: any) {
       message = err.message || 'Login failed'

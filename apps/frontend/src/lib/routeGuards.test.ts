@@ -32,7 +32,7 @@ test("public routes redirect authenticated admins to the admin dashboard", () =>
 });
 
 test("public routes redirect authenticated users to the dashboard", () => {
-  assert.equal(getPublicRouteRedirectPath(standardUser), "/dashboard");
+  assert.equal(getPublicRouteRedirectPath(standardUser), "/voting");
 });
 
 test("public routes allow unauthenticated users to continue", () => {
@@ -52,7 +52,7 @@ test("admin routes redirect unauthenticated users to login", () => {
 });
 
 test("admin routes redirect non-admin users to the dashboard", () => {
-  assert.equal(getAdminRouteRedirectPath(standardUser), "/dashboard");
+  assert.equal(getAdminRouteRedirectPath(standardUser), "/voting");
 });
 
 test("admin routes allow admins to continue", () => {
@@ -64,7 +64,7 @@ test("admin-elections routes redirect unauthenticated users to login", () => {
 });
 
 test("admin-elections routes redirect non-admin users to the dashboard", () => {
-  assert.equal(getAdminElectionsRouteRedirectPath(standardUser), "/dashboard");
+  assert.equal(getAdminElectionsRouteRedirectPath(standardUser), "/voting");
 });
 
 test("admin-elections routes allow admins to continue", () => {
