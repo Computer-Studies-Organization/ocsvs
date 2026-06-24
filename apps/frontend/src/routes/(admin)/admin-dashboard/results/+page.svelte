@@ -1,7 +1,7 @@
 <script lang='ts'>
   import type { TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { getVoteResults } from '$lib/api/votes'
+  import { getVotingState, listResults } from '$lib/api/elections'
   import { authStore } from '$lib/stores/auth'
   import { ArrowLeft, BarChart3, Loader, Trophy } from 'lucide-svelte'
   import { onMount } from 'svelte'
@@ -13,6 +13,7 @@
   }
 
   let resultsData = $state<TVoteResultsResponse | null>(null)
+  let electionName = $state('')
   let isLoading = $state(true)
   let isError = $state(false)
 
@@ -33,7 +34,39 @@
 
   onMount(async () => {
     try {
-      resultsData = await getVoteResults()
+      const state = await getVotingState()
+      const activeElection = state.open || state.lastClosed
+      if (activeElection) {
+        electionName = activeElection.name
+        const results = await listResults(activeElection.id)
+        const mappedResults = results.map(r => ({
+          positionId: r.positionId,
+          positionName: r.positionName,
+          candidates: r.candidates.map(c => ({
+            candidateId: c.candidateId,
+            candidateName: c.fullName,
+            positionId: r.positionId,
+            positionName: r.positionName,
+            voteCount: c.voteCount
+          }))
+        }))
+        const totalVotes = results.reduce((sum, r) => sum + r.totalVotes, 0)
+        resultsData = {
+          results: mappedResults,
+          meta: {
+            totalVotes,
+            totalPositions: results.length
+          }
+        }
+      } else {
+        resultsData = {
+          results: [],
+          meta: {
+            totalVotes: 0,
+            totalPositions: 0
+          }
+        }
+      }
     }
     catch {
       isError = true
@@ -61,7 +94,13 @@
         </div>
         <div>
           <h1 class='text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl'>Vote Results</h1>
-          <p class='mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500'>Real-time Election Statistics</p>
+          <p class='mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500'>
+            {#if electionName}
+              Real-time Election Statistics — {electionName}
+            {:else}
+              Real-time Election Statistics
+            {/if}
+          </p>
         </div>
         <div class='rounded-xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-md backdrop-blur'>
           <p class='text-sm text-slate-200'>Welcome, <span class='font-semibold text-slate-50'>{user?.user?.username || 'Admin'}</span></p>

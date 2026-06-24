@@ -64,6 +64,7 @@ export const updatePositionRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(PositionSchema, ERROR_MESSAGES.POSITION_UPDATED_SUCCESSFULLY),
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.POSITION_NOT_FOUND),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT),
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
       createErrorSchema(UpdatePositionBodySchema),
       "Validation failed",

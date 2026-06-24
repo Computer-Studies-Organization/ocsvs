@@ -87,6 +87,9 @@ const {
   mockCountByCandidateId,
   mockGetCurrentElection,
   mockListByElection,
+  mockFindElectionById,
+  mockFindLatestClosed,
+  mockGetElectionResults,
 } = vi.hoisted(() => ({
   mockFindActiveByIds: vi.fn(),
   mockListWithVoteCount: vi.fn(),
@@ -99,6 +102,9 @@ const {
   mockCountByCandidateId: vi.fn(),
   mockGetCurrentElection: vi.fn(),
   mockListByElection: vi.fn(),
+  mockFindElectionById: vi.fn(),
+  mockFindLatestClosed: vi.fn(),
+  mockGetElectionResults: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -135,9 +141,17 @@ vi.mock("@/database/repositories/position.repository", () => ({
   },
 }));
 
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findById: mockFindElectionById,
+    findLatestClosed: mockFindLatestClosed,
+  },
+}));
+
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: {
     getCurrentElection: mockGetCurrentElection,
+    getResults: mockGetElectionResults,
   },
 }));
 
@@ -166,6 +180,10 @@ describe("votes Routes (repository)", () => {
     mockCountByCandidateId.mockReset();
     mockGetCurrentElection.mockReset();
     mockListByElection.mockReset();
+    mockFindElectionById.mockReset();
+    mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "open" });
+    mockFindLatestClosed.mockReset();
+    mockGetElectionResults.mockReset();
     TEST_USER = {
       id: testUserId,
       accountId: testUserAccountId,
@@ -377,6 +395,46 @@ describe("votes Routes (repository)", () => {
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.INVALID_CANDIDATE);
     });
+
+    it("should return 404 when target election is not found", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockFindElectionById.mockResolvedValue(null);
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: "non-existent-election-id",
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(404);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_FOUND);
+    });
+
+    it("should return 409 when target election is not open", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "draft" });
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
+    });
   });
 
   describe("gET /votes/me - getMyVotes", () => {
@@ -458,23 +516,35 @@ describe("votes Routes (repository)", () => {
   describe("gET /votes/results - getVoteResults", () => {
     it("should return vote results grouped by position", async () => {
       setAdmin();
-      const mockResults = [
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockGetElectionResults.mockResolvedValue([
         {
-          candidateId: testCandidateId1,
-          candidateName: "John Doe",
           positionId: testPositionId1,
           positionName: "President",
-          voteCount: 5,
+          totalVotes: 5,
+          candidates: [
+            {
+              candidateId: testCandidateId1,
+              fullName: "John Doe",
+              voteCount: 5,
+              percentage: 100,
+            },
+          ],
         },
         {
-          candidateId: testCandidateId2,
-          candidateName: "Jane Smith",
           positionId: testPositionId2,
           positionName: "Vice President",
-          voteCount: 3,
+          totalVotes: 3,
+          candidates: [
+            {
+              candidateId: testCandidateId2,
+              fullName: "Jane Smith",
+              voteCount: 3,
+              percentage: 100,
+            },
+          ],
         },
-      ];
-      mockListWithVoteCount.mockResolvedValue(mockResults);
+      ]);
 
       const res = await router.request("/votes/results", { method: "GET" });
 
@@ -487,16 +557,22 @@ describe("votes Routes (repository)", () => {
 
     it("should include zero-vote candidates", async () => {
       setAdmin();
-      const mockResults = [
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockGetElectionResults.mockResolvedValue([
         {
-          candidateId: testCandidateId1,
-          candidateName: "John Doe",
           positionId: testPositionId1,
           positionName: "President",
-          voteCount: 0,
+          totalVotes: 0,
+          candidates: [
+            {
+              candidateId: testCandidateId1,
+              fullName: "John Doe",
+              voteCount: 0,
+              percentage: 0,
+            },
+          ],
         },
-      ];
-      mockListWithVoteCount.mockResolvedValue(mockResults);
+      ]);
 
       const res = await router.request("/votes/results", { method: "GET" });
 

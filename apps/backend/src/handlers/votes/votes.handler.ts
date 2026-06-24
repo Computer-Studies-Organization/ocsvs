@@ -12,6 +12,7 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
+import { electionRepo } from "@/database/repositories/election.repository";
 import { positions, votes } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -26,6 +27,15 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
 
   if (!user) {
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.BAD_REQUEST);
+  }
+
+  // Fetch the election and verify it's open
+  const election = await electionRepo.findById(db, electionId);
+  if (!election) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+  if (election.status !== "open") {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_OPEN }, httpStatusCodes.CONFLICT);
   }
 
   // Source of truth for "has voted" is the votes table (unique index on
@@ -141,42 +151,43 @@ export const getMyVotes: AppRouteHandler<typeof getMyVotesRoute> = async (c) => 
 export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async (c) => {
   const { db } = createDb(c);
 
-  // Get all active candidates with their vote counts via repository
-  const candidatesWithVotes = await candidateRepo.listWithVoteCount(db);
+  // Get current active election or latest closed election
+  const current =
+    (await electionQueries.getCurrentElection(db)) ?? (await electionRepo.findLatestClosed(db));
 
-  // Group by position
-  const resultsMap = new Map<
-    string,
-    {
-      positionId: string;
-      positionName: string;
-      candidates: {
-        candidateId: string;
-        candidateName: string;
-        positionId: string;
-        positionName: string;
-        voteCount: number;
-      }[];
-    }
-  >();
-  candidatesWithVotes.forEach((item) => {
-    const arr = resultsMap.get(item.positionId) ?? {
-      positionId: item.positionId,
-      positionName: item.positionName,
-      candidates: [],
-    };
-    arr.candidates.push(item);
-    resultsMap.set(item.positionId, arr);
-  });
+  if (!current) {
+    return c.json(
+      {
+        results: [],
+        meta: {
+          totalVotes: 0,
+          totalPositions: 0,
+        },
+      },
+      httpStatusCodes.OK,
+    );
+  }
 
-  // Format results
-  const results = Array.from(resultsMap.values());
+  // Get results for this election
+  const electionResults = await electionQueries.getResults(db, current.id);
+
+  // Map to the legacy VoteResultsResponse format
+  const results = electionResults.map((r) => ({
+    positionId: r.positionId,
+    positionName: r.positionName,
+    candidates: r.candidates.map((cand) => ({
+      candidateId: cand.candidateId,
+      candidateName: cand.fullName,
+      positionId: r.positionId,
+      positionName: r.positionName,
+      voteCount: cand.voteCount,
+    })),
+  }));
 
   // Sort positions by name for stable output
   results.sort((a, b) => a.positionName.localeCompare(b.positionName));
 
-  // Calculate totals
-  const totalVotes = candidatesWithVotes.reduce((sum, item) => sum + Number(item.voteCount), 0);
+  const totalVotes = electionResults.reduce((sum, r) => sum + r.totalVotes, 0);
 
   return c.json(
     {

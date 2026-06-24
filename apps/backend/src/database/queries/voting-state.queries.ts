@@ -44,7 +44,7 @@ export async function getVotingState(db: Database, accountId: string): Promise<V
       id: draftRow.id,
       name: draftRow.name,
       opensAt: draftRow.opensAt,
-      closesAt: draftRow.closesAt ?? draftRow.opensAt,
+      closesAt: draftRow.closesAt,
     };
   }
 

@@ -103,7 +103,7 @@ describe("getVotingState", () => {
     });
   });
 
-  it("falls back to opensAt for closesAt when closesAt is null on a draft row", async () => {
+  it("keeps closesAt as null when closesAt is null on a draft row", async () => {
     const draft = {
       id: "d1",
       name: "Summer",
@@ -120,7 +120,7 @@ describe("getVotingState", () => {
 
     const result = await getVotingState(db, accountId);
 
-    expect(result.nextDraft?.closesAt).toBe(100);
+    expect(result.nextDraft?.closesAt).toBeNull();
   });
 
   it("returns lastClosed with results when findLatestClosed returns a row", async () => {
