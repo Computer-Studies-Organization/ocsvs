@@ -1,6 +1,6 @@
-import type { TElection } from "$lib/types";
+import type { TVotingPageState } from "./voting-page-state";
 
-export interface TVotingState {
+export interface TStepperVotingState {
   selectedVotes: Record<string, string | null>;
   currentPositionIndex: number;
 }
@@ -12,11 +12,7 @@ export interface TStepperPosition {
   candidates: Array<{ id: string; fullName: string }>;
 }
 
-export function buildPositionsFromElection(_election: TElection): TStepperPosition[] {
-  return [];
-}
-
-export function createVotingState(positions: TStepperPosition[]): TVotingState {
+export function createVotingState(positions: TStepperPosition[]): TStepperVotingState {
   const selectedVotes: Record<string, string | null> = {};
   for (const pos of positions) {
     selectedVotes[pos.id] = null;
@@ -25,14 +21,14 @@ export function createVotingState(positions: TStepperPosition[]): TVotingState {
 }
 
 export function selectCandidate(
-  state: TVotingState,
+  state: TStepperVotingState,
   positionId: string,
   candidateId: string,
-): TVotingState {
+): TStepperVotingState {
   return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: candidateId } };
 }
 
-export function goNext(state: TVotingState, totalPositions: number): TVotingState {
+export function goNext(state: TStepperVotingState, totalPositions: number): TStepperVotingState {
   if (totalPositions === 0) return state;
   return {
     ...state,
@@ -40,30 +36,33 @@ export function goNext(state: TVotingState, totalPositions: number): TVotingStat
   };
 }
 
-export function goPrevious(state: TVotingState): TVotingState {
+export function goPrevious(state: TStepperVotingState): TStepperVotingState {
   return { ...state, currentPositionIndex: Math.max(state.currentPositionIndex - 1, 0) };
 }
 
-export function isFirstPosition(state: TVotingState): boolean {
+export function isFirstPosition(state: TStepperVotingState): boolean {
   return state.currentPositionIndex === 0;
 }
 
-export function isLastPosition(state: TVotingState, totalPositions: number): boolean {
+export function isLastPosition(state: TStepperVotingState, totalPositions: number): boolean {
   return state.currentPositionIndex === totalPositions - 1;
 }
 
-export function hasCurrentVote(state: TVotingState, positions: TStepperPosition[]): boolean {
+export function hasCurrentVote(state: TStepperVotingState, positions: TStepperPosition[]): boolean {
   const current = positions[state.currentPositionIndex];
   if (!current) return false;
   return state.selectedVotes[current.id] !== null;
 }
 
-export function allPositionsVoted(state: TVotingState, positions: TStepperPosition[]): boolean {
+export function allPositionsVoted(
+  state: TStepperVotingState,
+  positions: TStepperPosition[],
+): boolean {
   return positions.every((p) => state.selectedVotes[p.id] !== null);
 }
 
 export function getSelectedVotes(
-  state: TVotingState,
+  state: TStepperVotingState,
 ): Array<{ positionId: string; candidateId: string }> {
   const out: Array<{ positionId: string; candidateId: string }> = [];
   for (const [positionId, candidateId] of Object.entries(state.selectedVotes)) {
@@ -72,6 +71,11 @@ export function getSelectedVotes(
   return out;
 }
 
-export function getSelectedCount(state: TVotingState): number {
+export function getSelectedCount(state: TStepperVotingState): number {
   return Object.values(state.selectedVotes).filter((id) => id !== null).length;
+}
+
+export function withVoting(page: TVotingPageState, voting: TStepperVotingState): TVotingPageState {
+  if (page.kind !== "stepper") return page;
+  return { ...page, voting };
 }

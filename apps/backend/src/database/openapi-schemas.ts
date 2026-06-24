@@ -369,8 +369,8 @@ export const ResultsResponseSchema = z.array(ResultsPositionSchema);
 export const NextDraftSchema = z.object({
   id: z.string(),
   name: z.string(),
-  opensAt: z.number(),
-  closesAt: z.number(),
+  opensAt: z.number().nullable(),
+  closesAt: z.number().nullable(),
 });
 
 export const LastClosedResultsItemSchema = z.object({

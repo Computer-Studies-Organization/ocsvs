@@ -106,7 +106,7 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
   await electionRepo.updateStatus(db, id, {
     status: to,
     opensAt: opensAt ?? null,
-    closesAt: closesAt ?? null,
+    closesAt: closesAt ?? (to === "closed" ? Math.floor(Date.now() / 1000) : null),
   });
   const messageKey = (
     existing.status === "draft" && to === "open"

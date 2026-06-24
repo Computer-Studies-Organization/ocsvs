@@ -8,8 +8,8 @@ import { voteRepo } from "@/database/repositories/votes.repository";
 export interface NextDraft {
   id: string;
   name: string;
-  opensAt: number;
-  closesAt: number;
+  opensAt: number | null;
+  closesAt: number | null;
 }
 
 export interface LastClosed {
@@ -39,7 +39,7 @@ export async function getVotingState(db: Database, accountId: string): Promise<V
   ]);
 
   let nextDraft: NextDraft | null = null;
-  if (draftRow && draftRow.opensAt !== null) {
+  if (draftRow) {
     nextDraft = {
       id: draftRow.id,
       name: draftRow.name,

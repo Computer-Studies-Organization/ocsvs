@@ -181,8 +181,8 @@ export type TTransition = {
 export type TNextDraft = {
   id: string;
   name: string;
-  opensAt: number;
-  closesAt: number;
+  opensAt: number | null;
+  closesAt: number | null;
 };
 
 export type TLastClosed = {

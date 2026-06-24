@@ -11,7 +11,8 @@ import {
 
 const router = createRouter();
 router.use("*", requireAuth);
-router.use("*", requireAdmin);
+router.use("/users", requireAdmin);
+router.use("/users/*", requireAdmin);
 router.openapi(listUsersRoute, handlers.listUsers);
 router.openapi(getUserRoute, handlers.getUser);
 router.openapi(updateUserRoute, handlers.updateUser);
