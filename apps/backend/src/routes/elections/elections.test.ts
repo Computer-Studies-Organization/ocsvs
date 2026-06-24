@@ -263,6 +263,18 @@ describe("elections routes", () => {
       expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
     });
 
+    it("returns 409 when status is closed", async () => {
+      mockFindById.mockResolvedValue(makeElection({ status: "closed" }));
+      const res = await router.request(`/elections/${electionId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Renamed" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
+    });
+
     it("returns 404 when election is missing", async () => {
       mockFindById.mockResolvedValue(null);
       const res = await router.request(`/elections/${electionId}`, {
@@ -345,7 +357,31 @@ describe("elections routes", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.ELECTION_OPENED_SUCCESSFULLY);
-      expect(mockUpdateStatus).toHaveBeenCalled();
+      expect(mockUpdateStatus).toHaveBeenCalledWith(
+        mockDb,
+        electionId,
+        expect.objectContaining({ status: "open", opensAt: 1738000000, closesAt: 1738604800 }),
+      );
+    });
+
+    it("preserves existing opensAt when transitioning open->closed without providing opensAt", async () => {
+      mockFindById.mockResolvedValue(
+        makeElection({ status: "open", opensAt: 1738000000, closesAt: 1738604800 }),
+      );
+      mockCountPositions.mockResolvedValue(2);
+      mockUpdateStatus.mockResolvedValue(true);
+      const res = await router.request(`/elections/${electionId}/transitions`, {
+        method: "POST",
+        body: JSON.stringify({ to: "closed" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(200);
+      // opensAt from existing election must be forwarded, not nulled
+      expect(mockUpdateStatus).toHaveBeenCalledWith(
+        mockDb,
+        electionId,
+        expect.objectContaining({ status: "closed", opensAt: 1738000000 }),
+      );
     });
   });
 });

@@ -70,7 +70,7 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   if (!existing) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  if (existing.status !== "draft" && existing.status !== "closed") {
+  if (existing.status !== "draft") {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
   await electionRepo.updateMetadata(db, id, body);
@@ -103,10 +103,16 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
     }
     throw err;
   }
+  const resolvedClosesAt =
+    closesAt !== undefined
+      ? closesAt
+      : to === "closed"
+        ? Math.floor(Date.now() / 1000)
+        : (existing.closesAt ?? undefined);
   await electionRepo.updateStatus(db, id, {
     status: to,
-    opensAt: opensAt ?? null,
-    closesAt: closesAt ?? (to === "closed" ? Math.floor(Date.now() / 1000) : null),
+    opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
+    closesAt: resolvedClosesAt,
   });
   const messageKey = (
     existing.status === "draft" && to === "open"

@@ -97,17 +97,13 @@ export const positions = sqliteTable(
   (table) => [uniqueIndex("idx_positions_election_name").on(table.electionId, table.name)],
 );
 
-// NOTE: SQLite's `ALTER TABLE ADD COLUMN ... REFERENCES` cannot express the
-// ON DELETE clause. The `onDelete: 'restrict'` FKs declared here (and on
-// `votes.position_id` / `votes.election_id`) end up as NO ACTION at the
-// DB level. Because `PRAGMA foreign_keys` is not set in `src/config/db`
-// (SQLite's default is OFF), the FK constraints are stored in the schema
-// but not enforced at runtime. Vote integrity is upheld by the unique
-// indexes (`votes_user_position_election_unique_idx` and
-// `votes_user_candidate_unique_idx`) — those are the source of truth per
-// the design spec. Do not "fix" by switching to a table-recreation
-// migration without first deciding whether FK enforcement should be
-// turned on; this codebase's migrations assume it is off.
+// NOTE: libSQL/Turso defaults to `PRAGMA foreign_keys = ON`, so the FK
+// constraints declared here ARE enforced at runtime. The `onDelete: 'restrict'`
+// on `candidates.position_id`, `votes.position_id`, and `votes.election_id`
+// prevents orphaned references. The unique indexes
+// (`votes_user_position_election_unique_idx` and
+// `votes_user_candidate_unique_idx`) provide additional integrity guarantees
+// per the design spec.
 export const candidates = sqliteTable("candidates", {
   createdAt: integer("created_at")
     .notNull()

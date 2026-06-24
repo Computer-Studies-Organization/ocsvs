@@ -1,5 +1,5 @@
 import type { Database } from "../repositories/database.type";
-import { asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { candidates, elections, positions, votes } from "@/database/schema";
 
 export interface ElectionWithPositions {
@@ -47,8 +47,13 @@ export const electionQueries = {
       .where(eq(positions.electionId, id))
       .orderBy(asc(positions.displayOrder), asc(positions.createdAt))
       .all();
-    const candidateRows = positionRows.length
-      ? await db.select().from(candidates).where(eq(candidates.isActive, 1)).all()
+    const positionIds = positionRows.map((p) => p.id);
+    const candidateRows = positionIds.length
+      ? await db
+          .select()
+          .from(candidates)
+          .where(and(inArray(candidates.positionId, positionIds), eq(candidates.isActive, 1)))
+          .all()
       : [];
     return {
       ...election,

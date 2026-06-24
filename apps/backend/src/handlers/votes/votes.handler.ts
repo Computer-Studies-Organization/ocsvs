@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { positionRepo } from "@/database/repositories/position.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { positions, votes } from "@/database/schema";
@@ -49,19 +50,30 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   // and the database row for that candidate must carry the same positionId.
   // This catches a client mistake without a round-trip; the DB unique index
   // `(user_id, position_id, election_id)` is the source of truth.
-  const positions = new Set<string>();
+  const positionIds = new Set<string>();
   for (const voteItem of voteItems) {
     const candidate = candidateMap.get(voteItem.candidateId);
     if (!candidate || candidate.positionId !== voteItem.positionId) {
       return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
     }
-    if (positions.has(candidate.positionId)) {
+    if (positionIds.has(candidate.positionId)) {
       return c.json(
         { message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE },
         httpStatusCodes.UNPROCESSABLE_ENTITY,
       );
     }
-    positions.add(candidate.positionId);
+    positionIds.add(candidate.positionId);
+  }
+
+  // Verify that all submitted positions belong to the target election.
+  // Without this check, a crafted request could submit votes with a
+  // positionId from a different election, corrupting results queries.
+  const electionPositions = await positionRepo.listByElection(db, electionId);
+  const validPositionIds = new Set(electionPositions.map((p) => p.id));
+  for (const pid of positionIds) {
+    if (!validPositionIds.has(pid)) {
+      return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
+    }
   }
 
   const now = Math.floor(Date.now() / 1000);

@@ -273,9 +273,6 @@
                       {#if u.deletedAt}
                         <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
                       {/if}
-                      {#if u.hasVoted}
-                        <span class='rounded bg-emerald-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>VOTED</span>
-                      {/if}
                     </div>
                   </td>
                   <td class='px-4 py-3'>
@@ -329,7 +326,7 @@
         <button onclick={() => viewUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
       </div>
       <div class='space-y-2 text-sm'>
-        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Has Voted', viewUser.hasVoted ? 'Yes' : 'No'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
+        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
           <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
             <span class='text-slate-400'>{label}</span>
             <span class='font-semibold text-slate-50'>{val}</span>

@@ -258,10 +258,24 @@ describe("positions routes", () => {
       expect(res.status).toBe(404);
     });
 
+    it("returns 409 when election status is not draft", async () => {
+      mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "open" }));
+      const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: "New" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
+    });
+
     it("returns 200 with the updated position", async () => {
       mockFindById
         .mockResolvedValueOnce(makePosition())
         .mockResolvedValueOnce(makePosition({ name: "Renamed" }));
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
       const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
         method: "PATCH",
         body: JSON.stringify({ name: "Renamed" }),
@@ -290,8 +304,20 @@ describe("positions routes", () => {
       expect(res.status).toBe(404);
     });
 
+    it("returns 409 when election status is not draft", async () => {
+      mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "open" }));
+      const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
+        method: "DELETE",
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
+    });
+
     it("returns 409 when position has candidates", async () => {
       mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountByPositionId.mockResolvedValue(2);
       const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
         method: "DELETE",
@@ -303,6 +329,7 @@ describe("positions routes", () => {
 
     it("returns 200 when position is empty", async () => {
       mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountByPositionId.mockResolvedValue(0);
       mockDelete.mockResolvedValue(true);
       const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {

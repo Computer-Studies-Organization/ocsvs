@@ -55,6 +55,10 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
   if (!existing || existing.electionId !== id) {
     return c.json({ message: ERROR_MESSAGES.POSITION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
+  const election = await electionRepo.findById(db, id);
+  if (!election || election.status !== "draft") {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
+  }
   await positionRepo.update(db, positionId, body);
   const updated = await positionRepo.findById(db, positionId);
   if (!updated) {
@@ -72,6 +76,10 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
   const existing = await positionRepo.findById(db, positionId);
   if (!existing || existing.electionId !== id) {
     return c.json({ message: ERROR_MESSAGES.POSITION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+  const election = await electionRepo.findById(db, id);
+  if (!election || election.status !== "draft") {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
   const candCount = await candidateRepo.countByPositionId(db, positionId, {
     includeInactive: true,

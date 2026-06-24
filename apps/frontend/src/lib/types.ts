@@ -26,7 +26,6 @@ export interface TUser {
   yearLevel: TYearLevel;
   course: TCourse;
   email?: string;
-  hasVoted: boolean;
 }
 
 export interface TUsersData {
@@ -41,14 +40,13 @@ export interface TUsersData {
   yearLevel: string;
   course: string;
   role: string;
-  hasVoted: boolean;
   deletedAt: number | null;
   createdAt: number;
   updatedAt: number;
   lastLogin: number | null;
 }
 
-export type TRegisterUser = Omit<TUser, "accountId" | "hasVoted"> & {
+export type TRegisterUser = Omit<TUser, "accountId"> & {
   username: string;
   password: string;
 };
@@ -90,19 +88,20 @@ export interface TVoteResponse {
 }
 
 export interface TVoteStatus {
-  hasVoted: boolean;
   votes: TVoteResponse[];
 }
 
 export interface TVoteCount {
   candidateId: string;
   candidateName: string;
-  position: string;
+  positionId: string;
+  positionName: string;
   voteCount: number;
 }
 
 export interface TVoteResults {
-  position: string;
+  positionId: string;
+  positionName: string;
   candidates: TVoteCount[];
 }
 

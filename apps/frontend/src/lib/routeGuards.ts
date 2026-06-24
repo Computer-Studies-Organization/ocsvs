@@ -25,12 +25,6 @@ export function getAdminRouteRedirectPath(data: TUserData | null | undefined) {
   return null;
 }
 
-export function getAdminElectionsRouteRedirectPath(data: TUserData | null | undefined) {
-  if (!data) {
-    return "/auth";
-  }
-  if (data.user.role !== UserRole.ADMIN) {
-    return "/voting";
-  }
-  return null;
-}
+// Alias — same logic, kept as a separate export so callers can import the more
+// specific name without changing the behaviour if the elections guard diverges later.
+export const getAdminElectionsRouteRedirectPath = getAdminRouteRedirectPath;

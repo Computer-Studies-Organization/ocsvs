@@ -6,6 +6,7 @@ import router from "./index";
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(() => "eq-mock"),
   and: vi.fn(() => "and-mock"),
+  asc: vi.fn(() => "asc-mock"),
   count: vi.fn(() => "count-mock"),
   desc: vi.fn(() => "desc-mock"),
   inArray: vi.fn(() => "inArray-mock"),
@@ -85,6 +86,7 @@ const {
   mockFindByUserAndElection,
   mockCountByCandidateId,
   mockGetCurrentElection,
+  mockListByElection,
 } = vi.hoisted(() => ({
   mockFindActiveByIds: vi.fn(),
   mockListWithVoteCount: vi.fn(),
@@ -96,6 +98,7 @@ const {
   mockFindByUserAndElection: vi.fn(),
   mockCountByCandidateId: vi.fn(),
   mockGetCurrentElection: vi.fn(),
+  mockListByElection: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -123,6 +126,12 @@ vi.mock("@/database/repositories/votes.repository", () => ({
     countByCandidateId: mockCountByCandidateId,
     insertMany: vi.fn(),
     deleteByUserId: vi.fn(),
+  },
+}));
+
+vi.mock("@/database/repositories/position.repository", () => ({
+  positionRepo: {
+    listByElection: mockListByElection,
   },
 }));
 
@@ -156,6 +165,7 @@ describe("votes Routes (repository)", () => {
     mockFindByUserAndElection.mockReset();
     mockCountByCandidateId.mockReset();
     mockGetCurrentElection.mockReset();
+    mockListByElection.mockReset();
     TEST_USER = {
       id: testUserId,
       accountId: testUserAccountId,
@@ -222,6 +232,10 @@ describe("votes Routes (repository)", () => {
           [testCandidateId2, { id: testCandidateId2, positionId: testPositionId2 }],
         ]),
       );
+      mockListByElection.mockResolvedValue([
+        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
+        { id: testPositionId2, electionId: testElectionId, name: "VP", displayOrder: 1 },
+      ]);
       mockDb.insert.mockImplementationOnce(() => mockDb);
       mockDb.values.mockImplementationOnce(() => mockDb);
       mockDb.run.mockResolvedValueOnce({ changes: 2 });
@@ -298,6 +312,9 @@ describe("votes Routes (repository)", () => {
           [testCandidateId2, { id: testCandidateId2, positionId: testPositionId1 }],
         ]),
       );
+      mockListByElection.mockResolvedValue([
+        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
+      ]);
 
       const res = await router.request("/votes", {
         method: "POST",

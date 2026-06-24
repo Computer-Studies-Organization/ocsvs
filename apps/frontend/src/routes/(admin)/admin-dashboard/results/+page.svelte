@@ -121,14 +121,14 @@
         </div>
       {:else}
         <div class='space-y-8'>
-          {#each resultsWithPercentages as pos (pos.position)}
+          {#each resultsWithPercentages as pos (pos.positionId)}
             {@const winner = pos.candidates[0]}
             {@const isTie = pos.candidates.length > 1 && pos.candidates[0].voteCount === pos.candidates[1].voteCount}
             <div class='rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl sm:p-8'>
               <!-- Position header -->
               <div class='mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-4'>
                 <div class='min-w-0 flex-1'>
-                  <h3 class='text-md font-bold text-slate-100 sm:text-xl'>{pos.position}</h3>
+                  <h3 class='text-md font-bold text-slate-100 sm:text-xl'>{pos.positionName}</h3>
                   <p class='mt-1 text-xs text-slate-400'>{pos.totalVotes} total {pos.totalVotes === 1 ? 'vote' : 'votes'}</p>
                 </div>
                 {#if !isTie && winner && winner.voteCount > 0}
