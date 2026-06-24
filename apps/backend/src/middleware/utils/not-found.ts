@@ -1,7 +1,7 @@
-import type { NotFoundHandler } from 'hono'
+import type { NotFoundHandler } from "hono";
 
-import { NOT_FOUND } from '@/openapi/http-status-codes'
-import { NOT_FOUND as NOT_FOUND_MESSAGE } from '@/openapi/http-status-phrases'
+import { NOT_FOUND } from "@/openapi/http-status-codes";
+import { NOT_FOUND as NOT_FOUND_MESSAGE } from "@/openapi/http-status-phrases";
 
 /**
  * Global 404 Not Found handler for the Hono application.
@@ -32,9 +32,12 @@ import { NOT_FOUND as NOT_FOUND_MESSAGE } from '@/openapi/http-status-phrases'
  * ```
  */
 const notFound: NotFoundHandler = (c) => {
-  return c.json({
-    message: `${NOT_FOUND_MESSAGE} - ${c.req.path}`,
-  }, NOT_FOUND)
-}
+  return c.json(
+    {
+      message: `${NOT_FOUND_MESSAGE} - ${c.req.path}`,
+    },
+    NOT_FOUND,
+  );
+};
 
-export default notFound
+export default notFound;

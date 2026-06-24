@@ -1,4 +1,4 @@
-import type { ZodSchema } from '@/lib/types/zod-types'
+import type { ZodSchema } from "@/lib/types/zod-types";
 
 /**
  * Creates a JSON content object for OpenAPI response definitions.
@@ -23,20 +23,18 @@ import type { ZodSchema } from '@/lib/types/zod-types'
  * }
  * ```
  */
-function jsonContent<
-  T extends ZodSchema,
->(schema: T, description: string) {
+function jsonContent<T extends ZodSchema>(schema: T, description: string) {
   return {
     content: {
-      'application/json': {
+      "application/json": {
         schema,
       },
     },
     description,
-  }
+  };
 }
 
-export default jsonContent
+export default jsonContent;
 
 /**
  * Creates a required JSON content object for OpenAPI request body definitions.
@@ -60,11 +58,9 @@ export default jsonContent
  * }
  * ```
  */
-export function jsonContentRequired<
-  T extends ZodSchema,
->(schema: T, description: string) {
+export function jsonContentRequired<T extends ZodSchema>(schema: T, description: string) {
   return {
     ...jsonContent(schema, description),
     required: true,
-  }
+  };
 }

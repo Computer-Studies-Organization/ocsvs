@@ -1,20 +1,21 @@
 {
   "name": "@cso-voting/backend",
-  "type": "module",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "oxlint . && oxfmt --check .",
+    "lint:fix": "oxlint . --fix && oxfmt .",
     "test": "vitest",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.7",
@@ -34,11 +35,10 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.19.0",
     "@types/node": "^20.19.27",
     "drizzle-kit": "^0.31.8",
-    "eslint": "^9.39.2",
-    "eslint-plugin-format": "^1.1.0",
+    "oxfmt": "^0.55.0",
+    "oxlint": "^1.70.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^5.1.4",

@@ -4,6 +4,7 @@
   import { getAdminRouteRedirectPath } from '$lib/routeGuards'
   import { authStore } from '$lib/stores/auth'
   import { derived } from 'svelte/store'
+  import Header from '$lib/components/ui/Header.svelte'
 
   const { children } = $props()
 
@@ -20,9 +21,14 @@
 </script>
 
 {#if $state.loading}
-  <div class='flex min-h-screen w-full items-center justify-center'>
+  <div class='flex min-h-screen w-full items-center justify-center bg-slate-950 text-slate-100'>
     <Spinner size={40} />
   </div>
 {:else if !$state.redirect}
-  {@render children()}
+  <div class='min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col'>
+    <Header adminMode={true} />
+    <main class='flex-1 flex flex-col'>
+      {@render children()}
+    </main>
+  </div>
 {/if}

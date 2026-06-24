@@ -1,16 +1,16 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { PublicRoute } from '@/middleware'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { PublicRoute } from "@/middleware";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: () => (
     <PublicRoute>
       <HomeComponent />
     </PublicRoute>
   ),
-})
+});
 
 function HomeComponent() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-slate-900">
@@ -19,7 +19,6 @@ function HomeComponent() {
 
       <div className="relative z-10 w-full max-w-2xl px-6">
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-3xl shadow-2xl text-center">
-
           <div className="relative inline-block mb-8">
             <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-30 rounded-full"></div>
             <img
@@ -38,14 +37,14 @@ function HomeComponent() {
             Empowering Student Leadership Through Voting
           </p>
 
-          <button onClick={() => navigate({ to: '/auth/login' })} className="cursor-pointer relative px-10 py-4 font-bold text-white bg-blue-500 rounded-md transition-all duration-300">
-            <span className="relative uppercase tracking-[0.2em] text-xl">
-              Start Voting
-            </span>
+          <button
+            onClick={() => navigate({ to: "/auth/login" })}
+            className="cursor-pointer relative px-10 py-4 font-bold text-white bg-blue-500 rounded-md transition-all duration-300"
+          >
+            <span className="relative uppercase tracking-[0.2em] text-xl">Start Voting</span>
           </button>
-
         </div>
       </div>
     </div>
-  )
+  );
 }

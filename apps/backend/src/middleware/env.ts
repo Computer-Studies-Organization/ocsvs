@@ -1,6 +1,6 @@
-import { config } from 'dotenv'
-import { expand } from 'dotenv-expand'
-import { z } from 'zod'
+import { config } from "dotenv";
+import { expand } from "dotenv-expand";
+import { z } from "zod";
 
 /**
  * Environment configuration module with type-safe validation.
@@ -28,7 +28,7 @@ import { z } from 'zod'
  * ```
  */
 
-expand(config())
+expand(config());
 
 /**
  * Zod schema defining the structure and validation rules for environment variables.
@@ -45,30 +45,25 @@ expand(config())
  * - LOG_LEVEL: Must be valid pino log level, defaults to 'info'
  */
 const EnvSchema = z.object({
-  NODE_ENV: z.string().default('development'),
+  NODE_ENV: z.string().default("development"),
   PORT: z.coerce.number().default(3000),
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   TURSO_DATABASE_URL: z.string().min(1),
-  TURSO_AUTH_TOKEN: z.preprocess(
-    val => val === '' ? undefined : val,
-    z.string().optional(),
-  ),
-})
+  TURSO_AUTH_TOKEN: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+});
 
 /**
  * TypeScript type representing the validated environment configuration.
  * Inferred from the EnvSchema to ensure type safety.
  */
-export type Environment = z.infer<typeof EnvSchema>
+export type Environment = z.infer<typeof EnvSchema>;
 
 export function parseEnv(data: any) {
-  const { data: env, error } = EnvSchema.safeParse(data)
+  const { data: env, error } = EnvSchema.safeParse(data);
 
   if (error) {
-    throw new Error(JSON.stringify(error))
+    throw new Error(JSON.stringify(error));
   }
 
-  return env
+  return env;
 }

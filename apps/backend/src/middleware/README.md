@@ -26,11 +26,11 @@ middleware/
 Provides type-safe environment variable validation and access throughout the application.
 
 ```typescript
-import env from '@/middleware/env'
+import env from "@/middleware/env";
 
-console.log(env.PORT) // number (default: 3000)
-console.log(env.NODE_ENV) // string (default: 'development')
-console.log(env.DATABASE_URL) // string (required)
+console.log(env.PORT); // number (default: 3000)
+console.log(env.NODE_ENV); // string (default: 'development')
+console.log(env.DATABASE_URL); // string (required)
 ```
 
 **Environment Variables:**
@@ -47,9 +47,9 @@ console.log(env.DATABASE_URL) // string (required)
 Structured logging with environment-aware formatting:
 
 ```typescript
-import { logger } from '@/middleware/pino-logger'
+import { logger } from "@/middleware/pino-logger";
 
-app.use(logger()) // Pretty logs in dev, JSON in production
+app.use(logger()); // Pretty logs in dev, JSON in production
 ```
 
 **Features:**
@@ -64,10 +64,10 @@ app.use(logger()) // Pretty logs in dev, JSON in production
 Simple timestamp-based logging:
 
 ```typescript
-import { customLogger } from '@/middleware/custom-logger'
+import { customLogger } from "@/middleware/custom-logger";
 
-app.use(logger(customLogger))
-customLogger('Server started', 'on port 3000')
+app.use(logger(customLogger));
+customLogger("Server started", "on port 3000");
 // Output: [2024-01-15T10:30:45.123Z] - Server started on port 3000
 ```
 
@@ -80,16 +80,16 @@ customLogger('Server started', 'on port 3000')
 Creates standardized error schemas for OpenAPI documentation:
 
 ```typescript
-import createErrorSchema from '@/middleware/utils/create-error-schema'
+import createErrorSchema from "@/middleware/utils/create-error-schema";
 
 const route = createRoute({
   responses: {
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
       createErrorSchema(insertItemSchema),
-      'Validation error',
+      "Validation error",
     ),
   },
-})
+});
 ```
 
 #### JSON Content Helpers (`json-content.ts`)
@@ -97,21 +97,21 @@ const route = createRoute({
 Standardizes JSON content objects for OpenAPI:
 
 ```typescript
-import jsonContent, { jsonContentRequired } from '@/middleware/utils/json-content'
+import jsonContent, { jsonContentRequired } from "@/middleware/utils/json-content";
 
 // For responses
 const readRoute = createRoute({
   responses: {
-    [httpStatusCodes.OK]: jsonContent(itemSchema, 'Item details'),
+    [httpStatusCodes.OK]: jsonContent(itemSchema, "Item details"),
   },
-})
+});
 
 // For required request bodies
 const createRouteDefinition = createRoute({
   request: {
-    body: jsonContentRequired(createItemSchema, 'Item to create'),
+    body: jsonContentRequired(createItemSchema, "Item to create"),
   },
-})
+});
 ```
 
 #### ID Parameter Validator (`id-params-validator.ts`)
@@ -119,13 +119,13 @@ const createRouteDefinition = createRoute({
 Validates numeric ID parameters in URL paths:
 
 ```typescript
-import IdParamsSchema from '@/middleware/utils/id-params-validator'
+import IdParamsSchema from "@/middleware/utils/id-params-validator";
 
 export const getItem = createRoute({
-  path: '/items/{id}',
+  path: "/items/{id}",
   request: { params: IdParamsSchema },
   // ...
-})
+});
 ```
 
 ### Error Handling
@@ -135,9 +135,9 @@ export const getItem = createRoute({
 Handles all unhandled errors with environment-aware details:
 
 ```typescript
-import onError from '@/middleware/utils/on-error'
+import onError from "@/middleware/utils/on-error";
 
-app.onError(onError)
+app.onError(onError);
 ```
 
 **Features:**
@@ -152,9 +152,9 @@ app.onError(onError)
 Standardized 404 responses for undefined routes:
 
 ```typescript
-import notFound from '@/middleware/utils/not-found'
+import notFound from "@/middleware/utils/not-found";
 
-app.notFound(notFound)
+app.notFound(notFound);
 ```
 
 ## Usage Patterns
@@ -162,40 +162,37 @@ app.notFound(notFound)
 ### Basic App Setup
 
 ```typescript
-import { createRouter } from '@/lib/create-app'
-import { logger } from '@/middleware/pino-logger'
-import notFound from '@/middleware/utils/not-found'
-import onError from '@/middleware/utils/on-error'
+import { createRouter } from "@/lib/create-app";
+import { logger } from "@/middleware/pino-logger";
+import notFound from "@/middleware/utils/not-found";
+import onError from "@/middleware/utils/on-error";
 
-const app = createRouter()
-  .use(logger())
-  .notFound(notFound)
-  .onError(onError)
+const app = createRouter().use(logger()).notFound(notFound).onError(onError);
 ```
 
 ### Route Definition with Utilities
 
 ```typescript
-import { createRoute } from '@hono/zod-openapi'
-import createErrorSchema from '@/middleware/utils/create-error-schema'
-import IdParamsSchema from '@/middleware/utils/id-params-validator'
-import jsonContent from '@/middleware/utils/json-content'
+import { createRoute } from "@hono/zod-openapi";
+import createErrorSchema from "@/middleware/utils/create-error-schema";
+import IdParamsSchema from "@/middleware/utils/id-params-validator";
+import jsonContent from "@/middleware/utils/json-content";
 
 export const getItem = createRoute({
-  path: '/items/{id}',
-  method: 'get',
+  path: "/items/{id}",
+  method: "get",
   request: {
     params: IdParamsSchema,
   },
   responses: {
-    [httpStatusCodes.OK]: jsonContent(itemSchema, 'Item details'),
-    [httpStatusCodes.NOT_FOUND]: jsonContent(errorSchema, 'Item not found'),
+    [httpStatusCodes.OK]: jsonContent(itemSchema, "Item details"),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(errorSchema, "Item not found"),
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
       createErrorSchema(IdParamsSchema),
-      'Invalid ID parameter'
+      "Invalid ID parameter",
     ),
   },
-})
+});
 ```
 
 ## Best Practices

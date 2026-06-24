@@ -37,12 +37,15 @@
     class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4'
     role='dialog'
     aria-modal='true'
+    tabindex="-1"
     onclick={onclose}
     onkeydown={(e) => { if (e.key === 'Escape') onclose() }}
   >
     <div
       class='relative w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[90vh] overflow-y-auto'
+      role="document"
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
     >
       <button
         type='button'

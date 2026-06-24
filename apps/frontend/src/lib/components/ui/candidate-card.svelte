@@ -22,7 +22,6 @@
   <div class='mb-2 flex items-center justify-between gap-2'>
     <div>
       <h4 class='text-base font-semibold text-slate-100 sm:text-lg'>{candidate.fullName}</h4>
-      <p class='text-[11px] text-slate-400 sm:text-xs'>{candidate.position}</p>
     </div>
   </div>
 

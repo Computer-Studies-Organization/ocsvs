@@ -1,60 +1,81 @@
-export interface TVotingState {
-  selectedVotes: Record<string, string | null>
-  currentPositionIndex: number
+import type { TVotingPageState } from "./voting-page-state";
+
+export interface TStepperVotingState {
+  selectedVotes: Record<string, string | null>;
+  currentPositionIndex: number;
 }
 
-export interface TPositionGroup {
-  id: string
-  title: string
-  description: string
-  candidates: Array<{ id: string, [key: string]: unknown }>
+export interface TStepperPosition {
+  id: string;
+  name: string;
+  displayOrder: number;
+  candidates: Array<{ id: string; fullName: string }>;
 }
 
-export function createVotingState(positionGroups: TPositionGroup[]): TVotingState {
-  const selectedVotes: Record<string, string | null> = {}
-  for (const group of positionGroups) {
-    selectedVotes[group.id] = null
+export function createVotingState(positions: TStepperPosition[]): TStepperVotingState {
+  const selectedVotes: Record<string, string | null> = {};
+  for (const pos of positions) {
+    selectedVotes[pos.id] = null;
   }
-  return { selectedVotes, currentPositionIndex: 0 }
+  return { selectedVotes, currentPositionIndex: 0 };
 }
 
-export function selectCandidate(state: TVotingState, positionId: string, candidateId: string): TVotingState {
-  return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: candidateId } }
+export function selectCandidate(
+  state: TStepperVotingState,
+  positionId: string,
+  candidateId: string,
+): TStepperVotingState {
+  return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: candidateId } };
 }
 
-export function goNext(state: TVotingState, totalPositions: number): TVotingState {
-  if (totalPositions === 0)
-    return state
-  return { ...state, currentPositionIndex: Math.min(state.currentPositionIndex + 1, totalPositions - 1) }
+export function goNext(state: TStepperVotingState, totalPositions: number): TStepperVotingState {
+  if (totalPositions === 0) return state;
+  return {
+    ...state,
+    currentPositionIndex: Math.min(state.currentPositionIndex + 1, totalPositions - 1),
+  };
 }
 
-export function goPrevious(state: TVotingState): TVotingState {
-  return { ...state, currentPositionIndex: Math.max(state.currentPositionIndex - 1, 0) }
+export function goPrevious(state: TStepperVotingState): TStepperVotingState {
+  return { ...state, currentPositionIndex: Math.max(state.currentPositionIndex - 1, 0) };
 }
 
-export function isFirstPosition(state: TVotingState): boolean {
-  return state.currentPositionIndex === 0
+export function isFirstPosition(state: TStepperVotingState): boolean {
+  return state.currentPositionIndex === 0;
 }
 
-export function isLastPosition(state: TVotingState, totalPositions: number): boolean {
-  return state.currentPositionIndex === totalPositions - 1
+export function isLastPosition(state: TStepperVotingState, totalPositions: number): boolean {
+  return state.currentPositionIndex === totalPositions - 1;
 }
 
-export function hasCurrentVote(state: TVotingState, positionGroups: TPositionGroup[]): boolean {
-  const currentGroup = positionGroups[state.currentPositionIndex]
-  if (!currentGroup)
-    return false
-  return state.selectedVotes[currentGroup.id] !== null
+export function hasCurrentVote(state: TStepperVotingState, positions: TStepperPosition[]): boolean {
+  const current = positions[state.currentPositionIndex];
+  if (!current) return false;
+  return state.selectedVotes[current.id] !== null;
 }
 
-export function allPositionsVoted(state: TVotingState, positionGroups: TPositionGroup[]): boolean {
-  return positionGroups.every(group => state.selectedVotes[group.id] !== null)
+export function allPositionsVoted(
+  state: TStepperVotingState,
+  positions: TStepperPosition[],
+): boolean {
+  return positions.every((p) => state.selectedVotes[p.id] !== null);
 }
 
-export function getSelectedCandidateIds(state: TVotingState): string[] {
-  return Object.values(state.selectedVotes).filter((id): id is string => id !== null)
+export function getSelectedVotes(
+  state: TStepperVotingState,
+): Array<{ positionId: string; candidateId: string }> {
+  const out: Array<{ positionId: string; candidateId: string }> = [];
+  for (const [positionId, candidateId] of Object.entries(state.selectedVotes)) {
+    if (candidateId !== null) out.push({ positionId, candidateId });
+  }
+  return out;
 }
 
-export function getSelectedCount(state: TVotingState): number {
-  return Object.values(state.selectedVotes).filter(id => id !== null).length
+export function getSelectedCount(state: TStepperVotingState): number {
+  return Object.values(state.selectedVotes).filter((id) => id !== null).length;
+}
+
+export function withVoting(page: TVotingPageState, voting: TStepperVotingState): TVotingPageState {
+  if (page.kind !== "stepper") return page;
+  return { ...page, voting };
 }

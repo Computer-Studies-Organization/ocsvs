@@ -1,49 +1,48 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
-import router from './index'
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import router from "./index";
 
 // Mock drizzle-orm
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn(() => 'eq-mock'),
-  and: vi.fn(() => 'and-mock'),
-  count: vi.fn(() => 'count-mock'),
-  desc: vi.fn(() => 'desc-mock'),
-  inArray: vi.fn(() => 'inArray-mock'),
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn(() => "eq-mock"),
+  and: vi.fn(() => "and-mock"),
+  asc: vi.fn(() => "asc-mock"),
+  count: vi.fn(() => "count-mock"),
+  desc: vi.fn(() => "desc-mock"),
+  inArray: vi.fn(() => "inArray-mock"),
   sql: vi.fn(() => ({
-    get: () => 'CURRENT_TIMESTAMP',
-    toSQL: () => ({ sql: 'CURRENT_TIMESTAMP', params: [] }),
+    get: () => "CURRENT_TIMESTAMP",
+    toSQL: () => ({ sql: "CURRENT_TIMESTAMP", params: [] }),
   })),
-}))
+}));
 
 let TEST_USER = {
-  id: 'test-user-id',
-  accountId: 'test-account-id',
-  hasVoted: 0,
-  role: 'user',
-}
-let AUTH_ENABLED = true
+  id: "test-user-id",
+  accountId: "test-account-id",
+  role: "user",
+};
+let AUTH_ENABLED = true;
 
-vi.mock('@/middleware/auth', () => ({
+vi.mock("@/middleware/auth", () => ({
   requireAuth: async (c: any, next: any) => {
-    if (!AUTH_ENABLED)
-      return c.json({ message: 'Unauthorized' }, 401)
-    c.set('authUser', {
+    if (!AUTH_ENABLED) return c.json({ message: "Unauthorized" }, 401);
+    c.set("authUser", {
       id: TEST_USER.id,
-      email: 'test@example.com',
-      username: 'testuser',
+      email: "test@example.com",
+      username: "testuser",
       role: TEST_USER.role,
-    })
-    await next()
+    });
+    await next();
   },
   requireAdmin: async (c: any, next: any) => {
-    if (!AUTH_ENABLED || TEST_USER.role !== 'admin') {
-      return c.json({ message: 'Forbidden' }, 403)
+    if (!AUTH_ENABLED || TEST_USER.role !== "admin") {
+      return c.json({ message: "Forbidden" }, 403);
     }
-    await next()
+    await next();
   },
-}))
+}));
 
-let mockDb: any
+let mockDb: any;
 
 function createMockDb() {
   return {
@@ -67,164 +66,204 @@ function createMockDb() {
     set: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     batch: vi.fn().mockResolvedValue(undefined),
-  }
+  };
 }
 
-mockDb = createMockDb()
+mockDb = createMockDb();
 
-vi.mock('@/config/db', () => ({
+vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
-}))
+}));
 
-const { mockFindActiveByIds, mockListWithVoteCount, mockGetForAdminView, mockFindByAccountId, mockExistsForUser, mockFindByUserId, mockCountByCandidateId }
-  = vi.hoisted(() => ({
-    mockFindActiveByIds: vi.fn(),
-    mockListWithVoteCount: vi.fn(),
-    mockGetForAdminView: vi.fn(),
-    mockFindByAccountId: vi.fn(),
-    mockExistsForUser: vi.fn(),
-    mockFindByUserId: vi.fn(),
-    mockCountByCandidateId: vi.fn(),
-  }))
+const {
+  mockFindActiveByIds,
+  mockListWithVoteCount,
+  mockGetForAdminView,
+  mockFindByAccountId,
+  mockExistsForUser,
+  mockExistsForUserInElection,
+  mockFindByUserId,
+  mockFindByUserAndElection,
+  mockCountByCandidateId,
+  mockGetCurrentElection,
+  mockListByElection,
+  mockFindElectionById,
+  mockFindLatestClosed,
+  mockGetElectionResults,
+} = vi.hoisted(() => ({
+  mockFindActiveByIds: vi.fn(),
+  mockListWithVoteCount: vi.fn(),
+  mockGetForAdminView: vi.fn(),
+  mockFindByAccountId: vi.fn(),
+  mockExistsForUser: vi.fn(),
+  mockExistsForUserInElection: vi.fn(),
+  mockFindByUserId: vi.fn(),
+  mockFindByUserAndElection: vi.fn(),
+  mockCountByCandidateId: vi.fn(),
+  mockGetCurrentElection: vi.fn(),
+  mockListByElection: vi.fn(),
+  mockFindElectionById: vi.fn(),
+  mockFindLatestClosed: vi.fn(),
+  mockGetElectionResults: vi.fn(),
+}));
 
-vi.mock('@/database/repositories/candidates.repository', () => ({
+vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     findActiveByIds: mockFindActiveByIds,
     listWithVoteCount: mockListWithVoteCount,
     getForAdminView: mockGetForAdminView,
   },
-}))
+}));
 
-vi.mock('@/database/repositories/users.repository', () => ({
+vi.mock("@/database/repositories/users.repository", () => ({
   userRepo: {
     findByAccountId: mockFindByAccountId,
     getAccountId: vi.fn(),
     updateUser: vi.fn(),
-    setHasVoted: vi.fn(),
   },
-}))
+}));
 
-vi.mock('@/database/repositories/votes.repository', () => ({
+vi.mock("@/database/repositories/votes.repository", () => ({
   voteRepo: {
     findByUserId: mockFindByUserId,
+    findByUserAndElection: mockFindByUserAndElection,
     existsForUser: mockExistsForUser,
+    existsForUserInElection: mockExistsForUserInElection,
     countByCandidateId: mockCountByCandidateId,
     insertMany: vi.fn(),
     deleteByUserId: vi.fn(),
   },
-}))
+}));
 
-describe('votes Routes (repository)', () => {
-  const testUserId = 'test-user-id'
-  const testUserAccountId = 'test-account-id'
-  const testCandidateId1 = 'test-candidate-id-1'
-  const testCandidateId2 = 'test-candidate-id-2'
-  const testVoteId1 = 'test-vote-id-1'
-  const testVoteId2 = 'test-vote-id-2'
+vi.mock("@/database/repositories/position.repository", () => ({
+  positionRepo: {
+    listByElection: mockListByElection,
+  },
+}));
+
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findById: mockFindElectionById,
+    findLatestClosed: mockFindLatestClosed,
+  },
+}));
+
+vi.mock("@/database/queries/election.queries", () => ({
+  electionQueries: {
+    getCurrentElection: mockGetCurrentElection,
+    getResults: mockGetElectionResults,
+  },
+}));
+
+describe("votes Routes (repository)", () => {
+  const testUserId = "test-user-id";
+  const testUserAccountId = "test-account-id";
+  const testCandidateId1 = "test-candidate-id-1";
+  const testCandidateId2 = "test-candidate-id-2";
+  const testPositionId1 = "test-position-id-1";
+  const testPositionId2 = "test-position-id-2";
+  const testElectionId = "test-election-id";
+  const testVoteId1 = "test-vote-id-1";
+  const testVoteId2 = "test-vote-id-2";
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb = createMockDb()
-    mockFindActiveByIds.mockReset()
-    mockListWithVoteCount.mockReset()
-    mockGetForAdminView.mockReset()
-    mockFindByAccountId.mockReset()
-    mockExistsForUser.mockReset()
-    mockFindByUserId.mockReset()
-    mockCountByCandidateId.mockReset()
+    vi.clearAllMocks();
+    mockDb = createMockDb();
+    mockFindActiveByIds.mockReset();
+    mockListWithVoteCount.mockReset();
+    mockGetForAdminView.mockReset();
+    mockFindByAccountId.mockReset();
+    mockExistsForUser.mockReset();
+    mockExistsForUserInElection.mockReset();
+    mockFindByUserId.mockReset();
+    mockFindByUserAndElection.mockReset();
+    mockCountByCandidateId.mockReset();
+    mockGetCurrentElection.mockReset();
+    mockListByElection.mockReset();
+    mockFindElectionById.mockReset();
+    mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "open" });
+    mockFindLatestClosed.mockReset();
+    mockGetElectionResults.mockReset();
     TEST_USER = {
       id: testUserId,
       accountId: testUserAccountId,
-      hasVoted: 0,
-      role: 'user',
-    }
-    AUTH_ENABLED = true
-  })
+      role: "user",
+    };
+    AUTH_ENABLED = true;
+  });
 
   const setAdmin = () => {
-    TEST_USER = { ...TEST_USER, role: 'admin' }
-  }
+    TEST_USER = { ...TEST_USER, role: "admin" };
+  };
   const setUser = () => {
-    TEST_USER = { ...TEST_USER, role: 'user', hasVoted: 0 }
-  }
-  const setUserVoted = () => {
-    TEST_USER = { ...TEST_USER, hasVoted: 1 }
-  }
+    TEST_USER = { ...TEST_USER, role: "user" };
+  };
 
-  describe('authentication & Authorization', () => {
-    it('returns 401 when not authenticated for getMyVoteStatus', async () => {
-      AUTH_ENABLED = false
-      const res = await router.request('/votes/me', { method: 'GET' })
-      expect(res.status).toBe(401)
-    })
+  describe("authentication & Authorization", () => {
+    it("returns 401 when not authenticated for getMyVoteStatus", async () => {
+      AUTH_ENABLED = false;
+      const res = await router.request("/votes/me", { method: "GET" });
+      expect(res.status).toBe(401);
+    });
 
-    it('returns 401 when not authenticated for submitVote', async () => {
-      AUTH_ENABLED = false
-      const res = await router.request('/votes', {
-        method: 'POST',
-        body: JSON.stringify({ votes: [] }),
-        headers: { 'Content-Type': 'application/json' },
-      })
-      expect(res.status).toBe(401)
-    })
+    it("returns 401 when not authenticated for submitVote", async () => {
+      AUTH_ENABLED = false;
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({ electionId: testElectionId, votes: [] }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(401);
+    });
 
-    it('returns 401 when not authenticated for withdrawVote', async () => {
-      AUTH_ENABLED = false
-      const res = await router.request('/votes/me', { method: 'DELETE' })
-      expect(res.status).toBe(401)
-    })
+    it("returns 401 when not authenticated for getVoteResults", async () => {
+      AUTH_ENABLED = false;
+      const res = await router.request("/votes/results", { method: "GET" });
+      expect(res.status).toBe(401);
+    });
 
-    it('returns 401 when not authenticated for getVoteResults', async () => {
-      AUTH_ENABLED = false
-      const res = await router.request('/votes/results', { method: 'GET' })
-      expect(res.status).toBe(401)
-    })
+    it("returns 403 when authenticated as non-admin for getVoteResults", async () => {
+      setUser();
+      const res = await router.request("/votes/results", { method: "GET" });
+      expect(res.status).toBe(403);
+    });
 
-    it('returns 403 when authenticated as non-admin for getVoteResults', async () => {
-      setUser()
-      const res = await router.request('/votes/results', { method: 'GET' })
-      expect(res.status).toBe(403)
-    })
+    it("returns 403 when authenticated as non-admin for getCandidateVoteCount", async () => {
+      setUser();
+      const res = await router.request(`/votes/candidates/${testCandidateId1}/count`, {
+        method: "GET",
+      });
+      expect(res.status).toBe(403);
+    });
+  });
 
-    it('returns 403 when authenticated as non-admin for getCandidateVoteCount', async () => {
-      setUser()
-      const res = await router.request(
-        `/votes/candidates/${testCandidateId1}/count`,
-        { method: 'GET' },
-      )
-      expect(res.status).toBe(403)
-    })
-  })
+  describe("pOST /votes - Submit Vote", () => {
+    it("should successfully submit votes for multiple candidates", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
 
-  describe('pOST /votes - Submit Vote', () => {
-    it('should successfully submit votes for multiple candidates', async () => {
-      setUser()
-      const mockUser = {
-        id: testUserId,
-        accountId: testUserAccountId,
-        hasVoted: 0,
-      }
-
-      mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockExistsForUserInElection.mockResolvedValue(false);
       mockFindActiveByIds.mockResolvedValue(
         new Map([
-          [testCandidateId1, { id: testCandidateId1, position: 'President' }],
-          [testCandidateId2, { id: testCandidateId2, position: 'Vice President' }],
+          [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
+          [testCandidateId2, { id: testCandidateId2, positionId: testPositionId2 }],
         ]),
-      )
-      mockDb.insert.mockImplementationOnce(() => mockDb)
-      mockDb.values.mockImplementationOnce(() => mockDb)
-      mockDb.run.mockResolvedValueOnce({ changes: 2 })
-      mockDb.update.mockImplementationOnce(() => mockDb)
-      mockDb.set.mockImplementationOnce(() => mockDb)
-      mockDb.run.mockResolvedValueOnce({ changes: 1 })
+      );
+      mockListByElection.mockResolvedValue([
+        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
+        { id: testPositionId2, electionId: testElectionId, name: "VP", displayOrder: 1 },
+      ]);
+      mockDb.insert.mockImplementationOnce(() => mockDb);
+      mockDb.values.mockImplementationOnce(() => mockDb);
+      mockDb.run.mockResolvedValueOnce({ changes: 2 });
       mockFindByUserId.mockResolvedValue([
         {
           id: testVoteId1,
           userId: testUserId,
           candidateId: testCandidateId1,
-          position: 'President',
+          positionId: testPositionId1,
+          electionId: testElectionId,
           createdAt: Math.floor(Date.now() / 1000),
           updatedAt: Math.floor(Date.now() / 1000),
         },
@@ -232,234 +271,314 @@ describe('votes Routes (repository)', () => {
           id: testVoteId2,
           userId: testUserId,
           candidateId: testCandidateId2,
-          position: 'Vice President',
+          positionId: testPositionId2,
+          electionId: testElectionId,
           createdAt: Math.floor(Date.now() / 1000),
           updatedAt: Math.floor(Date.now() / 1000),
         },
-      ])
+      ]);
 
-      const res = await router.request('/votes', {
-        method: 'POST',
+      const res = await router.request("/votes", {
+        method: "POST",
         body: JSON.stringify({
+          electionId: testElectionId,
           votes: [
-            { candidateId: testCandidateId1 },
-            { candidateId: testCandidateId2 },
+            { candidateId: testCandidateId1, positionId: testPositionId1 },
+            { candidateId: testCandidateId2, positionId: testPositionId2 },
           ],
         }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+        headers: { "Content-Type": "application/json" },
+      });
 
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY)
-      expect(json.votes).toHaveLength(2)
-    })
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY);
+      expect(json.votes).toHaveLength(2);
+    });
 
-    it('should return 409 if user has already voted', async () => {
-      setUserVoted()
+    it("should return 409 if user has already voted", async () => {
+      setUser();
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
-        hasVoted: 1,
-      })
+      });
+      mockExistsForUserInElection.mockResolvedValue(true);
 
-      const res = await router.request('/votes', {
-        method: 'POST',
-        body: JSON.stringify({ votes: [{ candidateId: testCandidateId1 }] }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-      expect(res.status).toBe(409)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST)
-    })
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST);
+    });
 
-    it('should return 422 for duplicate position votes', async () => {
-      setUser()
-      const mockUser = {
-        id: testUserId,
-        accountId: testUserAccountId,
-        hasVoted: 0,
-      }
-      mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+    it("should return 422 for duplicate position votes", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockExistsForUserInElection.mockResolvedValue(false);
 
       mockFindActiveByIds.mockResolvedValue(
         new Map([
-          [testCandidateId1, { id: testCandidateId1, position: 'President' }],
-          [testCandidateId2, { id: testCandidateId2, position: 'President' }],
+          [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
+          [testCandidateId2, { id: testCandidateId2, positionId: testPositionId1 }],
         ]),
-      )
+      );
+      mockListByElection.mockResolvedValue([
+        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
+      ]);
 
-      const res = await router.request('/votes', {
-        method: 'POST',
+      const res = await router.request("/votes", {
+        method: "POST",
         body: JSON.stringify({
+          electionId: testElectionId,
           votes: [
-            { candidateId: testCandidateId1 },
-            { candidateId: testCandidateId2 },
+            { candidateId: testCandidateId1, positionId: testPositionId1 },
+            { candidateId: testCandidateId2, positionId: testPositionId1 },
           ],
         }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+        headers: { "Content-Type": "application/json" },
+      });
 
-      expect(res.status).toBe(422)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.DUPLICATE_POSITION_VOTE)
-    })
+      expect(res.status).toBe(422);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.DUPLICATE_POSITION_VOTE);
+    });
 
-    it('should return 404 for non-existent candidate', async () => {
-      setUser()
-      const mockUser = {
-        id: testUserId,
-        accountId: testUserAccountId,
-        hasVoted: 0,
-      }
-      mockFindByAccountId.mockResolvedValue(mockUser)
-      mockExistsForUser.mockResolvedValue(false)
+    it("should return 404 for non-existent candidate", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockExistsForUserInElection.mockResolvedValue(false);
 
-      mockFindActiveByIds.mockResolvedValue(new Map())
+      mockFindActiveByIds.mockResolvedValue(new Map());
 
-      const res = await router.request('/votes', {
-        method: 'POST',
-        body: JSON.stringify({ votes: [{ candidateId: testCandidateId1 }] }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-      expect(res.status).toBe(404)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND)
-    })
-  })
+      expect(res.status).toBe(404);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_NOT_FOUND);
+    });
 
-  describe('gET /votes/me - getMyVoteStatus', () => {
-    it('should return vote status when user has votes', async () => {
-      setUser()
+    it("should return 400 when candidate positionId does not match the request", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockExistsForUserInElection.mockResolvedValue(false);
+      mockFindActiveByIds.mockResolvedValue(
+        new Map([[testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }]]),
+      );
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId2 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(400);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.INVALID_CANDIDATE);
+    });
+
+    it("should return 404 when target election is not found", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockFindElectionById.mockResolvedValue(null);
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: "non-existent-election-id",
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(404);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_FOUND);
+    });
+
+    it("should return 409 when target election is not open", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "draft" });
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
+    });
+  });
+
+  describe("gET /votes/me - getMyVotes", () => {
+    it("returns vote picks for the current open election", async () => {
+      setUser();
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
-        hasVoted: 1,
-      })
-      mockFindByUserId.mockResolvedValue([
+      });
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindByUserAndElection.mockResolvedValue([
         {
           id: testVoteId1,
           userId: testUserId,
           candidateId: testCandidateId1,
-          position: 'President',
+          positionId: testPositionId1,
+          electionId: testElectionId,
           createdAt: 1000,
           updatedAt: 1000,
         },
-      ])
+      ]);
 
-      const res = await router.request('/votes/me', { method: 'GET' })
+      const res = await router.request("/votes/me", { method: "GET" });
 
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json.hasVoted).toBe(true)
-      expect(json.votes).toHaveLength(1)
-    })
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.electionId).toBe(testElectionId);
+      expect(json.votes).toHaveLength(1);
+      expect(json.votes[0]).toEqual({
+        candidateId: testCandidateId1,
+        positionId: testPositionId1,
+      });
+    });
 
-    it('should return empty votes when user has not voted', async () => {
-      setUser()
+    it("returns empty votes when there is no open election", async () => {
+      setUser();
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
-        hasVoted: 0,
-      })
-      mockFindByUserId.mockResolvedValue([])
+      });
+      mockGetCurrentElection.mockResolvedValue(null);
 
-      const res = await router.request('/votes/me', { method: 'GET' })
+      const res = await router.request("/votes/me", { method: "GET" });
 
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json).toEqual({ hasVoted: false, votes: [] })
-    })
-  })
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json).toEqual({ electionId: null, votes: [] });
+    });
 
-  describe('gET /votes/results - getVoteResults', () => {
-    it('should return vote results grouped by position', async () => {
-      setAdmin()
-      const mockResults = [
-        {
-          candidateId: testCandidateId1,
-          candidateName: 'John Doe',
-          position: 'President',
-          voteCount: 5,
-        },
-        {
-          candidateId: testCandidateId2,
-          candidateName: 'Jane Smith',
-          position: 'Vice President',
-          voteCount: 3,
-        },
-      ]
-      mockListWithVoteCount.mockResolvedValue(mockResults)
-
-      const res = await router.request('/votes/results', { method: 'GET' })
-
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json.results).toHaveLength(2)
-      expect(json.meta.totalVotes).toBe(8)
-      expect(json.meta.totalPositions).toBe(2)
-    })
-
-    it('should include zero-vote candidates', async () => {
-      setAdmin()
-      const mockResults = [
-        {
-          candidateId: testCandidateId1,
-          candidateName: 'John Doe',
-          position: 'President',
-          voteCount: 0,
-        },
-      ]
-      mockListWithVoteCount.mockResolvedValue(mockResults)
-
-      const res = await router.request('/votes/results', { method: 'GET' })
-
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json.results[0].candidates[0].voteCount).toBe(0)
-    })
-  })
-
-  describe('dELETE /votes/me - withdrawVote', () => {
-    it('should successfully withdraw votes', async () => {
-      setUser()
+    it("returns empty votes when user has not voted in the current election", async () => {
+      setUser();
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
-        hasVoted: 1,
-      })
-      mockExistsForUser.mockResolvedValue(true)
-      mockDb.delete.mockImplementationOnce(() => mockDb)
-      mockDb.where.mockImplementationOnce(() => mockDb)
-      mockDb.run.mockResolvedValueOnce({ changes: 1 })
-      mockDb.update.mockImplementationOnce(() => mockDb)
-      mockDb.set.mockImplementationOnce(() => mockDb)
-      mockDb.run.mockResolvedValueOnce({ changes: 1 })
+      });
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindByUserAndElection.mockResolvedValue([]);
 
-      const res = await router.request('/votes/me', { method: 'DELETE' })
+      const res = await router.request("/votes/me", { method: "GET" });
 
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.VOTE_WITHDRAWN_SUCCESSFULLY)
-    })
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.electionId).toBe(testElectionId);
+      expect(json.votes).toEqual([]);
+    });
 
-    it('should return 404 when no votes found to withdraw', async () => {
-      setUser()
-      mockFindByAccountId.mockResolvedValue({
-        id: testUserId,
-        accountId: testUserAccountId,
-        hasVoted: 0,
-      })
-      mockExistsForUser.mockResolvedValue(false)
+    it("returns empty votes when user record is missing", async () => {
+      setUser();
+      mockFindByAccountId.mockResolvedValue(null);
 
-      const res = await router.request('/votes/me', { method: 'DELETE' })
+      const res = await router.request("/votes/me", { method: "GET" });
 
-      expect(res.status).toBe(404)
-      const json = (await res.json()) as any
-      expect(json.message).toBe(ERROR_MESSAGES.VOTE_NOT_FOUND)
-    })
-  })
-})
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json).toEqual({ electionId: null, votes: [] });
+    });
+  });
+
+  describe("gET /votes/results - getVoteResults", () => {
+    it("should return vote results grouped by position", async () => {
+      setAdmin();
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockGetElectionResults.mockResolvedValue([
+        {
+          positionId: testPositionId1,
+          positionName: "President",
+          totalVotes: 5,
+          candidates: [
+            {
+              candidateId: testCandidateId1,
+              fullName: "John Doe",
+              voteCount: 5,
+              percentage: 100,
+            },
+          ],
+        },
+        {
+          positionId: testPositionId2,
+          positionName: "Vice President",
+          totalVotes: 3,
+          candidates: [
+            {
+              candidateId: testCandidateId2,
+              fullName: "Jane Smith",
+              voteCount: 3,
+              percentage: 100,
+            },
+          ],
+        },
+      ]);
+
+      const res = await router.request("/votes/results", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.results).toHaveLength(2);
+      expect(json.meta.totalVotes).toBe(8);
+      expect(json.meta.totalPositions).toBe(2);
+    });
+
+    it("should include zero-vote candidates", async () => {
+      setAdmin();
+      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockGetElectionResults.mockResolvedValue([
+        {
+          positionId: testPositionId1,
+          positionName: "President",
+          totalVotes: 0,
+          candidates: [
+            {
+              candidateId: testCandidateId1,
+              fullName: "John Doe",
+              voteCount: 0,
+              percentage: 0,
+            },
+          ],
+        },
+      ]);
+
+      const res = await router.request("/votes/results", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.results[0].candidates[0].voteCount).toBe(0);
+    });
+  });
+});

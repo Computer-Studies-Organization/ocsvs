@@ -26,6 +26,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Setup env files for CI
+        run: |
+          cp apps/frontend/.env.example apps/frontend/.env
+          cp apps/backend/.env.example apps/backend/.env
+
       - name: Typecheck
         run: pnpm -w typecheck
 

@@ -1,112 +1,112 @@
-import type { AppRouteHandler } from '@/lib/types/app-types'
+import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   getCandidateVoteCountRoute,
-  getMyVoteStatusRoute,
+  getMyVotesRoute,
   getVoteResultsRoute,
   submitVoteRoute,
-  withdrawVoteRoute,
-} from '@/routes/votes/routes'
-import { eq } from 'drizzle-orm'
-import { createDb } from '@/config/db'
-import { candidateRepo } from '@/database/repositories/candidates.repository'
-import { userRepo } from '@/database/repositories/users.repository'
-import { voteRepo } from '@/database/repositories/votes.repository'
-import { users, votes } from '@/database/schema'
-import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
-import * as httpStatusCodes from '@/openapi/http-status-codes'
+} from "@/routes/votes/routes";
+import { eq } from "drizzle-orm";
+import { createDb } from "@/config/db";
+import { electionQueries } from "@/database/queries/election.queries";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { positionRepo } from "@/database/repositories/position.repository";
+import { userRepo } from "@/database/repositories/users.repository";
+import { voteRepo } from "@/database/repositories/votes.repository";
+import { electionRepo } from "@/database/repositories/election.repository";
+import { positions, votes } from "@/database/schema";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => {
-  const { votes: voteItems } = c.req.valid('json')
-  const authUser = c.get('authUser')
-  const { db } = createDb(c)
+  const { electionId, votes: voteItems } = c.req.valid("json");
+  const authUser = c.get("authUser");
+  const { db } = createDb(c);
 
   // Get the user associated with this account
-  const user = await userRepo.findByAccountId(db, authUser.id)
+  const user = await userRepo.findByAccountId(db, authUser.id);
 
   if (!user) {
-    return c.json(
-      { message: ERROR_MESSAGES.USER_NOT_FOUND },
-      httpStatusCodes.BAD_REQUEST,
-    )
+    return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.BAD_REQUEST);
   }
 
-  // Check hasVoted flag first (quick check)
-  if (user.hasVoted === 1) {
-    return c.json(
-      { message: ERROR_MESSAGES.VOTE_ALREADY_CAST },
-      httpStatusCodes.CONFLICT,
-    )
+  // Fetch the election and verify it's open
+  const election = await electionRepo.findById(db, electionId);
+  if (!election) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+  if (election.status !== "open") {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_OPEN }, httpStatusCodes.CONFLICT);
+  }
+
+  // Source of truth for "has voted" is the votes table (unique index on
+  // (user_id, position_id, election_id)). The legacy users.has_voted column
+  // is gone.
+  const hasExistingVotes = await voteRepo.existsForUserInElection(db, user.id, electionId);
+
+  if (hasExistingVotes) {
+    return c.json({ message: ERROR_MESSAGES.VOTE_ALREADY_CAST }, httpStatusCodes.CONFLICT);
   }
 
   // Extract candidate IDs
-  const candidateIds = voteItems.map((v: { candidateId: string }) => v.candidateId)
+  const candidateIds = voteItems.map((v) => v.candidateId);
 
   // Batch validate all candidates are active
-  const candidateMap = await candidateRepo.findActiveByIds(db, candidateIds)
+  const candidateMap = await candidateRepo.findActiveByIds(db, candidateIds);
   if (candidateMap.size !== candidateIds.length) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
-  // Check for duplicate positions (user can only vote for one candidate per position)
-  const positions = new Set<string>()
-  for (const candidate of candidateMap.values()) {
-    if (positions.has(candidate.position)) {
+  // Defensive check: the request body says (candidateId, positionId) per vote,
+  // and the database row for that candidate must carry the same positionId.
+  // This catches a client mistake without a round-trip; the DB unique index
+  // `(user_id, position_id, election_id)` is the source of truth.
+  const positionIds = new Set<string>();
+  for (const voteItem of voteItems) {
+    const candidate = candidateMap.get(voteItem.candidateId);
+    if (!candidate || candidate.positionId !== voteItem.positionId) {
+      return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
+    }
+    if (positionIds.has(candidate.positionId)) {
       return c.json(
         { message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE },
         httpStatusCodes.UNPROCESSABLE_ENTITY,
-      )
+      );
     }
-    positions.add(candidate.position)
+    positionIds.add(candidate.positionId);
   }
 
-  // Double-check no existing votes (in case hasVoted flag is out of sync)
-  const hasExistingVotes = await voteRepo.existsForUser(db, user.id)
-
-  if (hasExistingVotes) {
-    return c.json(
-      { message: ERROR_MESSAGES.VOTE_ALREADY_CAST },
-      httpStatusCodes.CONFLICT,
-    )
+  // Verify that all submitted positions belong to the target election.
+  // Without this check, a crafted request could submit votes with a
+  // positionId from a different election, corrupting results queries.
+  const electionPositions = await positionRepo.listByElection(db, electionId);
+  const validPositionIds = new Set(electionPositions.map((p) => p.id));
+  for (const pid of positionIds) {
+    if (!validPositionIds.has(pid)) {
+      return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
+    }
   }
 
-  const now = Math.floor(Date.now() / 1000)
-  const insertedVotes: typeof votes.$inferInsert[] = []
-
-  // Create vote records
-  for (const voteItem of voteItems) {
-    const candidate = candidateMap.get(voteItem.candidateId)
-    if (!candidate) {
-      // Defensive: should not happen given earlier check
-      return c.json(
-        { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-        httpStatusCodes.NOT_FOUND,
-      )
-    }
-
-    const voteId = crypto.randomUUID()
-    insertedVotes.push({
+  const now = Math.floor(Date.now() / 1000);
+  const insertedVotes: (typeof votes.$inferInsert)[] = voteItems.map((voteItem) => {
+    const voteId = crypto.randomUUID();
+    return {
       id: voteId,
       userId: user.id,
       candidateId: voteItem.candidateId,
-      position: candidate.position,
+      positionId: voteItem.positionId,
+      electionId,
       createdAt: now,
       updatedAt: now,
-    })
-  }
+    };
+  });
 
-  // Insert all votes and update user's hasVoted flag (atomic D1 batch)
-  await db.batch([
-    db.insert(votes).values(insertedVotes),
-    db.update(users)
-      .set({ hasVoted: 1, updatedAt: now })
-      .where(eq(users.id, user.id)),
-  ])
+  // Atomic insert. The (user_id, position_id, election_id) unique index on
+  // `votes` prevents double-voting per position; an attempt to vote twice will
+  // surface as a unique-constraint violation from libSQL.
+  await db.batch([db.insert(votes).values(insertedVotes)]);
 
   // Get the created votes
-  const createdVotes = await voteRepo.findByUserId(db, user.id)
+  const createdVotes = await voteRepo.findByUserId(db, user.id);
 
   return c.json(
     {
@@ -114,66 +114,80 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
       votes: createdVotes,
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
-export const getMyVoteStatus: AppRouteHandler<typeof getMyVoteStatusRoute> = async (c) => {
-  const authUser = c.get('authUser')
-  const { db } = createDb(c)
+export const getMyVotes: AppRouteHandler<typeof getMyVotesRoute> = async (c) => {
+  const { db } = createDb(c);
+  const authUser = c.get("authUser");
 
   // Get the user associated with this account
-  const user = await userRepo.findByAccountId(db, authUser.id)
+  const user = await userRepo.findByAccountId(db, authUser.id);
 
   if (!user) {
-    return c.json(
-      { hasVoted: false, votes: [] },
-      httpStatusCodes.OK,
-    )
+    return c.json({ electionId: null, votes: [] }, httpStatusCodes.OK);
   }
 
-  // Get all votes for this user
-  const userVotes = await voteRepo.findByUserId(db, user.id)
+  // Source of truth: the current open election. If none is open, the user has
+  // no "current" votes to return.
+  const current = await electionQueries.getCurrentElection(db);
+  if (!current) {
+    return c.json({ electionId: null, votes: [] }, httpStatusCodes.OK);
+  }
 
-  const hasVoted = user.hasVoted === 1
-
+  const rows = await voteRepo.findByUserAndElection(db, user.id, current.id);
   return c.json(
     {
-      hasVoted,
-      votes: userVotes,
+      electionId: current.id,
+      votes: rows.map((r) => ({
+        candidateId: r.candidateId,
+        positionId: r.positionId,
+      })),
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
 export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async (c) => {
-  const { db } = createDb(c)
+  const { db } = createDb(c);
 
-  // Get all active candidates with their vote counts via repository
-  const candidatesWithVotes = await candidateRepo.listWithVoteCount(db)
+  // Get current active election or latest closed election
+  const current =
+    (await electionQueries.getCurrentElection(db)) ?? (await electionRepo.findLatestClosed(db));
 
-  // Group by position
-  const resultsMap = new Map<string, { candidateId: string, candidateName: string, position: string, voteCount: number }[]>()
-  candidatesWithVotes.forEach((item: { candidateId: string, candidateName: string, position: string, voteCount: number }) => {
-    const arr = resultsMap.get(item.position) || []
-    arr.push(item)
-    resultsMap.set(item.position, arr)
-  })
+  if (!current) {
+    return c.json(
+      {
+        results: [],
+        meta: {
+          totalVotes: 0,
+          totalPositions: 0,
+        },
+      },
+      httpStatusCodes.OK,
+    );
+  }
 
-  // Format results
-  const results = Array.from(resultsMap.entries()).map(([position, positionCandidates]) => ({
-    position,
-    candidates: positionCandidates,
-  }))
+  // Get results for this election
+  const electionResults = await electionQueries.getResults(db, current.id);
 
-  // Sort positions alphabetically
-  results.sort((a, b) => a.position.localeCompare(b.position))
+  // Map to the legacy VoteResultsResponse format
+  const results = electionResults.map((r) => ({
+    positionId: r.positionId,
+    positionName: r.positionName,
+    candidates: r.candidates.map((cand) => ({
+      candidateId: cand.candidateId,
+      candidateName: cand.fullName,
+      positionId: r.positionId,
+      positionName: r.positionName,
+      voteCount: cand.voteCount,
+    })),
+  }));
 
-  // Calculate totals
-  const totalVotes = candidatesWithVotes.reduce(
-    (sum: number, item: { candidateId: string, candidateName: string, position: string, voteCount: number }) =>
-      sum + Number(item.voteCount),
-    0,
-  )
+  // Sort positions by name for stable output
+  results.sort((a, b) => a.positionName.localeCompare(b.positionName));
+
+  const totalVotes = electionResults.reduce((sum, r) => sum + r.totalVotes, 0);
 
   return c.json(
     {
@@ -184,72 +198,39 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
       },
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
-export const getCandidateVoteCount: AppRouteHandler<typeof getCandidateVoteCountRoute> = async (c) => {
-  const { id } = c.req.valid('param')
-  const { db } = createDb(c)
+export const getCandidateVoteCount: AppRouteHandler<typeof getCandidateVoteCountRoute> = async (
+  c,
+) => {
+  const { id } = c.req.valid("param");
+  const { db } = createDb(c);
 
-  // Check if candidate exists and is active; we also need fullName
-  const candidate = await candidateRepo.getForAdminView(db, id)
+  // Check if candidate exists (active or inactive — count includes both)
+  const candidate = await candidateRepo.getForAdminView(db, id, { includeInactive: true });
   if (!candidate) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
+  // Look up the position name for the response
+  const position = await db
+    .select({ name: positions.name })
+    .from(positions)
+    .where(eq(positions.id, candidate.positionId))
+    .get();
+
   // Get vote count for this candidate
-  const voteCount = await voteRepo.countByCandidateId(db, id)
+  const voteCount = await voteRepo.countByCandidateId(db, id);
 
   return c.json(
     {
       candidateId: id,
       candidateName: candidate.fullName,
-      position: candidate.position,
+      positionId: candidate.positionId,
+      positionName: position?.name ?? "",
       voteCount,
     },
     httpStatusCodes.OK,
-  )
-}
-
-export const withdrawVote: AppRouteHandler<typeof withdrawVoteRoute> = async (c) => {
-  const authUser = c.get('authUser')
-  const { db } = createDb(c)
-
-  // Get the user associated with this account
-  const user = await userRepo.findByAccountId(db, authUser.id)
-
-  if (!user) {
-    return c.json(
-      { message: ERROR_MESSAGES.USER_NOT_FOUND },
-      httpStatusCodes.BAD_REQUEST,
-    )
-  }
-
-  // Check if user has voted
-  const hasExistingVotes = await voteRepo.existsForUser(db, user.id)
-
-  if (!hasExistingVotes) {
-    return c.json(
-      { message: ERROR_MESSAGES.VOTE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
-  }
-
-  const now = Math.floor(Date.now() / 1000)
-
-  // Delete all votes for this user and reset hasVoted flag (atomic D1 batch)
-  await db.batch([
-    db.delete(votes).where(eq(votes.userId, user.id)),
-    db.update(users)
-      .set({ hasVoted: 0, updatedAt: now })
-      .where(eq(users.id, user.id)),
-  ])
-
-  return c.json(
-    { message: ERROR_MESSAGES.VOTE_WITHDRAWN_SUCCESSFULLY },
-    httpStatusCodes.OK,
-  )
-}
+  );
+};

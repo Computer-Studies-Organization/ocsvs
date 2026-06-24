@@ -1,6 +1,6 @@
-import type { Database } from './database.type'
-import { and, eq, or, sql } from 'drizzle-orm'
-import { accounts, users } from '@/database/schema'
+import type { Database } from "./database.type";
+import { and, eq, or, sql } from "drizzle-orm";
+import { accounts, users } from "@/database/schema";
 
 export const accountRepo = {
   // Check if account exists by username or email (used by auth register)
@@ -9,49 +9,42 @@ export const accountRepo = {
     username: string,
     email?: string | null,
   ): Promise<{ id: string } | null> {
-    const conditions = [eq(accounts.username, username)]
+    const conditions = [eq(accounts.username, username)];
     if (email && email.trim()) {
-      conditions.push(eq(accounts.email, email))
+      conditions.push(eq(accounts.email, email));
     }
-    return await db
-      .select({ id: accounts.id })
-      .from(accounts)
-      .where(or(...conditions))
-      .get() ?? null
+    return (
+      (await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(or(...conditions))
+        .get()) ?? null
+    );
   },
 
   // Check if username exists (excluding a specific account)
-  async usernameExists(
-    db: Database,
-    username: string,
-    excludeAccountId: string,
-  ): Promise<boolean> {
+  async usernameExists(db: Database, username: string, excludeAccountId: string): Promise<boolean> {
     const existing = await db
       .select({ id: accounts.id })
       .from(accounts)
-      .where(
-        and(
-          eq(accounts.username, username),
-          sql`${accounts.id} != ${excludeAccountId}`,
-        ),
-      )
-      .get()
-    return existing != null
+      .where(and(eq(accounts.username, username), sql`${accounts.id} != ${excludeAccountId}`))
+      .get();
+    return existing != null;
   },
 
   // Create account + user (used by auth register)
   async create(
     db: Database,
     data: {
-      accountId: string
-      username: string
-      email: string | null
-      passwordHash: string
-      studentId: string
-      firstName: string
-      lastName: string
-      course: string
-      yearLevel: string
+      accountId: string;
+      username: string;
+      email: string | null;
+      passwordHash: string;
+      studentId: string;
+      firstName: string;
+      lastName: string;
+      course: string;
+      yearLevel: string;
     },
   ): Promise<void> {
     await db.batch([
@@ -60,7 +53,7 @@ export const accountRepo = {
         username: data.username,
         email: data.email,
         password_hash: data.passwordHash,
-        role: 'user',
+        role: "user",
       }),
       db.insert(users).values({
         id: crypto.randomUUID(),
@@ -71,7 +64,7 @@ export const accountRepo = {
         course: data.course,
         yearLevel: data.yearLevel,
       }),
-    ])
+    ]);
   },
 
   // Update account fields
@@ -79,32 +72,28 @@ export const accountRepo = {
     db: Database,
     accountId: string,
     data: Partial<{
-      username: string
-      email: string | null
-      password_hash: string
-      lastLogin: number
+      username: string;
+      email: string | null;
+      password_hash: string;
+      lastLogin: number;
     }>,
   ): Promise<void> {
-    const now = Math.floor(Date.now() / 1000)
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
       .set({ ...data, updatedAt: now })
       .where(eq(accounts.id, accountId))
-      .run()
+      .run();
   },
 
   // Update password hash (used by changePassword)
-  async updatePassword(
-    db: Database,
-    accountId: string,
-    passwordHash: string,
-  ): Promise<void> {
-    const now = Math.floor(Date.now() / 1000)
+  async updatePassword(db: Database, accountId: string, passwordHash: string): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
       .set({ password_hash: passwordHash, updatedAt: now })
       .where(eq(accounts.id, accountId))
-      .run()
+      .run();
   },
 
   // Get password hash for account (used by auth changePassword)
@@ -112,30 +101,32 @@ export const accountRepo = {
     db: Database,
     accountId: string,
   ): Promise<{ password_hash: string } | null> {
-    return await db
-      .select({ password_hash: accounts.password_hash })
-      .from(accounts)
-      .where(eq(accounts.id, accountId))
-      .get() ?? null
+    return (
+      (await db
+        .select({ password_hash: accounts.password_hash })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .get()) ?? null
+    );
   },
 
   // Soft delete account
   async softDelete(db: Database, accountId: string): Promise<void> {
-    const now = Math.floor(Date.now() / 1000)
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
       .set({ deletedAt: now, updatedAt: now })
       .where(eq(accounts.id, accountId))
-      .run()
+      .run();
   },
 
   // Restore soft-deleted account
   async restore(db: Database, accountId: string): Promise<void> {
-    const now = Math.floor(Date.now() / 1000)
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
       .set({ deletedAt: null, updatedAt: now })
       .where(eq(accounts.id, accountId))
-      .run()
+      .run();
   },
-}
+};

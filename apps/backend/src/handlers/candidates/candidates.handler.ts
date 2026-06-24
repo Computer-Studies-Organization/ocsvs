@@ -1,64 +1,45 @@
-import type { AppRouteHandler } from '@/lib/types/app-types'
+import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   createCandidateRoute,
   deleteCandidateRoute,
   getCandidateRoute,
   listCandidatesRoute,
   updateCandidateRoute,
-} from '@/routes/candidates/routes'
-import { eq } from 'drizzle-orm'
-import { createDb } from '@/config/db'
-import { candidateRepo } from '@/database/repositories/candidates.repository'
-import { accounts } from '@/database/schema'
-import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
-import * as httpStatusCodes from '@/openapi/http-status-codes'
+} from "@/routes/candidates/routes";
+import { eq } from "drizzle-orm";
+import { createDb } from "@/config/db";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { accounts } from "@/database/schema";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import * as httpStatusCodes from "@/openapi/http-status-codes";
 
-export const createCandidate: AppRouteHandler<
-  typeof createCandidateRoute
-> = async (c) => {
-  if (c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
+export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
-  const { fullName, accountId, position, manifesto } = c.req.valid('json')
-  const { db } = createDb(c)
+  const { fullName, accountId, positionId, manifesto } = c.req.valid("json");
+  const { db } = createDb(c);
 
   // Verify account exists
-  const account = await db
-    .select()
-    .from(accounts)
-    .where(eq(accounts.id, accountId))
-    .get()
+  const account = await db.select().from(accounts).where(eq(accounts.id, accountId)).get();
 
   if (!account) {
-    return c.json(
-      { message: ERROR_MESSAGES.ACCOUNT_NOT_FOUND },
-      httpStatusCodes.BAD_REQUEST,
-    )
+    return c.json({ message: ERROR_MESSAGES.ACCOUNT_NOT_FOUND }, httpStatusCodes.BAD_REQUEST);
   }
 
   // Ensure no active candidate for same account+position
-  const exists = await candidateRepo.existsActiveForAccountPosition(
-    db,
-    accountId,
-    position,
-  )
+  const exists = await candidateRepo.existsActiveForAccountPosition(db, accountId, positionId);
   if (exists) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS },
-      httpStatusCodes.CONFLICT,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
   }
 
   const candidateId = await candidateRepo.create(db, {
     fullName,
     accountId,
-    position,
+    positionId,
     manifesto,
-  })
+  });
 
   return c.json(
     {
@@ -67,33 +48,28 @@ export const createCandidate: AppRouteHandler<
         id: candidateId,
         fullName,
         accountId,
-        position,
+        positionId,
         manifesto,
       },
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
-export const listCandidates: AppRouteHandler<
-  typeof listCandidatesRoute
-> = async (c) => {
-  const { page, limit, includeDeleted } = c.req.valid('query')
+export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async (c) => {
+  const { page, limit, includeDeleted } = c.req.valid("query");
 
-  if (includeDeleted && c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
+  if (includeDeleted && c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
-  const { db } = createDb(c)
+  const { db } = createDb(c);
 
   const result = await candidateRepo.listForAdminTable(db, {
     page,
     limit,
     includeInactive: includeDeleted,
-  })
+  });
 
   return c.json(
     {
@@ -101,52 +77,39 @@ export const listCandidates: AppRouteHandler<
       meta: result.meta,
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
-export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (
-  c,
-) => {
-  const { id } = c.req.valid('param')
-  const { db } = createDb(c)
+export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c) => {
+  const { id } = c.req.valid("param");
+  const { db } = createDb(c);
 
-  const candidate = await candidateRepo.getForAdminView(db, id)
+  const candidate = await candidateRepo.getForAdminView(db, id);
 
   if (!candidate) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
-  return c.json(candidate, httpStatusCodes.OK)
-}
+  return c.json(candidate, httpStatusCodes.OK);
+};
 
-export const updateCandidate: AppRouteHandler<
-  typeof updateCandidateRoute
-> = async (c) => {
-  if (c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
+export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
-  const { id } = c.req.valid('param')
-  const updateData = c.req.valid('json')
-  const { db } = createDb(c)
+  const { id } = c.req.valid("param");
+  const updateData = c.req.valid("json");
+  const { db } = createDb(c);
 
-  const existingCandidate = await candidateRepo.getForAdminView(db, id)
+  const existingCandidate = await candidateRepo.getForAdminView(db, id);
   if (!existingCandidate) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
-  await candidateRepo.update(db, id, updateData)
+  await candidateRepo.update(db, id, updateData);
 
-  const updatedCandidate = await candidateRepo.getForAdminView(db, id)
+  const updatedCandidate = await candidateRepo.getForAdminView(db, id);
 
   return c.json(
     {
@@ -154,34 +117,23 @@ export const updateCandidate: AppRouteHandler<
       candidate: updatedCandidate,
     },
     httpStatusCodes.OK,
-  )
-}
+  );
+};
 
-export const deleteCandidate: AppRouteHandler<
-  typeof deleteCandidateRoute
-> = async (c) => {
-  if (c.var.authUser.role !== 'admin') {
-    return c.json(
-      { message: ERROR_MESSAGES.FORBIDDEN },
-      httpStatusCodes.FORBIDDEN,
-    )
+export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
-  const { id } = c.req.valid('param')
-  const { db } = createDb(c)
+  const { id } = c.req.valid("param");
+  const { db } = createDb(c);
 
-  const existingCandidate = await candidateRepo.getForAdminView(db, id)
+  const existingCandidate = await candidateRepo.getForAdminView(db, id);
   if (!existingCandidate) {
-    return c.json(
-      { message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND },
-      httpStatusCodes.NOT_FOUND,
-    )
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
-  await candidateRepo.softDelete(db, id)
+  await candidateRepo.softDelete(db, id);
 
-  return c.json(
-    { message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY },
-    httpStatusCodes.OK,
-  )
-}
+  return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
+};

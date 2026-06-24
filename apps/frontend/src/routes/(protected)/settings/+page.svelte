@@ -120,14 +120,12 @@
     <button onclick={() => window.location.reload()} class='rounded-xl bg-sky-500 px-6 py-3 font-bold text-white'>Retry</button>
   </div>
 {:else}
-  <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-    <div class='h-1 w-full bg-gradient-to-r from-blue-500 via-sky-400 to-indigo-500'></div>
-    <div class='mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8'>
+  <div class='mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8'>
 
       <!-- Header -->
       <div class='mb-8'>
         <button
-          onclick={() => goto(isAdmin ? '/admin-dashboard' : '/dashboard')}
+          onclick={() => goto(isAdmin ? '/admin-dashboard' : '/voting')}
           class='mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-50 cursor-pointer'
         >
           <ArrowLeft size={20} stroke-width={2.5} />
@@ -306,5 +304,4 @@
       </div>
 
     </div>
-  </div>
 {/if}

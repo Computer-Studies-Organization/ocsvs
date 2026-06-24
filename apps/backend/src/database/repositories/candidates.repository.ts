@@ -1,55 +1,54 @@
-import type { Database } from './database.type'
-import { and, count, desc, eq, inArray } from 'drizzle-orm'
-import { candidates, votes } from '@/database/schema'
+import type { Database } from "./database.type";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { candidates, positions, votes } from "@/database/schema";
 
-export type CandidateRow = typeof candidates.$inferSelect
+export type CandidateRow = typeof candidates.$inferSelect;
 
 export interface AdminListResult {
-  data: CandidateRow[]
+  data: CandidateRow[];
   meta: {
-    total: number
-    page: number
-    limit: number
-    totalPages: number
-  }
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface VoteCountResult {
-  candidateId: string
-  candidateName: string
-  position: string
-  voteCount: number
+  candidateId: string;
+  candidateName: string;
+  positionId: string;
+  positionName: string;
+  voteCount: number;
 }
 
 export const candidateRepo = {
   // Ballot: minimal fields, active-only
   async listForBallot(
     db: Database,
-  ): Promise<{ id: string, fullName: string, position: string }[]> {
+  ): Promise<{ id: string; fullName: string; positionId: string }[]> {
     return await db
       .select({
         id: candidates.id,
         fullName: candidates.fullName,
-        position: candidates.position,
+        positionId: candidates.positionId,
       })
       .from(candidates)
       .where(eq(candidates.isActive, 1))
-      .all()
+      .all();
   },
 
   // Admin table: full candidate records, paginated, optional inactive include
   async listForAdminTable(
     db: Database,
-    opts: { page?: number, limit?: number, includeInactive?: boolean } = {},
+    opts: { page?: number; limit?: number; includeInactive?: boolean } = {},
   ): Promise<AdminListResult> {
-    const page = opts.page ?? 1
-    const limit = opts.limit ?? 10
-    const includeInactive = opts.includeInactive ?? false
-    const offset = (page - 1) * limit
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 10;
+    const includeInactive = opts.includeInactive ?? false;
+    const offset = (page - 1) * limit;
 
-    const whereClause = includeInactive
-      ? undefined
-      : eq(candidates.isActive, 1)
+    const whereClause = includeInactive ? undefined : eq(candidates.isActive, 1);
 
     const [data, totalRaw] = await Promise.all([
       db
@@ -57,7 +56,7 @@ export const candidateRepo = {
           id: candidates.id,
           fullName: candidates.fullName,
           accountId: candidates.accountId,
-          position: candidates.position,
+          positionId: candidates.positionId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
           createdAt: candidates.createdAt,
@@ -70,24 +69,26 @@ export const candidateRepo = {
         .offset(offset)
         .all(),
       db.select({ count: count() }).from(candidates).where(whereClause).get(),
-    ])
+    ]);
 
-    const total = (totalRaw as { count: number } | null)?.count ?? 0
-    const totalPages = Math.ceil(total / limit)
+    const total = (totalRaw as { count: number } | null)?.count ?? 0;
+    const totalPages = Math.ceil(total / limit);
 
-    return { data, meta: { total, page, limit, totalPages } }
+    return { data, meta: { total, page, limit, totalPages } };
   },
 
   // Single-candidate read for vote validation (active-only, minimal fields)
   async getForValidation(
     db: Database,
     id: string,
-  ): Promise<{ id: string, position: string } | null> {
-    return (await db
-      .select({ id: candidates.id, position: candidates.position })
-      .from(candidates)
-      .where(and(eq(candidates.id, id), eq(candidates.isActive, 1)))
-      .get()) ?? null
+  ): Promise<{ id: string; positionId: string } | null> {
+    return (
+      (await db
+        .select({ id: candidates.id, positionId: candidates.positionId })
+        .from(candidates)
+        .where(and(eq(candidates.id, id), eq(candidates.isActive, 1)))
+        .get()) ?? null
+    );
   },
 
   // Single-candidate full view for admin (optionally include inactive)
@@ -96,25 +97,27 @@ export const candidateRepo = {
     id: string,
     opts: { includeInactive?: boolean } = {},
   ): Promise<CandidateRow | null> {
-    const includeInactive = opts.includeInactive ?? false
+    const includeInactive = opts.includeInactive ?? false;
     const whereClause = includeInactive
       ? eq(candidates.id, id)
-      : and(eq(candidates.id, id), eq(candidates.isActive, 1))
+      : and(eq(candidates.id, id), eq(candidates.isActive, 1));
 
-    return (await db
-      .select({
-        id: candidates.id,
-        fullName: candidates.fullName,
-        accountId: candidates.accountId,
-        position: candidates.position,
-        manifesto: candidates.manifesto,
-        isActive: candidates.isActive,
-        createdAt: candidates.createdAt,
-        updatedAt: candidates.updatedAt,
-      })
-      .from(candidates)
-      .where(whereClause)
-      .get()) ?? null
+    return (
+      (await db
+        .select({
+          id: candidates.id,
+          fullName: candidates.fullName,
+          accountId: candidates.accountId,
+          positionId: candidates.positionId,
+          manifesto: candidates.manifesto,
+          isActive: candidates.isActive,
+          createdAt: candidates.createdAt,
+          updatedAt: candidates.updatedAt,
+        })
+        .from(candidates)
+        .where(whereClause)
+        .get()) ?? null
+    );
   },
 
   // Count of active candidates
@@ -123,51 +126,65 @@ export const candidateRepo = {
       .select({ count: count() })
       .from(candidates)
       .where(eq(candidates.isActive, 1))
-      .get()
-    return (res as { count: number } | null)?.count ?? 0
+      .get();
+    return (res as { count: number } | null)?.count ?? 0;
+  },
+
+  // Count of candidates for a position (active-only by default)
+  async countByPositionId(
+    db: Database,
+    positionId: string,
+    opts: { includeInactive?: boolean } = {},
+  ): Promise<number> {
+    const includeInactive = opts.includeInactive ?? false;
+    const where = includeInactive
+      ? eq(candidates.positionId, positionId)
+      : and(eq(candidates.positionId, positionId), eq(candidates.isActive, 1));
+    const row = await db.select({ count: count() }).from(candidates).where(where).get();
+    return (row as { count: number } | null)?.count ?? 0;
   },
 
   // Batch find active candidates by IDs — returns Map for O(1) lookup
   async findActiveByIds(
     db: Database,
     ids: string[],
-  ): Promise<Map<string, { id: string, position: string }>> {
+  ): Promise<Map<string, { id: string; positionId: string }>> {
     const rows = await db
-      .select({ id: candidates.id, position: candidates.position })
+      .select({ id: candidates.id, positionId: candidates.positionId })
       .from(candidates)
       .where(and(inArray(candidates.id, ids), eq(candidates.isActive, 1)))
-      .all()
-    return new Map<string, { id: string, position: string }>(
-      rows.map<[string, { id: string, position: string }]>(r => [r.id, r]),
-    )
+      .all();
+    return new Map<string, { id: string; positionId: string }>(
+      rows.map<[string, { id: string; positionId: string }]>((r) => [r.id, r]),
+    );
   },
 
   // Insert new candidate (always active)
   async create(
     db: Database,
     data: {
-      fullName: string
-      accountId: string
-      position: string
-      manifesto: string
+      fullName: string;
+      accountId: string;
+      positionId: string;
+      manifesto: string;
     },
   ): Promise<string> {
-    const id = crypto.randomUUID()
-    const now = Math.floor(Date.now() / 1000)
+    const id = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000);
     await db
       .insert(candidates)
       .values({
         id,
         fullName: data.fullName,
         accountId: data.accountId,
-        position: data.position,
+        positionId: data.positionId,
         manifesto: data.manifesto,
         isActive: 1,
         createdAt: now,
         updatedAt: now,
       })
-      .run()
-    return id
+      .run();
+    return id;
   },
 
   // Update candidate (preserves isActive unless explicitly updated)
@@ -175,23 +192,19 @@ export const candidateRepo = {
     db: Database,
     id: string,
     data: Partial<{
-      fullName?: string
-      accountId?: string
-      position?: string
-      manifesto?: string
-      isActive?: number
+      fullName?: string;
+      accountId?: string;
+      positionId?: string;
+      manifesto?: string;
+      isActive?: number;
     }>,
   ): Promise<boolean> {
     const updateSet: Record<string, any> = {
       ...data,
       updatedAt: Math.floor(Date.now() / 1000),
-    }
-    const result = await db
-      .update(candidates)
-      .set(updateSet)
-      .where(eq(candidates.id, id))
-      .run()
-    return result.rowsAffected > 0
+    };
+    const result = await db.update(candidates).set(updateSet).where(eq(candidates.id, id)).run();
+    return result.rowsAffected > 0;
   },
 
   // Soft-delete: set isActive = 0
@@ -200,15 +213,15 @@ export const candidateRepo = {
       .update(candidates)
       .set({ isActive: 0, updatedAt: Math.floor(Date.now() / 1000) })
       .where(eq(candidates.id, id))
-      .run()
-    return result.rowsAffected > 0
+      .run();
+    return result.rowsAffected > 0;
   },
 
   // Check if active candidate exists for the given account+position (used in create)
   async existsActiveForAccountPosition(
     db: Database,
     accountId: string,
-    position: string,
+    positionId: string,
   ): Promise<boolean> {
     const res = await db
       .select({ id: candidates.id })
@@ -216,13 +229,13 @@ export const candidateRepo = {
       .where(
         and(
           eq(candidates.accountId, accountId),
-          eq(candidates.position, position),
+          eq(candidates.positionId, positionId),
           eq(candidates.isActive, 1),
         ),
       )
       .limit(1)
-      .get()
-    return res !== undefined
+      .get();
+    return res !== undefined;
   },
 
   // Specialized query for vote results: active candidates with vote counts
@@ -231,15 +244,17 @@ export const candidateRepo = {
       .select({
         candidateId: candidates.id,
         candidateName: candidates.fullName,
-        position: candidates.position,
+        positionId: candidates.positionId,
+        positionName: positions.name,
         voteCount: count(votes.id),
       })
       .from(candidates)
+      .leftJoin(positions, eq(candidates.positionId, positions.id))
       .leftJoin(votes, eq(candidates.id, votes.candidateId))
       .where(eq(candidates.isActive, 1))
-      .groupBy(candidates.id, candidates.fullName, candidates.position)
+      .groupBy(candidates.id, candidates.fullName, candidates.positionId, positions.name)
       .orderBy(desc(count(votes.id)))
-      .all()
-    return rows as VoteCountResult[]
+      .all();
+    return rows as VoteCountResult[];
   },
-}
+};

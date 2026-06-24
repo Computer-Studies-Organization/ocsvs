@@ -1,20 +1,16 @@
 <script lang='ts'>
   import type { TUsersData } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { logout } from '$lib/api/auth'
   import { deleteUser, fetchUsers, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
   import {
     Archive,
     ArrowUpDown,
-    BarChart3,
     Edit,
     Eye,
     Loader,
-    LogOut,
     RotateCcw,
     Search,
-    Settings,
     X,
   } from 'lucide-svelte'
   import { onMount } from 'svelte'
@@ -197,14 +193,7 @@
     }
   }
 
-  async function handleLogout() {
-    try {
-      await logout()
-      authStore.set({ user: null, loading: false })
-      goto('/auth', { replaceState: true })
-    }
-    catch { /* ignore */ }
-  }
+
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
@@ -220,28 +209,6 @@
         </p>
         <h1 class='text-2xl font-black text-slate-50 sm:text-3xl'>User Management</h1>
         <p class='mt-1 text-xs text-slate-500'>Manage registered voters and administrators</p>
-      </div>
-      <div class='flex items-center gap-2'>
-        <button
-          onclick={() => goto('/admin-dashboard/results')}
-          class='flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-500 hover:bg-slate-800 cursor-pointer'
-        >
-          <BarChart3 size={16} class='text-sky-400' />
-          View Results
-        </button>
-        <button
-          onclick={() => goto('/settings')}
-          class='flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 cursor-pointer'
-        >
-          <Settings size={16} />
-        </button>
-        <button
-          onclick={handleLogout}
-          class='flex items-center gap-2 rounded-xl border border-red-900/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 cursor-pointer'
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
       </div>
     </header>
 
@@ -306,9 +273,6 @@
                       {#if u.deletedAt}
                         <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
                       {/if}
-                      {#if u.hasVoted}
-                        <span class='rounded bg-emerald-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>VOTED</span>
-                      {/if}
                     </div>
                   </td>
                   <td class='px-4 py-3'>
@@ -362,7 +326,7 @@
         <button onclick={() => viewUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
       </div>
       <div class='space-y-2 text-sm'>
-        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Has Voted', viewUser.hasVoted ? 'Yes' : 'No'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
+        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
           <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
             <span class='text-slate-400'>{label}</span>
             <span class='font-semibold text-slate-50'>{val}</span>

@@ -1,6 +1,6 @@
-import type { ErrorHandler } from 'hono'
-import process from 'node:process'
-import { HTTPException } from 'hono/http-exception'
+import type { ErrorHandler } from "hono";
+import process from "node:process";
+import { HTTPException } from "hono/http-exception";
 
 /**
  * Global error handler for the Hono application.
@@ -54,20 +54,20 @@ const onError: ErrorHandler = (err, c) => {
   if (err instanceof HTTPException) {
     // Use the built-in getResponse() method to generate a Response object
     // This automatically handles status codes and headers.
-    return err.getResponse()
+    return err.getResponse();
   }
 
   // For all other errors, return a generic 500 response
   // You can customize this as needed
-  const env = c.env?.NODE_ENV || process.env.NODE_ENV
+  const env = c.env?.NODE_ENV || process.env.NODE_ENV;
   return c.json(
     {
-      message: 'Internal Server Error',
-      error: env === 'production' ? undefined : err.message,
-      stack: env === 'production' ? undefined : err.stack,
+      message: "Internal Server Error",
+      error: env === "production" ? undefined : err.message,
+      stack: env === "production" ? undefined : err.stack,
     },
     500,
-  )
-}
+  );
+};
 
-export default onError
+export default onError;

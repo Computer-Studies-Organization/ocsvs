@@ -1,40 +1,37 @@
-import { createRoute, z } from '@hono/zod-openapi'
-import { SelectCandidateSchema } from '@/database/openapi-schemas'
-import { ERROR_MESSAGES } from '@/lib/constants/error-messages'
-import { booleanQuery } from '@/lib/validation/boolean-query'
-import jsonContent from '@/middleware/utils/json-content'
-import * as httpStatusCodes from '@/openapi/http-status-codes'
+import { createRoute, z } from "@hono/zod-openapi";
+import { SelectCandidateSchema } from "@/database/openapi-schemas";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { booleanQuery } from "@/lib/validation/boolean-query";
+import jsonContent from "@/middleware/utils/json-content";
+import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const createCandidateSchema = z.object({
   fullName: z.string(),
   accountId: z.string(),
-  position: z.string(),
+  positionId: z.string(),
   manifesto: z.string(),
-})
+});
 
 export const updateCandidateSchema = z.object({
   fullName: z.string().optional(),
-  position: z.string().optional(),
   manifesto: z.string().optional(),
-})
+  isActive: z.number().int().optional(),
+});
 
 const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
-})
+});
 export const ListCandidatesQuerySchema = PaginationSchema.extend({
-  includeDeleted: booleanQuery.default('false'),
-})
+  includeDeleted: booleanQuery.default("false"),
+});
 
 export const createCandidateRoute = createRoute({
-  tags: ['Candidates'],
-  method: 'post',
-  path: '/candidates',
+  tags: ["Candidates"],
+  method: "post",
+  path: "/candidates",
   request: {
-    body: jsonContent(
-      createCandidateSchema,
-      'Candidate details',
-    ),
+    body: jsonContent(createCandidateSchema, "Candidate details"),
   },
   responses: {
     [httpStatusCodes.OK]: jsonContent(
@@ -44,7 +41,7 @@ export const createCandidateRoute = createRoute({
           id: z.string(),
           fullName: z.string(),
           accountId: z.string(),
-          position: z.string(),
+          positionId: z.string(),
           manifesto: z.string(),
         }),
       }),
@@ -81,12 +78,12 @@ export const createCandidateRoute = createRoute({
       ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
     ),
   },
-})
+});
 
 export const listCandidatesRoute = createRoute({
-  tags: ['Candidates'],
-  method: 'get',
-  path: '/candidates',
+  tags: ["Candidates"],
+  method: "get",
+  path: "/candidates",
   request: {
     query: ListCandidatesQuerySchema,
   },
@@ -101,7 +98,7 @@ export const listCandidatesRoute = createRoute({
           totalPages: z.number().int(),
         }),
       }),
-      'List of candidates',
+      "List of candidates",
     ),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
       z.object({
@@ -116,22 +113,19 @@ export const listCandidatesRoute = createRoute({
       ERROR_MESSAGES.FORBIDDEN,
     ),
   },
-})
+});
 
 export const getCandidateRoute = createRoute({
-  tags: ['Candidates'],
-  method: 'get',
-  path: '/candidates/{id}',
+  tags: ["Candidates"],
+  method: "get",
+  path: "/candidates/{id}",
   request: {
     params: z.object({
       id: z.string(),
     }),
   },
   responses: {
-    [httpStatusCodes.OK]: jsonContent(
-      SelectCandidateSchema as any,
-      'Candidate details',
-    ),
+    [httpStatusCodes.OK]: jsonContent(SelectCandidateSchema as any, "Candidate details"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),
@@ -145,20 +139,17 @@ export const getCandidateRoute = createRoute({
       ERROR_MESSAGES.UNAUTHORIZED,
     ),
   },
-})
+});
 
 export const updateCandidateRoute = createRoute({
-  tags: ['Candidates'],
-  method: 'put',
-  path: '/candidates/{id}',
+  tags: ["Candidates"],
+  method: "put",
+  path: "/candidates/{id}",
   request: {
     params: z.object({
       id: z.string(),
     }),
-    body: jsonContent(
-      updateCandidateSchema,
-      'Updated candidate details',
-    ),
+    body: jsonContent(updateCandidateSchema, "Updated candidate details"),
   },
   responses: {
     [httpStatusCodes.OK]: jsonContent(
@@ -193,12 +184,12 @@ export const updateCandidateRoute = createRoute({
       ERROR_MESSAGES.INVALID_REQUEST,
     ),
   },
-})
+});
 
 export const deleteCandidateRoute = createRoute({
-  tags: ['Candidates'],
-  method: 'delete',
-  path: '/candidates/{id}',
+  tags: ["Candidates"],
+  method: "delete",
+  path: "/candidates/{id}",
   request: {
     params: z.object({
       id: z.string(),
@@ -230,4 +221,4 @@ export const deleteCandidateRoute = createRoute({
       ERROR_MESSAGES.FORBIDDEN,
     ),
   },
-})
+});
