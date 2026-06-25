@@ -16,7 +16,7 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
 
   const election = await electionRepo.findById(db, id);
   if (!election) {
-    return c.json({ message: "Election not found" }, httpStatusCodes.NOT_FOUND);
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
   // If election is open, only admins or users who have voted can access results

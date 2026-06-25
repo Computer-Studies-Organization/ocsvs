@@ -1,3 +1,4 @@
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import router from "./index";
 
@@ -127,7 +128,7 @@ describe("election results route", () => {
       mockFindById.mockResolvedValue(undefined);
       const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
       expect(res.status).toBe(404);
-      expect(await res.json()).toEqual({ message: "Election not found" });
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
     });
 
     it("returns 200 with results when election is closed", async () => {
