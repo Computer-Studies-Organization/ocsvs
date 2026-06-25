@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount } from 'svelte'
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { getElection, listResults, getVotingState } from '$lib/api/elections'
@@ -56,7 +56,7 @@
       results = res
       election = e
     } catch (err) {
-      console.error('Failed to poll election results', err)
+      // Fail silently (polling is best-effort; errors are expected on temporary network blips)
     }
   }
 

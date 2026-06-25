@@ -24,6 +24,7 @@ const PaginationSchema = z.object({
 });
 export const ListCandidatesQuerySchema = PaginationSchema.extend({
   includeDeleted: booleanQuery.default("false"),
+  positionId: z.string().optional(),
 });
 
 export const createCandidateRoute = createRoute({

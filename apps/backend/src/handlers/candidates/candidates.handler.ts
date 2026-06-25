@@ -57,7 +57,7 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
 };
 
 export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async (c) => {
-  const { page, limit, includeDeleted } = c.req.valid("query");
+  const { page, limit, includeDeleted, positionId } = c.req.valid("query");
 
   if (includeDeleted && c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
@@ -69,6 +69,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
     page,
     limit,
     includeInactive: includeDeleted,
+    positionId,
   });
 
   return c.json(

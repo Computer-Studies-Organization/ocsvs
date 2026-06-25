@@ -38,17 +38,24 @@ export const candidateRepo = {
       .all();
   },
 
-  // Admin table: full candidate records, paginated, optional inactive include
+  // Admin table: full candidate records, paginated, opt inactive include
   async listForAdminTable(
     db: Database,
-    opts: { page?: number; limit?: number; includeInactive?: boolean } = {},
+    opts: { page?: number; limit?: number; includeInactive?: boolean; positionId?: string } = {},
   ): Promise<AdminListResult> {
     const page = opts.page ?? 1;
     const limit = opts.limit ?? 10;
     const includeInactive = opts.includeInactive ?? false;
+    const positionId = opts.positionId;
     const offset = (page - 1) * limit;
 
-    const whereClause = includeInactive ? undefined : eq(candidates.isActive, 1);
+    const baseWhere = includeInactive ? undefined : eq(candidates.isActive, 1);
+    const positionWhere = positionId ? eq(candidates.positionId, positionId) : undefined;
+    const whereClause = positionWhere
+      ? baseWhere
+        ? and(baseWhere, positionWhere)
+        : positionWhere
+      : baseWhere;
 
     const [data, totalRaw] = await Promise.all([
       db
@@ -193,8 +200,6 @@ export const candidateRepo = {
     id: string,
     data: Partial<{
       fullName?: string;
-      accountId?: string;
-      positionId?: string;
       manifesto?: string;
       isActive?: number;
     }>,
