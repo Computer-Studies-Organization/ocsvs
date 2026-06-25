@@ -121,6 +121,7 @@ export const candidates = sqliteTable("candidates", {
     .references(() => positions.id, { onDelete: "restrict" }),
   manifesto: text("manifesto").notNull(),
   isActive: integer("is_active").notNull().default(1),
+  imageUrl: text("image_url"),
 });
 
 export const votes = sqliteTable(

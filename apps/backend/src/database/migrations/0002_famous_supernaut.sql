@@ -1,0 +1,1 @@
+ALTER TABLE `candidates` ADD `image_url` text;
