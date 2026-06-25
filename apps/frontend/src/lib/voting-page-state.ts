@@ -59,7 +59,7 @@ export function buildStepperPositions(
       displayOrder: p.displayOrder,
       candidates: candidates
         .filter((c) => c.positionId === p.id)
-        .map((c) => ({ id: c.id, fullName: c.fullName })),
+        .map((c) => ({ id: c.id, fullName: c.fullName, imageUrl: c.imageUrl })),
     }))
     .filter((p) => p.candidates.length > 0);
 }

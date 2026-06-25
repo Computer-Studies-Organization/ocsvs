@@ -115,9 +115,33 @@ const samplePositions: TPosition[] = [
 ];
 
 const sampleCandidates: TCandidate[] = [
-  { id: "c1", fullName: "Alice", accountId: "a1", positionId: "p1", manifesto: "", isActive: 1 },
-  { id: "c2", fullName: "Bob", accountId: "a2", positionId: "p2", manifesto: "", isActive: 1 },
-  { id: "c3", fullName: "Carol", accountId: "a3", positionId: "p1", manifesto: "", isActive: 1 },
+  {
+    id: "c1",
+    fullName: "Alice",
+    accountId: "a1",
+    positionId: "p1",
+    manifesto: "",
+    isActive: 1,
+    imageUrl: null,
+  },
+  {
+    id: "c2",
+    fullName: "Bob",
+    accountId: "a2",
+    positionId: "p2",
+    manifesto: "",
+    isActive: 1,
+    imageUrl: null,
+  },
+  {
+    id: "c3",
+    fullName: "Carol",
+    accountId: "a3",
+    positionId: "p1",
+    manifesto: "",
+    isActive: 1,
+    imageUrl: null,
+  },
 ];
 
 test("deriveVotingPageState returns loading when apiState is null and no error", () => {
@@ -272,7 +296,15 @@ test("buildStepperPositions filters out positions with no candidates", () => {
     },
   ];
   const result = buildStepperPositions(positions, [
-    { id: "c1", fullName: "Alice", accountId: "a1", positionId: "p1", manifesto: "", isActive: 1 },
+    {
+      id: "c1",
+      fullName: "Alice",
+      accountId: "a1",
+      positionId: "p1",
+      manifesto: "",
+      isActive: 1,
+      imageUrl: null,
+    },
   ]);
   assert.equal(result.length, 1);
   assert.equal(result[0]?.id, "p1");

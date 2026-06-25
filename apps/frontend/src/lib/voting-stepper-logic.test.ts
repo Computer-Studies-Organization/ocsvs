@@ -20,8 +20,8 @@ const positions: TStepperPosition[] = [
     name: "President",
     displayOrder: 0,
     candidates: [
-      { id: "c1", fullName: "Alice" },
-      { id: "c2", fullName: "Bob" },
+      { id: "c1", fullName: "Alice", imageUrl: null },
+      { id: "c2", fullName: "Bob", imageUrl: null },
     ],
   },
   {
@@ -29,11 +29,16 @@ const positions: TStepperPosition[] = [
     name: "Vice President",
     displayOrder: 1,
     candidates: [
-      { id: "c3", fullName: "Charlie" },
-      { id: "c4", fullName: "Dave" },
+      { id: "c3", fullName: "Charlie", imageUrl: null },
+      { id: "c4", fullName: "Dave", imageUrl: null },
     ],
   },
-  { id: "pos-3", name: "Secretary", displayOrder: 2, candidates: [{ id: "c5", fullName: "Eve" }] },
+  {
+    id: "pos-3",
+    name: "Secretary",
+    displayOrder: 2,
+    candidates: [{ id: "c5", fullName: "Eve", imageUrl: null }],
+  },
 ];
 
 test("createVotingState initializes all positions to null and index to 0", () => {
