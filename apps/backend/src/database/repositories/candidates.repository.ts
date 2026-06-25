@@ -66,6 +66,7 @@ export const candidateRepo = {
           positionId: candidates.positionId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
+          imageUrl: candidates.imageUrl,
           createdAt: candidates.createdAt,
           updatedAt: candidates.updatedAt,
         })
@@ -118,6 +119,7 @@ export const candidateRepo = {
           positionId: candidates.positionId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
+          imageUrl: candidates.imageUrl,
           createdAt: candidates.createdAt,
           updatedAt: candidates.updatedAt,
         })
@@ -209,6 +211,19 @@ export const candidateRepo = {
       updatedAt: Math.floor(Date.now() / 1000),
     };
     const result = await db.update(candidates).set(updateSet).where(eq(candidates.id, id)).run();
+    return result.rowsAffected > 0;
+  },
+
+  // Update candidate image URL
+  async updateImageUrl(db: Database, id: string, imageUrl: string | null): Promise<boolean> {
+    const result = await db
+      .update(candidates)
+      .set({
+        imageUrl,
+        updatedAt: Math.floor(Date.now() / 1000),
+      })
+      .where(eq(candidates.id, id))
+      .run();
     return result.rowsAffected > 0;
   },
 

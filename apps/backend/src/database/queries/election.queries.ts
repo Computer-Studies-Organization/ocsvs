@@ -15,7 +15,13 @@ export interface ElectionWithPositions {
     id: string;
     name: string;
     displayOrder: number;
-    candidates: Array<{ id: string; fullName: string; isActive: number; manifesto: string }>;
+    candidates: Array<{
+      id: string;
+      fullName: string;
+      isActive: number;
+      manifesto: string;
+      imageUrl: string | null;
+    }>;
   }>;
 }
 
@@ -69,6 +75,7 @@ export const electionQueries = {
             fullName: c.fullName,
             isActive: c.isActive,
             manifesto: c.manifesto,
+            imageUrl: c.imageUrl,
           })),
       })),
     };

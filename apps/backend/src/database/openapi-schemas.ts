@@ -130,6 +130,10 @@ export const CandidateSchema = z.object({
     description: "Whether the candidate is active (0 or 1)",
     example: 1,
   }),
+  imageUrl: z.string().url().nullable().optional().openapi({
+    description: "URL of the candidate avatar image (optional)",
+    example: "https://example.com/avatar.jpg",
+  }),
 });
 
 export const VoteSchema = z.object({
