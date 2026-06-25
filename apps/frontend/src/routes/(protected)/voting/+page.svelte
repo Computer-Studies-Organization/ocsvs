@@ -22,7 +22,7 @@
   import { authStore } from '$lib/stores/auth'
   import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
   import Spinner from '$lib/components/ui/spinner.svelte'
-  import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, Vote } from 'lucide-svelte'
+  import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, User, Vote } from 'lucide-svelte'
 
   let apiState = $state<TVotingState | null>(null)
   let positions = $state<TPosition[] | null>(null)
@@ -186,13 +186,24 @@
             <button
               type='button'
               onclick={() => selectAt(currentPosition.id, c.id)}
-              class='flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all'
+              class='flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all'
               style:background={pageState.voting.selectedVotes[currentPosition.id] === c.id ? 'oklch(0.30 0.08 250)' : 'oklch(0.22 0.025 250)'}
               style:border-color={pageState.voting.selectedVotes[currentPosition.id] === c.id ? 'oklch(0.55 0.15 250)' : 'oklch(0.30 0.025 250)'}
             >
+              {#if c.imageUrl}
+                <img
+                  src={c.imageUrl}
+                  alt={c.fullName}
+                  class='h-10 w-10 rounded-full object-cover'
+                />
+              {:else}
+                <div class='flex h-10 w-10 items-center justify-center rounded-full bg-slate-800'>
+                  <User size={20} class='text-slate-400' />
+                </div>
+              {/if}
               <span class='font-semibold text-slate-100'>{c.fullName}</span>
               {#if pageState.voting.selectedVotes[currentPosition.id] === c.id}
-                <span class='text-blue-400'>Selected</span>
+                <span class='ml-auto text-blue-400'>Selected</span>
               {/if}
             </button>
           {/each}

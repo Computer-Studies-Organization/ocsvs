@@ -1,6 +1,7 @@
 <script lang='ts'>
   import type { TCandidate } from '$lib/types'
   import VoteProgressBar from './vote-progress-bar.svelte'
+  import { User } from 'lucide-svelte'
 
   let {
     candidate,
@@ -19,7 +20,18 @@
 </script>
 
 <div class='flex h-full flex-col rounded-xl border border-white/10 bg-slate-900/40 p-4 shadow-lg transition-all hover:border-blue-500/30 hover:shadow-xl sm:p-5'>
-  <div class='mb-2 flex items-center justify-between gap-2'>
+  <div class='mb-2 flex items-center gap-3'>
+    {#if candidate.imageUrl}
+      <img
+        src={candidate.imageUrl}
+        alt={candidate.fullName}
+        class='h-12 w-12 rounded-full object-cover'
+      />
+    {:else}
+      <div class='flex h-12 w-12 items-center justify-center rounded-full bg-slate-800'>
+        <User size={24} class='text-slate-400' />
+      </div>
+    {/if}
     <div>
       <h4 class='text-base font-semibold text-slate-100 sm:text-lg'>{candidate.fullName}</h4>
     </div>

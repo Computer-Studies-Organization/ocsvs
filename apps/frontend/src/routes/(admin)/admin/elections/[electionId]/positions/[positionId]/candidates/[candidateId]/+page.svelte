@@ -3,13 +3,14 @@
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { ArrowLeft, Loader, Save, Trash2 } from 'lucide-svelte'
-  import { getCandidate, updateCandidate, deleteCandidate } from '$lib/api/candidates'
+  import { getCandidate, updateCandidate, deleteCandidate, uploadCandidateImage, deleteCandidateImage } from '$lib/api/candidates'
   import { getElection } from '$lib/api/elections'
   import { listPositions } from '$lib/api/positions'
   import { fetchUser } from '$lib/api/users'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import Modal from '$lib/components/ui/modal.svelte'
   import Spinner from '$lib/components/ui/spinner.svelte'
+  import ImageUpload from '$lib/components/ui/image-upload.svelte'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
 
   type CandidateRecord = {
@@ -19,6 +20,7 @@
     positionId: string
     manifesto: string
     isActive: number
+    imageUrl: string | null
   }
 
   let candidate = $state<CandidateRecord | null>(null)
@@ -32,6 +34,7 @@
   let isDeleteOpen = $state(false)
   let isDeleting = $state(false)
   let deleteError = $state('')
+  let imageError = $state('')
 
   let editManifesto = $state('')
   let editIsActive = $state(true)
@@ -127,6 +130,30 @@
       isDeleting = false
     }
   }
+
+  async function handleImageUpload(file: File) {
+    if (!candidateId) return
+    imageError = ''
+    try {
+      const updated = await uploadCandidateImage(candidateId, file)
+      candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
+    } catch (err: unknown) {
+      imageError = extractErrorMessage(err, 'Failed to upload image')
+      throw err
+    }
+  }
+
+  async function handleImageDelete() {
+    if (!candidateId) return
+    imageError = ''
+    try {
+      const updated = await deleteCandidateImage(candidateId)
+      candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
+    } catch (err: unknown) {
+      imageError = extractErrorMessage(err, 'Failed to delete image')
+      throw err
+    }
+  }
 </script>
 
 <div class='min-h-[100dvh]' style='background: oklch(0.16 0.020 250)'>
@@ -176,6 +203,17 @@
         class='rounded-2xl border p-5 shadow-lg space-y-5'
         style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
       >
+        <ImageUpload
+          currentImageUrl={candidate.imageUrl}
+          onupload={handleImageUpload}
+          ondelete={handleImageDelete}
+          disabled={isSaving}
+        />
+
+        {#if imageError}
+          <p class='text-sm text-red-400'>{imageError}</p>
+        {/if}
+
         <div class='space-y-2'>
           <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
             Full name
