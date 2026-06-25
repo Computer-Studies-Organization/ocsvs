@@ -1,0 +1,125 @@
+import B2 from "backblaze-b2";
+
+export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+export interface B2Config {
+  applicationKeyId: string;
+  applicationKey: string;
+  bucketName: string;
+}
+
+export interface UploadResult {
+  url: string;
+  key: string;
+}
+
+export class B2Client {
+  private b2: InstanceType<typeof B2>;
+  private bucketName: string;
+  private bucketId: string | null = null;
+  private authorized = false;
+
+  constructor(config: B2Config) {
+    this.b2 = new B2({
+      applicationKeyId: config.applicationKeyId,
+      applicationKey: config.applicationKey,
+    });
+    this.bucketName = config.bucketName;
+  }
+
+  private async ensureAuthorized(): Promise<void> {
+    if (!this.authorized) {
+      await this.b2.authorize();
+      this.authorized = true;
+    }
+    if (!this.bucketId) {
+      const response = await this.b2.listBuckets();
+      const responseData = response.data as {
+        buckets: Array<{ bucketId: string; bucketName: string }>;
+      };
+      const bucket = responseData.buckets.find((b) => b.bucketName === this.bucketName);
+      if (!bucket) {
+        throw new Error(`B2 bucket "${this.bucketName}" not found`);
+      }
+      this.bucketId = bucket.bucketId;
+    }
+  }
+
+  private generateKey(candidateId: string, filename: string): string {
+    const parts = filename.split(".");
+    const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
+    const uuid = crypto.randomUUID();
+    return `candidates/${candidateId}/${uuid}.${ext}`;
+  }
+
+  validateFile(file: { size: number; type: string }): { valid: boolean; error?: string } {
+    if (!ALLOWED_TYPES.includes(file.type as (typeof ALLOWED_TYPES)[number])) {
+      return {
+        valid: false,
+        error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`,
+      };
+    }
+
+    if (file.size > MAX_SIZE) {
+      return {
+        valid: false,
+        error: `File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    return { valid: true };
+  }
+
+  async uploadImage(
+    candidateId: string,
+    file: Buffer,
+    contentType: string,
+    filename: string,
+  ): Promise<UploadResult> {
+    await this.ensureAuthorized();
+
+    const key = this.generateKey(candidateId, filename);
+
+    const uploadUrl = await this.b2.getUploadUrl({
+      bucketId: this.bucketId!,
+    });
+
+    await this.b2.uploadFile({
+      uploadUrl: uploadUrl.data.uploadUrl,
+      uploadAuthToken: uploadUrl.data.authorizationToken,
+      fileName: key,
+      data: file,
+      mime: contentType,
+    });
+
+    const url = `https://f003.backblazeb2.com/file/${this.bucketName}/${key}`;
+
+    return { url, key };
+  }
+
+  async deleteImage(key: string): Promise<void> {
+    await this.ensureAuthorized();
+
+    // Look up the fileId by listing files with the key as prefix
+    const listResponse = await this.b2.listFileNames({
+      bucketId: this.bucketId!,
+      prefix: key,
+      maxFileCount: 1,
+    });
+
+    const files = listResponse.data.files as Array<{ fileName: string; fileId: string }>;
+    const file = files.find((f) => f.fileName === key);
+
+    if (!file) {
+      // File already deleted or never existed — treat as success
+      return;
+    }
+
+    await this.b2.deleteFileVersion({
+      fileName: key,
+      fileId: file.fileId,
+    });
+  }
+}

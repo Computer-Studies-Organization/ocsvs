@@ -12,5 +12,6 @@
   "vars": {
     "NODE_ENV": "development",
     "LOG_LEVEL": "debug",
+    "B2_BUCKET_NAME": "cso-voting-candidates",
   },
 }
