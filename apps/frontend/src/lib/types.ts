@@ -68,6 +68,7 @@ export interface TCandidate {
   positionId: string;
   manifesto: string;
   isActive: number;
+  imageUrl: string | null;
 }
 
 export interface TVote {

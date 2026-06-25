@@ -65,3 +65,28 @@ export async function updateCandidate(
 export async function deleteCandidate(id: string): Promise<{ message: string }> {
   return apiFetch(`/candidates/${id}`, { method: "DELETE" });
 }
+
+export async function uploadCandidateImage(candidateId: string, file: File): Promise<TCandidate> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await apiFetch<{ message: string; candidate: TCandidate }>(
+    `/candidates/${candidateId}/image`,
+    {
+      method: "POST",
+      body: formData,
+      // Don't set Content-Type - browser sets it with boundary for FormData
+    },
+  );
+  return res.candidate;
+}
+
+export async function deleteCandidateImage(candidateId: string): Promise<TCandidate> {
+  const res = await apiFetch<{ message: string; candidate: TCandidate }>(
+    `/candidates/${candidateId}/image`,
+    {
+      method: "DELETE",
+    },
+  );
+  return res.candidate;
+}
