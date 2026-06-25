@@ -223,3 +223,91 @@ export const deleteCandidateRoute = createRoute({
     ),
   },
 });
+
+export const uploadImageRoute = createRoute({
+  tags: ["Candidates"],
+  method: "post",
+  path: "/candidates/{id}/image",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      z.object({
+        message: z.string(),
+        candidate: SelectCandidateSchema as any,
+      }),
+      ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.CANDIDATE_NOT_FOUND,
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.UNAUTHORIZED,
+    ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.FORBIDDEN,
+    ),
+    [httpStatusCodes.BAD_REQUEST]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "No image file provided",
+    ),
+    [httpStatusCodes.UNSUPPORTED_MEDIA_TYPE]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Invalid file type or size",
+    ),
+  },
+});
+
+export const deleteImageRoute = createRoute({
+  tags: ["Candidates"],
+  method: "delete",
+  path: "/candidates/{id}/image",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      z.object({
+        message: z.string(),
+        candidate: SelectCandidateSchema as any,
+      }),
+      ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.CANDIDATE_NOT_FOUND,
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.UNAUTHORIZED,
+    ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.FORBIDDEN,
+    ),
+  },
+});
