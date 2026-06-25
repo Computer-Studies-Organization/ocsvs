@@ -3,7 +3,7 @@
   import { page } from '$app/state'
   import { ArrowLeft, Edit, Loader, Plus, Users } from 'lucide-svelte'
   import { getElection } from '$lib/api/elections'
-  import { listPositions } from '$lib/api/positions'
+  import { listPositions, updatePosition } from '$lib/api/positions'
   import { allCandidates, createCandidate } from '$lib/api/candidates'
   import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
@@ -14,6 +14,7 @@
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { validate } from '$lib/validation/helpers'
   import { createCandidateSchema } from '$lib/validation/candidate'
+  import { updatePositionSchema } from '$lib/validation/position'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
 
   type CandidateRow = {
@@ -35,6 +36,12 @@
   let createManifesto = $state('')
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
+
+  let isEditOpen = $state(false)
+  let editName = $state('')
+  let editOrder = $state('')
+  let editBusy = $state(false)
+  let editErrors = $state<Record<string, string>>({})
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
 
@@ -99,6 +106,50 @@
     if (createBusy)
       return
     isCreateOpen = false
+  }
+
+  function openEdit() {
+    if (!position) return
+    editName = position.name
+    editOrder = String(position.displayOrder ?? '')
+    editErrors = {}
+    isEditOpen = true
+  }
+
+  function closeEdit() {
+    if (editBusy) return
+    isEditOpen = false
+  }
+
+  async function submitEdit(e: SubmitEvent) {
+    e.preventDefault()
+    if (!electionId || !positionId || !position) return
+    const orderNum = Number.parseInt(editOrder, 10)
+    const result = validate(updatePositionSchema, {
+      name: editName.trim(),
+      displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
+    })
+    if (!result.ok) {
+      editErrors = result.errors
+      return
+    }
+    editErrors = {}
+    editBusy = true
+    try {
+      await updatePosition(electionId, positionId, {
+        name: editName.trim(),
+        displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
+      })
+      isEditOpen = false
+      await load()
+      addToast('success', 'Position updated')
+    }
+    catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to update position'))
+    }
+    finally {
+      editBusy = false
+    }
   }
 
   function handleUserSelect(accountId: string) {
@@ -193,7 +244,20 @@
         class='rounded-2xl border p-5 shadow-lg mb-6'
         style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
       >
-        <h1 class='text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{position.name}</h1>
+        <div class='flex items-center gap-3'>
+          <h1 class='text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{position.name}</h1>
+          {#if election?.status === 'draft'}
+            <button
+              type='button'
+              onclick={openEdit}
+              class='rounded-lg p-1.5 transition-colors cursor-pointer'
+              style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
+              title='Edit position'
+            >
+              <Edit size={16} />
+            </button>
+          {/if}
+        </div>
         <p class='text-sm mt-1' style='color: oklch(0.70 0.015 250)'>{election?.name ?? ''}</p>
       </header>
 
@@ -339,6 +403,67 @@
       >
         {#if createBusy}<Loader class='animate-spin' size={18} />{/if}
         {createBusy ? 'Adding…' : 'Add candidate'}
+      </button>
+    </div>
+  </form>
+</Modal>
+
+<!-- Edit Position Modal -->
+<Modal open={isEditOpen} onclose={closeEdit}>
+  <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Edit position</h2>
+
+  <form onsubmit={submitEdit} class='space-y-5'>
+    <div class='space-y-2'>
+      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+        Name
+      </label>
+      <input
+        type='text'
+        bind:value={editName}
+        required
+        disabled={editBusy}
+        placeholder='President'
+        oninput={() => { if (editErrors.name) editErrors.name = '' }}
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {editErrors.name ? 'border-red-500' : ''}'
+        style='background: oklch(0.16 0.020 250); border-color: {editErrors.name ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
+      />
+      {#if editErrors.name}
+        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{editErrors.name}</p>
+      {/if}
+    </div>
+
+    <div class='space-y-2'>
+      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+        Display order (optional)
+      </label>
+      <input
+        type='number'
+        bind:value={editOrder}
+        disabled={editBusy}
+        placeholder='0'
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
+        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+      />
+    </div>
+
+    <div class='flex gap-3 pt-2'>
+      <button
+        type='button'
+        onclick={closeEdit}
+        disabled={editBusy}
+        class='flex-1 px-4 py-3 rounded-xl font-bold transition cursor-pointer'
+        style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
+      >
+        Cancel
+      </button>
+      <button
+        type='submit'
+        disabled={editBusy || !editName.trim()}
+        class='flex-1 px-4 py-3 rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+        style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+      >
+        {#if editBusy}<Loader class='animate-spin' size={18} />{/if}
+        {editBusy ? 'Saving…' : 'Save changes'}
       </button>
     </div>
   </form>

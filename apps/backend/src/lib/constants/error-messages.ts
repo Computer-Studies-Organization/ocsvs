@@ -57,7 +57,6 @@ export const ERROR_MESSAGES = {
   USER_LOGGED_IN_SUCCESSFULLY: "User logged in successfully",
   LOGGED_OUT_SUCCESSFULLY: "Logged out successfully",
   VOTE_SUBMITTED_SUCCESSFULLY: "Vote submitted successfully",
-  VOTE_WITHDRAWN_SUCCESSFULLY: "Vote withdrawn successfully",
   PROFILE_UPDATED_SUCCESSFULLY: "Profile updated successfully",
   PASSWORD_CHANGED_SUCCESSFULLY: "Password changed successfully",
 
