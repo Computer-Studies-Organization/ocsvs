@@ -1,14 +1,18 @@
 <script lang='ts'>
   import { onMount } from 'svelte'
   import { page } from '$app/state'
-  import { ArrowLeft, Loader, Plus } from 'lucide-svelte'
+  import { ArrowLeft, ListOrdered, Loader, Plus } from 'lucide-svelte'
   import { getElection } from '$lib/api/elections'
   import { createPosition, listPositions } from '$lib/api/positions'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
+  import { validate } from '$lib/validation/helpers'
+  import { createPositionSchema } from '$lib/validation/position'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
+  import EmptyState from '$lib/components/ui/empty-state.svelte'
+  import SkeletonTable from '$lib/components/ui/skeleton-table.svelte'
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
-  import Spinner from '$lib/components/ui/spinner.svelte'
   import type { TElection, TPosition } from '$lib/types'
 
   let election = $state<TElection | null>(null)
@@ -19,7 +23,7 @@
   let createName = $state('')
   let createOrder = $state('')
   let createBusy = $state(false)
-  let createError = $state('')
+  let createErrors = $state<Record<string, string>>({})
 
   const electionId = $derived(page.params.electionId)
 
@@ -38,6 +42,7 @@
     }
     catch (e: unknown) {
       error = `Couldn't load election: ${extractErrorMessage(e, 'Unknown error')}`
+      addToast('error', extractErrorMessage(e, 'Failed to load election'))
     }
     finally {
       isLoading = false
@@ -54,7 +59,6 @@
   function openCreate() {
     createName = ''
     createOrder = ''
-    createError = ''
     isCreateOpen = true
   }
 
@@ -66,12 +70,20 @@
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
-    if (!createName.trim() || !electionId)
+    if (!electionId)
       return
+    const orderNum = Number.parseInt(createOrder, 10)
+    const result = validate(createPositionSchema, {
+      name: createName.trim(),
+      displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
+    })
+    if (!result.ok) {
+      createErrors = result.errors
+      return
+    }
+    createErrors = {}
     createBusy = true
-    createError = ''
     try {
-      const orderNum = Number.parseInt(createOrder, 10)
       await createPosition(electionId, {
         name: createName.trim(),
         displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
@@ -81,9 +93,10 @@
       createOrder = ''
       const p = await listPositions(electionId)
       positions = p
+      addToast('success', 'Position created')
     }
     catch (err: unknown) {
-      createError = extractErrorMessage(err, 'Failed to create position')
+      addToast('error', extractErrorMessage(err, 'Failed to create position'))
     }
     finally {
       createBusy = false
@@ -103,13 +116,7 @@
     </a>
 
     {#if isLoading}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl flex items-center justify-center gap-3'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <Spinner size={28} />
-        <p class='text-sm font-medium' style='color: oklch(0.70 0.015 250)'>Loading election…</p>
-      </div>
+      <SkeletonTable rows={5} cols={3} />
     {:else if error || !election}
       <div
         class='rounded-2xl border p-8 shadow-2xl'
@@ -117,6 +124,14 @@
       >
         <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>{error || 'Election not found.'}</p>
       </div>
+    {:else if positions.length === 0}
+      <EmptyState
+        icon={ListOrdered}
+        title='No positions yet'
+        description='Add positions for this election.'
+        cta='Add position'
+        oncta={openCreate}
+      />
     {:else}
       <!-- Header -->
       <header
@@ -153,29 +168,23 @@
           </button>
         </div>
 
-        {#if positions.length === 0}
-          <p class='text-sm text-center py-6' style='color: oklch(0.70 0.015 250)'>
-            No positions yet. Add positions before opening.
-          </p>
-        {:else}
-          <ul class='space-y-2'>
-            {#each positions as p (p.id)}
-              <li>
-                <a
-                  href={`/admin/elections/${electionId}/positions/${p.id}`}
-                  class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer'
-                  style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
-                >
-                  <div>
-                    <p class='font-bold' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
-                    <p class='text-xs' style='color: oklch(0.60 0.015 250)'>Order: {p.displayOrder}</p>
-                  </div>
-                  <span class='text-xs font-bold' style='color: oklch(0.55 0.15 250)'>Open →</span>
-                </a>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+        <ul class='space-y-2'>
+          {#each positions as p (p.id)}
+            <li>
+              <a
+                href={`/admin/elections/${electionId}/positions/${p.id}`}
+                class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer'
+                style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
+              >
+                <div>
+                  <p class='font-bold' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
+                  <p class='text-xs' style='color: oklch(0.60 0.015 250)'>Order: {p.displayOrder}</p>
+                </div>
+                <span class='text-xs font-bold' style='color: oklch(0.55 0.15 250)'>Open →</span>
+              </a>
+            </li>
+          {/each}
+        </ul>
       </section>
     {/if}
   </div>
@@ -185,14 +194,6 @@
 <Modal open={isCreateOpen} onclose={closeCreate}>
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Add position</h2>
 
-  {#if createError}
-    <div
-      class='mb-4 rounded-xl px-4 py-3 text-sm'
-      style='background: oklch(0.40 0.15 25 / 0.25); color: oklch(0.98 0.005 250); border: 1px solid oklch(0.40 0.15 25 / 0.5)'
-    >
-      {createError}
-    </div>
-  {/if}
 
   <form onsubmit={submitCreate} class='space-y-5'>
     <div class='space-y-2'>
@@ -205,9 +206,13 @@
         required
         disabled={createBusy}
         placeholder='President'
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+        oninput={() => { if (createErrors.name) createErrors.name = '' }}
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {createErrors.name ? 'border-red-500' : ''}'
+        style='background: oklch(0.16 0.020 250); border-color: {createErrors.name ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
       />
+      {#if createErrors.name}
+        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.name}</p>
+      {/if}
     </div>
 
     <div class='space-y-2'>

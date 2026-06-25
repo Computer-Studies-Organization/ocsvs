@@ -3,9 +3,13 @@
   import { Plus, Loader, CalendarRange } from 'lucide-svelte'
   import { listElections, createElection } from '$lib/api/elections'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
+  import { validate } from '$lib/validation/helpers'
+  import { createElectionSchema } from '$lib/validation/election'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
+  import EmptyState from '$lib/components/ui/empty-state.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
-  import Spinner from '$lib/components/ui/spinner.svelte'
   import type { TElection, TElectionStatus } from '$lib/types'
 
   let elections = $state<TElection[]>([])
@@ -16,7 +20,7 @@
   let createName = $state('')
   let createDescription = $state('')
   let createBusy = $state(false)
-  let createError = $state('')
+  let createErrors = $state<Record<string, string>>({})
 
   const tabs: Array<{ value: TElectionStatus | 'all', label: string }> = [
     { value: 'all', label: 'All' },
@@ -39,7 +43,7 @@
       elections = await listElections(statusFilter === 'all' ? undefined : statusFilter)
     }
     catch (e: unknown) {
-      error = `Couldn't load elections: ${extractErrorMessage(e, 'Unknown error')}`
+      addToast('error', extractErrorMessage(e, 'Failed to load elections'))
     }
     finally {
       isLoading = false
@@ -56,7 +60,6 @@
   function openCreate() {
     createName = ''
     createDescription = ''
-    createError = ''
     isCreateOpen = true
   }
 
@@ -68,10 +71,13 @@
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
-    if (!createName.trim())
+    const result = validate(createElectionSchema, { name: createName.trim(), description: createDescription.trim() || undefined })
+    if (!result.ok) {
+      createErrors = result.errors
       return
+    }
+    createErrors = {}
     createBusy = true
-    createError = ''
     try {
       await createElection({
         name: createName.trim(),
@@ -81,9 +87,10 @@
       createName = ''
       createDescription = ''
       await load()
+      addToast('success', 'Election created')
     }
     catch (err: unknown) {
-      createError = extractErrorMessage(err, 'Failed to create election')
+      addToast('error', extractErrorMessage(err, 'Failed to create election'))
     }
     finally {
       createBusy = false
@@ -134,27 +141,23 @@
 
     <!-- Body -->
     {#if isLoading}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl flex items-center justify-center gap-3'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <Spinner size={28} />
-        <p class='text-sm font-medium' style='color: oklch(0.70 0.015 250)'>Loading elections…</p>
+      <div class='grid grid-cols-1 gap-4 md:grid-cols-2'>
+        {#each { length: 4 } as _}
+          <SkeletonCard />
+        {/each}
       </div>
     {:else if error}
       <div class='rounded-2xl border p-8 shadow-2xl' style='background: oklch(0.40 0.15 25 / 0.15); border-color: oklch(0.40 0.15 25 / 0.4)'>
         <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>{error}</p>
       </div>
     {:else if elections.length === 0}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl text-center'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <CalendarRange size={32} class='mx-auto mb-3' style='color: oklch(0.55 0.15 250)' />
-        <p class='text-sm' style='color: oklch(0.70 0.015 250)'>
-          No elections yet. Click <span class='font-bold' style='color: oklch(0.55 0.15 250)'>New election</span> to create one.
-        </p>
-      </div>
+      <EmptyState
+        icon={CalendarRange}
+        title='No elections yet'
+        description='Create your first election to get started.'
+        cta='New election'
+        oncta={openCreate}
+      />
     {:else}
       <div class='grid grid-cols-1 gap-4 md:grid-cols-2'>
         {#each elections as election (election.id)}
@@ -187,14 +190,6 @@
 <Modal open={isCreateOpen} onclose={closeCreate}>
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>New election</h2>
 
-  {#if createError}
-    <div
-      class='mb-4 rounded-xl px-4 py-3 text-sm'
-      style='background: oklch(0.40 0.15 25 / 0.25); color: oklch(0.98 0.005 250); border: 1px solid oklch(0.40 0.15 25 / 0.5)'
-    >
-      {createError}
-    </div>
-  {/if}
 
   <form onsubmit={submitCreate} class='space-y-5'>
     <div class='space-y-2'>
@@ -207,9 +202,13 @@
         required
         disabled={createBusy}
         placeholder='CSO General Elections 2026'
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+        oninput={() => { if (createErrors.name) createErrors.name = '' }}
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {createErrors.name ? 'border-red-500' : ''}'
+        style='background: oklch(0.16 0.020 250); border-color: {createErrors.name ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
       />
+      {#if createErrors.name}
+        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.name}</p>
+      {/if}
     </div>
 
     <div class='space-y-2'>

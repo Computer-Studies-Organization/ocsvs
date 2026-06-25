@@ -6,6 +6,10 @@
   import { UserRole } from '$lib/types'
   import { ArrowLeft, Eye, EyeOff, KeyRound, Loader, Save } from 'lucide-svelte'
   import { onMount } from 'svelte'
+  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
+  import { validate } from '$lib/validation/helpers'
+  import { updateProfileSchema, changePasswordSchema } from '$lib/validation/profile'
 
   // State
   let profile = $state<ProfileData | null>(null)
@@ -18,14 +22,14 @@
   let username = $state('')
   let email = $state('')
   let isSavingProfile = $state(false)
-  let profileMsg = $state<{ text: string, ok: boolean } | null>(null)
+  let profileErrors = $state<Record<string, string>>({})
 
   // Password form
   let currentPassword = $state('')
   let newPassword = $state('')
   let confirmPassword = $state('')
   let isSavingPassword = $state(false)
-  let passwordMsg = $state<{ text: string, ok: boolean } | null>(null)
+  let passwordErrors = $state<Record<string, string>>({})
 
   // Visibility toggles
   let showCurrent = $state(false)
@@ -54,8 +58,18 @@
 
   async function handleProfileSubmit(e: SubmitEvent) {
     e.preventDefault()
+    const result = validate(updateProfileSchema, {
+      firstName,
+      lastName,
+      username,
+      email: email.trim() || undefined,
+    })
+    if (!result.ok) {
+      profileErrors = result.errors
+      return
+    }
+    profileErrors = {}
     isSavingProfile = true
-    profileMsg = null
     try {
       const payload: UpdateProfileData = {
         firstName,
@@ -64,47 +78,42 @@
         email: email.trim(),
       }
       await updateMyProfile(payload)
-      profileMsg = { text: 'Profile updated successfully.', ok: true }
+      addToast('success', 'Profile updated')
     }
     catch (err: any) {
-      profileMsg = { text: err.message || 'Failed to update profile', ok: false }
+      addToast('error', extractErrorMessage(err, 'Failed to update profile'))
     }
     finally {
       isSavingProfile = false
-      setTimeout(() => {
-        profileMsg = null
-      }, 4000)
     }
   }
 
   async function handlePasswordSubmit(e: SubmitEvent) {
     e.preventDefault()
-    passwordMsg = null
-    if (newPassword.length < 8) {
-      passwordMsg = { text: 'Password must be at least 8 characters', ok: false }
+    const result = validate(changePasswordSchema, {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    })
+    if (!result.ok) {
+      passwordErrors = result.errors
       return
     }
-    if (newPassword !== confirmPassword) {
-      passwordMsg = { text: 'Passwords do not match', ok: false }
-      return
-    }
+    passwordErrors = {}
     isSavingPassword = true
     try {
       const payload: ChangePasswordData = { currentPassword, newPassword }
       await changePassword(payload)
-      passwordMsg = { text: 'Password changed successfully.', ok: true }
+      addToast('success', 'Password changed')
       currentPassword = ''
       newPassword = ''
       confirmPassword = ''
     }
     catch (err: any) {
-      passwordMsg = { text: err.message || 'Failed to change password', ok: false }
+      addToast('error', extractErrorMessage(err, 'Failed to change password'))
     }
     finally {
       isSavingPassword = false
-      setTimeout(() => {
-        passwordMsg = null
-      }, 4000)
     }
   }
 </script>
@@ -139,12 +148,6 @@
       <div class='mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-6'>
         <h2 class='mb-6 text-xl font-bold text-slate-50'>Profile Information</h2>
 
-        {#if profileMsg}
-          <div class="mb-4 rounded-xl border px-4 py-3 text-sm font-semibold
-            {profileMsg.ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-red-500/30 bg-red-500/10 text-red-300'}">
-            {profileMsg.text}
-          </div>
-        {/if}
 
         <form onsubmit={handleProfileSubmit} class='space-y-5'>
           <div class='grid grid-cols-1 gap-5 md:grid-cols-2'>
@@ -154,9 +157,13 @@
               <input
                 type='text'
                 bind:value={firstName}
+                oninput={() => { if (profileErrors.firstName) profileErrors.firstName = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {profileErrors.firstName ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
               />
+              {#if profileErrors.firstName}
+                <p class='text-xs font-medium text-red-400'>{profileErrors.firstName}</p>
+              {/if}
             </div>
             <!-- Last Name -->
             <div class='space-y-2'>
@@ -164,9 +171,13 @@
               <input
                 type='text'
                 bind:value={lastName}
+                oninput={() => { if (profileErrors.lastName) profileErrors.lastName = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {profileErrors.lastName ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
               />
+              {#if profileErrors.lastName}
+                <p class='text-xs font-medium text-red-400'>{profileErrors.lastName}</p>
+              {/if}
             </div>
             <!-- Username -->
             <div class='space-y-2'>
@@ -174,9 +185,13 @@
               <input
                 type='text'
                 bind:value={username}
+                oninput={() => { if (profileErrors.username) profileErrors.username = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {profileErrors.username ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
               />
+              {#if profileErrors.username}
+                <p class='text-xs font-medium text-red-400'>{profileErrors.username}</p>
+              {/if}
             </div>
             <!-- Email -->
             <div class='space-y-2'>
@@ -184,8 +199,12 @@
               <input
                 type='email'
                 bind:value={email}
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
+                oninput={() => { if (profileErrors.email) profileErrors.email = '' }}
+                class='w-full rounded-xl border-2 {profileErrors.email ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
               />
+              {#if profileErrors.email}
+                <p class='text-xs font-medium text-red-400'>{profileErrors.email}</p>
+              {/if}
             </div>
           </div>
 
@@ -229,12 +248,6 @@
           <h2 class='text-xl font-bold text-slate-50'>Change Password</h2>
         </div>
 
-        {#if passwordMsg}
-          <div class="mb-4 rounded-xl border px-4 py-3 text-sm font-semibold
-            {passwordMsg.ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-red-500/30 bg-red-500/10 text-red-300'}">
-            {passwordMsg.text}
-          </div>
-        {/if}
 
         <form onsubmit={handlePasswordSubmit} class='space-y-5'>
           <!-- Current Password -->
@@ -244,13 +257,17 @@
               <input
                 type={showCurrent ? 'text' : 'password'}
                 bind:value={currentPassword}
+                oninput={() => { if (passwordErrors.currentPassword) passwordErrors.currentPassword = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {passwordErrors.currentPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
               />
               <button type='button' onclick={() => showCurrent = !showCurrent} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
                 {#if showCurrent}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
               </button>
             </div>
+            {#if passwordErrors.currentPassword}
+              <p class='text-xs font-medium text-red-400'>{passwordErrors.currentPassword}</p>
+            {/if}
           </div>
 
           <!-- New Password -->
@@ -260,13 +277,17 @@
               <input
                 type={showNew ? 'text' : 'password'}
                 bind:value={newPassword}
+                oninput={() => { if (passwordErrors.newPassword) passwordErrors.newPassword = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {passwordErrors.newPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
               />
               <button type='button' onclick={() => showNew = !showNew} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
                 {#if showNew}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
               </button>
             </div>
+            {#if passwordErrors.newPassword}
+              <p class='text-xs font-medium text-red-400'>{passwordErrors.newPassword}</p>
+            {/if}
           </div>
 
           <!-- Confirm Password -->
@@ -276,13 +297,17 @@
               <input
                 type={showConfirm ? 'text' : 'password'}
                 bind:value={confirmPassword}
+                oninput={() => { if (passwordErrors.confirmPassword) passwordErrors.confirmPassword = '' }}
                 required
-                class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
+                class='w-full rounded-xl border-2 {passwordErrors.confirmPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
               />
               <button type='button' onclick={() => showConfirm = !showConfirm} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
                 {#if showConfirm}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
               </button>
             </div>
+            {#if passwordErrors.confirmPassword}
+              <p class='text-xs font-medium text-red-400'>{passwordErrors.confirmPassword}</p>
+            {/if}
           </div>
 
           <div class='flex justify-end pt-2'>

@@ -3,6 +3,7 @@
   import { transitionElection } from '$lib/api/elections'
   import { canTransition } from '$lib/election-lifecycle-client'
   import Modal from './modal.svelte'
+  import { addToast } from '$lib/stores/toast'
 
   let { election, onsuccess = () => {} }: {
     election: TElection
@@ -38,8 +39,10 @@
       open = false
       activeTarget = null
       onsuccess()
+      addToast('success', 'Election transitioned')
     } catch (e) {
       error = e instanceof Error ? e.message : 'Transition failed'
+      addToast('error', e instanceof Error ? e.message : 'Transition failed')
     } finally {
       busy = false
     }

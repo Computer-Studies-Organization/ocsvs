@@ -14,6 +14,8 @@
     X,
   } from 'lucide-svelte'
   import { onMount } from 'svelte'
+  import { addToast } from '$lib/stores/toast'
+  import SkeletonTable from '$lib/components/ui/skeleton-table.svelte'
 
   type SortableKey = 'studentId' | 'firstName' | 'lastName' | 'username' | 'yearLevel' | 'course'
   const SORTABLE_KEYS: SortableKey[] = ['studentId', 'firstName', 'lastName', 'username', 'yearLevel', 'course']
@@ -146,6 +148,7 @@
         course: editForm.course || undefined,
       })
       editMsg = 'Saved!'
+      addToast('success', 'User updated')
       await loadUsers()
       setTimeout(() => {
         editUser = null
@@ -153,6 +156,7 @@
     }
     catch (e: any) {
       editMsg = e.message || 'Failed to save'
+      addToast('error', e.message || 'Failed to save')
     }
     finally {
       isEditSaving = false
@@ -167,9 +171,11 @@
       await deleteUser(archiveConfirmUser.id)
       await loadUsers()
       archiveConfirmUser = null
+      addToast('success', 'User archived')
     }
     catch (e: any) {
       actionMsg = e.message || 'Failed to archive'
+      addToast('error', e.message || 'Failed to archive')
     }
     finally {
       isActionLoading = false
@@ -184,9 +190,11 @@
       await restoreUser(restoreConfirmUser.id)
       await loadUsers()
       restoreConfirmUser = null
+      addToast('success', 'User restored')
     }
     catch (e: any) {
       actionMsg = e.message || 'Failed to restore'
+      addToast('error', e.message || 'Failed to restore')
     }
     finally {
       isActionLoading = false
@@ -237,8 +245,8 @@
     <!-- Table -->
     <div class='overflow-hidden rounded-2xl border border-slate-800 bg-slate-900'>
       {#if isLoading}
-        <div class='flex h-40 items-center justify-center'>
-          <Loader class='animate-spin text-sky-400' size={32} />
+        <div class='p-4'>
+          <SkeletonTable rows={8} cols={6} />
         </div>
       {:else if errorMsg}
         <div class='flex h-40 items-center justify-center text-red-400'>{errorMsg}</div>

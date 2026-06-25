@@ -5,7 +5,7 @@
   import { getElection, listResults, getVotingState } from '$lib/api/elections'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import type { TElection, TResults } from '$lib/types'
-  import Spinner from '$lib/components/ui/spinner.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import { ArrowLeft, BarChart3, Info, Trophy, Vote } from 'lucide-svelte'
 
@@ -113,10 +113,7 @@
     <!-- Main Content Area -->
     <main class='flex-1 space-y-6'>
       {#if isLoading}
-        <div class='flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900 p-8 shadow-2xl'>
-          <Spinner size={32} />
-          <p class='text-slate-400'>Loading election details…</p>
-        </div>
+        <SkeletonCard />
       {:else if error}
         <div class='rounded-2xl border border-red-500/20 bg-red-950/20 p-8 text-center text-red-400 shadow-2xl'>
           <p>{error}</p>

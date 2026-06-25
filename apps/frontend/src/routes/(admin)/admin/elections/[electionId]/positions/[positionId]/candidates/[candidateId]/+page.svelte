@@ -8,9 +8,13 @@
   import { listPositions } from '$lib/api/positions'
   import { fetchUser } from '$lib/api/users'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
   import Modal from '$lib/components/ui/modal.svelte'
   import Spinner from '$lib/components/ui/spinner.svelte'
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
+
+  import { validate } from '$lib/validation/helpers'
+  import { updateCandidateSchema } from '$lib/validation/candidate'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
 
   type CandidateRecord = {
@@ -30,14 +34,15 @@
   let isLoading = $state(true)
   let error = $state('')
   let isSaving = $state(false)
-  let saveMsg = $state('')
+
   let isDeleteOpen = $state(false)
   let isDeleting = $state(false)
-  let deleteError = $state('')
   let imageError = $state('')
 
   let editManifesto = $state('')
   let editIsActive = $state(true)
+
+  let editErrors = $state<Record<string, string>>({})
 
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
@@ -83,19 +88,27 @@
     e.preventDefault()
     if (!candidateId)
       return
+    const result = validate(updateCandidateSchema, {
+      manifesto: editManifesto,
+      isActive: editIsActive ? 1 : 0,
+    })
+    if (!result.ok) {
+      editErrors = result.errors
+      return
+    }
+    editErrors = {}
     isSaving = true
-    saveMsg = ''
+
     try {
       const updated = await updateCandidate(candidateId, {
         manifesto: editManifesto,
         isActive: editIsActive ? 1 : 0,
       })
       candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
-      saveMsg = 'Saved'
-      setTimeout(() => (saveMsg = ''), 1500)
+      addToast('success', 'Candidate updated')
     }
     catch (err: unknown) {
-      saveMsg = extractErrorMessage(err, 'Failed to save')
+      addToast('error', extractErrorMessage(err, 'Failed to update candidate'))
     }
     finally {
       isSaving = false
@@ -103,7 +116,6 @@
   }
 
   function openDelete() {
-    deleteError = ''
     isDeleteOpen = true
   }
 
@@ -117,14 +129,14 @@
     if (!candidateId)
       return
     isDeleting = true
-    deleteError = ''
     try {
       await deleteCandidate(candidateId)
       isDeleteOpen = false
+      addToast('success', 'Candidate deleted')
       await goto(`/admin/elections/${electionId}/positions/${positionId}`)
     }
     catch (err: unknown) {
-      deleteError = extractErrorMessage(err, 'Failed to delete')
+      addToast('error', extractErrorMessage(err, 'Failed to delete candidate'))
     }
     finally {
       isDeleting = false
@@ -235,9 +247,13 @@
             bind:value={editManifesto}
             rows={6}
             disabled={isSaving}
-            class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none'
-            style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+            oninput={() => { if (editErrors.manifesto) editErrors.manifesto = '' }}
+            class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none {editErrors.manifesto ? 'border-red-500' : ''}'
+            style='background: oklch(0.16 0.020 250); border-color: {editErrors.manifesto ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
           ></textarea>
+          {#if editErrors.manifesto}
+            <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{editErrors.manifesto}</p>
+          {/if}
         </div>
 
         <label class='flex items-center gap-3 cursor-pointer'>
@@ -250,14 +266,6 @@
           <span class='text-sm font-semibold' style='color: oklch(0.95 0.008 250)'>Active</span>
         </label>
 
-        {#if saveMsg}
-          <p
-            class='text-sm font-semibold'
-            style={saveMsg === 'Saved' ? 'color: oklch(0.70 0.15 145)' : 'color: oklch(0.70 0.15 25)'}
-          >
-            {saveMsg}
-          </p>
-        {/if}
 
         <div class='flex flex-wrap gap-3 pt-2'>
           <button
@@ -293,14 +301,6 @@
     This will soft-delete <strong style='color: oklch(0.95 0.008 250)'>{candidate?.fullName ?? ''}</strong>. The candidate will be marked inactive.
   </p>
 
-  {#if deleteError}
-    <div
-      class='mb-4 rounded-xl px-4 py-3 text-sm'
-      style='background: oklch(0.40 0.15 25 / 0.25); color: oklch(0.98 0.005 250); border: 1px solid oklch(0.40 0.15 25 / 0.5)'
-    >
-      {deleteError}
-    </div>
-  {/if}
 
   <div class='flex gap-3 justify-end'>
     <button

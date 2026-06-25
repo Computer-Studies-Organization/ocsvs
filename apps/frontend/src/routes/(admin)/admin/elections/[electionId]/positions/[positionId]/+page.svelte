@@ -8,8 +8,12 @@
   import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
   import Modal from '$lib/components/ui/modal.svelte'
-  import Spinner from '$lib/components/ui/spinner.svelte'
+  import EmptyState from '$lib/components/ui/empty-state.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
+  import { validate } from '$lib/validation/helpers'
+  import { createCandidateSchema } from '$lib/validation/candidate'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
 
   type CandidateRow = {
@@ -30,8 +34,7 @@
   let createFullName = $state('')
   let createManifesto = $state('')
   let createBusy = $state(false)
-  let createError = $state('')
-
+  let createErrors = $state<Record<string, string>>({})
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
 
@@ -88,7 +91,7 @@
     createAccountId = ''
     createFullName = ''
     createManifesto = ''
-    createError = ''
+    createErrors = {}
     isCreateOpen = true
   }
 
@@ -106,10 +109,20 @@
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
-    if (!createAccountId || !createFullName.trim() || !createManifesto.trim() || !positionId || !electionId)
+    const result = validate(createCandidateSchema, {
+      fullName: createFullName.trim(),
+      manifesto: createManifesto.trim(),
+    })
+    if (!result.ok) {
+      createErrors = result.errors
       return
+    }
+    if (!createAccountId || !positionId || !electionId) {
+      createErrors = { ...createErrors, user: 'User is required' }
+      return
+    }
+    createErrors = {}
     createBusy = true
-    createError = ''
     const eId = electionId
     const pId = positionId
     try {
@@ -129,9 +142,10 @@
         fullName: c.fullName,
         isActive: (c as { isActive?: number }).isActive,
       }))
+      addToast('success', 'Candidate added')
     }
     catch (err: unknown) {
-      createError = extractErrorMessage(err, 'Failed to create candidate')
+      addToast('error', extractErrorMessage(err, 'Failed to add candidate'))
     }
     finally {
       createBusy = false
@@ -162,12 +176,10 @@
     {/if}
 
     {#if isLoading}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl flex items-center justify-center gap-3'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <Spinner size={28} />
-        <p class='text-sm font-medium' style='color: oklch(0.70 0.015 250)'>Loading position…</p>
+      <div class='grid grid-cols-1 gap-4 md:grid-cols-2'>
+        {#each { length: 4 } as _}
+          <SkeletonCard />
+        {/each}
       </div>
     {:else if error || !position}
       <div
@@ -206,9 +218,13 @@
         </div>
 
         {#if candidates.length === 0}
-          <p class='text-sm text-center py-6' style='color: oklch(0.70 0.015 250)'>
-            No candidates yet. Click <span class='font-bold' style='color: oklch(0.55 0.15 250)'>Add candidate</span> to register one.
-          </p>
+          <EmptyState
+            icon={Users}
+            title='No candidates yet'
+            description='Add candidates for this position.'
+            cta='Add candidate'
+            oncta={openCreate}
+          />
         {:else}
           <ul class='space-y-2'>
             {#each candidates as c (c.id)}
@@ -242,14 +258,6 @@
 <Modal open={isCreateOpen} onclose={closeCreate}>
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Add candidate</h2>
 
-  {#if createError}
-    <div
-      class='mb-4 rounded-xl px-4 py-3 text-sm'
-      style='background: oklch(0.40 0.15 25 / 0.25); color: oklch(0.98 0.005 250); border: 1px solid oklch(0.40 0.15 25 / 0.5)'
-    >
-      {createError}
-    </div>
-  {/if}
 
   {#if usersError}
     <div class='mb-4 rounded-xl border border-yellow-500/30 px-4 py-2 text-sm' style='background: oklch(0.25 0.025 250); color: oklch(0.95 0.008 250)'>
@@ -264,17 +272,20 @@
       </label>
       <select
         value={createAccountId}
-        onchange={(e) => handleUserSelect(e.currentTarget.value)}
+        onchange={(e) => { handleUserSelect(e.currentTarget.value); if (createErrors.user) createErrors.user = '' }}
         required
         disabled={createBusy}
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {createErrors.user ? 'border-red-500' : ''}'
+        style='background: oklch(0.16 0.020 250); border-color: {createErrors.user ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
       >
         <option value=''>Select a user</option>
         {#each users as u (u.accountId)}
           <option value={u.accountId}>{getCandidateUserLabel(u)}</option>
         {/each}
       </select>
+      {#if createErrors.user}
+        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.user}</p>
+      {/if}
     </div>
 
     <div class='space-y-2'>
@@ -300,9 +311,14 @@
         rows={5}
         required
         disabled={createBusy}
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+        oninput={() => { if (createErrors.manifesto) createErrors.manifesto = '' }}
+        class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none {createErrors.manifesto ? 'border-red-500' : ''}'
+        style='background: oklch(0.16 0.020 250); border-color: {createErrors.manifesto ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
       ></textarea>
+      {#if createErrors.manifesto}
+        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.manifesto}</p>
+      {/if}
+
     </div>
 
     <div class='flex gap-3 pt-2'>

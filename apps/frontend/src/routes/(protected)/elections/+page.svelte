@@ -3,8 +3,10 @@
   import { listElections } from '$lib/api/elections'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import type { TElection } from '$lib/types'
-  import Spinner from '$lib/components/ui/spinner.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
+
+  import EmptyState from '$lib/components/ui/empty-state.svelte'
   import { Calendar, Inbox, Vote } from 'lucide-svelte'
 
   let elections = $state<TElection[]>([])
@@ -60,21 +62,21 @@
   </div>
 
   {#if isLoading}
-    <div class='flex min-h-[40vh] items-center justify-center'>
-      <Spinner size={40} />
+    <div class='mt-8 grid gap-4 sm:grid-cols-1 md:grid-cols-2'>
+      {#each Array(3) as _}
+        <SkeletonCard />
+      {/each}
     </div>
   {:else if error}
     <div class='mt-8 rounded-2xl border border-red-500/20 bg-red-950/20 p-6 text-center text-red-400'>
       {error}
     </div>
-  {:else if sortedElections.length === 0}
-    <div class='flex min-h-[40vh] items-center justify-center p-8'>
-      <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
-        <Inbox size={48} class='mx-auto mb-4 text-slate-500' />
-        <h2 class='text-xl font-bold text-slate-100'>No elections yet</h2>
-        <p class='mt-2 text-slate-400'>Check back later for upcoming elections.</p>
-      </div>
-    </div>
+  {:else if elections.length === 0}
+    <EmptyState
+      icon={Vote}
+      title='No elections available'
+      description='There are no elections at this time. Check back later.'
+    />
   {:else}
     <div class='mt-8 grid gap-4 sm:grid-cols-1 md:grid-cols-2'>
       {#each sortedElections as election (election.id)}

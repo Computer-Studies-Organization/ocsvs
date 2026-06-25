@@ -5,6 +5,8 @@
   import { authStore } from '$lib/stores/auth'
   import { ArrowLeft, BarChart3, Loader, Trophy } from 'lucide-svelte'
   import { onMount } from 'svelte'
+  import EmptyState from '$lib/components/ui/empty-state.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
 
   interface CandidateWithPct extends TVoteCount { percentage: number }
   interface PositionResult extends TVoteResults {
@@ -146,18 +148,23 @@
     <!-- Results -->
     <div class='flex-1 space-y-6'>
       {#if isLoading}
-        <div class='flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl'>
-          <Loader class='animate-spin text-blue-400' size={24} />
-          <p class='text-slate-400'>Loading results…</p>
+        <div class='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          {#each { length: 2 } as _}
+            <SkeletonCard />
+          {/each}
         </div>
       {:else if isError}
         <div class='rounded-2xl border border-red-500/20 bg-red-500/5 p-8 backdrop-blur-xl'>
           <p class='text-center text-red-400'>Failed to load results. Please try again later.</p>
         </div>
       {:else if resultsWithPercentages.length === 0}
-        <div class='rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl'>
-          <p class='text-center text-slate-400'>No results available yet. Votes will appear here once the election begins.</p>
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title='No results available'
+          description='Results will appear after an election is closed.'
+          cta='View elections'
+          oncta={() => goto('/admin/elections')}
+        />
       {:else}
         <div class='space-y-8'>
           {#each resultsWithPercentages as pos (pos.positionId)}

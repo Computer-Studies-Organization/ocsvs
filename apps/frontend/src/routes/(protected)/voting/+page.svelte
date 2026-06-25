@@ -19,9 +19,10 @@
     withVoting,
   } from '$lib/voting-stepper-logic'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { addToast } from '$lib/stores/toast'
   import { authStore } from '$lib/stores/auth'
   import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
-  import Spinner from '$lib/components/ui/spinner.svelte'
+  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, User, Vote } from 'lucide-svelte'
 
   let apiState = $state<TVotingState | null>(null)
@@ -68,9 +69,11 @@
     try {
       await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
       await load()
+      addToast('success', 'Vote submitted')
     }
     catch (e: unknown) {
       loadError = extractErrorMessage(e, 'Failed to submit vote')
+      addToast('error', extractErrorMessage(e, 'Failed to submit vote'))
     }
     finally {
       isSubmitting = false
@@ -112,8 +115,29 @@
 </script>
 
 {#if pageState.kind === 'loading'}
-  <div class='flex min-h-[60vh] items-center justify-center'>
-    <Spinner size={40} />
+  <div class='mx-auto max-w-3xl p-6'>
+    <SkeletonCard />
+    <div class='mt-6 rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl'>
+      <div class='flex items-start justify-between gap-3 mb-3'>
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+      <SkeletonCard />
+      <SkeletonCard />
+      <div class='mt-6 space-y-3'>
+        {#each Array(3) as _}
+          <div class='flex items-center gap-3 rounded-xl border border-white/10 p-4'>
+            <div class='h-10 w-10 animate-pulse rounded-full bg-slate-800' />
+            <div class='h-4 flex-1 animate-pulse rounded bg-slate-800' />
+          </div>
+        {/each}
+      </div>
+      <div class='mt-6 flex items-center justify-between'>
+        <div class='h-10 w-24 animate-pulse rounded-xl bg-slate-800' />
+        <div class='h-4 w-16 animate-pulse rounded bg-slate-800' />
+        <div class='h-10 w-32 animate-pulse rounded-xl bg-blue-600/50' />
+      </div>
+    </div>
   </div>
 {:else if pageState.kind === 'error'}
   <div class='p-8 text-center'>

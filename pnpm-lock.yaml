@@ -111,6 +111,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^7.0.1

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Upload, X, ImageIcon } from "lucide-svelte";
+  import { addToast } from "$lib/stores/toast";
 
   let {
     currentImageUrl = null,
@@ -66,8 +67,10 @@
     isUploading = true;
     try {
       await onupload(file);
+      addToast('success', 'Image uploaded')
     } catch (e) {
       error = e instanceof Error ? e.message : "Upload failed";
+      addToast('error', e instanceof Error ? e.message : "Upload failed");
       previewUrl = null;
     } finally {
       isUploading = false;
@@ -79,9 +82,11 @@
     isUploading = true;
     try {
       await ondelete();
+      addToast('success', 'Image deleted')
       previewUrl = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Delete failed";
+      addToast('error', e instanceof Error ? e.message : "Delete failed");
     } finally {
       isUploading = false;
     }
