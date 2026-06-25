@@ -84,11 +84,11 @@
               Voting
             </a>
             <a
-              href='/results'
-              aria-current={isActive('/results') ? 'page' : undefined}
-              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/results') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
+              href='/elections'
+              aria-current={isActive('/elections') ? 'page' : undefined}
+              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/elections') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
             >
-              Results
+              Elections
             </a>
           {/if}
         </nav>

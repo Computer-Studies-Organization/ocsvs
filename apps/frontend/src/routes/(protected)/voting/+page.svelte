@@ -133,7 +133,7 @@
         <CheckCircle size={48} class='mx-auto mb-4 text-emerald-400' />
         <h1 class='text-2xl font-bold text-slate-100'>{c.name} has ended</h1>
         <p class='mt-2 text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
-        <a href='/results' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+        <a href='/elections/{c.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
       {:else if pageState.variant === 'both' && pageState.nextDraft && pageState.lastClosed}
         {@const d = pageState.nextDraft}
         {@const c = pageState.lastClosed}
@@ -142,7 +142,7 @@
         <p class='mt-2 text-slate-400'>
           Latest: {c.name} (ended {formatTimestamp(c.closesAt)}). Next: {d.name} opens {d.opensAt ? formatTimestamp(d.opensAt) : 'Date TBD'}.
         </p>
-        <a href='/results' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+        <a href='/elections/{c.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
       {:else}
         <Vote size={48} class='mx-auto mb-4 text-slate-400' />
         <h1 class='text-2xl font-bold text-slate-100'>No elections scheduled</h1>
@@ -166,7 +166,7 @@
       <Vote size={48} class='mx-auto mb-4 text-emerald-400' />
       <h1 class='text-2xl font-bold text-slate-100'>Thank you for voting!</h1>
       <p class='mt-2 text-slate-400'>Your vote in "{pageState.election.name}" has been recorded.</p>
-      <a href='/results' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+      <a href='/elections/{pageState.election.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
     </div>
   </div>
 {:else}
