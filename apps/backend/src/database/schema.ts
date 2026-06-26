@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi";
-import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { desc, sql } from "drizzle-orm";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from "drizzle-zod";
 
 export const ROLES = z.enum(["user", "admin"]);
@@ -154,6 +154,28 @@ export const votes = sqliteTable(
       table.positionId,
       table.electionId,
     ),
+  ],
+);
+
+export const auditLog = sqliteTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    actorAccountIdSnapshot: text("actor_account_id_snapshot").notNull(),
+    actorUsernameSnapshot: text("actor_username_snapshot").notNull(),
+    description: text("description"),
+  },
+  (table) => [
+    index("idx_audit_log_created_at_id_desc").on(desc(table.createdAt), desc(table.id)),
+    index("idx_audit_log_target_type_target_id").on(table.targetType, table.targetId),
+    index("idx_audit_log_actor_account_id_snapshot").on(table.actorAccountIdSnapshot),
+    index("idx_audit_log_action").on(table.action),
   ],
 );
 

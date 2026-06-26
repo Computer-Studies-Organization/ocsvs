@@ -193,6 +193,82 @@ Defined in `src/lib/election-lifecycle.ts`:
 - **Assertion logic:** `assertTransition(from, to, body, positionCount)` validates transitions and throws `TransitionError` (with HTTP status code) for invalid transitions, missing position count on `draft→open`, or missing/invalid `opensAt/closesAt` timestamps.
 - **Transitions** are requested via `POST /elections/:id/transitions` with `{ to, opensAt?, closesAt? }`.
 
+### Audit log
+
+Append-only audit trail of admin write actions, captured by every admin mutation handler. Source: `apps/backend/src/database/schema.ts` (Drizzle table def), repository at `apps/backend/src/database/repositories/audit-log.repository.ts`, action vocabulary at `apps/backend/src/lib/constants/audit-actions.ts`.
+
+#### Schema
+
+Table `audit_log` (`schema.ts:160`):
+
+| Column | Type | Purpose |
+|---|---|---|
+| `id` | text PK (uuid) | Row identifier (`crypto.randomUUID()`) |
+| `created_at` | integer (unix seconds) | When the action happened (`unixepoch()` default) |
+| `action` | text | Dotted enum (see vocabulary below) |
+| `target_type` | text | One of `election` / `position` / `candidate` / `user` |
+| `target_id` | text | UUID of the affected resource |
+| `actor_account_id_snapshot` | text | Denormalised `accounts.id` of the actor at write time |
+| `actor_username_snapshot` | text | Denormalised `accounts.username` of the actor at write time |
+| `description` | text (nullable) | Free-form context (e.g. `draft → open` for transitions) |
+
+Indexes:
+
+- `(created_at DESC, id DESC)` (`idx_audit_log_created_at_id_desc`) — cursor pagination
+- `(target_type, target_id)` (`idx_audit_log_target_type_target_id`) — per-resource audit queries
+- `(actor_account_id_snapshot)` (`idx_audit_log_actor_account_id_snapshot`) — "what did this admin do"
+- `(action)` (`idx_audit_log_action`) — filtering by action type
+
+Invariant test: `apps/backend/src/database/schema-names.test.ts` (`describe("audit_log schema")`) asserts the Drizzle table exposes the 8 expected columns, the OpenAPI `AuditLogEntrySchema` mirrors them 1:1 in camelCase, `AuditLogListResponse` exposes exactly `items` + `nextCursor`, and every value in `AUDIT_ACTIONS` round-trips through the OpenAPI `action` field.
+
+#### Action vocabulary
+
+12 actions, organised by resource. Source of truth: `apps/backend/src/lib/constants/audit-actions.ts` — `AUDIT_ACTIONS` (Zod enum) is the same validator used by the write path (`auditLogRepo.insert`) and the read filter (`GET /audit-log?action=…`).
+
+```
+election.create          — admin creates a new election
+election.update          — admin updates election metadata (name, dates)
+election.transition      — admin changes election status (draft→open, open→closed, closed→archived, etc.)
+position.create          — admin adds a position to an election
+position.update          — admin modifies a position (name, displayOrder)
+position.delete          — admin removes a position from an election
+candidate.create         — admin adds a candidate to a position
+candidate.update         — admin modifies a candidate (name, description, image)
+candidate.deactivate     — admin soft-deletes a candidate (sets isActive=0)
+user.update              — admin modifies a user's account fields
+user.soft_delete         — admin soft-deletes a user (sets deletedAt)
+user.restore             — admin restores a soft-deleted user
+```
+
+#### Read API endpoints (admin-only)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/audit-log` | Global paginated list. Query filters: `actorId`, `action`, `targetType`, `targetId`, `since`, `until`. Cursor params: `cursor` (composite `createdAt:id` base64url), `limit` (default 50, max 200). Returns `{ items, nextCursor }`. |
+| `GET` | `/elections/:id/audit` | Entries whose target is this election. |
+| `GET` | `/elections/:id/positions/:positionId/audit` | Entries whose target is this position. |
+| `GET` | `/candidates/:id/audit` | Entries whose target is this candidate. |
+| `GET` | `/users/:id/audit` | Entries whose target is this user. |
+
+All five endpoints are admin-only. Auth uses the in-handler `c.var.authUser?.role !== "admin"` guard (mirroring the elections handler pattern). Two reasons for in-handler rather than middleware:
+
+- Hono's typed `.openapi(routeDef, middleware, handler)` overloads don't accept this 3-arg shape cleanly (TS2345).
+- `router.use("/audit-log/*", requireAdmin)` hits the Workers runtime prefix-match bug documented at `routes/elections/index.ts:50`.
+
+#### Convention: writing audit rows from new admin handlers
+
+> **Every new admin mutation handler MUST write one `audit_log` row before returning success.** The row must capture `actorAccountIdSnapshot` and `actorUsernameSnapshot` from `c.var.authUser` BEFORE the mutation runs (so the snapshot reflects the actor at the time of action, not after any account changes). Use `description` for free-form context (e.g. transition states for `election.transition`). The audit insert must happen AFTER the mutation succeeds and BEFORE `c.json(...)` returns — failed mutations must NOT leave an audit row. **There is no try/catch around the audit insert** — failures surface as 500 (honest, visible).
+
+#### See also
+
+- `apps/backend/src/database/schema.ts` — Drizzle table def (`auditLog`)
+- `apps/backend/src/database/repositories/audit-log.repository.ts` — repo (`auditLogRepo.insert`, paginated queries)
+- `apps/backend/src/lib/constants/audit-actions.ts` — `AUDIT_ACTIONS` and `TARGET_TYPES` Zod enums
+- `apps/backend/src/database/openapi-schemas.ts` — `AuditLogEntrySchema` and `AuditLogListResponse`
+- `apps/backend/src/handlers/audit-log/audit-log.handler.ts` — read API handlers
+- `apps/backend/src/routes/audit-log/` — `/audit-log` route defs (`routes.ts`, `index.ts`)
+- `apps/backend/src/routes/elections/audit.routes.ts`, `routes/candidates/audit.routes.ts`, `routes/users/audit.routes.ts` — per-resource audit sub-routes
+
 ### Voting State Composite Endpoint
 
 `GET /elections/state` (`/elections/state` route, handler in `handlers/elections/voting-state.handler.ts`) returns a composite response:
