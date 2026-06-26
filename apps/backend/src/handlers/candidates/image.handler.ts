@@ -1,6 +1,7 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type { deleteImageRoute, uploadImageRoute } from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { B2Client } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
@@ -18,6 +19,8 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   if (c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
 
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
@@ -68,6 +71,15 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   // Update database
   await candidateRepo.updateImageUrl(db, id, url);
 
+  // Write audit log
+  await auditLogRepo.insert(db, {
+    action: "candidate.update",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
+
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
 
@@ -84,6 +96,8 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
   if (c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
 
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
@@ -108,6 +122,15 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
 
   // Clear imageUrl in database
   await candidateRepo.updateImageUrl(db, id, null);
+
+  // Write audit log
+  await auditLogRepo.insert(db, {
+    action: "candidate.update",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
