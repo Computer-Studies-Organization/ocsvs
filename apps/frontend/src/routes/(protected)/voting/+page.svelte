@@ -127,15 +127,15 @@
       <div class='mt-6 space-y-3'>
         {#each Array(3) as _}
           <div class='flex items-center gap-3 rounded-xl border border-white/10 p-4'>
-            <div class='h-10 w-10 animate-pulse rounded-full bg-slate-800' />
-            <div class='h-4 flex-1 animate-pulse rounded bg-slate-800' />
+            <div class='h-10 w-10 animate-pulse rounded-full bg-slate-800'></div>
+            <div class='h-4 flex-1 animate-pulse rounded bg-slate-800'></div>
           </div>
         {/each}
       </div>
       <div class='mt-6 flex items-center justify-between'>
-        <div class='h-10 w-24 animate-pulse rounded-xl bg-slate-800' />
-        <div class='h-4 w-16 animate-pulse rounded bg-slate-800' />
-        <div class='h-10 w-32 animate-pulse rounded-xl bg-blue-600/50' />
+        <div class='h-10 w-24 animate-pulse rounded-xl bg-slate-800'></div>
+        <div class='h-4 w-16 animate-pulse rounded bg-slate-800'></div>
+        <div class='h-10 w-32 animate-pulse rounded-xl bg-blue-600/50'></div>
       </div>
     </div>
   </div>
