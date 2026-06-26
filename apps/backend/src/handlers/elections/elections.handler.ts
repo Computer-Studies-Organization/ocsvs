@@ -12,6 +12,7 @@ import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
+import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { assertTransition, TransitionError } from "@/lib/election-lifecycle";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -55,6 +56,15 @@ export const getCurrentElectionHandler: AppRouteHandler<typeof getCurrentElectio
   const row = await electionQueries.getCurrentElection(db);
   if (!row) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+  if (row.positions) {
+    for (const p of row.positions) {
+      if (p.candidates) {
+        for (const cand of p.candidates) {
+          cand.imageUrl = resolveCandidateImageUrl(cand.imageUrl, cand.id, c.env, c.req.url);
+        }
+      }
+    }
   }
   return c.json(row, httpStatusCodes.OK);
 };

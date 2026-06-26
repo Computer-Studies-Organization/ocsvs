@@ -57,6 +57,7 @@ const {
   mockValidateFile,
   mockUploadImage,
   mockDeleteImage,
+  mockDownloadImage,
   mockAuditInsert,
 } = vi.hoisted(() => ({
   mockExistsActiveForAccountPosition: vi.fn(),
@@ -69,6 +70,7 @@ const {
   mockValidateFile: vi.fn(),
   mockUploadImage: vi.fn(),
   mockDeleteImage: vi.fn(),
+  mockDownloadImage: vi.fn(),
   mockAuditInsert: vi.fn(),
 }));
 
@@ -84,13 +86,18 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
   },
 }));
 
-vi.mock("@/lib/b2-client", () => ({
-  B2Client: vi.fn().mockImplementation(() => ({
-    validateFile: mockValidateFile,
-    uploadImage: mockUploadImage,
-    deleteImage: mockDeleteImage,
-  })),
-}));
+vi.mock("@/lib/b2-client", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/b2-client")>("@/lib/b2-client");
+  return {
+    ...actual,
+    B2Client: vi.fn().mockImplementation(() => ({
+      validateFile: mockValidateFile,
+      uploadImage: mockUploadImage,
+      deleteImage: mockDeleteImage,
+      downloadImage: mockDownloadImage,
+    })),
+  };
+});
 
 vi.mock("@/database/repositories/audit-log.repository", () => ({
   auditLogRepo: {
@@ -458,6 +465,55 @@ describe("candidate Routes (repository)", () => {
         actorAccountIdSnapshot: "test-user-id",
         actorUsernameSnapshot: "testuser",
       });
+    });
+  });
+
+  describe("GET /candidates/:id/image (getCandidateImage)", () => {
+    it("should return candidate image file from B2", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl:
+          "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-1/image.png",
+      });
+      mockDownloadImage.mockResolvedValueOnce({
+        data: new ArrayBuffer(8),
+        contentType: "image/png",
+      });
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        { method: "GET" },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "cso-voting-candidates",
+        },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("image/png");
+      expect(mockDownloadImage).toHaveBeenCalledWith("candidates/cand-1/image.png");
+    });
+
+    it("should return 404 if candidate has no image", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: null,
+      });
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        { method: "GET" },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "cso-voting-candidates",
+        },
+      );
+
+      expect(res.status).toBe(404);
     });
   });
 });

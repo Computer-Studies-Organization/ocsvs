@@ -1,9 +1,13 @@
 import type { AppBindings, AppRouteHandler } from "@/lib/types/app-types";
-import type { deleteImageRoute, uploadImageRoute } from "@/routes/candidates/routes";
+import type {
+  deleteImageRoute,
+  getCandidateImageRoute,
+  uploadImageRoute,
+} from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { B2Client } from "@/lib/b2-client";
+import { B2Client, resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -85,6 +89,14 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
 
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
+  if (updatedCandidate) {
+    updatedCandidate.imageUrl = resolveCandidateImageUrl(
+      updatedCandidate.imageUrl,
+      updatedCandidate.id,
+      c.env,
+      c.req.url,
+    );
+  }
 
   return c.json(
     {
@@ -137,6 +149,14 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
 
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
+  if (updatedCandidate) {
+    updatedCandidate.imageUrl = resolveCandidateImageUrl(
+      updatedCandidate.imageUrl,
+      updatedCandidate.id,
+      c.env,
+      c.req.url,
+    );
+  }
 
   return c.json(
     {
@@ -145,4 +165,31 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
     },
     httpStatusCodes.OK,
   );
+};
+
+export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> = async (c) => {
+  const { id } = c.req.valid("param");
+  const { db } = createDb(c);
+  const b2 = getB2Client(c.env);
+
+  const candidate = await candidateRepo.getForAdminView(db, id);
+  if (!candidate || !candidate.imageUrl) {
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+
+  try {
+    const bucketPrefix = `https://f003.backblazeb2.com/file/${c.env.B2_BUCKET_NAME}/`;
+    if (!candidate.imageUrl.startsWith(bucketPrefix)) {
+      return c.json({ message: "Invalid image URL format" }, httpStatusCodes.BAD_REQUEST);
+    }
+    const key = candidate.imageUrl.substring(bucketPrefix.length);
+    const { data, contentType } = await b2.downloadImage(key);
+    return c.body(data, httpStatusCodes.OK, {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=31536000",
+    });
+  } catch (error) {
+    console.error("Failed to download image from B2:", error);
+    return c.json({ message: "Failed to download image" }, httpStatusCodes.INTERNAL_SERVER_ERROR);
+  }
 };

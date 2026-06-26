@@ -57,6 +57,10 @@ const EnvSchema = z.object({
     z.string().optional(),
   ),
   B2_APPLICATION_KEY: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+  B2_PUBLIC_ACCESS: z.preprocess(
+    (val) => val === "true" || val === true,
+    z.boolean().default(false),
+  ),
 });
 
 /**
