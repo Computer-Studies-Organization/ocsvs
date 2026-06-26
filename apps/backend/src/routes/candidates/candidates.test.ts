@@ -53,6 +53,11 @@ const {
   mockGetForAdminView,
   mockUpdate,
   mockSoftDelete,
+  mockUpdateImageUrl,
+  mockValidateFile,
+  mockUploadImage,
+  mockDeleteImage,
+  mockAuditInsert,
 } = vi.hoisted(() => ({
   mockExistsActiveForAccountPosition: vi.fn(),
   mockCreate: vi.fn(),
@@ -60,6 +65,11 @@ const {
   mockGetForAdminView: vi.fn(),
   mockUpdate: vi.fn(),
   mockSoftDelete: vi.fn(),
+  mockUpdateImageUrl: vi.fn(),
+  mockValidateFile: vi.fn(),
+  mockUploadImage: vi.fn(),
+  mockDeleteImage: vi.fn(),
+  mockAuditInsert: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -70,6 +80,21 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
     getForAdminView: mockGetForAdminView,
     update: mockUpdate,
     softDelete: mockSoftDelete,
+    updateImageUrl: mockUpdateImageUrl,
+  },
+}));
+
+vi.mock("@/lib/b2-client", () => ({
+  B2Client: vi.fn().mockImplementation(() => ({
+    validateFile: mockValidateFile,
+    uploadImage: mockUploadImage,
+    deleteImage: mockDeleteImage,
+  })),
+}));
+
+vi.mock("@/database/repositories/audit-log.repository", () => ({
+  auditLogRepo: {
+    insert: mockAuditInsert,
   },
 }));
 
@@ -83,6 +108,11 @@ describe("candidate Routes (repository)", () => {
     mockGetForAdminView.mockReset();
     mockUpdate.mockReset();
     mockSoftDelete.mockReset();
+    mockUpdateImageUrl.mockReset();
+    mockValidateFile.mockReset();
+    mockUploadImage.mockReset();
+    mockDeleteImage.mockReset();
+    mockAuditInsert.mockReset();
   });
 
   describe("pOST /candidates (createCandidate)", () => {
@@ -307,6 +337,127 @@ describe("candidate Routes (repository)", () => {
       });
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("POST /candidates/:id/image (uploadImage)", () => {
+    it("should upload candidate image, update database, and write audit log", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });
+      mockValidateFile.mockReturnValue({ valid: true });
+      mockUploadImage.mockResolvedValue({ url: "https://b2.com/image.png", key: "key" });
+      mockUpdateImageUrl.mockResolvedValue(true);
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/image.png",
+      });
+
+      const form = new FormData();
+      form.append("image", new File([""], "image.png", { type: "image/png" }));
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        {
+          method: "POST",
+          body: form,
+        },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockValidateFile).toHaveBeenCalled();
+      expect(mockUploadImage).toHaveBeenCalledWith(
+        candidateId,
+        expect.any(Buffer),
+        "image/png",
+        "image.png",
+      );
+      expect(mockUpdateImageUrl).toHaveBeenCalledWith(
+        expect.anything(),
+        candidateId,
+        "https://b2.com/image.png",
+      );
+      expect(mockAuditInsert).toHaveBeenCalledWith(expect.anything(), {
+        action: "candidate.update",
+        targetType: "candidate",
+        targetId: candidateId,
+        actorAccountIdSnapshot: "test-user-id",
+        actorUsernameSnapshot: "testuser",
+      });
+    });
+
+    it("should delete old image from B2 first if it exists", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/old.png",
+      });
+      mockValidateFile.mockReturnValue({ valid: true });
+      mockUploadImage.mockResolvedValue({ url: "https://b2.com/image.png", key: "key" });
+      mockUpdateImageUrl.mockResolvedValue(true);
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/image.png",
+      });
+
+      const form = new FormData();
+      form.append("image", new File([""], "image.png", { type: "image/png" }));
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        {
+          method: "POST",
+          body: form,
+        },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockDeleteImage).toHaveBeenCalledWith("candidates/cand-1/old.png");
+      expect(mockUploadImage).toHaveBeenCalled();
+    });
+  });
+
+  describe("DELETE /candidates/:id/image (deleteImage)", () => {
+    it("should delete candidate image from B2, update database, and write audit log", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/image.png",
+      });
+      mockUpdateImageUrl.mockResolvedValue(true);
+      mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        {
+          method: "DELETE",
+        },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockDeleteImage).toHaveBeenCalledWith("candidates/cand-1/image.png");
+      expect(mockUpdateImageUrl).toHaveBeenCalledWith(expect.anything(), candidateId, null);
+      expect(mockAuditInsert).toHaveBeenCalledWith(expect.anything(), {
+        action: "candidate.update",
+        targetType: "candidate",
+        targetId: candidateId,
+        actorAccountIdSnapshot: "test-user-id",
+        actorUsernameSnapshot: "testuser",
+      });
     });
   });
 });
