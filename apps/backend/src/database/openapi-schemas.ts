@@ -414,3 +414,70 @@ export const VotingStateSchema = z.object({
   lastClosed: LastClosedSchema.nullable(),
   myVotes: MyVotesSchema,
 });
+
+// === audit log ===
+// Public response shape for a single audit-log row. Mirrors the camelCase
+// `AuditLogRow` type exported from `@/database/repositories/audit-log.repository`
+// (the repo stays decoupled from Zod enums; the API layer re-states them here).
+//
+// Schema name is `AuditLogEntrySchema` (not `AuditLogEntry`) to avoid colliding
+// with the `AuditLogEntry` *interface* the repository exports as the insert
+// payload shape. The inferred TS alias is `AuditLogEntryT` for the same reason.
+// `.openapi("Name")` on the outer schema registers it under `components.schemas`
+// in the generated OpenAPI doc, mirroring the convention used by every other
+// schema in this file (e.g. `CreateElectionBodySchema.openapi("CreateElectionBody")`).
+export const AuditLogEntrySchema = z
+  .object({
+    id: z.string().uuid().openapi({
+      description: "Audit log row ID (UUID v4)",
+      example: "f0e1d2c3-b4a5-4687-8901-23456789abcd",
+    }),
+    createdAt: z.number().int().positive().openapi({
+      description: "Unix-seconds timestamp the entry was recorded",
+      example: 1719400000,
+    }),
+    action: z.string().openapi({
+      description:
+        "Dotted `<resource>.<verb>` action key. Values are constrained to the AUDIT_ACTIONS enum in @/lib/constants/audit-actions (e.g. 'election.transition').",
+      example: "election.transition",
+    }),
+    targetType: z.enum(["election", "position", "candidate", "user"]).openapi({
+      description: "Kind of resource the action was performed against",
+      example: "election",
+    }),
+    targetId: z.string().uuid().openapi({
+      description: "ID of the resource the action was performed against",
+      example: "a1b2c3d4-e5f6-4789-8abc-1234567890ab",
+    }),
+    actorAccountIdSnapshot: z.string().openapi({
+      description:
+        "Denormalised snapshot of the actor's account ID at write time (so historical entries remain attributable even if the account is later deleted)",
+      example: "acc_456def",
+    }),
+    actorUsernameSnapshot: z.string().openapi({
+      description:
+        "Denormalised snapshot of the actor's username at write time (for human-readable audit trails)",
+      example: "admin.jane",
+    }),
+    description: z.string().nullable().openapi({
+      description:
+        "Free-form, nullable context for the action (e.g. 'draft → open'). May be null when no extra context was supplied at write time.",
+      example: "draft → open",
+    }),
+  })
+  .openapi("AuditLogEntrySchema");
+export type AuditLogEntryT = z.infer<typeof AuditLogEntrySchema>;
+
+export const AuditLogListResponse = z
+  .object({
+    items: z.array(AuditLogEntrySchema).openapi({
+      description: "Audit log entries for the current page, newest first",
+    }),
+    nextCursor: z.string().nullable().openapi({
+      description:
+        "Opaque cursor for the next page (URL-safe base64 of `<createdAt>:<id>`). Null when this is the last page.",
+      example: "MTcxOTQwMDAwMDpmMGUxZDJjMy1iNGE1LTQ2ODctODkwMS0yMzQ1Njc4OWFiY2Q=",
+    }),
+  })
+  .openapi("AuditLogListResponse");
+// === end audit log ===
