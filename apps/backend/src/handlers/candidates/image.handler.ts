@@ -34,7 +34,7 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   const file = formData.get("image") as File | null;
 
   if (!file) {
-    return c.json({ message: "No image file provided" }, httpStatusCodes.BAD_REQUEST);
+    return c.json({ message: ERROR_MESSAGES.NO_IMAGE_PROVIDED }, httpStatusCodes.BAD_REQUEST);
   }
 
   // Validate file
@@ -44,7 +44,10 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   });
 
   if (!validation.valid) {
-    return c.json({ message: validation.error }, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
+    return c.json(
+      { message: validation.error || ERROR_MESSAGES.UNSUPPORTED_MEDIA_TYPE },
+      httpStatusCodes.UNSUPPORTED_MEDIA_TYPE,
+    );
   }
 
   // Delete old image if exists
