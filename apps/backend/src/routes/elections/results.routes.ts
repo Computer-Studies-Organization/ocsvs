@@ -18,6 +18,7 @@ export const getElectionResultsRoute = createRoute({
       ResultsResponseSchema,
       "Election results grouped by position",
     ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorSchema, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorSchema, ERROR_MESSAGES.ELECTION_NOT_FOUND),
   },
 });

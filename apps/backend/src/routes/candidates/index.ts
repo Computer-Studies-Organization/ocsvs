@@ -1,7 +1,9 @@
+import * as auditHandlers from "@/handlers/audit-log/audit-log.handler";
 import * as handlers from "@/handlers/candidates/candidates.handler";
 import * as imageHandlers from "@/handlers/candidates/image.handler";
 import { createRouter } from "@/lib/create-app";
 import { requireAuth } from "@/middleware/auth";
+import { getCandidateAuditRoute } from "./audit.routes";
 import {
   createCandidateRoute,
   deleteCandidateRoute,
@@ -25,5 +27,9 @@ router.openapi(updateCandidateRoute, handlers.updateCandidate);
 router.openapi(deleteCandidateRoute, handlers.deleteCandidate);
 router.openapi(uploadImageRoute, imageHandlers.uploadImage);
 router.openapi(deleteImageRoute, imageHandlers.deleteImage);
+
+// ── Audit routes ──────────────────────────────────────────────────────────
+// Admin guard lives in the handler (see step-6 audit-log.handler.ts).
+router.openapi(getCandidateAuditRoute, auditHandlers.listCandidateAudit);
 
 export default router;

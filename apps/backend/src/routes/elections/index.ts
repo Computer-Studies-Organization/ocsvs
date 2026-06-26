@@ -1,3 +1,4 @@
+import { listElectionAudit, listPositionAudit } from "@/handlers/audit-log/audit-log.handler";
 import {
   createElectionHandler,
   getCurrentElectionHandler,
@@ -16,6 +17,7 @@ import { getElectionResultsHandler } from "@/handlers/elections/results.handler"
 import { getVotingStateHandler } from "@/handlers/elections/voting-state.handler";
 import { createRouter } from "@/lib/create-app";
 import { requireAuth } from "@/middleware/auth";
+import { getElectionAuditRoute, getPositionAuditRoute } from "./audit.routes";
 import {
   createPositionRoute,
   deletePositionRoute,
@@ -56,5 +58,10 @@ router.openapi(transitionElectionRoute, transitionElectionHandler);
 router.openapi(createPositionRoute, createPositionHandler);
 router.openapi(updatePositionRoute, updatePositionHandler);
 router.openapi(deletePositionRoute, deletePositionHandler);
+
+// ── Audit routes ──────────────────────────────────────────────────────────
+// Admin guard lives in the handler (see step-6 audit-log.handler.ts).
+router.openapi(getElectionAuditRoute, listElectionAudit);
+router.openapi(getPositionAuditRoute, listPositionAudit);
 
 export default router;
