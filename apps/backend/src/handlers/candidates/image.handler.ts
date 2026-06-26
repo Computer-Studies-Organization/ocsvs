@@ -7,7 +7,9 @@ import { B2Client } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
-function getB2Client(c: any): B2Client {
+function getB2Client(c: {
+  env: { B2_APPLICATION_KEY_ID: string; B2_APPLICATION_KEY: string; B2_BUCKET_NAME: string };
+}): B2Client {
   return new B2Client({
     applicationKeyId: c.env.B2_APPLICATION_KEY_ID,
     applicationKey: c.env.B2_APPLICATION_KEY,
@@ -24,7 +26,11 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
 
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
-  const b2 = getB2Client(c);
+  const b2 = getB2Client(
+    c as unknown as {
+      env: { B2_APPLICATION_KEY_ID: string; B2_APPLICATION_KEY: string; B2_BUCKET_NAME: string };
+    },
+  );
 
   // Check candidate exists
   const candidate = await candidateRepo.getForAdminView(db, id);
@@ -101,7 +107,11 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
 
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
-  const b2 = getB2Client(c);
+  const b2 = getB2Client(
+    c as unknown as {
+      env: { B2_APPLICATION_KEY_ID: string; B2_APPLICATION_KEY: string; B2_BUCKET_NAME: string };
+    },
+  );
 
   // Check candidate exists
   const candidate = await candidateRepo.getForAdminView(db, id);
