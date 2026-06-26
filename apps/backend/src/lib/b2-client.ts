@@ -102,7 +102,7 @@ export class B2Client {
   async deleteImage(key: string): Promise<void> {
     await this.ensureAuthorized();
 
-    // Look up the fileId by listing files with the key as prefix
+    // @ts-expect-error: @types/backblaze-b2 is missing the 'prefix' parameter type which is supported at runtime by B2
     const listResponse = await this.b2.listFileNames({
       bucketId: this.bucketId!,
       prefix: key,
