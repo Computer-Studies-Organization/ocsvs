@@ -7,9 +7,11 @@ import type {
   updateUserRoute,
 } from "@/routes/users/routes";
 import { createDb } from "@/config/db";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -49,6 +51,11 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
 };
 
 export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { userId } = c.req.valid("param");
   const updateData = c.req.valid("json");
@@ -91,6 +98,14 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
     await userRepo.updateUser(db, userId, userFields);
   }
 
+  await auditLogRepo.insert(db, {
+    action: "user.update",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
+
   // Fetch updated user
   const updatedUser = await userAccountQueries.findById(db, userId);
 
@@ -104,6 +119,11 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 };
 
 export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { userId } = c.req.valid("param");
 
@@ -120,10 +140,23 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
 
   await accountRepo.softDelete(db, user.accountId);
 
+  await auditLogRepo.insert(db, {
+    action: "user.soft_delete",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
+
   return c.json({ message: "User archived successfully" }, httpStatusCodes.OK);
 };
 
 export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { userId } = c.req.valid("param");
 
@@ -138,6 +171,14 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
   }
 
   await accountRepo.restore(db, user.accountId);
+
+  await auditLogRepo.insert(db, {
+    action: "user.restore",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: "User restored successfully" }, httpStatusCodes.OK);
 };

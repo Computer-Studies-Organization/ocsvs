@@ -6,6 +6,7 @@ import type {
   updatePositionRoute,
 } from "@/routes/elections/positions.routes";
 import { createDb } from "@/config/db";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
@@ -22,6 +23,8 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
@@ -41,6 +44,13 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
   if (!row) {
     throw new Error("Position row missing immediately after create");
   }
+  await auditLogRepo.insert(db, {
+    action: "position.create",
+    targetType: "position",
+    targetId: newId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
   return c.json(row, httpStatusCodes.CREATED);
 };
 
@@ -48,6 +58,8 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { id, positionId } = c.req.valid("param");
   const body = c.req.valid("json");
@@ -64,6 +76,13 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
   if (!updated) {
     throw new Error("Position row missing immediately after update");
   }
+  await auditLogRepo.insert(db, {
+    action: "position.update",
+    targetType: "position",
+    targetId: positionId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
   return c.json(updated, httpStatusCodes.OK);
 };
 
@@ -71,6 +90,8 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { id, positionId } = c.req.valid("param");
   const existing = await positionRepo.findById(db, positionId);
@@ -88,5 +109,12 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
     return c.json({ message: ERROR_MESSAGES.POSITION_HAS_CANDIDATES }, httpStatusCodes.CONFLICT);
   }
   await positionRepo.delete(db, positionId);
+  await auditLogRepo.insert(db, {
+    action: "position.delete",
+    targetType: "position",
+    targetId: positionId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
   return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };

@@ -8,6 +8,7 @@ import type {
 } from "@/routes/candidates/routes";
 import { eq } from "drizzle-orm";
 import { createDb } from "@/config/db";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { accounts } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
@@ -17,6 +18,8 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
   if (c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
 
   const { fullName, accountId, positionId, manifesto } = c.req.valid("json");
   const { db } = createDb(c);
@@ -39,6 +42,14 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
     accountId,
     positionId,
     manifesto,
+  });
+
+  await auditLogRepo.insert(db, {
+    action: "candidate.create",
+    targetType: "candidate",
+    targetId: candidateId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
   });
 
   return c.json(
@@ -98,6 +109,8 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   if (c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
 
   const { id } = c.req.valid("param");
   const updateData = c.req.valid("json");
@@ -109,6 +122,14 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   }
 
   await candidateRepo.update(db, id, updateData);
+
+  await auditLogRepo.insert(db, {
+    action: "candidate.update",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
 
@@ -125,6 +146,8 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
   if (c.var.authUser.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
 
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
@@ -135,6 +158,14 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
   }
 
   await candidateRepo.softDelete(db, id);
+
+  await auditLogRepo.insert(db, {
+    action: "candidate.deactivate",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };

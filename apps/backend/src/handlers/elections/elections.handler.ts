@@ -10,6 +10,7 @@ import type {
 } from "@/routes/elections/routes";
 import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { assertTransition, TransitionError } from "@/lib/election-lifecycle";
@@ -28,6 +29,8 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const body = c.req.valid("json");
   const id = await electionRepo.create(db, body);
@@ -35,6 +38,13 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
   if (!row) {
     throw new Error("Election row missing immediately after create");
   }
+  await auditLogRepo.insert(db, {
+    action: "election.create",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
   return c.json(row, httpStatusCodes.CREATED);
 };
 
@@ -63,6 +73,8 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
@@ -78,6 +90,13 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   if (!updated) {
     throw new Error("Election row missing immediately after update");
   }
+  await auditLogRepo.insert(db, {
+    action: "election.update",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
   return c.json(updated, httpStatusCodes.OK);
 };
 
@@ -87,6 +106,8 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
   if (c.var.authUser?.role !== "admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const { to, opensAt, closesAt } = c.req.valid("json");
@@ -113,6 +134,14 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
     status: to,
     opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
     closesAt: resolvedClosesAt,
+  });
+  await auditLogRepo.insert(db, {
+    action: "election.transition",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+    description: `${existing.status} → ${to}`,
   });
   const messageKey = (
     existing.status === "draft" && to === "open"
