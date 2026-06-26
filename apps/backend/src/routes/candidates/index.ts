@@ -8,6 +8,7 @@ import {
   createCandidateRoute,
   deleteCandidateRoute,
   deleteImageRoute,
+  getCandidateImageRoute,
   getCandidateRoute,
   listCandidatesRoute,
   updateCandidateRoute,
@@ -27,6 +28,7 @@ router.openapi(updateCandidateRoute, handlers.updateCandidate);
 router.openapi(deleteCandidateRoute, handlers.deleteCandidate);
 router.openapi(uploadImageRoute, imageHandlers.uploadImage);
 router.openapi(deleteImageRoute, imageHandlers.deleteImage);
+router.openapi(getCandidateImageRoute, imageHandlers.getCandidateImage);
 
 // ── Audit routes ──────────────────────────────────────────────────────────
 // Admin guard lives in the handler (see step-6 audit-log.handler.ts).

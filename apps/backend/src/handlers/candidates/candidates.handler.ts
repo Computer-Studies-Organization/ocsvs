@@ -11,6 +11,7 @@ import { createDb } from "@/config/db";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { accounts } from "@/database/schema";
+import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -83,9 +84,14 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
     positionId,
   });
 
+  const mappedData = result.data.map((cand) => ({
+    ...cand,
+    imageUrl: resolveCandidateImageUrl(cand.imageUrl, cand.id, c.env, c.req.url),
+  }));
+
   return c.json(
     {
-      data: result.data,
+      data: mappedData,
       meta: result.meta,
     },
     httpStatusCodes.OK,
@@ -101,6 +107,8 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
   if (!candidate) {
     return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
+
+  candidate.imageUrl = resolveCandidateImageUrl(candidate.imageUrl, candidate.id, c.env, c.req.url);
 
   return c.json(candidate, httpStatusCodes.OK);
 };
@@ -132,6 +140,14 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   });
 
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
+  if (updatedCandidate) {
+    updatedCandidate.imageUrl = resolveCandidateImageUrl(
+      updatedCandidate.imageUrl,
+      updatedCandidate.id,
+      c.env,
+      c.req.url,
+    );
+  }
 
   return c.json(
     {

@@ -311,3 +311,45 @@ export const deleteImageRoute = createRoute({
     ),
   },
 });
+
+export const getCandidateImageRoute = createRoute({
+  tags: ["Candidates"],
+  method: "get",
+  path: "/candidates/{id}/image",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    [httpStatusCodes.OK]: {
+      description: "Candidate image file",
+      content: {
+        "image/*": {
+          schema: {
+            type: "string",
+            format: "binary",
+          },
+        },
+      },
+    },
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.CANDIDATE_NOT_FOUND,
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.UNAUTHORIZED,
+    ),
+    [httpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+    ),
+  },
+});

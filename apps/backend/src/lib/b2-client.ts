@@ -122,4 +122,50 @@ export class B2Client {
       fileId: file.fileId,
     });
   }
+
+  async downloadImage(key: string): Promise<{ data: ArrayBuffer; contentType: string }> {
+    await this.ensureAuthorized();
+
+    const response = await (this.b2 as any).downloadFileByName({
+      bucketName: this.bucketName,
+      fileName: key,
+      responseType: "arraybuffer",
+    });
+
+    const contentType = (response.headers["content-type"] as string) || "image/jpeg";
+    return {
+      data: response.data as ArrayBuffer,
+      contentType,
+    };
+  }
+}
+
+export function resolveCandidateImageUrl(
+  imageUrl: string | null,
+  candidateId: string,
+  env: { B2_BUCKET_NAME: string; B2_PUBLIC_ACCESS: boolean | string } | undefined,
+  requestUrl: string,
+): string | null {
+  if (!imageUrl) return null;
+  const b2BucketName = env?.B2_BUCKET_NAME;
+  const publicAccess = env
+    ? env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true
+    : true;
+  if (publicAccess || !b2BucketName) return imageUrl;
+
+  const bucketPrefix = `https://f003.backblazeb2.com/file/${b2BucketName}/`;
+  if (imageUrl.startsWith(bucketPrefix)) {
+    let origin = "http://localhost";
+    try {
+      origin = new URL(requestUrl).origin;
+    } catch {
+      try {
+        origin = new URL(requestUrl, "http://localhost").origin;
+      } catch {
+        // fallback to default
+      }
+    }
+    return `${origin}/candidates/${candidateId}/image`;
+  }
+  return imageUrl;
 }
