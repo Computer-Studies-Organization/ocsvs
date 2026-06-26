@@ -38,6 +38,8 @@ expand(config());
  *
  * Optional variables:
  * - TURSO_AUTH_TOKEN: Optional authorization token for Turso
+ * - B2_APPLICATION_KEY_ID: Optional Backblaze B2 application key ID (required at runtime for image endpoints)
+ * - B2_APPLICATION_KEY: Optional Backblaze B2 application key (required at runtime for image endpoints)
  *
  * Optional variables with defaults:
  * - NODE_ENV: Defaults to 'development'
@@ -50,6 +52,11 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   TURSO_DATABASE_URL: z.string().min(1),
   TURSO_AUTH_TOKEN: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+  B2_APPLICATION_KEY_ID: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional(),
+  ),
+  B2_APPLICATION_KEY: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
 });
 
 /**
