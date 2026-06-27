@@ -31,8 +31,18 @@ export class B2Client {
 
   private async ensureAuthorized(): Promise<void> {
     if (!this.authorized) {
-      await this.b2.authorize();
+      const response = await this.b2.authorize();
       this.authorized = true;
+
+      const allowed = response.data?.allowed;
+      if (allowed && allowed.bucketId) {
+        if (allowed.bucketName && allowed.bucketName !== this.bucketName) {
+          throw new Error(
+            `Key is restricted to bucket "${allowed.bucketName}", but configured to use "${this.bucketName}"`,
+          );
+        }
+        this.bucketId = allowed.bucketId;
+      }
     }
     if (!this.bucketId) {
       const response = await this.b2.listBuckets();
