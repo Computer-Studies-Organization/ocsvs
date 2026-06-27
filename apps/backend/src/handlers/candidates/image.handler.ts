@@ -60,6 +60,22 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
     );
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Validate file content matches declared MIME type
+  const magicCheck = b2.validateMagicBytes(buffer, file.type);
+  if (!magicCheck.valid) {
+    // Log the specific validation error internally, but keep the API response generic for security
+    c.var.logger?.warn(
+      { error: magicCheck.error, fileType: file.type, candidateId: id, actorAccountId },
+      "Image upload blocked: magic bytes mismatch",
+    );
+    return c.json(
+      { message: ERROR_MESSAGES.UNSUPPORTED_MEDIA_TYPE },
+      httpStatusCodes.UNSUPPORTED_MEDIA_TYPE,
+    );
+  }
+
   // Delete old image if exists
   if (candidate.imageUrl) {
     try {
@@ -71,8 +87,6 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
     }
   }
 
-  // Upload to B2
-  const buffer = Buffer.from(await file.arrayBuffer());
   const { url } = await b2.uploadImage(id, buffer, file.type, file.name);
 
   // Update database
@@ -187,6 +201,7 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
     return c.body(data, httpStatusCodes.OK, {
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=31536000",
+      "X-Content-Type-Options": "nosniff",
     });
   } catch (error) {
     console.error("Failed to download image from B2:", error);
