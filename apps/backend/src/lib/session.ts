@@ -78,6 +78,14 @@ export async function deleteSession(db: Database, sessionId: string): Promise<vo
 }
 
 /**
+ * Deletes all sessions for the given account.
+ * Used to invalidate all sessions when a password is changed.
+ */
+export async function deleteAllSessionsForAccount(db: Database, accountId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.accountId, accountId)).run();
+}
+
+/**
  * Sets the session cookie on the response.
  */
 export function setSessionCookie(c: Context, sessionId: string, expiresAt: number): void {

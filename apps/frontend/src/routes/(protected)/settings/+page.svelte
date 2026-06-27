@@ -103,8 +103,16 @@
     isSavingPassword = true
     try {
       const payload: ChangePasswordData = { currentPassword, newPassword }
-      await changePassword(payload)
-      addToast('success', 'Password changed')
+      const result = await changePassword(payload)
+
+      if (!result.sessionRotated) {
+        addToast('info', result.message)
+        authStore.set({ user: null, loading: false })
+        goto('/auth', { replaceState: true })
+        return
+      }
+
+      addToast('success', result.message)
       currentPassword = ''
       newPassword = ''
       confirmPassword = ''

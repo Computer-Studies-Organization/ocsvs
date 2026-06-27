@@ -10,6 +10,7 @@ import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { createSession, deleteAllSessionsForAccount, setSessionCookie } from "@/lib/session";
 import { validateProfanity } from "@/lib/profanity";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -122,5 +123,37 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   const newPasswordHash = await hashPassword(newPassword);
   await accountRepo.updatePassword(db, authUser.id, newPasswordHash);
 
-  return c.json({ message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY }, httpStatusCodes.OK);
+  // Invalidate all existing sessions for this account (security best practice)
+  try {
+    await deleteAllSessionsForAccount(db, authUser.id);
+  } catch (error) {
+    c.var.logger?.error(
+      { error, accountId: authUser.id },
+      "Failed to invalidate sessions after password change",
+    );
+    return c.json(
+      { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
+
+  try {
+    // Create a new session for the current user
+    const session = await createSession(db, authUser.id);
+    setSessionCookie(c, session.id, session.expiresAt);
+  } catch (error) {
+    c.var.logger?.error(
+      { error, accountId: authUser.id },
+      "Failed to regenerate session after password change",
+    );
+    return c.json(
+      { message: ERROR_MESSAGES.PASSWORD_CHANGED_PLEASE_RE_LOGIN, sessionRotated: false },
+      httpStatusCodes.OK,
+    );
+  }
+
+  return c.json(
+    { message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY, sessionRotated: true },
+    httpStatusCodes.OK,
+  );
 };

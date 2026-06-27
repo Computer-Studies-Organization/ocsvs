@@ -92,6 +92,29 @@ vi.mock("@/lib/profanity", () => ({
   validateProfanity: mockValidateProfanity,
 }));
 
+// Mock session functions
+const { mockDeleteAllSessionsForAccount, mockCreateSession, mockSetSessionCookie } = vi.hoisted(
+  () => ({
+    mockDeleteAllSessionsForAccount: vi.fn().mockResolvedValue(undefined),
+    mockCreateSession: vi.fn().mockResolvedValue({
+      id: "new-session-id",
+      accountId: "test-user-id",
+      expiresAt: 9999999999,
+    }),
+    mockSetSessionCookie: vi.fn(),
+  }),
+);
+
+vi.mock("@/lib/session", () => ({
+  deleteAllSessionsForAccount: mockDeleteAllSessionsForAccount,
+  createSession: mockCreateSession,
+  setSessionCookie: mockSetSessionCookie,
+  getSessionIdFromCookie: vi.fn(),
+  getSessionAccount: vi.fn(),
+  deleteSession: vi.fn(),
+  clearSessionCookie: vi.fn(),
+}));
+
 describe("profile Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -180,6 +203,9 @@ describe("profile Routes", () => {
     expect(body.message).toBe("Password changed successfully");
     expect(mockGetPasswordHash).toHaveBeenCalled();
     expect(mockUpdatePassword).toHaveBeenCalled();
+    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
+    expect(mockCreateSession).toHaveBeenCalled();
+    expect(mockSetSessionCookie).toHaveBeenCalled();
   });
 
   // Error path tests
@@ -296,5 +322,52 @@ describe("profile Routes", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("Current password is incorrect");
     expect(mockUpdatePassword).not.toHaveBeenCalled();
+  });
+
+  it("should return success message asking user to re-login if session regeneration fails", async () => {
+    mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockUpdatePassword.mockResolvedValue(undefined);
+    mockCreateSession.mockRejectedValueOnce(new Error("DB Connection failed"));
+
+    const res = await router.request("/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: "oldpassword",
+        newPassword: "newpassword123",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Password changed successfully. Please log in again.");
+    expect(body.sessionRotated).toBe(false);
+    expect(mockUpdatePassword).toHaveBeenCalled();
+    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
+    expect(mockSetSessionCookie).not.toHaveBeenCalled();
+  });
+
+  it("should return 500 if deleteAllSessionsForAccount fails", async () => {
+    mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockUpdatePassword.mockResolvedValue(undefined);
+    mockDeleteAllSessionsForAccount.mockRejectedValueOnce(new Error("DB Connection failed"));
+
+    const res = await router.request("/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: "oldpassword",
+        newPassword: "newpassword123",
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Internal server error");
+    expect(mockUpdatePassword).toHaveBeenCalled();
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    expect(mockSetSessionCookie).not.toHaveBeenCalled();
   });
 });

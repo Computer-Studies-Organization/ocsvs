@@ -11,6 +11,8 @@ export async function updateMyProfile(
   return apiFetch("/me/profile", { method: "PATCH", body: JSON.stringify(data) });
 }
 
-export async function changePassword(data: ChangePasswordData): Promise<{ message: string }> {
+export async function changePassword(
+  data: ChangePasswordData,
+): Promise<{ message: string; sessionRotated: boolean }> {
   return apiFetch("/me/password", { method: "POST", body: JSON.stringify(data) });
 }

@@ -88,6 +88,7 @@ export const changePasswordRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
+        sessionRotated: z.boolean(),
       }),
       "Password changed successfully",
     ),
@@ -102,6 +103,12 @@ export const changePasswordRoute = createRoute({
         message: z.string(),
       }),
       "Unauthorized or incorrect current password",
+    ),
+    [httpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Internal server error",
     ),
   },
 });

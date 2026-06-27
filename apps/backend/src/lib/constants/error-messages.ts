@@ -61,6 +61,7 @@ export const ERROR_MESSAGES = {
   VOTE_SUBMITTED_SUCCESSFULLY: "Vote submitted successfully",
   PROFILE_UPDATED_SUCCESSFULLY: "Profile updated successfully",
   PASSWORD_CHANGED_SUCCESSFULLY: "Password changed successfully",
+  PASSWORD_CHANGED_PLEASE_RE_LOGIN: "Password changed successfully. Please log in again.",
 
   // Server errors
   INTERNAL_SERVER_ERROR: "Internal server error",
