@@ -99,4 +99,46 @@ describe("B2Client", () => {
   it("should delete file by key", async () => {
     await expect(client.deleteImage("candidates/candidate-123/test.jpg")).resolves.not.toThrow();
   });
+
+  describe("validateMagicBytes", () => {
+    it("should accept valid JPEG magic bytes", () => {
+      const buffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+      const result = client.validateMagicBytes(buffer, "image/jpeg");
+      expect(result.valid).toBe(true);
+    });
+
+    it("should accept valid PNG magic bytes", () => {
+      const buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      const result = client.validateMagicBytes(buffer, "image/png");
+      expect(result.valid).toBe(true);
+    });
+
+    it("should accept valid WebP magic bytes (RIFF and WEBP)", () => {
+      const buffer = Buffer.from([
+        0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+      ]);
+      const result = client.validateMagicBytes(buffer, "image/webp");
+      expect(result.valid).toBe(true);
+    });
+
+    it("should reject HTML content declared as image/jpeg", () => {
+      const buffer = Buffer.from("<html><body>alert(1)</body></html>");
+      const result = client.validateMagicBytes(buffer, "image/jpeg");
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain("does not match declared type");
+    });
+
+    it("should reject empty buffer", () => {
+      const buffer = Buffer.alloc(0);
+      const result = client.validateMagicBytes(buffer, "image/jpeg");
+      expect(result.valid).toBe(false);
+    });
+
+    it("should reject unsupported MIME type", () => {
+      const buffer = Buffer.from([0xff, 0xd8, 0xff]);
+      const result = client.validateMagicBytes(buffer, "image/gif");
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain("Unsupported file type");
+    });
+  });
 });

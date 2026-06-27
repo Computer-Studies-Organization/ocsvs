@@ -4,6 +4,13 @@ export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+const MAGIC_BYTES: Readonly<
+  Record<Exclude<(typeof ALLOWED_TYPES)[number], "image/webp">, number[][]>
+> = {
+  "image/jpeg": [[0xff, 0xd8, 0xff]],
+  "image/png": [[0x89, 0x50, 0x4e, 0x47]],
+};
+
 export interface B2Config {
   applicationKeyId: string;
   applicationKey: string;
@@ -76,6 +83,47 @@ export class B2Client {
       return {
         valid: false,
         error: `File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Validates that the file content matches the declared MIME type by checking
+   * magic bytes (file signatures). Catches spoofed Content-Type headers.
+   */
+  validateMagicBytes(buffer: Buffer, declaredType: string): { valid: boolean; error?: string } {
+    if (declaredType === "image/webp") {
+      if (buffer.length < 12) {
+        return {
+          valid: false,
+          error: `File content does not match declared type ${declaredType}`,
+        };
+      }
+      const isRiff =
+        buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+      const isWebp =
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+      if (!isRiff || !isWebp) {
+        return {
+          valid: false,
+          error: `File content does not match declared type ${declaredType}`,
+        };
+      }
+      return { valid: true };
+    }
+
+    const expected = MAGIC_BYTES[declaredType as keyof typeof MAGIC_BYTES];
+    if (!expected) {
+      return { valid: false, error: `Unsupported file type: ${declaredType}` };
+    }
+
+    const matches = expected.some((sig) => sig.every((byte, i) => buffer[i] === byte));
+    if (!matches) {
+      return {
+        valid: false,
+        error: `File content does not match declared type ${declaredType}`,
       };
     }
 

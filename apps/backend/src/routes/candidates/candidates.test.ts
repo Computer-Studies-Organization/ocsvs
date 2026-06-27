@@ -55,6 +55,7 @@ const {
   mockSoftDelete,
   mockUpdateImageUrl,
   mockValidateFile,
+  mockValidateMagicBytes,
   mockUploadImage,
   mockDeleteImage,
   mockDownloadImage,
@@ -68,6 +69,7 @@ const {
   mockSoftDelete: vi.fn(),
   mockUpdateImageUrl: vi.fn(),
   mockValidateFile: vi.fn(),
+  mockValidateMagicBytes: vi.fn().mockReturnValue({ valid: true }),
   mockUploadImage: vi.fn(),
   mockDeleteImage: vi.fn(),
   mockDownloadImage: vi.fn(),
@@ -92,6 +94,7 @@ vi.mock("@/lib/b2-client", async () => {
     ...actual,
     B2Client: vi.fn().mockImplementation(() => ({
       validateFile: mockValidateFile,
+      validateMagicBytes: mockValidateMagicBytes,
       uploadImage: mockUploadImage,
       deleteImage: mockDeleteImage,
       downloadImage: mockDownloadImage,
@@ -117,6 +120,7 @@ describe("candidate Routes (repository)", () => {
     mockSoftDelete.mockReset();
     mockUpdateImageUrl.mockReset();
     mockValidateFile.mockReset();
+    mockValidateMagicBytes.mockReturnValue({ valid: true });
     mockUploadImage.mockReset();
     mockDeleteImage.mockReset();
     mockAuditInsert.mockReset();
@@ -430,6 +434,45 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       expect(mockDeleteImage).toHaveBeenCalledWith("candidates/cand-1/old.png");
       expect(mockUploadImage).toHaveBeenCalled();
+    });
+
+    it("should reject upload with 415 when magic bytes do not match declared type and not delete old image", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/old.png",
+      });
+      mockValidateFile.mockReturnValue({ valid: true });
+      mockValidateMagicBytes.mockReturnValue({
+        valid: false,
+        error: `File content does not match declared type image/png`,
+      });
+
+      const form = new FormData();
+      form.append(
+        "image",
+        new File(["<html><body>x</body></html>"], "image.png", { type: "image/png" }),
+      );
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        {
+          method: "POST",
+          body: form,
+        },
+        {
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(415);
+      expect(mockValidateMagicBytes).toHaveBeenCalledWith(expect.any(Buffer), "image/png");
+      expect(mockDeleteImage).not.toHaveBeenCalled();
+      expect(mockUploadImage).not.toHaveBeenCalled();
+      expect(mockUpdateImageUrl).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
     });
   });
 
