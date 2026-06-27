@@ -67,7 +67,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   const { studentNumber, password } = c.req.valid("json");
   const { db } = createDb(c);
 
-  c.var.logger.info({ studentNumber, passwordLength: password.length }, "Login attempt");
+  c.var.logger.info({ studentNumber }, "Login attempt");
 
   const result = await userAccountQueries.findByStudentId(db, studentNumber);
 
@@ -82,7 +82,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   }
 
   const isValid = await verifyPassword(password, result.password_hash);
-  c.var.logger.info({ isValid, hashLength: result.password_hash.length }, "Password verification");
+  c.var.logger.debug({ studentNumber }, "Password verification complete");
 
   if (!isValid) {
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);
