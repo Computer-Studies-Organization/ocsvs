@@ -39,13 +39,17 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
   if (!row) {
     throw new Error("Election row missing immediately after create");
   }
-  await auditLogRepo.insert(db, {
-    action: "election.create",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "election.create",
+      targetType: "election",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "election.create", targetId: id }, "audit insert failed");
+  }
   return c.json(row, httpStatusCodes.CREATED);
 };
 
@@ -100,13 +104,18 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   if (!updated) {
     throw new Error("Election row missing immediately after update");
   }
-  await auditLogRepo.insert(db, {
-    action: "election.update",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "election.update",
+      targetType: "election",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "election.update", targetId: id }, "audit insert failed");
+  }
+
   return c.json(updated, httpStatusCodes.OK);
 };
 
@@ -145,14 +154,19 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
     opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
     closesAt: resolvedClosesAt,
   });
-  await auditLogRepo.insert(db, {
-    action: "election.transition",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-    description: `${existing.status} → ${to}`,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "election.transition",
+      targetType: "election",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+      description: `${existing.status} \u2192 ${to}`,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "election.transition", targetId: id }, "audit insert failed");
+  }
+
   const messageKey = (
     existing.status === "draft" && to === "open"
       ? "ELECTION_OPENED_SUCCESSFULLY"

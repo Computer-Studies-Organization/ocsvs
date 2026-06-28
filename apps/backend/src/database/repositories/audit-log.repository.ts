@@ -198,12 +198,15 @@ export const auditLogRepo = {
     db: Database,
     targetType: TargetType,
     targetId: string,
+    limit?: number,
   ): Promise<AuditLogRow[]> {
+    const clampedLimit = clampLimit(limit);
     return (await db
       .select()
       .from(auditLog)
       .where(and(eq(auditLog.targetType, targetType), eq(auditLog.targetId, targetId)))
       .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+      .limit(clampedLimit)
       .all()) as AuditLogRow[];
   },
 };

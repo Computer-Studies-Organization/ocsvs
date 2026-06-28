@@ -94,13 +94,17 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   await candidateRepo.updateImageUrl(db, id, url);
 
   // Write audit log
-  await auditLogRepo.insert(db, {
-    action: "candidate.update",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "candidate.update",
+      targetType: "candidate",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger?.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+  }
 
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
@@ -154,13 +158,17 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
   await candidateRepo.updateImageUrl(db, id, null);
 
   // Write audit log
-  await auditLogRepo.insert(db, {
-    action: "candidate.update",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "candidate.update",
+      targetType: "candidate",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger?.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+  }
 
   // Return updated candidate
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);

@@ -78,6 +78,7 @@ export const submitVoteRoute = createRoute({
   tags: ["Votes"],
   method: "post",
   path: "/votes",
+  security: [{ sessionAuth: [] }],
   request: {
     body: jsonContentRequired(
       submitVoteSchema,
@@ -132,6 +133,7 @@ export const getMyVotesRoute = createRoute({
   tags: ["Votes"],
   method: "get",
   path: "/votes/me",
+  security: [{ sessionAuth: [] }],
   responses: {
     [httpStatusCodes.OK]: jsonContent(VoteStatusSchema, "My votes for the current open election"),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
@@ -147,6 +149,7 @@ export const getVoteResultsRoute = createRoute({
   tags: ["Votes"],
   method: "get",
   path: "/votes/results",
+  security: [{ sessionAuth: [] }],
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       VoteResultsResponseSchema,
@@ -171,6 +174,7 @@ export const getCandidateVoteCountRoute = createRoute({
   tags: ["Votes"],
   method: "get",
   path: "/votes/candidates/{id}/count",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
