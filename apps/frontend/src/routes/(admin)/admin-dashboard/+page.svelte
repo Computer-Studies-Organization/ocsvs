@@ -340,6 +340,12 @@
             <span class='font-semibold text-slate-50'>{val}</span>
           </div>
         {/each}
+        <a
+          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
+          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+        >
+          View Audit Trail →
+        </a>
       </div>
     </div>
   </div>

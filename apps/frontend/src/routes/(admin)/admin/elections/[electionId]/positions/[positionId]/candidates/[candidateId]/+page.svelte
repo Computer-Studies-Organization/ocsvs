@@ -208,6 +208,12 @@
             {user.studentId} · {user.email ?? ''}
           </p>
         {/if}
+        <a
+          href={`/admin/audit-log?targetType=candidate&targetId=${candidateId}`}
+          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
+        >
+          View Audit Trail →
+        </a>
       </header>
 
       <form

@@ -147,7 +147,15 @@
             {election.description || '(no description)'}
           </p>
         </div>
-        <TransitionButton {election} onsuccess={load} />
+        <div class='flex items-center gap-3'>
+          <a
+            href={`/admin/audit-log?targetType=election&targetId=${electionId}`}
+            class='flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
+          >
+            View Audit Trail →
+          </a>
+          <TransitionButton {election} onsuccess={load} />
+        </div>
       </header>
 
       <!-- Positions -->

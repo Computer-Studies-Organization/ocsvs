@@ -70,6 +70,13 @@
               Results
             </a>
             <a
+              href='/admin/audit-log'
+              aria-current={isActive('/admin/audit-log') ? 'page' : undefined}
+              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/audit-log') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            >
+              Audit Log
+            </a>
+            <a
               href='/voting'
               class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-slate-200"
             >
