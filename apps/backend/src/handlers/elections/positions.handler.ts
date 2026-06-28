@@ -53,7 +53,10 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "position.create", targetId: newId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "position.create", targetId: newId },
+      "audit insert failed",
+    );
   }
 
   return c.json(row, httpStatusCodes.CREATED);
@@ -90,7 +93,10 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "position.update", targetId: positionId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "position.update", targetId: positionId },
+      "audit insert failed",
+    );
   }
 
   return c.json(updated, httpStatusCodes.OK);
@@ -128,7 +134,10 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "position.delete", targetId: positionId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "position.delete", targetId: positionId },
+      "audit insert failed",
+    );
   }
 
   return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);

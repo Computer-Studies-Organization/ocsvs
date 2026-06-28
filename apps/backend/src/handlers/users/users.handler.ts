@@ -107,7 +107,10 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "user.update", targetId: userId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "user.update", targetId: userId },
+      "audit insert failed",
+    );
   }
 
   // Fetch updated user
@@ -153,7 +156,10 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "user.soft_delete", targetId: userId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "user.soft_delete", targetId: userId },
+      "audit insert failed",
+    );
   }
 
   return c.json({ message: "User archived successfully" }, httpStatusCodes.OK);
@@ -189,7 +195,10 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "user.restore", targetId: userId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "user.restore", targetId: userId },
+      "audit insert failed",
+    );
   }
 
   return c.json({ message: "User restored successfully" }, httpStatusCodes.OK);

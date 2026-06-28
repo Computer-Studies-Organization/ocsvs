@@ -103,7 +103,10 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger?.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+    c.var.logger?.error(
+      { auditErr, action: "candidate.update", targetId: id },
+      "audit insert failed",
+    );
   }
 
   // Return updated candidate
@@ -167,7 +170,10 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger?.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+    c.var.logger?.error(
+      { auditErr, action: "candidate.update", targetId: id },
+      "audit insert failed",
+    );
   }
 
   // Return updated candidate

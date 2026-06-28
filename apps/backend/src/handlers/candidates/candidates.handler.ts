@@ -54,7 +54,10 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "candidate.create", targetId: candidateId }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "candidate.create", targetId: candidateId },
+      "audit insert failed",
+    );
   }
 
   return c.json(
@@ -144,7 +147,10 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "candidate.update", targetId: id },
+      "audit insert failed",
+    );
   }
 
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
@@ -192,7 +198,10 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "candidate.deactivate", targetId: id }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "candidate.deactivate", targetId: id },
+      "audit insert failed",
+    );
   }
 
   return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);

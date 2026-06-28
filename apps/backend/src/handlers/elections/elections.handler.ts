@@ -48,7 +48,10 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "election.create", targetId: id }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "election.create", targetId: id },
+      "audit insert failed",
+    );
   }
   return c.json(row, httpStatusCodes.CREATED);
 };
@@ -113,7 +116,10 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
       actorUsernameSnapshot: actorUsername,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "election.update", targetId: id }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "election.update", targetId: id },
+      "audit insert failed",
+    );
   }
 
   return c.json(updated, httpStatusCodes.OK);
@@ -164,7 +170,10 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
       description: `${existing.status} \u2192 ${to}`,
     });
   } catch (auditErr) {
-    c.var.logger.error({ auditErr, action: "election.transition", targetId: id }, "audit insert failed");
+    c.var.logger.error(
+      { auditErr, action: "election.transition", targetId: id },
+      "audit insert failed",
+    );
   }
 
   const messageKey = (
