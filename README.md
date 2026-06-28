@@ -4,11 +4,13 @@ A modern, secure, and transparent voting platform engineered for the Computer St
 
 ## ✨ Tech Stack
 
-### Frontend
-- **Framework:** React 19
-- **Build Tool:** Vite
-- **Routing:** TanStack Router
-- **State Management:** (Implied) React Context / Hooks
+### Active Frontend
+- **Framework:** SvelteKit 2 + Svelte 5
+- **Styling:** Tailwind 4
+- **Routing:** SvelteKit file-based routing
+
+### Archived Frontend
+- **Framework:** React 19 (`apps/frontend-react`) — previous implementation, currently archived
 
 ### Backend
 - **Framework:** Hono (Cloudflare Workers)
@@ -18,6 +20,10 @@ A modern, secure, and transparent voting platform engineered for the Computer St
 
 ### Monorepo
 - **Manager:** pnpm workspaces
+
+## 🚀 Getting Started
+
+New to the repo? See [ONBOARDING.md](./ONBOARDING.md) for setup, including Backblaze B2 bucket configuration.
 
 ## 🚀 Getting Started
 
