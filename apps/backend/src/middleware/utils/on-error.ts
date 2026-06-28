@@ -12,7 +12,7 @@ import { HTTPException } from "hono/http-exception";
  * Error handling logic:
  * - HTTPException: Uses the exception's built-in response generation
  * - Other errors: Returns a generic 500 Internal Server Error
- * - Stack traces: Only included in non-production environments
+ * - Stack traces: Only included when NODE_ENV is explicitly "development"
  *
  * @param err - The error object that was thrown
  * @param c - Hono context object containing request/response information
@@ -39,8 +39,7 @@ import { HTTPException } from "hono/http-exception";
  * Generic error response (production):
  * ```json
  * {
- *   "message": "Internal Server Error",
- *   "error": "Database connection failed"
+ *   "message": "Internal Server Error"
  * }
  * ```
  *
@@ -63,8 +62,8 @@ const onError: ErrorHandler = (err, c) => {
   return c.json(
     {
       message: "Internal Server Error",
-      error: env === "production" ? undefined : err.message,
-      stack: env === "production" ? undefined : err.stack,
+      error: env === "development" ? err.message : undefined,
+      stack: env === "development" ? err.stack : undefined,
     },
     500,
   );

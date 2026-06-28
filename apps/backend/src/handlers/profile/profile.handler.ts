@@ -119,23 +119,25 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
     );
   }
 
-  // Hash new password and update
-  const newPasswordHash = await hashPassword(newPassword);
-  await accountRepo.updatePassword(db, authUser.id, newPasswordHash);
-
-  // Invalidate all existing sessions for this account (security best practice)
+  // Invalidate all existing sessions BEFORE updating password.
+  // If this fails, we bail early — password is unchanged and old sessions remain valid (safe).
+  // If this succeeds but password update fails, user can re-login with old password (acceptable).
   try {
     await deleteAllSessionsForAccount(db, authUser.id);
   } catch (error) {
     c.var.logger?.error(
       { error, accountId: authUser.id },
-      "Failed to invalidate sessions after password change",
+      "Failed to invalidate sessions before password change",
     );
     return c.json(
       { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       httpStatusCodes.INTERNAL_SERVER_ERROR,
     );
   }
+
+  // Hash new password and update
+  const newPasswordHash = await hashPassword(newPassword);
+  await accountRepo.updatePassword(db, authUser.id, newPasswordHash);
 
   try {
     // Create a new session for the current user

@@ -366,7 +366,8 @@ describe("profile Routes", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as any;
     expect(body.message).toBe("Internal server error");
-    expect(mockUpdatePassword).toHaveBeenCalled();
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
+    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
     expect(mockCreateSession).not.toHaveBeenCalled();
     expect(mockSetSessionCookie).not.toHaveBeenCalled();
   });
