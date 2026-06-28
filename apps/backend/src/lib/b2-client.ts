@@ -4,6 +4,7 @@ export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+
 const MAGIC_BYTES: Readonly<
   Record<Exclude<(typeof ALLOWED_TYPES)[number], "image/webp">, number[][]>
 > = {
@@ -15,6 +16,8 @@ export interface B2Config {
   applicationKeyId: string;
   applicationKey: string;
   bucketName: string;
+  /** Public download URL prefix, e.g. `https://f003.backblazeb2.com/file`. */
+  publicBaseUrl: string;
 }
 
 export interface UploadResult {
@@ -27,6 +30,7 @@ export class B2Client {
   private bucketName: string;
   private bucketId: string | null = null;
   private authorized = false;
+  private publicBaseUrl: string;
 
   constructor(config: B2Config) {
     this.b2 = new B2({
@@ -34,6 +38,7 @@ export class B2Client {
       applicationKey: config.applicationKey,
     });
     this.bucketName = config.bucketName;
+    this.publicBaseUrl = config.publicBaseUrl;
   }
 
   private async ensureAuthorized(): Promise<void> {
@@ -152,7 +157,7 @@ export class B2Client {
       mime: contentType,
     });
 
-    const url = `https://f003.backblazeb2.com/file/${this.bucketName}/${key}`;
+    const url = `${this.publicBaseUrl}/${this.bucketName}/${key}`;
 
     return { url, key };
   }
@@ -160,7 +165,7 @@ export class B2Client {
   async deleteImage(key: string): Promise<void> {
     await this.ensureAuthorized();
 
-    // @ts-expect-error: @types/backblaze-b2 is missing the 'prefix' parameter type which is supported at runtime by B2
+    // @ts-expect-error: @types/backblaze-b2 requires startFileName/delimiter which B2 doesn't need at runtime
     const listResponse = await this.b2.listFileNames({
       bucketId: this.bucketId!,
       prefix: key,
@@ -184,7 +189,7 @@ export class B2Client {
   async downloadImage(key: string): Promise<{ data: ArrayBuffer; contentType: string }> {
     await this.ensureAuthorized();
 
-    const response = await (this.b2 as any).downloadFileByName({
+    const response = await this.b2.downloadFileByName({
       bucketName: this.bucketName,
       fileName: key,
       responseType: "arraybuffer",
@@ -201,17 +206,20 @@ export class B2Client {
 export function resolveCandidateImageUrl(
   imageUrl: string | null,
   candidateId: string,
-  env: { B2_BUCKET_NAME: string; B2_PUBLIC_ACCESS: boolean | string } | undefined,
+  env: {
+    B2_BUCKET_NAME: string;
+    B2_PUBLIC_ACCESS: boolean | string;
+    B2_PUBLIC_BASE_URL: string;
+  },
   requestUrl: string,
 ): string | null {
   if (!imageUrl) return null;
-  const b2BucketName = env?.B2_BUCKET_NAME;
-  const publicAccess = env
-    ? env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true
-    : true;
+  const b2BucketName = env.B2_BUCKET_NAME;
+  const publicAccess =
+    env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true;
   if (publicAccess || !b2BucketName) return imageUrl;
 
-  const bucketPrefix = `https://f003.backblazeb2.com/file/${b2BucketName}/`;
+  const bucketPrefix = `${env.B2_PUBLIC_BASE_URL}/${b2BucketName}/`;
   if (imageUrl.startsWith(bucketPrefix)) {
     let origin = "http://localhost";
     try {

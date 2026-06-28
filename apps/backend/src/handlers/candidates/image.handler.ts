@@ -19,6 +19,7 @@ function getB2Client(env: AppBindings["Bindings"]): B2Client {
     applicationKeyId: env.B2_APPLICATION_KEY_ID,
     applicationKey: env.B2_APPLICATION_KEY,
     bucketName: env.B2_BUCKET_NAME,
+    publicBaseUrl: env.B2_PUBLIC_BASE_URL,
   });
 }
 
@@ -192,7 +193,7 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   }
 
   try {
-    const bucketPrefix = `https://f003.backblazeb2.com/file/${c.env.B2_BUCKET_NAME}/`;
+    const bucketPrefix = `${c.env.B2_PUBLIC_BASE_URL}/${c.env.B2_BUCKET_NAME}/`;
     if (!candidate.imageUrl.startsWith(bucketPrefix)) {
       return c.json({ message: "Invalid image URL format" }, httpStatusCodes.BAD_REQUEST);
     }
