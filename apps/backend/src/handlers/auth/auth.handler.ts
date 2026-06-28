@@ -88,7 +88,10 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   }
 
   const isValid = await verifyPassword(password, result.password_hash);
-  c.var.logger.debug({ studentNumber: maskStudentId(studentNumber) }, "Password verification complete");
+  c.var.logger.debug(
+    { studentNumber: maskStudentId(studentNumber) },
+    "Password verification complete",
+  );
 
   if (!isValid) {
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);

@@ -33,6 +33,7 @@ describe("B2Client", () => {
       applicationKeyId: "test-key-id",
       applicationKey: "test-key",
       bucketName: "test-bucket",
+      publicBaseUrl: "https://test.b2.com/file",
     });
   });
 

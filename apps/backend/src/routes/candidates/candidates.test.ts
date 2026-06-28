@@ -373,6 +373,7 @@ describe("candidate Routes (repository)", () => {
           body: form,
         },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "bucket",
@@ -425,6 +426,7 @@ describe("candidate Routes (repository)", () => {
           body: form,
         },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "bucket",
@@ -461,6 +463,7 @@ describe("candidate Routes (repository)", () => {
           body: form,
         },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "bucket",
@@ -492,6 +495,7 @@ describe("candidate Routes (repository)", () => {
           method: "DELETE",
         },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "bucket",
@@ -528,6 +532,7 @@ describe("candidate Routes (repository)", () => {
         `/candidates/${candidateId}/image`,
         { method: "GET" },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "cso-voting-candidates",
@@ -550,6 +555,7 @@ describe("candidate Routes (repository)", () => {
         `/candidates/${candidateId}/image`,
         { method: "GET" },
         {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
           B2_APPLICATION_KEY_ID: "key-id",
           B2_APPLICATION_KEY: "key",
           B2_BUCKET_NAME: "cso-voting-candidates",
