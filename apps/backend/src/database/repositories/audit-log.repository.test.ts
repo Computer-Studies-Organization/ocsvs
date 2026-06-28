@@ -374,8 +374,8 @@ describe("auditLogRepo.listByTarget", () => {
     expect(chain.from).toHaveBeenCalledWith(auditLog);
     expect(chain.where).toHaveBeenCalledTimes(1);
     expect(chain.orderBy).toHaveBeenCalledTimes(1);
-    // Unbounded by design — must NOT call .limit().
-    expect(chain.limit).not.toHaveBeenCalled();
+    // Now uses limit for pagination (default 50).
+    expect(chain.limit).toHaveBeenCalledWith(50);
     expect(chain.all).toHaveBeenCalledTimes(1);
 
     const eqCalls = vi.mocked(eq).mock.calls;

@@ -29,6 +29,7 @@ export const listUsersRoute = createRoute({
   tags: ["Users"],
   method: "get",
   path: "/users",
+  security: [{ sessionAuth: [] }],
   request: {
     query: ListUsersQuerySchema,
   },
@@ -64,6 +65,7 @@ export const getUserRoute = createRoute({
   tags: ["Users"],
   method: "get",
   path: "/users/{userId}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       userId: z.string(),
@@ -96,6 +98,7 @@ export const updateUserRoute = createRoute({
   tags: ["Users"],
   method: "patch",
   path: "/users/{userId}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       userId: z.string(),
@@ -141,6 +144,7 @@ export const deleteUserRoute = createRoute({
   tags: ["Users"],
   method: "delete",
   path: "/users/{userId}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       userId: z.string(),
@@ -184,6 +188,7 @@ export const restoreUserRoute = createRoute({
   tags: ["Users"],
   method: "post",
   path: "/users/{userId}/restore",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       userId: z.string(),

@@ -18,6 +18,7 @@ export const listPositionsRoute = createRoute({
   method: "get",
   path: "/elections/{id}/positions",
   tags: ["Positions"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: IdParams,
   },
@@ -33,6 +34,7 @@ export const createPositionRoute = createRoute({
   method: "post",
   path: "/elections/{id}/positions",
   tags: ["Positions"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: IdParams,
     body: jsonContent(CreatePositionBodySchema, "Position data"),
@@ -56,6 +58,7 @@ export const updatePositionRoute = createRoute({
   method: "patch",
   path: "/elections/{id}/positions/{positionId}",
   tags: ["Positions"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: PositionIdParams,
     body: jsonContent(UpdatePositionBodySchema, "Fields to update"),
@@ -76,6 +79,7 @@ export const deletePositionRoute = createRoute({
   method: "delete",
   path: "/elections/{id}/positions/{positionId}",
   tags: ["Positions"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: PositionIdParams,
   },

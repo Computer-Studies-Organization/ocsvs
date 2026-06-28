@@ -31,6 +31,7 @@ export const createCandidateRoute = createRoute({
   tags: ["Candidates"],
   method: "post",
   path: "/candidates",
+  security: [{ sessionAuth: [] }],
   request: {
     body: jsonContent(createCandidateSchema, "Candidate details"),
   },
@@ -85,6 +86,7 @@ export const listCandidatesRoute = createRoute({
   tags: ["Candidates"],
   method: "get",
   path: "/candidates",
+  security: [{ sessionAuth: [] }],
   request: {
     query: ListCandidatesQuerySchema,
   },
@@ -120,6 +122,7 @@ export const getCandidateRoute = createRoute({
   tags: ["Candidates"],
   method: "get",
   path: "/candidates/{id}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
@@ -146,6 +149,7 @@ export const updateCandidateRoute = createRoute({
   tags: ["Candidates"],
   method: "put",
   path: "/candidates/{id}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
@@ -191,6 +195,7 @@ export const deleteCandidateRoute = createRoute({
   tags: ["Candidates"],
   method: "delete",
   path: "/candidates/{id}",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
@@ -228,6 +233,7 @@ export const uploadImageRoute = createRoute({
   tags: ["Candidates"],
   method: "post",
   path: "/candidates/{id}/image",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
@@ -278,6 +284,7 @@ export const deleteImageRoute = createRoute({
   tags: ["Candidates"],
   method: "delete",
   path: "/candidates/{id}/image",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),
@@ -316,6 +323,7 @@ export const getCandidateImageRoute = createRoute({
   tags: ["Candidates"],
   method: "get",
   path: "/candidates/{id}/image",
+  security: [{ sessionAuth: [] }],
   request: {
     params: z.object({
       id: z.string(),

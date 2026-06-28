@@ -30,6 +30,7 @@ export const getMyProfileRoute = createRoute({
   tags: ["Profile"],
   method: "get",
   path: "/me/profile",
+  security: [{ sessionAuth: [] }],
   responses: {
     [httpStatusCodes.OK]: jsonContent(ProfileResponseSchema, "Current user profile"),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
@@ -45,6 +46,7 @@ export const updateMyProfileRoute = createRoute({
   tags: ["Profile"],
   method: "patch",
   path: "/me/profile",
+  security: [{ sessionAuth: [] }],
   request: {
     body: jsonContentRequired(UpdateProfileSchema, "Profile update data"),
   },
@@ -81,6 +83,7 @@ export const changePasswordRoute = createRoute({
   tags: ["Profile"],
   method: "post",
   path: "/me/password",
+  security: [{ sessionAuth: [] }],
   request: {
     body: jsonContentRequired(ChangePasswordSchema, "Password change data"),
   },

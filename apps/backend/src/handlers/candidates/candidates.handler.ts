@@ -45,13 +45,17 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
     manifesto,
   });
 
-  await auditLogRepo.insert(db, {
-    action: "candidate.create",
-    targetType: "candidate",
-    targetId: candidateId,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "candidate.create",
+      targetType: "candidate",
+      targetId: candidateId,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "candidate.create", targetId: candidateId }, "audit insert failed");
+  }
 
   return c.json(
     {
@@ -131,13 +135,17 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
 
   await candidateRepo.update(db, id, updateData);
 
-  await auditLogRepo.insert(db, {
-    action: "candidate.update",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "candidate.update",
+      targetType: "candidate",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "candidate.update", targetId: id }, "audit insert failed");
+  }
 
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
   if (updatedCandidate) {
@@ -175,13 +183,17 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
 
   await candidateRepo.softDelete(db, id);
 
-  await auditLogRepo.insert(db, {
-    action: "candidate.deactivate",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await auditLogRepo.insert(db, {
+      action: "candidate.deactivate",
+      targetType: "candidate",
+      targetId: id,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
+  } catch (auditErr) {
+    c.var.logger.error({ auditErr, action: "candidate.deactivate", targetId: id }, "audit insert failed");
+  }
 
   return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };

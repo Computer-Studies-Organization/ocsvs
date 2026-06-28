@@ -31,6 +31,7 @@ export const createElectionRoute = createRoute({
   method: "post",
   path: "/elections",
   tags: ["Elections"],
+  security: [{ sessionAuth: [] }],
   request: {
     body: jsonContent(CreateElectionBodySchema, "Election metadata"),
   },
@@ -61,6 +62,7 @@ export const getElectionRoute = createRoute({
   method: "get",
   path: "/elections/{id}",
   tags: ["Elections"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: IdParams,
   },
@@ -74,6 +76,7 @@ export const updateElectionRoute = createRoute({
   method: "patch",
   path: "/elections/{id}",
   tags: ["Elections"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: IdParams,
     body: jsonContent(UpdateElectionBodySchema, "Fields to update"),
@@ -94,6 +97,7 @@ export const transitionElectionRoute = createRoute({
   method: "post",
   path: "/elections/{id}/transitions",
   tags: ["Elections"],
+  security: [{ sessionAuth: [] }],
   request: {
     params: IdParams,
     body: jsonContent(TransitionBodySchema, "Transition request"),

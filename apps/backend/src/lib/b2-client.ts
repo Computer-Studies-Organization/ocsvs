@@ -4,7 +4,6 @@ export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
-
 const MAGIC_BYTES: Readonly<
   Record<Exclude<(typeof ALLOWED_TYPES)[number], "image/webp">, number[][]>
 > = {
@@ -215,8 +214,7 @@ export function resolveCandidateImageUrl(
 ): string | null {
   if (!imageUrl) return null;
   const b2BucketName = env.B2_BUCKET_NAME;
-  const publicAccess =
-    env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true;
+  const publicAccess = env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true;
   if (publicAccess || !b2BucketName) return imageUrl;
 
   const bucketPrefix = `${env.B2_PUBLIC_BASE_URL}/${b2BucketName}/`;
