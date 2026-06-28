@@ -10,7 +10,7 @@ import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { createSession, deleteAllSessionsForAccount, setSessionCookie } from "@/lib/session";
+import { createSession, setSessionCookie } from "@/lib/session";
 import { validateProfanity } from "@/lib/profanity";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -119,25 +119,23 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
     );
   }
 
-  // Invalidate all existing sessions BEFORE updating password.
-  // If this fails, we bail early — password is unchanged and old sessions remain valid (safe).
-  // If this succeeds but password update fails, user can re-login with old password (acceptable).
+  // Invalidate all existing sessions and update the password atomically.
+  // libSQL runs the batch as a single implicit transaction: either both the
+  // session deletion and the password update apply, or neither does. This
+  // closes the window where one write could succeed while the other fails.
+  const newPasswordHash = await hashPassword(newPassword);
   try {
-    await deleteAllSessionsForAccount(db, authUser.id);
+    await accountRepo.changePasswordAndInvalidateSessions(db, authUser.id, newPasswordHash);
   } catch (error) {
     c.var.logger?.error(
       { error, accountId: authUser.id },
-      "Failed to invalidate sessions before password change",
+      "Failed to change password and invalidate sessions",
     );
     return c.json(
       { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       httpStatusCodes.INTERNAL_SERVER_ERROR,
     );
   }
-
-  // Hash new password and update
-  const newPasswordHash = await hashPassword(newPassword);
-  await accountRepo.updatePassword(db, authUser.id, newPasswordHash);
 
   try {
     // Create a new session for the current user

@@ -23,13 +23,19 @@ vi.mock("@/config/db", () => ({
 }));
 
 // Mock the account repository
-const { mockUsernameExists, mockUpdateAccount, mockGetPasswordHash, mockUpdatePassword } =
-  vi.hoisted(() => ({
-    mockUsernameExists: vi.fn(),
-    mockUpdateAccount: vi.fn(),
-    mockGetPasswordHash: vi.fn(),
-    mockUpdatePassword: vi.fn(),
-  }));
+const {
+  mockUsernameExists,
+  mockUpdateAccount,
+  mockGetPasswordHash,
+  mockUpdatePassword,
+  mockChangePasswordAndInvalidateSessions,
+} = vi.hoisted(() => ({
+  mockUsernameExists: vi.fn(),
+  mockUpdateAccount: vi.fn(),
+  mockGetPasswordHash: vi.fn(),
+  mockUpdatePassword: vi.fn(),
+  mockChangePasswordAndInvalidateSessions: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@/database/repositories/account.repository", () => ({
   accountRepo: {
@@ -38,6 +44,7 @@ vi.mock("@/database/repositories/account.repository", () => ({
     create: vi.fn(),
     updateAccount: mockUpdateAccount,
     updatePassword: mockUpdatePassword,
+    changePasswordAndInvalidateSessions: mockChangePasswordAndInvalidateSessions,
     getPasswordHash: mockGetPasswordHash,
     softDelete: vi.fn(),
     restore: vi.fn(),
@@ -93,20 +100,16 @@ vi.mock("@/lib/profanity", () => ({
 }));
 
 // Mock session functions
-const { mockDeleteAllSessionsForAccount, mockCreateSession, mockSetSessionCookie } = vi.hoisted(
-  () => ({
-    mockDeleteAllSessionsForAccount: vi.fn().mockResolvedValue(undefined),
-    mockCreateSession: vi.fn().mockResolvedValue({
-      id: "new-session-id",
-      accountId: "test-user-id",
-      expiresAt: 9999999999,
-    }),
-    mockSetSessionCookie: vi.fn(),
+const { mockCreateSession, mockSetSessionCookie } = vi.hoisted(() => ({
+  mockCreateSession: vi.fn().mockResolvedValue({
+    id: "new-session-id",
+    accountId: "test-user-id",
+    expiresAt: 9999999999,
   }),
-);
+  mockSetSessionCookie: vi.fn(),
+}));
 
 vi.mock("@/lib/session", () => ({
-  deleteAllSessionsForAccount: mockDeleteAllSessionsForAccount,
   createSession: mockCreateSession,
   setSessionCookie: mockSetSessionCookie,
   getSessionIdFromCookie: vi.fn(),
@@ -187,7 +190,7 @@ describe("profile Routes", () => {
   it("should change password", async () => {
     mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
     mockVerifyPassword.mockResolvedValue(true);
-    mockUpdatePassword.mockResolvedValue(undefined);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(undefined);
 
     const res = await router.request("/me/password", {
       method: "POST",
@@ -202,8 +205,12 @@ describe("profile Routes", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("Password changed successfully");
     expect(mockGetPasswordHash).toHaveBeenCalled();
-    expect(mockUpdatePassword).toHaveBeenCalled();
-    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
+    expect(mockChangePasswordAndInvalidateSessions).toHaveBeenCalledWith(
+      expect.anything(),
+      "test-user-id",
+      "new-hashed-password",
+    );
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
     expect(mockCreateSession).toHaveBeenCalled();
     expect(mockSetSessionCookie).toHaveBeenCalled();
   });
@@ -302,7 +309,7 @@ describe("profile Routes", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as any;
     expect(body.message).toBe("User not found");
-    expect(mockUpdatePassword).not.toHaveBeenCalled();
+    expect(mockChangePasswordAndInvalidateSessions).not.toHaveBeenCalled();
   });
 
   it("should reject password change with incorrect current password", async () => {
@@ -321,13 +328,13 @@ describe("profile Routes", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as any;
     expect(body.message).toBe("Current password is incorrect");
-    expect(mockUpdatePassword).not.toHaveBeenCalled();
+    expect(mockChangePasswordAndInvalidateSessions).not.toHaveBeenCalled();
   });
 
   it("should return success message asking user to re-login if session regeneration fails", async () => {
     mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
     mockVerifyPassword.mockResolvedValue(true);
-    mockUpdatePassword.mockResolvedValue(undefined);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(undefined);
     mockCreateSession.mockRejectedValueOnce(new Error("DB Connection failed"));
 
     const res = await router.request("/me/password", {
@@ -343,16 +350,16 @@ describe("profile Routes", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("Password changed successfully. Please log in again.");
     expect(body.sessionRotated).toBe(false);
-    expect(mockUpdatePassword).toHaveBeenCalled();
-    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
+    expect(mockChangePasswordAndInvalidateSessions).toHaveBeenCalled();
     expect(mockSetSessionCookie).not.toHaveBeenCalled();
   });
 
-  it("should return 500 if deleteAllSessionsForAccount fails", async () => {
+  it("should return 500 if atomic password change and session invalidation fails", async () => {
     mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
     mockVerifyPassword.mockResolvedValue(true);
-    mockUpdatePassword.mockResolvedValue(undefined);
-    mockDeleteAllSessionsForAccount.mockRejectedValueOnce(new Error("DB Connection failed"));
+    mockChangePasswordAndInvalidateSessions.mockRejectedValueOnce(
+      new Error("DB Connection failed"),
+    );
 
     const res = await router.request("/me/password", {
       method: "POST",
@@ -366,8 +373,7 @@ describe("profile Routes", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as any;
     expect(body.message).toBe("Internal server error");
-    expect(mockUpdatePassword).not.toHaveBeenCalled();
-    expect(mockDeleteAllSessionsForAccount).toHaveBeenCalled();
+    expect(mockChangePasswordAndInvalidateSessions).toHaveBeenCalled();
     expect(mockCreateSession).not.toHaveBeenCalled();
     expect(mockSetSessionCookie).not.toHaveBeenCalled();
   });

@@ -1,6 +1,6 @@
 import type { Database } from "./database.type";
 import { and, eq, or, sql } from "drizzle-orm";
-import { accounts, users } from "@/database/schema";
+import { accounts, sessions, users } from "@/database/schema";
 
 export const accountRepo = {
   // Check if account exists by username or email (used by auth register)
@@ -94,6 +94,25 @@ export const accountRepo = {
       .set({ password_hash: passwordHash, updatedAt: now })
       .where(eq(accounts.id, accountId))
       .run();
+  },
+
+  // Atomically invalidate all sessions and update the password hash.
+  // Wraps both writes in a single libSQL batch (implicit transaction): either
+  // both apply or neither does, closing the window where sessions could be
+  // deleted while the password remains unchanged (and vice versa).
+  async changePasswordAndInvalidateSessions(
+    db: Database,
+    accountId: string,
+    passwordHash: string,
+  ): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await db.batch([
+      db.delete(sessions).where(eq(sessions.accountId, accountId)),
+      db
+        .update(accounts)
+        .set({ password_hash: passwordHash, updatedAt: now })
+        .where(eq(accounts.id, accountId)),
+    ]);
   },
 
   // Get password hash for account (used by auth changePassword)
