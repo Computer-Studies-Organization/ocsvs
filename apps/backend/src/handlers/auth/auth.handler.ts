@@ -15,6 +15,12 @@ import {
 } from "@/lib/session";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
+/** Mask student number for logging — keep last 4 chars for correlation. */
+function maskStudentId(id: string): string {
+  if (id.length <= 4) return "****";
+  return "*".repeat(id.length - 4) + id.slice(-4);
+}
+
 export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
   const { firstName, lastName, email, username, password, studentId, course, yearLevel } =
     c.req.valid("json");
@@ -67,22 +73,22 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   const { studentNumber, password } = c.req.valid("json");
   const { db } = createDb(c);
 
-  c.var.logger.info({ studentNumber }, "Login attempt");
+  c.var.logger.info({ studentNumber: maskStudentId(studentNumber) }, "Login attempt");
 
   const result = await userAccountQueries.findByStudentId(db, studentNumber);
 
   if (!result) {
-    c.var.logger.warn({ studentNumber }, "User not found");
+    c.var.logger.warn({ studentNumber: maskStudentId(studentNumber) }, "User not found");
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);
   }
 
   if (result.deletedAt !== null) {
-    c.var.logger.warn({ studentNumber }, "User deleted");
+    c.var.logger.warn({ studentNumber: maskStudentId(studentNumber) }, "User deleted");
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);
   }
 
   const isValid = await verifyPassword(password, result.password_hash);
-  c.var.logger.debug({ studentNumber }, "Password verification complete");
+  c.var.logger.debug({ studentNumber: maskStudentId(studentNumber) }, "Password verification complete");
 
   if (!isValid) {
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);
