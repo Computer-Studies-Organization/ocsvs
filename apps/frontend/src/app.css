@@ -3,4 +3,7 @@
 @theme {
   /* Non-standard Tailwind shade used across forms, cards, and tables */
   --color-slate-850: oklch(0.222 0.016 270);
+
+  /* Type family. Loaded via app.html; referenced by utilities. */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
