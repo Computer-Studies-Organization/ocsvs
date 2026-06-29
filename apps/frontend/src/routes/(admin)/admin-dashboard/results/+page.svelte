@@ -1,12 +1,13 @@
 <script lang='ts'>
-  import type { TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
+  import type { TElection, TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { getVotingState, listResults } from '$lib/api/elections'
+  import { getVotingState, listResults, listElections } from '$lib/api/elections'
   import { authStore } from '$lib/stores/auth'
-  import { ArrowLeft, BarChart3, Loader, Trophy } from 'lucide-svelte'
+  import { ArrowLeft, BarChart3, Loader, Trophy, Download } from 'lucide-svelte'
   import { onMount } from 'svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
+  import { addToast } from '$lib/stores/toast'
 
   interface CandidateWithPct extends TVoteCount { percentage: number }
   interface PositionResult extends TVoteResults {
@@ -14,12 +15,18 @@
     totalVotes: number
   }
 
+  let elections = $state<TElection[]>([])
+  let selectedElectionId = $state<string>('')
   let resultsData = $state<TVoteResultsResponse | null>(null)
   let electionName = $state('')
   let isLoading = $state(true)
   let isError = $state(false)
 
   const user = $derived($authStore.user)
+
+  const visibleElections = $derived(
+    elections.filter(e => e.status !== 'draft')
+  )
 
   const resultsWithPercentages = $derived.by<PositionResult[]>(() => {
     if (!resultsData?.results)
@@ -36,11 +43,50 @@
 
   onMount(async () => {
     try {
+      elections = await listElections()
+      
       const state = await getVotingState()
       const activeElection = state.open || state.lastClosed
-      if (activeElection) {
-        electionName = activeElection.name
-        const results = await listResults(activeElection.id)
+      
+      const filtered = elections.filter(e => e.status !== 'draft')
+      if (activeElection && filtered.some(e => e.id === activeElection.id)) {
+        selectedElectionId = activeElection.id
+      } else if (filtered.length > 0) {
+        selectedElectionId = filtered[0].id
+      } else {
+        selectedElectionId = ''
+      }
+    }
+    catch {
+      addToast('error', 'Failed to load elections list')
+      isError = true
+      isLoading = false
+    }
+  })
+
+  $effect(() => {
+    if (!selectedElectionId) {
+      resultsData = {
+        results: [],
+        meta: {
+          totalVotes: 0,
+          totalPositions: 0
+        }
+      }
+      isLoading = false
+      return
+    }
+
+    let active = true
+    async function loadResults() {
+      isLoading = true
+      isError = false
+      try {
+        const selected = elections.find(e => e.id === selectedElectionId)
+        if (selected) {
+          electionName = selected.name
+        }
+        const results = await listResults(selectedElectionId)
         const mappedResults = results.map(r => ({
           positionId: r.positionId,
           positionName: r.positionName,
@@ -53,30 +99,106 @@
           }))
         }))
         const totalVotes = results.reduce((sum, r) => sum + r.totalVotes, 0)
-        resultsData = {
-          results: mappedResults,
-          meta: {
-            totalVotes,
-            totalPositions: results.length
-          }
-        }
-      } else {
-        resultsData = {
-          results: [],
-          meta: {
-            totalVotes: 0,
-            totalPositions: 0
+        
+        if (active) {
+          resultsData = {
+            results: mappedResults,
+            meta: {
+              totalVotes,
+              totalPositions: results.length
+            }
           }
         }
       }
+      catch {
+        if (active) {
+          isError = true
+          addToast('error', 'Failed to load election results')
+        }
+      }
+      finally {
+        if (active) {
+          isLoading = false
+        }
+      }
     }
-    catch {
-      isError = true
-    }
-    finally {
-      isLoading = false
+
+    loadResults()
+
+    return () => {
+      active = false
     }
   })
+
+  function exportToCSV() {
+    if (!resultsWithPercentages.length || !electionName) return
+
+    const escapeCsv = (val: string) => {
+      const stringVal = String(val)
+      if (/[",\n\r]/.test(stringVal)) {
+        return `"${stringVal.replace(/"/g, '""')}"`
+      }
+      return stringVal
+    }
+
+    const csvRows: string[] = []
+
+    csvRows.push(`${escapeCsv('Election Name')},${escapeCsv(electionName)}`)
+    csvRows.push(`${escapeCsv('Export Date')},${escapeCsv(new Date().toLocaleString())}`)
+    if (resultsData?.meta) {
+      csvRows.push(`${escapeCsv('Total Votes Cast')},${escapeCsv(String(resultsData.meta.totalVotes))}`)
+    }
+    csvRows.push('')
+
+    csvRows.push([
+      escapeCsv('Position'),
+      escapeCsv('Candidate'),
+      escapeCsv('Votes'),
+      escapeCsv('Percentage'),
+      escapeCsv('Status')
+    ].join(','))
+
+    for (const pos of resultsWithPercentages) {
+      const winner = pos.candidates[0]
+      const isTie = pos.candidates.length > 1 && pos.candidates[0].voteCount === pos.candidates[1].voteCount
+
+      for (let i = 0; i < pos.candidates.length; i++) {
+        const candidate = pos.candidates[i]
+        let status = ''
+        if (candidate.voteCount > 0) {
+          if (isTie && candidate.voteCount === winner?.voteCount) {
+            status = 'Tied'
+          } else if (!isTie && i === 0) {
+            status = 'Winner'
+          }
+        }
+        
+        csvRows.push([
+          escapeCsv(pos.positionName),
+          escapeCsv(candidate.candidateName),
+          escapeCsv(String(candidate.voteCount)),
+          escapeCsv(`${candidate.percentage}%`),
+          escapeCsv(status)
+        ].join(','))
+      }
+    }
+
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    
+    const formattedElectionName = electionName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '')
+    const timestamp = new Date().toISOString().split('T')[0]
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${formattedElectionName}_results_${timestamp}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    addToast('success', 'CSV export started')
+  }
 </script>
 
 <div class='relative min-h-[100dvh] w-full overflow-hidden bg-slate-900 text-slate-100'>
@@ -120,6 +242,40 @@
         </button>
       </div>
     </header>
+
+    <!-- Election Selector & Actions -->
+    <div class='flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-sm backdrop-blur'>
+      <div class='flex items-center gap-3'>
+        <label for='election-select' class='text-sm font-bold text-slate-400'>
+          Election:
+        </label>
+        {#if visibleElections.length > 0}
+          <select
+            id='election-select'
+            bind:value={selectedElectionId}
+            class='rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-100 focus:border-sky-400 focus:outline-none cursor-pointer'
+          >
+            {#each visibleElections as e}
+              <option value={e.id}>{e.name} ({e.status})</option>
+            {/each}
+          </select>
+        {:else if isLoading}
+          <div class='h-10 w-48 animate-pulse rounded-xl bg-slate-800'></div>
+        {:else}
+          <span class='text-sm text-slate-500 font-medium'>No visible elections available</span>
+        {/if}
+      </div>
+
+      {#if resultsWithPercentages.length > 0 && !isLoading && !isError}
+        <button
+          onclick={exportToCSV}
+          class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 cursor-pointer'
+        >
+          <Download size={16} />
+          Export to CSV
+        </button>
+      {/if}
+    </div>
 
     <!-- Summary -->
     {#if resultsData?.meta}
