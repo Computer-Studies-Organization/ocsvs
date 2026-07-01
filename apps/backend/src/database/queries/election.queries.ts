@@ -109,10 +109,11 @@ export const electionQueries = {
         positions.id,
         positions.name,
         positions.displayOrder,
+        positions.createdAt,
         candidates.id,
         candidates.fullName,
       )
-      .orderBy(asc(positions.displayOrder), desc(count(votes.id)))
+      .orderBy(asc(positions.displayOrder), asc(positions.createdAt), desc(count(votes.id)))
       .all();
 
     const byPosition = new Map<string, ResultsPosition>();

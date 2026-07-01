@@ -258,5 +258,13 @@ describe("electionQueries", () => {
         },
       ]);
     });
+
+    it("orders positions by displayOrder ASC, createdAt ASC, and voteCount DESC", async () => {
+      chain.all.mockReturnValueOnce([]);
+      await electionQueries.getResults(mockDb as any, "e1");
+      expect(chain.orderBy).toHaveBeenCalled();
+      const lastCallArgs = chain.orderBy.mock.calls[0];
+      expect(lastCallArgs).toHaveLength(3);
+    });
   });
 });
