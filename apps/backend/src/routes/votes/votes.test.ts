@@ -181,7 +181,13 @@ describe("votes Routes (repository)", () => {
     mockGetCurrentElection.mockReset();
     mockListByElection.mockReset();
     mockFindElectionById.mockReset();
-    mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "open" });
+    const nowSecs = Math.floor(Date.now() / 1000);
+    mockFindElectionById.mockResolvedValue({
+      id: testElectionId,
+      status: "open",
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
+    });
     mockFindLatestClosed.mockReset();
     mockGetElectionResults.mockReset();
     TEST_USER = {
@@ -421,6 +427,58 @@ describe("votes Routes (repository)", () => {
       const mockUser = { id: testUserId, accountId: testUserAccountId };
       mockFindByAccountId.mockResolvedValue(mockUser);
       mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "draft" });
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
+    });
+
+    it("should return 409 when target election has not opened yet", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      const nowSecs = Math.floor(Date.now() / 1000);
+      mockFindElectionById.mockResolvedValue({
+        id: testElectionId,
+        status: "open",
+        opensAt: nowSecs + 3600,
+        closesAt: nowSecs + 7200,
+      });
+
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
+    });
+
+    it("should return 409 when target election has already closed", async () => {
+      setUser();
+      const mockUser = { id: testUserId, accountId: testUserAccountId };
+      mockFindByAccountId.mockResolvedValue(mockUser);
+      const nowSecs = Math.floor(Date.now() / 1000);
+      mockFindElectionById.mockResolvedValue({
+        id: testElectionId,
+        status: "open",
+        opensAt: nowSecs - 7200,
+        closesAt: nowSecs - 3600,
+      });
 
       const res = await router.request("/votes", {
         method: "POST",

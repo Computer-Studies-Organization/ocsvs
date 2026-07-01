@@ -55,13 +55,14 @@ describe("getVotingState", () => {
   });
 
   it("returns the open election when one exists", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
     const openRow = {
       id: "e1",
       name: "Spring 2026",
       description: null,
       status: "open",
-      opensAt: 1,
-      closesAt: 2,
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
       createdAt: 1,
       updatedAt: 1,
     };
@@ -165,13 +166,14 @@ describe("getVotingState", () => {
   });
 
   it("returns user-scoped myVotes when an open election exists", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
     const openRow = {
       id: "e-open",
       name: "Now",
       description: null,
       status: "open",
-      opensAt: 1,
-      closesAt: 2,
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
       createdAt: 1,
       updatedAt: 1,
     };
@@ -205,13 +207,14 @@ describe("getVotingState", () => {
   });
 
   it("returns empty myVotes when the account has no associated user", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
     const openRow = {
       id: "e-open",
       name: "Now",
       description: null,
       status: "open",
-      opensAt: 1,
-      closesAt: 2,
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
       createdAt: 1,
       updatedAt: 1,
     };
@@ -224,5 +227,75 @@ describe("getVotingState", () => {
 
     expect(result.myVotes).toEqual({ electionId: "e-open", votes: [] });
     expect(voteRepo.findByUserAndElection).not.toHaveBeenCalled();
+  });
+
+  it("virtualizes open election to nextDraft when it has not started yet", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
+    const openRow = {
+      id: "e-upcoming",
+      name: "Upcoming",
+      description: null,
+      status: "open",
+      opensAt: nowSecs + 3600,
+      closesAt: nowSecs + 7200,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
+
+    const result = await getVotingState(db, accountId);
+
+    expect(result.open).toBeNull();
+    expect(result.nextDraft).toEqual({
+      id: "e-upcoming",
+      name: "Upcoming",
+      opensAt: nowSecs + 3600,
+      closesAt: nowSecs + 7200,
+    });
+  });
+
+  it("virtualizes open election to lastClosed when it has already ended", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
+    const openRow = {
+      id: "e-ended",
+      name: "Ended",
+      description: null,
+      status: "open",
+      opensAt: nowSecs - 7200,
+      closesAt: nowSecs - 3600,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
+    vi.mocked(electionQueries.getResults).mockResolvedValue([
+      {
+        positionId: "p1",
+        positionName: "President",
+        totalVotes: 10,
+        candidates: [{ candidateId: "c1", fullName: "Alice", voteCount: 10, percentage: 100 }],
+      },
+    ] as any);
+
+    const result = await getVotingState(db, accountId);
+
+    expect(result.open).toBeNull();
+    expect(result.lastClosed).toEqual({
+      id: "e-ended",
+      name: "Ended",
+      closesAt: nowSecs - 3600,
+      results: [
+        {
+          positionId: "p1",
+          positionName: "President",
+          totalVotes: 10,
+          candidates: [{ candidateId: "c1", fullName: "Alice", voteCount: 10, percentage: 100 }],
+        },
+      ],
+    });
+    expect(electionQueries.getResults).toHaveBeenCalledWith(db, "e-ended");
   });
 });

@@ -21,6 +21,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   const { electionId, votes: voteItems } = c.req.valid("json");
   const authUser = c.get("authUser");
   const { db } = createDb(c);
+  const now = Math.floor(Date.now() / 1000);
 
   // Get the user associated with this account
   const user = await userRepo.findByAccountId(db, authUser.id);
@@ -34,7 +35,13 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   if (!election) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  if (election.status !== "open") {
+  if (
+    election.status !== "open" ||
+    election.opensAt === null ||
+    election.closesAt === null ||
+    now < election.opensAt ||
+    now > election.closesAt
+  ) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_OPEN }, httpStatusCodes.CONFLICT);
   }
 
@@ -86,7 +93,6 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
     }
   }
 
-  const now = Math.floor(Date.now() / 1000);
   const insertedVotes: (typeof votes.$inferInsert)[] = voteItems.map((voteItem) => {
     const voteId = crypto.randomUUID();
     return {

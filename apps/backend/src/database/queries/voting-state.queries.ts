@@ -32,29 +32,56 @@ export interface VotingState {
 }
 
 export async function getVotingState(db: Database, accountId: string): Promise<VotingState> {
-  const [open, draftRow, closedRow] = await Promise.all([
+  const now = Math.floor(Date.now() / 1000);
+  const [dbOpen, draftRow, closedRow] = await Promise.all([
     electionRepo.findOpen(db),
     electionRepo.findEarliestDraft(db),
     electionRepo.findLatestClosed(db),
   ]);
 
+  let open: typeof dbOpen = dbOpen;
+  let virtualDraft = draftRow;
+  let virtualClosed = closedRow;
+
+  // "Virtualize" an election whose status='open' is out of sync with its time
+  // window (admin transitioned early, or forgot to close) by demoting it into
+  // the right UI slot. The DB row is left alone — only the response shape
+  // reflects what the wall clock says.
+  if (dbOpen) {
+    if (dbOpen.opensAt !== null && now < dbOpen.opensAt) {
+      open = null;
+      if (!virtualDraft || virtualDraft.opensAt === null || dbOpen.opensAt < virtualDraft.opensAt) {
+        virtualDraft = dbOpen;
+      }
+    } else if (dbOpen.closesAt !== null && now > dbOpen.closesAt) {
+      open = null;
+      if (
+        !virtualClosed ||
+        virtualClosed.closesAt === null ||
+        dbOpen.closesAt > virtualClosed.closesAt
+      ) {
+        virtualClosed = dbOpen;
+      }
+    }
+  }
+
   let nextDraft: NextDraft | null = null;
-  if (draftRow) {
+  if (virtualDraft) {
     nextDraft = {
-      id: draftRow.id,
-      name: draftRow.name,
-      opensAt: draftRow.opensAt,
-      closesAt: draftRow.closesAt,
+      id: virtualDraft.id,
+      name: virtualDraft.name,
+      opensAt: virtualDraft.opensAt,
+      closesAt: virtualDraft.closesAt,
     };
   }
 
   let lastClosed: LastClosed | null = null;
-  if (closedRow && closedRow.closesAt !== null) {
-    const results = await electionQueries.getResults(db, closedRow.id);
+  if (virtualClosed && virtualClosed.closesAt !== null) {
+    const results = await electionQueries.getResults(db, virtualClosed.id);
     lastClosed = {
-      id: closedRow.id,
-      name: closedRow.name,
-      closesAt: closedRow.closesAt,
+      id: virtualClosed.id,
+      name: virtualClosed.name,
+      closesAt: virtualClosed.closesAt,
       results,
     };
   }
