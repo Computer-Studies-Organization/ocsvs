@@ -1,427 +1,289 @@
 <script lang='ts'>
-  import type { TUsersData } from '$lib/types'
-  import { goto, invalidate } from '$app/navigation'
-  import { deleteUser, restoreUser, updateUser } from '$lib/api/users'
-  import { authStore } from '$lib/stores/auth'
-  import { userCache } from '$lib/cache'
+  import type { AdminStats } from '$lib/api/admin-stats'
+  import { goto } from '$app/navigation'
   import {
-    Archive,
-    ArrowUpDown,
-    Edit,
-    Eye,
-    Loader,
-    RotateCcw,
-    Search,
-    X,
+    Users,
+    FileText,
+    Activity,
+    PlusCircle,
+    ArrowRight,
+    Vote,
+    History,
+    ShieldAlert,
+    Calendar,
+    ChevronRight
   } from 'lucide-svelte'
-  import { addToast } from '$lib/stores/toast'
-
-  type SortableKey = 'studentId' | 'firstName' | 'lastName' | 'username' | 'yearLevel' | 'course'
-  const SORTABLE_KEYS: SortableKey[] = ['studentId', 'firstName', 'lastName', 'username', 'yearLevel', 'course']
-  const SORTABLE_LABELS: Record<SortableKey, string> = {
-    studentId: 'Student ID',
-    firstName: 'First Name',
-    lastName: 'Last Name',
-    username: 'Username',
-    yearLevel: 'Year',
-    course: 'Course',
-  }
-
-  type EditField = 'firstName' | 'lastName' | 'username' | 'email' | 'yearLevel' | 'course'
-  const EDIT_FIELDS: EditField[] = ['firstName', 'lastName', 'username', 'email', 'yearLevel', 'course']
-  const EDIT_LABELS: Record<EditField, string> = {
-    firstName: 'First Name',
-    lastName: 'Last Name',
-    username: 'Username',
-    email: 'Email',
-    yearLevel: 'Year Level',
-    course: 'Course',
-  }
-  type EditForm = Record<EditField, string>
 
   let { data } = $props()
-  let users = $derived<TUsersData[]>(data.users)
-  // svelte-ignore state_referenced_locally
-  let includeDeleted = $state(data.includeDeleted)
+  let stats = $derived<AdminStats>(data.stats)
+  let error = $derived<string | undefined>(data.error)
 
-  $effect(() => {
-    includeDeleted = data.includeDeleted
-  })
-
-  // State
-  let search = $state('')
-  let sortKey = $state<SortableKey>('studentId')
-  let sortAsc = $state(true)
-  let pageIndex = $state(0)
-  const pageSize = 25
-
-  // Modals
-  let viewUser = $state<TUsersData | null>(null)
-  let editUser = $state<TUsersData | null>(null)
-  let editForm = $state<EditForm>({ firstName: '', lastName: '', username: '', email: '', yearLevel: '', course: '' })
-  let isEditSaving = $state(false)
-  let editMsg = $state('')
-  let archiveConfirmUser = $state<TUsersData | null>(null)
-  let restoreConfirmUser = $state<TUsersData | null>(null)
-  let isActionLoading = $state(false)
-  let actionMsg = $state('')
-
-  // Update URL when includeDeleted changes
-  $effect(() => {
-    const url = new URL(window.location.href)
-    if (includeDeleted) {
-      url.searchParams.set('archived', 'true')
-    } else {
-      url.searchParams.delete('archived')
-    }
-    if (url.toString() === window.location.href) return
-    goto(url.toString(), { replaceState: true, noScroll: true })
-  })
-
-  // Derived filtered + sorted + paginated list
-  const filtered = $derived.by(() => {
-    let list = includeDeleted ? users : users.filter((u) => !u.deletedAt)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter((u) => {
-        const studentIdMatch = u.studentId?.toLowerCase().includes(q)
-        const firstNameMatch = u.firstName?.toLowerCase().includes(q)
-        const lastNameMatch = u.lastName?.toLowerCase().includes(q)
-        const usernameMatch = u.username?.toLowerCase().includes(q)
-        return studentIdMatch || firstNameMatch || lastNameMatch || usernameMatch
-      })
-    }
-    list = [...list].sort((a, b) => {
-      const av = String(a[sortKey] ?? '')
-      const bv = String(b[sortKey] ?? '')
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av)
-    })
-    return list
-  })
-
-  const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)))
-  const paginated = $derived(filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize))
-
-  $effect(() => {
-    void includeDeleted
-    pageIndex = 0
-  })
-
-  function toggleSort(key: SortableKey) {
-    if (sortKey === key) {
-      sortAsc = !sortAsc
-    }
-    else {
-      sortKey = key
-      sortAsc = true
-    }
-    pageIndex = 0
+  function formatTimestamp(unixSeconds: number): string {
+    const d = new Date(unixSeconds * 1000)
+    return d.toLocaleString()
   }
 
-  function openEdit(u: TUsersData) {
-    editUser = u
-    editForm = {
-      firstName: u.firstName ?? '',
-      lastName: u.lastName ?? '',
-      username: u.username ?? '',
-      email: u.email ?? '',
-      yearLevel: u.yearLevel ?? '',
-      course: u.course ?? '',
-    }
-    editMsg = ''
+  function truncateId(id: string): string {
+    return id.length > 12 ? id.slice(0, 12) + '…' : id
   }
-
-  async function handleEditSave() {
-    if (!editUser)
-      return
-    isEditSaving = true
-    editMsg = ''
-    try {
-      await updateUser(editUser.id, {
-        firstName: editForm.firstName,
-        lastName: editForm.lastName,
-        username: editForm.username,
-        email: editForm.email.trim(),
-        yearLevel: editForm.yearLevel || undefined,
-        course: editForm.course || undefined,
-      })
-      editMsg = 'Saved!'
-      addToast('success', 'User updated')
-      userCache.invalidate()
-      await invalidate('app:users')
-      setTimeout(() => {
-        editUser = null
-      }, 800)
-    }
-    catch (e: any) {
-      editMsg = e.message || 'Failed to save'
-      addToast('error', e.message || 'Failed to save')
-    }
-    finally {
-      isEditSaving = false
-    }
-  }
-
-  async function handleArchive() {
-    if (!archiveConfirmUser)
-      return
-    isActionLoading = true
-    try {
-      await deleteUser(archiveConfirmUser.id)
-      userCache.invalidate()
-      await invalidate('app:users')
-      archiveConfirmUser = null
-      addToast('success', 'User archived')
-    }
-    catch (e: any) {
-      actionMsg = e.message || 'Failed to archive'
-      addToast('error', e.message || 'Failed to archive')
-    }
-    finally {
-      isActionLoading = false
-    }
-  }
-
-  async function handleRestore() {
-    if (!restoreConfirmUser)
-      return
-    isActionLoading = true
-    try {
-      await restoreUser(restoreConfirmUser.id)
-      userCache.invalidate()
-      await invalidate('app:users')
-      restoreConfirmUser = null
-      addToast('success', 'User restored')
-    }
-    catch (e: any) {
-      actionMsg = e.message || 'Failed to restore'
-      addToast('error', e.message || 'Failed to restore')
-    }
-    finally {
-      isActionLoading = false
-    }
-  }
-
-
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
+  <!-- Top accent bar -->
   <div class='h-1 w-full bg-gradient-to-r from-amber-500 via-orange-400 to-rose-500'></div>
 
-  <div class='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
     <!-- Header -->
-    <header class='mb-6 flex flex-wrap items-center justify-between gap-4'>
+    <header class='mb-8 flex flex-wrap items-center justify-between gap-4'>
       <div>
         <p class='inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-300/90 mb-2'>
           <span class='h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]'></span>
           Admin Panel
         </p>
-        <h1 class='text-2xl font-black text-slate-50 sm:text-3xl'>User Management</h1>
-        <p class='mt-1 text-xs text-slate-500'>Manage registered voters and administrators</p>
+        <h1 class='text-3xl font-black text-slate-50 tracking-tight sm:text-4xl'>Dashboard Overview</h1>
+        <p class='mt-1 text-sm text-slate-400'>Monitor election participation, system audit history, and access quick actions.</p>
       </div>
     </header>
 
-    <!-- Search & Filters -->
-    <div class='mb-4 flex flex-wrap gap-3'>
-      <div class='relative flex-1 min-w-[200px]'>
-        <Search size={16} class='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500' />
-        <input
-          type='text'
-          placeholder='Search users…'
-          bind:value={search}
-          oninput={() => pageIndex = 0}
-          class='w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
-        />
+    {#if error}
+      <div class='mb-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 flex items-center gap-3 text-red-400'>
+        <ShieldAlert size={20} />
+        <p class='text-sm font-semibold'>{error}</p>
       </div>
-      <label class='flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800'>
-        <input type='checkbox' bind:checked={includeDeleted} class='h-4 w-4 accent-amber-400' />
-        Show archived
-      </label>
-    </div>
-
-    {#if actionMsg}
-      <div class='mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300'>{actionMsg}</div>
     {/if}
 
-    <!-- Table -->
-    <div class='overflow-hidden rounded-2xl border border-slate-800 bg-slate-900'>
-      <div class='overflow-x-auto'>
-        <table class='w-full text-sm'>
-          <thead>
-            <tr class='border-b border-slate-800 bg-slate-950/50'>
-              {#each SORTABLE_KEYS as key}
-                <th class='px-4 py-3 text-left'>
-                  <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
-                    {SORTABLE_LABELS[key]}
-                    <ArrowUpDown size={12} />
-                  </button>
-                </th>
-              {/each}
-              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Status</th>
-              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each paginated as u (u.id)}
-              <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30 {u.deletedAt ? 'opacity-60' : ''}">
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.studentId}</td>
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.yearLevel ?? '—'}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
-                <td class='px-4 py-3'>
-                  <div class='flex flex-wrap gap-1'>
-                    {#if u.deletedAt}
-                      <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
-                    {/if}
-                  </div>
-                </td>
-                <td class='px-4 py-3'>
-                  <div class='flex gap-1.5'>
-                    <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
-                    {#if u.deletedAt}
-                      <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
-                    {:else}
-                      <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
-                      <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
-                    {/if}
-                  </div>
-                </td>
-              </tr>
-            {/each}
-            {#if paginated.length === 0}
-              <tr><td colspan={8} class='h-24 text-center text-slate-500'>No users found.</td></tr>
-            {/if}
-          </tbody>
-        </table>
+    <!-- Metrics Grid -->
+    <div class='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8'>
+      <!-- Voters Card -->
+      <div class='relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-md shadow-sm transition hover:border-slate-700/80'>
+        <div class='flex items-center justify-between'>
+          <div>
+            <p class='text-xs font-bold uppercase tracking-wider text-slate-500'>Registered Voters</p>
+            <p class='mt-2 text-3xl font-black text-slate-50'>{stats.votersCount}</p>
+          </div>
+          <div class='rounded-xl bg-blue-500/10 p-3 text-blue-400 border border-blue-500/10'>
+            <Users size={24} />
+          </div>
+        </div>
+        <div class='mt-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3'>
+          <span>Active voter directory</span>
+          <a href='/admin/users' class='flex items-center gap-0.5 text-blue-400 font-bold hover:underline'>
+            Manage users →
+          </a>
+        </div>
       </div>
 
-      <!-- Pagination -->
-      <div class='flex items-center justify-between border-t border-slate-800 px-4 py-3'>
-        <p class='text-xs text-slate-500'>{filtered.length} user(s)</p>
-        <div class='flex items-center gap-2'>
-          <button
-            disabled={pageIndex === 0}
-            onclick={() => pageIndex--}
-            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
-          >←</button>
-          <span class='text-sm font-semibold text-slate-100'>{pageIndex + 1} / {pageCount}</span>
-          <button
-            disabled={pageIndex >= pageCount - 1}
-            onclick={() => pageIndex++}
-            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
-          >→</button>
+      <!-- Elections Card -->
+      <div class='relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-md shadow-sm transition hover:border-slate-700/80'>
+        <div class='flex items-center justify-between'>
+          <div>
+            <p class='text-xs font-bold uppercase tracking-wider text-slate-500'>Total Elections</p>
+            <p class='mt-2 text-3xl font-black text-slate-50'>{stats.electionsCount}</p>
+          </div>
+          <div class='rounded-xl bg-purple-500/10 p-3 text-purple-400 border border-purple-500/10'>
+            <FileText size={24} />
+          </div>
+        </div>
+        <div class='mt-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3'>
+          <span>Draft, Live, Closed or Archived</span>
+          <a href='/admin/elections' class='flex items-center gap-0.5 text-purple-400 font-bold hover:underline'>
+            View elections →
+          </a>
+        </div>
+      </div>
+
+      <!-- Turnout Quick Card -->
+      <div class='relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-md shadow-sm transition hover:border-slate-700/80 sm:col-span-2 lg:col-span-1'>
+        <div class='flex items-center justify-between'>
+          <div>
+            <p class='text-xs font-bold uppercase tracking-wider text-slate-500'>Active Turnout</p>
+            <p class='mt-2 text-3xl font-black text-slate-50'>
+              {stats.activeElection ? `${stats.activeElection.turnoutPct}%` : 'N/A'}
+            </p>
+          </div>
+          <div class='rounded-xl bg-emerald-500/10 p-3 text-emerald-400 border border-emerald-500/10'>
+            <Activity size={24} />
+          </div>
+        </div>
+        <div class='mt-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3'>
+          <span>
+            {stats.activeElection ? `${stats.activeElection.votedCount} votes cast` : 'No active election'}
+          </span>
+          {#if stats.activeElection}
+            <a href='/admin/results' class='flex items-center gap-0.5 text-emerald-400 font-bold hover:underline'>
+              Real-time results →
+            </a>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+    <div class='grid grid-cols-1 gap-8 lg:grid-cols-3'>
+      <!-- Left 2 Cols: Turnout & Action -->
+      <div class='lg:col-span-2 space-y-8'>
+        <!-- Turnout Progress Card -->
+        <div class='rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-sm backdrop-blur-md'>
+          <h2 class='text-lg font-bold text-slate-50 mb-4 flex items-center gap-2'>
+            <Vote size={18} class='text-amber-400' />
+            Live Election Turnout
+          </h2>
+
+          {#if stats.activeElection}
+            <div class='space-y-4'>
+              <div class='flex items-center justify-between gap-4'>
+                <div>
+                  <span class='inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 uppercase mb-1.5'>
+                    <span class='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping'></span>
+                    Live Now
+                  </span>
+                  <h3 class='text-base font-bold text-slate-100'>{stats.activeElection.name}</h3>
+                </div>
+                <div class='text-right'>
+                  <span class='text-xl font-black text-amber-400'>{stats.activeElection.turnoutPct}%</span>
+                  <p class='text-xs text-slate-500'>{stats.activeElection.votedCount} / {stats.activeElection.votersCount} voted</p>
+                </div>
+              </div>
+
+              <!-- Progress bar -->
+              <div class='space-y-1.5'>
+                <div class='h-3 w-full overflow-hidden rounded-full bg-slate-950 border border-slate-800/80'>
+                  <div
+                    class='h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500'
+                    style='width: {stats.activeElection.turnoutPct}%'
+                  ></div>
+                </div>
+              </div>
+
+              {#if stats.activeElection.closesAt}
+                <div class='flex items-center gap-1.5 text-xs text-slate-400 bg-slate-950/65 rounded-xl px-4 py-2 border border-slate-850 w-fit'>
+                  <Calendar size={14} class='text-slate-500' />
+                  <span>Closes at: <span class='font-semibold text-slate-350'>{formatTimestamp(stats.activeElection.closesAt)}</span></span>
+                </div>
+              {/if}
+            </div>
+          {:else}
+            <div class='py-8 text-center border-2 border-dashed border-slate-800 rounded-xl bg-slate-950/30'>
+              <Vote size={36} class='mx-auto text-slate-700 mb-2' />
+              <p class='text-sm text-slate-400 font-semibold'>No Active Voting Session</p>
+              <p class='text-xs text-slate-500 mt-1'>Activate or create an election from the elections management page.</p>
+              <button
+                onclick={() => goto('/admin/elections')}
+                class='mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 px-4 py-2 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer'
+              >
+                Go to Elections
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class='rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-sm backdrop-blur-md'>
+          <h2 class='text-lg font-bold text-slate-50 mb-4'>Quick Actions</h2>
+          <div class='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            <!-- Create Election -->
+            <button
+              onclick={() => goto('/admin/elections')}
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            >
+              <div class='rounded-lg bg-amber-500/10 p-2.5 text-amber-400 border border-amber-500/10'>
+                <PlusCircle size={18} />
+              </div>
+              <div>
+                <h3 class='text-sm font-bold text-slate-100'>Manage Elections</h3>
+                <p class='mt-1 text-xs text-slate-500'>Create elections, adjust schedule, or add details.</p>
+              </div>
+            </button>
+
+            <!-- Manage Voters -->
+            <button
+              onclick={() => goto('/admin/users')}
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            >
+              <div class='rounded-lg bg-blue-500/10 p-2.5 text-blue-400 border border-blue-500/10'>
+                <Users size={18} />
+              </div>
+              <div>
+                <h3 class='text-sm font-bold text-slate-100'>Manage Voters</h3>
+                <p class='mt-1 text-xs text-slate-500'>Browse voter directory, edit metadata or archive/restore users.</p>
+              </div>
+            </button>
+
+            <!-- View Audit Logs -->
+            <button
+              onclick={() => goto('/admin/audit-log')}
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            >
+              <div class='rounded-lg bg-slate-750 p-2.5 text-slate-300 border border-slate-700/80'>
+                <History size={18} />
+              </div>
+              <div>
+                <h3 class='text-sm font-bold text-slate-100'>Audit History</h3>
+                <p class='mt-1 text-xs text-slate-500'>Monitor actions taken by admins across the system.</p>
+              </div>
+            </button>
+
+            <!-- View Results -->
+            <button
+              onclick={() => goto('/admin/results')}
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            >
+              <div class='rounded-lg bg-purple-500/10 p-2.5 text-purple-400 border border-purple-500/10'>
+                <Activity size={18} />
+              </div>
+              <div>
+                <h3 class='text-sm font-bold text-slate-100'>Election Results</h3>
+                <p class='mt-1 text-xs text-slate-500'>View real-time live counts and final closed results.</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right 1 Col: Recent Audit Logs -->
+      <div class='lg:col-span-1'>
+        <div class='rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-sm backdrop-blur-md h-full flex flex-col'>
+          <div class='flex items-center justify-between mb-4'>
+            <h2 class='text-lg font-bold text-slate-50 flex items-center gap-2'>
+              <History size={18} class='text-slate-400' />
+              Recent Logs
+            </h2>
+            <a href='/admin/audit-log' class='text-xs text-blue-400 font-semibold hover:underline flex items-center gap-0.5'>
+              View all
+              <ChevronRight size={12} />
+            </a>
+          </div>
+
+          <div class='flex-1 space-y-3 overflow-y-auto max-h-[460px] pr-1'>
+            {#each stats.recentLogs as log (log.id)}
+              <div class='rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5 space-y-1.5 transition hover:border-slate-700/60'>
+                <div class='flex items-center justify-between gap-2'>
+                  <span class='font-bold text-xs text-slate-200'>{log.actorUsernameSnapshot}</span>
+                  <span class='text-[10px] text-slate-500 font-semibold'>{formatTimestamp(log.createdAt).split(',')[0]}</span>
+                </div>
+                <div class='flex flex-wrap gap-1'>
+                  <span class='rounded bg-blue-500/10 border border-blue-500/10 text-[9px] font-bold text-blue-400 px-1.5 py-0.2'>
+                    {log.action}
+                  </span>
+                  <span class='rounded bg-emerald-500/10 border border-emerald-500/10 text-[9px] font-bold text-emerald-400 px-1.5 py-0.2 uppercase'>
+                    {log.targetType}
+                  </span>
+                </div>
+                {#if log.description}
+                  <p class='text-xs text-slate-400 border-t border-slate-800/60 pt-1.5 mt-1 font-medium'>
+                    {log.description}
+                  </p>
+                {/if}
+              </div>
+            {:else}
+              <div class='py-8 text-center text-slate-600 flex flex-col items-center justify-center h-full'>
+                <History size={24} class='text-slate-800 mb-2' />
+                <p class='text-xs font-semibold'>No system audits found</p>
+              </div>
+            {/each}
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<!-- View Modal -->
-{#if viewUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl'>
-      <div class='mb-4 flex items-center justify-between'>
-        <h3 class='text-lg font-bold text-slate-50'>User Details</h3>
-        <button onclick={() => viewUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
-      </div>
-      <div class='space-y-2 text-sm'>
-        {#each [['Student ID', viewUser.studentId], ['First Name', viewUser.firstName], ['Last Name', viewUser.lastName], ['Username', viewUser.username ?? '—'], ['Email', viewUser.email ?? '—'], ['Year Level', viewUser.yearLevel ?? '—'], ['Course', viewUser.course ?? '—'], ['Role', viewUser.role ?? '—'], ['Status', viewUser.deletedAt ? 'Archived' : 'Active']] as [label, val]}
-          <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-            <span class='text-slate-400'>{label}</span>
-            <span class='font-semibold text-slate-50'>{val}</span>
-          </div>
-        {/each}
-        <a
-          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
-          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
-        >
-          View Audit Trail →
-        </a>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Edit Modal -->
-{#if editUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl'>
-      <div class='mb-4 flex items-center justify-between'>
-        <h3 class='text-lg font-bold text-slate-50'>Edit User</h3>
-        <button onclick={() => editUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
-      </div>
-      <div class='space-y-3'>
-        {#each EDIT_FIELDS as field}
-          <div>
-            <label for={field} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
-            <input
-              id={field}
-              type='text'
-              value={editForm[field]}
-              oninput={e => editForm[field] = e.currentTarget.value}
-              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
-            />
-          </div>
-        {/each}
-        {#if editMsg}
-          <p class="text-sm {editMsg === 'Saved!' ? 'text-emerald-400' : 'text-red-400'}">{editMsg}</p>
-        {/if}
-        <div class='flex justify-end gap-2 pt-2'>
-          <button onclick={() => editUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-          <button
-            onclick={handleEditSave}
-            disabled={isEditSaving}
-            class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
-          >
-            {#if isEditSaving}<Loader class='animate-spin' size={14} />{/if}
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Archive Confirm -->
-{#if archiveConfirmUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-sm rounded-2xl border border-orange-800/40 bg-slate-900 p-6 shadow-2xl'>
-      <h3 class='mb-2 text-lg font-bold text-slate-50'>Archive User?</h3>
-      <p class='mb-4 text-sm text-slate-400'>Are you sure you want to archive <span class='font-semibold text-slate-200'>{archiveConfirmUser.firstName} {archiveConfirmUser.lastName}</span>? They will no longer be able to log in.</p>
-      <div class='flex gap-2 justify-end'>
-        <button onclick={() => archiveConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-        <button
-          onclick={handleArchive}
-          disabled={isActionLoading}
-          class='flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-60 cursor-pointer'
-        >
-          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
-          Archive
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Restore Confirm -->
-{#if restoreConfirmUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-sm rounded-2xl border border-emerald-800/40 bg-slate-900 p-6 shadow-2xl'>
-      <h3 class='mb-2 text-lg font-bold text-slate-50'>Restore User?</h3>
-      <p class='mb-4 text-sm text-slate-400'>Restore <span class='font-semibold text-slate-200'>{restoreConfirmUser.firstName} {restoreConfirmUser.lastName}</span> so they can log in again.</p>
-      <div class='flex gap-2 justify-end'>
-        <button onclick={() => restoreConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-        <button
-          onclick={handleRestore}
-          disabled={isActionLoading}
-          class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60 cursor-pointer'
-        >
-          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
-          Restore
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}

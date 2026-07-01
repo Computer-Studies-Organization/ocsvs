@@ -1,12 +1,19 @@
 import type { PageLoad } from "./$types";
-import { userCache } from "$lib/cache";
+import { fetchAdminStats } from "$lib/api/admin-stats";
 
-export const load: PageLoad = async ({ url, depends }) => {
-  depends("app:users");
-  // Seeds the "Show archived" checkbox on first paint. The user cache always
-  // returns active + archived users, so this flag does not filter the fetch —
-  // the +page.svelte derives the visible list from `data.users` client-side.
-  const includeDeleted = url.searchParams.get("archived") === "true";
-  const users = await userCache.fetch();
-  return { users: users ?? [], includeDeleted };
+export const load: PageLoad = async () => {
+  try {
+    const stats = await fetchAdminStats();
+    return { stats };
+  } catch (error) {
+    return {
+      stats: {
+        votersCount: 0,
+        electionsCount: 0,
+        activeElection: null,
+        recentLogs: [],
+      },
+      error: "Failed to load dashboard stats",
+    };
+  }
 };

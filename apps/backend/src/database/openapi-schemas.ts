@@ -481,3 +481,56 @@ export const AuditLogListResponse = z
   })
   .openapi("AuditLogListResponse");
 // === end audit log ===
+
+export const AdminStatsSchema = z
+  .object({
+    votersCount: z.number().int().openapi({
+      description: "Total number of registered active voters",
+      example: 1248,
+    }),
+    electionsCount: z.number().int().openapi({
+      description: "Total number of elections in the system",
+      example: 5,
+    }),
+    activeElection: z
+      .object({
+        id: z.string().uuid().openapi({
+          description: "ID of the active election",
+          example: "a1b2c3d4-e5f6-4789-8abc-1234567890ab",
+        }),
+        name: z.string().openapi({
+          description: "Name of the active election",
+          example: "CSO General Elections 2026",
+        }),
+        opensAt: z.number().int().nullable().openapi({
+          description: "Unix timestamp when voting opens",
+          example: 1719400000,
+        }),
+        closesAt: z.number().int().nullable().openapi({
+          description: "Unix timestamp when voting closes",
+          example: 1719486400,
+        }),
+        votedCount: z.number().int().openapi({
+          description: "Total number of unique voters who have voted so far in this election",
+          example: 926,
+        }),
+        votersCount: z.number().int().openapi({
+          description: "Total number of eligible active voters",
+          example: 1248,
+        }),
+        turnoutPct: z.number().openapi({
+          description: "Turnout percentage (votedCount / votersCount * 100)",
+          example: 74.2,
+        }),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "Stats about the currently open/active election, or null if no active election",
+      }),
+    recentLogs: z.array(AuditLogEntrySchema).openapi({
+      description: "List of the 5 most recent audit log entries",
+    }),
+  })
+  .openapi("AdminStats");
+export type AdminStatsT = z.infer<typeof AdminStatsSchema>;

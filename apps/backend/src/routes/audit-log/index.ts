@@ -1,5 +1,6 @@
 import * as handlers from "@/handlers/audit-log/audit-log.handler";
 import { createRouter } from "@/lib/create-app";
+import { requireAuth } from "@/middleware/auth";
 import * as routes from "./routes";
 
 /**
@@ -19,6 +20,7 @@ import * as routes from "./routes";
  * in `routes/elections/index.ts:50`).
  */
 const router = createRouter();
+router.use("*", requireAuth);
 
 router.openapi(routes.listAuditLogRoute, handlers.listAuditLog);
 

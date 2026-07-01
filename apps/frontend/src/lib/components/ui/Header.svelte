@@ -50,10 +50,17 @@
           {#if adminMode}
             <a
               href='/admin-dashboard'
-              aria-current={isActive('/admin-dashboard') && !isActive('/admin-dashboard/results') ? 'page' : undefined}
-              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/admin-dashboard') && !isActive('/admin-dashboard/results') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+              aria-current={page.url.pathname === '/admin-dashboard' ? 'page' : undefined}
+              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {page.url.pathname === '/admin-dashboard' ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
             >
               Dashboard
+            </a>
+            <a
+              href='/admin/users'
+              aria-current={isActive('/admin/users') ? 'page' : undefined}
+              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/users') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            >
+              Users
             </a>
             <a
               href='/admin/elections'
@@ -63,9 +70,9 @@
               Elections
             </a>
             <a
-              href='/admin-dashboard/results'
-              aria-current={isActive('/admin-dashboard/results') ? 'page' : undefined}
-              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/admin-dashboard/results') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+              href='/admin/results'
+              aria-current={isActive('/admin/results') ? 'page' : undefined}
+              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/results') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
             >
               Results
             </a>

@@ -9,10 +9,11 @@ import index from "@/routes/index.route";
 import profile from "@/routes/profile";
 import users from "@/routes/users";
 import votes from "@/routes/votes";
+import adminStats from "@/routes/admin-stats";
 
 const app = createApp();
 
-const routes = [index, auth, profile, users, candidates, votes, auditLog, elections];
+const routes = [index, auth, profile, users, candidates, votes, auditLog, elections, adminStats];
 
 configureOpenAPI(app as AppOpenAPI);
 

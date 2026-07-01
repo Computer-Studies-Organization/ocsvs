@@ -38,41 +38,6 @@ vi.mock("@/database/repositories/audit-log.repository", async () => {
 
 vi.mock("@/config/db", () => ({ createDb: vi.fn(() => ({ db: {} })) }));
 
-vi.mock("@/lib/create-app", async () => {
-  const { OpenAPIHono } = await import("@hono/zod-openapi");
-  // default-hook.ts uses `export default defaultHook`, so the function
-  // lives on the module's `default` property, not as a named export.
-  const { default: defaultHook } = await import("@/openapi/default-hook");
-  const { requireAuth } = await import("@/middleware/auth");
-
-  // Real `createRouter()` factory — applies defaultHook via the OpenAPIHono
-  // constructor option (the exact pattern used in production; see
-  // `lib/create-app.ts:35-39`). This is what makes validation failures return
-  // 422 instead of the framework default 400.
-  const makeRouter = () => {
-    const r = new OpenAPIHono({ strict: false, defaultHook });
-    // Apply auth middleware BEFORE any routes are registered on this
-    // router (which happens inside `routes/audit-log/index.ts` via
-    // `.openapi(...)` after it calls `createRouter()`). This mirrors
-    // the production pattern in `routes/elections/index.ts:27` where
-    // `router.use("/elections/*", requireAuth)` precedes the `.openapi`
-    // calls. Order matters: Hono processes middleware in registration
-    // order, so the middleware must be registered first.
-    r.use("/audit-log/*", requireAuth);
-    return r;
-  };
-
-  return {
-    default: makeRouter,
-    createRouter: makeRouter,
-    createTestApp: (sub: any) => {
-      const app = makeRouter();
-      app.route("/", sub);
-      return app;
-    },
-  };
-});
-
 describe("audit-log route", () => {
   let testApp: any;
 

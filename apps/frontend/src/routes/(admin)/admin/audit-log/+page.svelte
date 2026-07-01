@@ -194,7 +194,10 @@
     if (entry.targetType === "election") {
       return `/admin/elections/${entry.targetId}`;
     }
-    // User and candidate don't have dedicated detail pages, link to admin-dashboard
+    if (entry.targetType === "user") {
+      return "/admin/users";
+    }
+    // Candidate doesn't have a dedicated detail page
     return null;
   }
 
