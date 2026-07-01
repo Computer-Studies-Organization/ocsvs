@@ -228,6 +228,7 @@ describe("electionQueries", () => {
         {
           positionId: "p1",
           positionName: "President",
+          displayOrder: 1,
           candidateId: "c1",
           candidateName: "Alice",
           voteCount: 3,
@@ -235,6 +236,7 @@ describe("electionQueries", () => {
         {
           positionId: "p1",
           positionName: "President",
+          displayOrder: 1,
           candidateId: "c2",
           candidateName: "Bob",
           voteCount: 1,
@@ -247,6 +249,7 @@ describe("electionQueries", () => {
         {
           positionId: "p1",
           positionName: "President",
+          displayOrder: 1,
           totalVotes: 4,
           candidates: [
             { candidateId: "c1", fullName: "Alice", voteCount: 3, percentage: 75 },

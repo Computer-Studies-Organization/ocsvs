@@ -579,6 +579,7 @@ describe("votes Routes (repository)", () => {
         {
           positionId: testPositionId1,
           positionName: "President",
+          displayOrder: 1,
           totalVotes: 5,
           candidates: [
             {
@@ -592,6 +593,7 @@ describe("votes Routes (repository)", () => {
         {
           positionId: testPositionId2,
           positionName: "Vice President",
+          displayOrder: 2,
           totalVotes: 3,
           candidates: [
             {
@@ -620,6 +622,7 @@ describe("votes Routes (repository)", () => {
         {
           positionId: testPositionId1,
           positionName: "President",
+          displayOrder: 1,
           totalVotes: 0,
           candidates: [
             {

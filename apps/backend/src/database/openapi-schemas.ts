@@ -341,6 +341,10 @@ export const ResultsPositionSchema = z
       description: "Position name",
       example: "President",
     }),
+    displayOrder: z.number().int().openapi({
+      description: "Display order of the position",
+      example: 1,
+    }),
     totalVotes: z.number().int().openapi({
       description: "Total votes cast for this position",
       example: 42,

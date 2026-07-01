@@ -106,7 +106,15 @@ describe("GET /elections/state", () => {
         id: "c1",
         name: "Recent",
         closesAt: 200,
-        results: [{ positionId: "p1", positionName: "President", totalVotes: 10, candidates: [] }],
+        results: [
+          {
+            positionId: "p1",
+            positionName: "President",
+            displayOrder: 1,
+            totalVotes: 10,
+            candidates: [],
+          },
+        ],
       },
       myVotes: { electionId: null, votes: [] },
     });

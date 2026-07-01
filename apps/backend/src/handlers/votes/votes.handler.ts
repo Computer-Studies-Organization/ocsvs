@@ -181,6 +181,7 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
   const results = electionResults.map((r) => ({
     positionId: r.positionId,
     positionName: r.positionName,
+    displayOrder: r.displayOrder,
     candidates: r.candidates.map((cand) => ({
       candidateId: cand.candidateId,
       candidateName: cand.fullName,
@@ -190,8 +191,8 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
     })),
   }));
 
-  // Sort positions by name for stable output
-  results.sort((a, b) => a.positionName.localeCompare(b.positionName));
+  // Sort positions by display order
+  results.sort((a, b) => a.displayOrder - b.displayOrder);
 
   const totalVotes = electionResults.reduce((sum, r) => sum + r.totalVotes, 0);
 

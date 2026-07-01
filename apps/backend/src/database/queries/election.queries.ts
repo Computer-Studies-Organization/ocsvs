@@ -28,6 +28,7 @@ export interface ElectionWithPositions {
 export interface ResultsPosition {
   positionId: string;
   positionName: string;
+  displayOrder: number;
   totalVotes: number;
   candidates: Array<{
     candidateId: string;
@@ -95,6 +96,7 @@ export const electionQueries = {
       .select({
         positionId: positions.id,
         positionName: positions.name,
+        displayOrder: positions.displayOrder,
         candidateId: candidates.id,
         candidateName: candidates.fullName,
         voteCount: count(votes.id),
@@ -103,7 +105,13 @@ export const electionQueries = {
       .leftJoin(candidates, eq(candidates.positionId, positions.id))
       .leftJoin(votes, eq(votes.candidateId, candidates.id))
       .where(eq(positions.electionId, electionId))
-      .groupBy(positions.id, positions.name, candidates.id, candidates.fullName)
+      .groupBy(
+        positions.id,
+        positions.name,
+        positions.displayOrder,
+        candidates.id,
+        candidates.fullName,
+      )
       .orderBy(asc(positions.displayOrder), desc(count(votes.id)))
       .all();
 
@@ -113,6 +121,7 @@ export const electionQueries = {
         byPosition.set(r.positionId, {
           positionId: r.positionId,
           positionName: r.positionName,
+          displayOrder: r.displayOrder,
           totalVotes: 0,
           candidates: [],
         });
