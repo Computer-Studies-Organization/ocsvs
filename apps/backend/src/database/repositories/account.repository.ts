@@ -139,6 +139,16 @@ export const accountRepo = {
       .run();
   },
 
+  // Count active (non-deleted) admin accounts
+  async countActiveAdmins(db: Database): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(accounts)
+      .where(and(eq(accounts.role, "admin"), sql`${accounts.deletedAt} IS NULL`))
+      .get();
+    return result?.count ?? 0;
+  },
+
   // Restore soft-deleted account
   async restore(db: Database, accountId: string): Promise<void> {
     const now = Math.floor(Date.now() / 1000);

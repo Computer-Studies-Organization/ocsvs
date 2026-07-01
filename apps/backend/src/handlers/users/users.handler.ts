@@ -145,6 +145,19 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
     return c.json({ message: "User is already archived" }, httpStatusCodes.BAD_REQUEST);
   }
 
+  // Prevent admin from deleting themselves
+  if (c.var.authUser.id === user.accountId) {
+    return c.json({ message: ERROR_MESSAGES.CANNOT_DELETE_SELF }, httpStatusCodes.BAD_REQUEST);
+  }
+
+  // Prevent deleting the last admin
+  if (user.role === "admin") {
+    const adminCount = await accountRepo.countActiveAdmins(db);
+    if (adminCount <= 1) {
+      return c.json({ message: ERROR_MESSAGES.CANNOT_DELETE_LAST_ADMIN }, httpStatusCodes.BAD_REQUEST);
+    }
+  }
+
   await accountRepo.softDelete(db, user.accountId);
 
   try {

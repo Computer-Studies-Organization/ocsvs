@@ -61,6 +61,7 @@ export interface AdminListResult {
 export interface DeleteStatus {
   accountId: string;
   deletedAt: number | null;
+  role: string;
 }
 
 // --- Query module ---
@@ -229,6 +230,7 @@ export const userAccountQueries = {
         .select({
           accountId: users.accountId,
           deletedAt: accounts.deletedAt,
+          role: accounts.role,
         })
         .from(users)
         .innerJoin(accounts, eq(users.accountId, accounts.id))

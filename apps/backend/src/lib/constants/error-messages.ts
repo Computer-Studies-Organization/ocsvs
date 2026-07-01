@@ -28,6 +28,8 @@ export const ERROR_MESSAGES = {
   USER_ALREADY_EXISTS: "User already exists",
   USERNAME_ALREADY_EXISTS: "Username already exists",
   VOTE_ALREADY_CAST: "You have already voted",
+  CANNOT_DELETE_SELF: "You cannot delete your own account",
+  CANNOT_DELETE_LAST_ADMIN: "Cannot delete the last admin account",
 
   // Validation errors
   INVALID_REQUEST: "Invalid request",
