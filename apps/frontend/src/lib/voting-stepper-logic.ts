@@ -32,7 +32,7 @@ export function goNext(state: TStepperVotingState, totalPositions: number): TSte
   if (totalPositions === 0) return state;
   return {
     ...state,
-    currentPositionIndex: Math.min(state.currentPositionIndex + 1, totalPositions - 1),
+    currentPositionIndex: Math.min(state.currentPositionIndex + 1, totalPositions),
   };
 }
 
@@ -46,6 +46,10 @@ export function isFirstPosition(state: TStepperVotingState): boolean {
 
 export function isLastPosition(state: TStepperVotingState, totalPositions: number): boolean {
   return state.currentPositionIndex === totalPositions - 1;
+}
+
+export function isReviewStep(state: TStepperVotingState, totalPositions: number): boolean {
+  return state.currentPositionIndex === totalPositions;
 }
 
 export function hasCurrentVote(state: TStepperVotingState, positions: TStepperPosition[]): boolean {

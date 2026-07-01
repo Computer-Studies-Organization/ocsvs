@@ -10,6 +10,7 @@ import {
   hasCurrentVote,
   isFirstPosition,
   isLastPosition,
+  isReviewStep,
   selectCandidate,
 } from "./voting-stepper-logic";
 
@@ -66,10 +67,12 @@ test("goNext advances index", () => {
   expect(next.currentPositionIndex).toBe(1);
 });
 
-test("goNext does not exceed last index", () => {
+test("goNext allows reaching review step index but not exceeding it", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 2 };
-  const next = goNext(state, 3);
-  expect(next.currentPositionIndex).toBe(2);
+  let next = goNext(state, 3);
+  expect(next.currentPositionIndex).toBe(3);
+  next = goNext(next, 3);
+  expect(next.currentPositionIndex).toBe(3);
 });
 
 test("goNext does not go below 0 when totalPositions is 0", () => {
@@ -98,6 +101,12 @@ test("isFirstPosition true at 0, false otherwise", () => {
 test("isLastPosition true at last, false otherwise", () => {
   expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 2 }, 3)).toBe(true);
   expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 0 }, 3)).toBe(false);
+});
+
+test("isReviewStep true at totalPositions, false otherwise", () => {
+  expect(isReviewStep({ selectedVotes: {}, currentPositionIndex: 3 }, 3)).toBe(true);
+  expect(isReviewStep({ selectedVotes: {}, currentPositionIndex: 2 }, 3)).toBe(false);
+  expect(isReviewStep({ selectedVotes: {}, currentPositionIndex: 0 }, 3)).toBe(false);
 });
 
 test("hasCurrentVote false when no vote for current position", () => {
