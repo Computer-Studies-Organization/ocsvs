@@ -48,7 +48,13 @@ vi.mock("@/database/queries/user-account.queries", () => ({
   },
 }));
 
-const { mockUsernameExists, mockUpdateAccount, mockSoftDelete, mockRestore, mockCountActiveAdmins } = vi.hoisted(() => ({
+const {
+  mockUsernameExists,
+  mockUpdateAccount,
+  mockSoftDelete,
+  mockRestore,
+  mockCountActiveAdmins,
+} = vi.hoisted(() => ({
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockSoftDelete: vi.fn(),
@@ -206,7 +212,11 @@ describe("users Routes", () => {
       expect(mockSoftDelete).toHaveBeenCalledWith({}, "other-account-id");
       expect(mockAuditLogInsert).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ action: "user.soft_delete", targetType: "user", targetId: "some-user-id" })
+        expect.objectContaining({
+          action: "user.soft_delete",
+          targetType: "user",
+          targetId: "some-user-id",
+        }),
       );
     });
 

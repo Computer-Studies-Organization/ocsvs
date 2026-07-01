@@ -147,7 +147,10 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
   if (user.role === "admin") {
     const adminCount = await accountRepo.countActiveAdmins(db);
     if (adminCount <= 1) {
-      return c.json({ message: ERROR_MESSAGES.CANNOT_DELETE_LAST_ADMIN }, httpStatusCodes.BAD_REQUEST);
+      return c.json(
+        { message: ERROR_MESSAGES.CANNOT_DELETE_LAST_ADMIN },
+        httpStatusCodes.BAD_REQUEST,
+      );
     }
   }
 
