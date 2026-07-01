@@ -1,10 +1,8 @@
 <script lang='ts'>
-  import { onMount } from 'svelte'
-  import { page } from '$app/state'
   import { ArrowLeft, Edit, Loader, Plus, Users } from 'lucide-svelte'
-  import { getElection } from '$lib/api/elections'
-  import { listPositions, updatePosition } from '$lib/api/positions'
-  import { allCandidates, createCandidate } from '$lib/api/candidates'
+  import { invalidate } from '$app/navigation'
+  import { updatePosition } from '$lib/api/positions'
+  import { createCandidate } from '$lib/api/candidates'
   import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
@@ -16,6 +14,7 @@
   import { createCandidateSchema } from '$lib/validation/candidate'
   import { updatePositionSchema } from '$lib/validation/position'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
+  import { positionCache, candidateCache } from '$lib/cache'
 
   type CandidateRow = {
     id: string
@@ -23,12 +22,11 @@
     isActive?: number
   }
 
-  let election = $state<TElection | null>(null)
-  let position = $state<TPosition | null>(null)
-  let candidates = $state<CandidateRow[]>([])
+  let { data } = $props()
+  let election = $derived(data.election)
+  let position = $derived(data.position)
+  let candidates = $derived<CandidateRow[]>(data.candidates)
   let users = $state<TUsersData[]>([])
-  let isLoading = $state(true)
-  let error = $state('')
   let usersError = $state('')
   let isCreateOpen = $state(false)
   let createAccountId = $state('')
@@ -42,56 +40,12 @@
   let editOrder = $state('')
   let editBusy = $state(false)
   let editErrors = $state<Record<string, string>>({})
-  const electionId = $derived(page.params.electionId)
-  const positionId = $derived(page.params.positionId)
 
-  async function load() {
-    if (!electionId || !positionId)
-      return
-    isLoading = true
-    error = ''
-    try {
-      const [e, allPos, candRes] = await Promise.all([
-        getElection(electionId),
-        listPositions(electionId),
-        allCandidates({ electionId, positionId, includeInactive: true }),
-      ])
-      election = e
-      position = allPos.find(p => p.id === positionId) ?? null
-      candidates = candRes.data.map(c => ({
-        id: c.id,
-        fullName: c.fullName,
-        isActive: (c as { isActive?: number }).isActive,
-      }))
-    }
-    catch (e: unknown) {
-      error = `Couldn't load position: ${extractErrorMessage(e, 'Unknown error')}`
-    }
-    finally {
-      isLoading = false
-    }
-  }
-
-  async function loadUsers() {
-    try {
-      const res = await fetchUsers({ limit: 100 })
-      users = res.data
-    }
-    catch (e: unknown) {
-      usersError = extractErrorMessage(e, 'Failed to load users')
-      users = []
-    }
-  }
-
-  onMount(() => {
-    load()
-    loadUsers()
-  })
-
+  // Load users on mount for the create modal
   $effect(() => {
-    void electionId
-    void positionId
-    load()
+    fetchUsers({ limit: 100 })
+      .then(res => { users = res.data })
+      .catch(e => { usersError = extractErrorMessage(e, 'Failed to load users'); users = [] })
   })
 
   function openCreate() {
@@ -103,8 +57,7 @@
   }
 
   function closeCreate() {
-    if (createBusy)
-      return
+    if (createBusy) return
     isCreateOpen = false
   }
 
@@ -123,7 +76,7 @@
 
   async function submitEdit(e: SubmitEvent) {
     e.preventDefault()
-    if (!electionId || !positionId || !position) return
+    if (!election || !position) return
     const orderNum = Number.parseInt(editOrder, 10)
     const result = validate(updatePositionSchema, {
       name: editName.trim(),
@@ -136,12 +89,14 @@
     editErrors = {}
     editBusy = true
     try {
-      await updatePosition(electionId, positionId, {
+      await updatePosition(election.id, position.id, {
         name: editName.trim(),
         displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
       })
       isEditOpen = false
-      await load()
+      positionCache.invalidate(election.id)
+      candidateCache.invalidate(election.id)
+      await invalidate('app:position')
       addToast('success', 'Position updated')
     }
     catch (err: unknown) {
@@ -160,6 +115,7 @@
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
+    if (!position || !election) return
     const result = validate(createCandidateSchema, {
       fullName: createFullName.trim(),
       manifesto: createManifesto.trim(),
@@ -168,31 +124,26 @@
       createErrors = result.errors
       return
     }
-    if (!createAccountId || !positionId || !electionId) {
+    if (!createAccountId) {
       createErrors = { ...createErrors, user: 'User is required' }
       return
     }
     createErrors = {}
     createBusy = true
-    const eId = electionId
-    const pId = positionId
     try {
       await createCandidate({
         fullName: createFullName.trim(),
         accountId: createAccountId,
-        positionId: pId,
+        positionId: position.id,
         manifesto: createManifesto.trim(),
       } as never)
       isCreateOpen = false
       createAccountId = ''
       createFullName = ''
       createManifesto = ''
-      const candRes = await allCandidates({ electionId: eId, positionId: pId, includeInactive: true })
-      candidates = candRes.data.map(c => ({
-        id: c.id,
-        fullName: c.fullName,
-        isActive: (c as { isActive?: number }).isActive,
-      }))
+      positionCache.invalidate(election.id)
+      candidateCache.invalidate(election.id)
+      await invalidate('app:position')
       addToast('success', 'Candidate added')
     }
     catch (err: unknown) {
@@ -208,7 +159,7 @@
   <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     {#if election}
       <a
-        href={`/admin/elections/${electionId}`}
+        href={`/admin/elections/${election.id}`}
         class='inline-flex items-center gap-1.5 text-sm font-semibold mb-4 transition-colors hover:opacity-80'
         style='color: oklch(0.70 0.015 250)'
       >
@@ -217,27 +168,21 @@
       </a>
     {:else}
       <a
-        href={`/admin/elections/${electionId}`}
+        href='/admin/elections'
         class='inline-flex items-center gap-1.5 text-sm font-semibold mb-4 transition-colors hover:opacity-80'
         style='color: oklch(0.70 0.015 250)'
       >
         <ArrowLeft size={16} />
-        Back to election
+        Back to elections
       </a>
     {/if}
 
-    {#if isLoading}
-      <div class='grid grid-cols-1 gap-4 md:grid-cols-2'>
-        {#each { length: 4 } as _}
-          <SkeletonCard />
-        {/each}
-      </div>
-    {:else if error || !position}
+    {#if !position}
       <div
         class='rounded-2xl border p-8 shadow-2xl'
         style='background: oklch(0.40 0.15 25 / 0.15); border-color: oklch(0.40 0.15 25 / 0.4)'
       >
-        <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>{error || 'Position not found.'}</p>
+        <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>Position not found.</p>
       </div>
     {:else}
       <header
@@ -294,7 +239,7 @@
             {#each candidates as c (c.id)}
               <li>
                 <a
-                  href={`/admin/elections/${electionId}/positions/${positionId}/candidates/${c.id}`}
+                  href={`/admin/elections/${election?.id}/positions/${position.id}/candidates/${c.id}`}
                   class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer'
                   style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
                 >
@@ -322,7 +267,6 @@
 <Modal open={isCreateOpen} onclose={closeCreate}>
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Add candidate</h2>
 
-
   {#if usersError}
     <div class='mb-4 rounded-xl border border-yellow-500/30 px-4 py-2 text-sm' style='background: oklch(0.25 0.025 250); color: oklch(0.95 0.008 250)'>
       {usersError}
@@ -331,10 +275,11 @@
 
   <form onsubmit={submitCreate} class='space-y-5'>
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='createAccountId' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         User
       </label>
       <select
+        id='createAccountId'
         value={createAccountId}
         onchange={(e) => { handleUserSelect(e.currentTarget.value); if (createErrors.user) createErrors.user = '' }}
         required
@@ -353,10 +298,11 @@
     </div>
 
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='createFullName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Full name
       </label>
       <input
+        id='createFullName'
         type='text'
         value={createFullName}
         readonly
@@ -367,10 +313,11 @@
     </div>
 
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='createManifesto' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Manifesto
       </label>
       <textarea
+        id='createManifesto'
         bind:value={createManifesto}
         rows={5}
         required
@@ -382,7 +329,6 @@
       {#if createErrors.manifesto}
         <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.manifesto}</p>
       {/if}
-
     </div>
 
     <div class='flex gap-3 pt-2'>
@@ -414,10 +360,11 @@
 
   <form onsubmit={submitEdit} class='space-y-5'>
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='editPositionName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Name
       </label>
       <input
+        id='editPositionName'
         type='text'
         bind:value={editName}
         required
@@ -433,10 +380,11 @@
     </div>
 
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='editPositionOrder' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Display order (optional)
       </label>
       <input
+        id='editPositionOrder'
         type='number'
         bind:value={editOrder}
         disabled={editBusy}

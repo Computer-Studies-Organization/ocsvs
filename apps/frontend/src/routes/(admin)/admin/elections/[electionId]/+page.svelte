@@ -1,60 +1,26 @@
 <script lang='ts'>
-  import { onMount } from 'svelte'
-  import { page } from '$app/state'
   import { ArrowLeft, ListOrdered, Loader, Plus } from 'lucide-svelte'
-  import { getElection } from '$lib/api/elections'
-  import { createPosition, listPositions } from '$lib/api/positions'
+  import { invalidate } from '$app/navigation'
+  import { createPosition } from '$lib/api/positions'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast'
   import { validate } from '$lib/validation/helpers'
   import { createPositionSchema } from '$lib/validation/position'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
-  import SkeletonTable from '$lib/components/ui/skeleton-table.svelte'
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TPosition } from '$lib/types'
+  import { electionCache, positionCache } from '$lib/cache'
 
-  let election = $state<TElection | null>(null)
-  let positions = $state<TPosition[]>([])
-  let isLoading = $state(true)
-  let error = $state('')
+  let { data } = $props()
+  let election = $derived(data.election)
+  let positions = $derived(data.positions)
   let isCreateOpen = $state(false)
   let createName = $state('')
   let createOrder = $state('')
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
-
-  const electionId = $derived(page.params.electionId)
-
-  async function load() {
-    if (!electionId)
-      return
-    isLoading = true
-    error = ''
-    try {
-      const [e, p] = await Promise.all([
-        getElection(electionId),
-        listPositions(electionId),
-      ])
-      election = e
-      positions = p
-    }
-    catch (e: unknown) {
-      error = `Couldn't load election: ${extractErrorMessage(e, 'Unknown error')}`
-      addToast('error', extractErrorMessage(e, 'Failed to load election'))
-    }
-    finally {
-      isLoading = false
-    }
-  }
-
-  onMount(load)
-
-  $effect(() => {
-    void electionId
-    load()
-  })
 
   function openCreate() {
     createName = ''
@@ -63,15 +29,12 @@
   }
 
   function closeCreate() {
-    if (createBusy)
-      return
+    if (createBusy) return
     isCreateOpen = false
   }
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
-    if (!electionId)
-      return
     const orderNum = Number.parseInt(createOrder, 10)
     const result = validate(createPositionSchema, {
       name: createName.trim(),
@@ -84,15 +47,16 @@
     createErrors = {}
     createBusy = true
     try {
-      await createPosition(electionId, {
+      await createPosition(election.id, {
         name: createName.trim(),
         displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
       })
       isCreateOpen = false
       createName = ''
       createOrder = ''
-      const p = await listPositions(electionId)
-      positions = p
+      electionCache.invalidate()
+      positionCache.invalidate(election.id)
+      await invalidate('app:election')
       addToast('success', 'Position created')
     }
     catch (err: unknown) {
@@ -115,16 +79,32 @@
       Back to elections
     </a>
 
-    {#if isLoading}
-      <SkeletonTable rows={5} cols={3} />
-    {:else if error || !election}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl'
-        style='background: oklch(0.40 0.15 25 / 0.15); border-color: oklch(0.40 0.15 25 / 0.4)'
-      >
-        <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>{error || 'Election not found.'}</p>
+    <!-- Header -->
+    <header
+      class='rounded-2xl border p-5 shadow-lg mb-6 flex flex-wrap items-start justify-between gap-4'
+      style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
+    >
+      <div>
+        <div class='flex items-center gap-3 mb-2'>
+          <h1 class='text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{election.name}</h1>
+          <StatusBadge status={election.status} />
+        </div>
+        <p class='text-sm' style='color: oklch(0.70 0.015 250)'>
+          {election.description || '(no description)'}
+        </p>
       </div>
-    {:else if positions.length === 0}
+      <div class='flex items-center gap-3'>
+        <a
+          href={`/admin/audit-log?targetType=election&targetId=${election.id}`}
+          class='flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
+        >
+          View Audit Trail →
+        </a>
+        <TransitionButton {election} onsuccess={async () => { electionCache.invalidate(); positionCache.invalidate(election.id); await invalidate('app:election') }} />
+      </div>
+    </header>
+
+    {#if positions.length === 0}
       <EmptyState
         icon={ListOrdered}
         title='No positions yet'
@@ -133,31 +113,6 @@
         oncta={openCreate}
       />
     {:else}
-      <!-- Header -->
-      <header
-        class='rounded-2xl border p-5 shadow-lg mb-6 flex flex-wrap items-start justify-between gap-4'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <div>
-          <div class='flex items-center gap-3 mb-2'>
-            <h1 class='text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{election.name}</h1>
-            <StatusBadge status={election.status} />
-          </div>
-          <p class='text-sm' style='color: oklch(0.70 0.015 250)'>
-            {election.description || '(no description)'}
-          </p>
-        </div>
-        <div class='flex items-center gap-3'>
-          <a
-            href={`/admin/audit-log?targetType=election&targetId=${electionId}`}
-            class='flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
-          >
-            View Audit Trail →
-          </a>
-          <TransitionButton {election} onsuccess={load} />
-        </div>
-      </header>
-
       <!-- Positions -->
       <section
         class='rounded-2xl border p-5 shadow-lg'
@@ -180,7 +135,7 @@
           {#each positions as p (p.id)}
             <li>
               <a
-                href={`/admin/elections/${electionId}/positions/${p.id}`}
+                href={`/admin/elections/${election.id}/positions/${p.id}`}
                 class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer'
                 style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
               >
@@ -202,13 +157,13 @@
 <Modal open={isCreateOpen} onclose={closeCreate}>
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Add position</h2>
 
-
   <form onsubmit={submitCreate} class='space-y-5'>
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='createPositionName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Name
       </label>
       <input
+        id='createPositionName'
         type='text'
         bind:value={createName}
         required
@@ -224,10 +179,11 @@
     </div>
 
     <div class='space-y-2'>
-      <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+      <label for='createPositionOrder' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
         Display order (optional)
       </label>
       <input
+        id='createPositionOrder'
         type='number'
         bind:value={createOrder}
         disabled={createBusy}

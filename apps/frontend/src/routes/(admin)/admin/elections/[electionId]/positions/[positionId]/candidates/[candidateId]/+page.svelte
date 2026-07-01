@@ -1,21 +1,16 @@
 <script lang='ts'>
-  import { onMount } from 'svelte'
+  import { goto, invalidate } from '$app/navigation'
   import { page } from '$app/state'
-  import { goto } from '$app/navigation'
   import { ArrowLeft, Loader, Save, Trash2 } from 'lucide-svelte'
-  import { getCandidate, updateCandidate, deleteCandidate, uploadCandidateImage, deleteCandidateImage } from '$lib/api/candidates'
-  import { getElection } from '$lib/api/elections'
-  import { listPositions } from '$lib/api/positions'
-  import { fetchUser } from '$lib/api/users'
+  import { updateCandidate, deleteCandidate, uploadCandidateImage, deleteCandidateImage } from '$lib/api/candidates'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast'
   import Modal from '$lib/components/ui/modal.svelte'
-  import Spinner from '$lib/components/ui/spinner.svelte'
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
-
   import { validate } from '$lib/validation/helpers'
   import { updateCandidateSchema } from '$lib/validation/candidate'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
+  import { candidateCache } from '$lib/cache'
 
   type CandidateRecord = {
     id: string
@@ -27,67 +22,35 @@
     imageUrl: string | null
   }
 
-  let candidate = $state<CandidateRecord | null>(null)
-  let election = $state<TElection | null>(null)
-  let position = $state<TPosition | null>(null)
-  let user = $state<TUsersData | null>(null)
-  let isLoading = $state(true)
-  let error = $state('')
-  let isSaving = $state(false)
-
-  let isDeleteOpen = $state(false)
-  let isDeleting = $state(false)
-  let imageError = $state('')
-
-  let editManifesto = $state('')
-  let editIsActive = $state(true)
-
-  let editErrors = $state<Record<string, string>>({})
+  let { data } = $props()
+  let candidate = $derived<CandidateRecord>(data.candidate)
+  let election = $derived<TElection>(data.election)
+  let position = $derived<TPosition | null>(data.position)
+  let user = $derived<TUsersData | null>(data.user)
 
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
   const candidateId = $derived(page.params.candidateId)
 
-  async function load() {
-    if (!electionId || !positionId || !candidateId)
-      return
-    isLoading = true
-    error = ''
-    try {
-      const c = (await getCandidate(candidateId)) as unknown as CandidateRecord
-      candidate = c
-      editManifesto = c.manifesto ?? ''
-      editIsActive = c.isActive === 1
-      const [e, allPos, u] = await Promise.all([
-        getElection(electionId),
-        listPositions(electionId),
-        fetchUser(c.accountId).catch(() => null),
-      ])
-      election = e
-      position = allPos.find(p => p.id === positionId) ?? null
-      user = u ?? null
-    }
-    catch (e: unknown) {
-      error = `Couldn't load candidate: ${extractErrorMessage(e, 'Unknown error')}`
-    }
-    finally {
-      isLoading = false
-    }
-  }
+  let isSaving = $state(false)
+  let isDeleteOpen = $state(false)
+  let isDeleting = $state(false)
+  let imageError = $state('')
 
-  onMount(load)
+  // svelte-ignore state_referenced_locally
+  let editManifesto = $state(candidate.manifesto ?? '')
+  // svelte-ignore state_referenced_locally
+  let editIsActive = $state(candidate.isActive === 1)
+  let editErrors = $state<Record<string, string>>({})
 
   $effect(() => {
-    void electionId
-    void positionId
-    void candidateId
-    load()
+    editManifesto = candidate.manifesto ?? ''
+    editIsActive = candidate.isActive === 1
   })
 
   async function handleSave(e: SubmitEvent) {
     e.preventDefault()
-    if (!candidateId)
-      return
+    if (!candidateId) return
     const result = validate(updateCandidateSchema, {
       manifesto: editManifesto,
       isActive: editIsActive ? 1 : 0,
@@ -98,13 +61,13 @@
     }
     editErrors = {}
     isSaving = true
-
     try {
-      const updated = await updateCandidate(candidateId, {
+      await updateCandidate(candidateId, {
         manifesto: editManifesto,
         isActive: editIsActive ? 1 : 0,
       })
-      candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
+      candidateCache.invalidate(electionId)
+      await invalidate('app:candidate')
       addToast('success', 'Candidate updated')
     }
     catch (err: unknown) {
@@ -120,17 +83,16 @@
   }
 
   function closeDelete() {
-    if (isDeleting)
-      return
+    if (isDeleting) return
     isDeleteOpen = false
   }
 
   async function handleDelete() {
-    if (!candidateId)
-      return
+    if (!candidateId) return
     isDeleting = true
     try {
       await deleteCandidate(candidateId)
+      candidateCache.invalidate(electionId)
       isDeleteOpen = false
       addToast('success', 'Candidate deleted')
       await goto(`/admin/elections/${electionId}/positions/${positionId}`)
@@ -147,8 +109,9 @@
     if (!candidateId) return
     imageError = ''
     try {
-      const updated = await uploadCandidateImage(candidateId, file)
-      candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
+      await uploadCandidateImage(candidateId, file)
+      candidateCache.invalidate(electionId)
+      await invalidate('app:candidate')
     } catch (err: unknown) {
       imageError = extractErrorMessage(err, 'Failed to upload image')
       throw err
@@ -159,8 +122,9 @@
     if (!candidateId) return
     imageError = ''
     try {
-      const updated = await deleteCandidateImage(candidateId)
-      candidate = { ...candidate, ...(updated as unknown as CandidateRecord) } as CandidateRecord
+      await deleteCandidateImage(candidateId)
+      candidateCache.invalidate(electionId)
+      await invalidate('app:candidate')
     } catch (err: unknown) {
       imageError = extractErrorMessage(err, 'Failed to delete image')
       throw err
@@ -179,20 +143,12 @@
       {position?.name ?? 'Position'}
     </a>
 
-    {#if isLoading}
-      <div
-        class='rounded-2xl border p-8 shadow-2xl flex items-center justify-center gap-3'
-        style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
-      >
-        <Spinner size={28} />
-        <p class='text-sm font-medium' style='color: oklch(0.70 0.015 250)'>Loading candidate…</p>
-      </div>
-    {:else if error || !candidate}
+    {#if !candidate}
       <div
         class='rounded-2xl border p-8 shadow-2xl'
         style='background: oklch(0.40 0.15 25 / 0.15); border-color: oklch(0.40 0.15 25 / 0.4)'
       >
-        <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>{error || 'Candidate not found.'}</p>
+        <p class='text-sm text-center' style='color: oklch(0.95 0.008 250)'>Candidate not found.</p>
       </div>
     {:else}
       <header
@@ -233,10 +189,11 @@
         {/if}
 
         <div class='space-y-2'>
-          <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+          <label for='fullName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
             Full name
           </label>
           <input
+            id='fullName'
             type='text'
             value={candidate.fullName}
             readonly
@@ -246,10 +203,11 @@
         </div>
 
         <div class='space-y-2'>
-          <label class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+          <label for='editManifesto' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
             Manifesto
           </label>
           <textarea
+            id='editManifesto'
             bind:value={editManifesto}
             rows={6}
             disabled={isSaving}

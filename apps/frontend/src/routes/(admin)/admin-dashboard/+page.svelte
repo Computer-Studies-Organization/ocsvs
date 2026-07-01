@@ -1,8 +1,9 @@
 <script lang='ts'>
   import type { TUsersData } from '$lib/types'
-  import { goto } from '$app/navigation'
-  import { deleteUser, fetchUsers, restoreUser, updateUser } from '$lib/api/users'
+  import { goto, invalidate } from '$app/navigation'
+  import { deleteUser, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
+  import { userCache } from '$lib/cache'
   import {
     Archive,
     ArrowUpDown,
@@ -13,9 +14,7 @@
     Search,
     X,
   } from 'lucide-svelte'
-  import { onMount } from 'svelte'
   import { addToast } from '$lib/stores/toast'
-  import SkeletonTable from '$lib/components/ui/skeleton-table.svelte'
 
   type SortableKey = 'studentId' | 'firstName' | 'lastName' | 'username' | 'yearLevel' | 'course'
   const SORTABLE_KEYS: SortableKey[] = ['studentId', 'firstName', 'lastName', 'username', 'yearLevel', 'course']
@@ -40,11 +39,16 @@
   }
   type EditForm = Record<EditField, string>
 
+  let { data } = $props()
+  let users = $derived<TUsersData[]>(data.users)
+  // svelte-ignore state_referenced_locally
+  let includeDeleted = $state(data.includeDeleted)
+
+  $effect(() => {
+    includeDeleted = data.includeDeleted
+  })
+
   // State
-  let users = $state<TUsersData[]>([])
-  let isLoading = $state(true)
-  let errorMsg = $state('')
-  let includeDeleted = $state(false)
   let search = $state('')
   let sortKey = $state<SortableKey>('studentId')
   let sortAsc = $state(true)
@@ -62,32 +66,21 @@
   let isActionLoading = $state(false)
   let actionMsg = $state('')
 
-  async function loadUsers() {
-    isLoading = true
-    errorMsg = ''
-    try {
-      const res = await fetchUsers({ limit: 100, includeDeleted })
-      users = res.data
-    }
-    catch (e: any) {
-      errorMsg = e.message || 'Failed to load users'
-    }
-    finally {
-      isLoading = false
-    }
-  }
-
-  onMount(loadUsers)
-
+  // Update URL when includeDeleted changes
   $effect(() => {
-    if (includeDeleted !== undefined) {
-      loadUsers()
+    const url = new URL(window.location.href)
+    if (includeDeleted) {
+      url.searchParams.set('archived', 'true')
+    } else {
+      url.searchParams.delete('archived')
     }
+    if (url.toString() === window.location.href) return
+    goto(url.toString(), { replaceState: true, noScroll: true })
   })
 
   // Derived filtered + sorted + paginated list
   const filtered = $derived.by(() => {
-    let list = users
+    let list = includeDeleted ? users : users.filter((u) => !u.deletedAt)
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter((u) => {
@@ -108,6 +101,11 @@
 
   const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)))
   const paginated = $derived(filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize))
+
+  $effect(() => {
+    void includeDeleted
+    pageIndex = 0
+  })
 
   function toggleSort(key: SortableKey) {
     if (sortKey === key) {
@@ -149,7 +147,8 @@
       })
       editMsg = 'Saved!'
       addToast('success', 'User updated')
-      await loadUsers()
+      userCache.invalidate()
+      await invalidate('app:users')
       setTimeout(() => {
         editUser = null
       }, 800)
@@ -169,7 +168,8 @@
     isActionLoading = true
     try {
       await deleteUser(archiveConfirmUser.id)
-      await loadUsers()
+      userCache.invalidate()
+      await invalidate('app:users')
       archiveConfirmUser = null
       addToast('success', 'User archived')
     }
@@ -188,7 +188,8 @@
     isActionLoading = true
     try {
       await restoreUser(restoreConfirmUser.id)
-      await loadUsers()
+      userCache.invalidate()
+      await invalidate('app:users')
       restoreConfirmUser = null
       addToast('success', 'User restored')
     }
@@ -244,83 +245,75 @@
 
     <!-- Table -->
     <div class='overflow-hidden rounded-2xl border border-slate-800 bg-slate-900'>
-      {#if isLoading}
-        <div class='p-4'>
-          <SkeletonTable rows={8} cols={6} />
-        </div>
-      {:else if errorMsg}
-        <div class='flex h-40 items-center justify-center text-red-400'>{errorMsg}</div>
-      {:else}
-        <div class='overflow-x-auto'>
-          <table class='w-full text-sm'>
-            <thead>
-              <tr class='border-b border-slate-800 bg-slate-950/50'>
-                {#each SORTABLE_KEYS as key}
-                  <th class='px-4 py-3 text-left'>
-                    <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
-                      {SORTABLE_LABELS[key]}
-                      <ArrowUpDown size={12} />
-                    </button>
-                  </th>
-                {/each}
-                <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Status</th>
-                <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each paginated as u (u.id)}
-                <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30 {u.deletedAt ? 'opacity-60' : ''}">
-                  <td class='px-4 py-3 font-semibold text-slate-50'>{u.studentId}</td>
-                  <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
-                  <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
-                  <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
-                  <td class='px-4 py-3 text-slate-300'>{u.yearLevel ?? '—'}</td>
-                  <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
-                  <td class='px-4 py-3'>
-                    <div class='flex flex-wrap gap-1'>
-                      {#if u.deletedAt}
-                        <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
-                      {/if}
-                    </div>
-                  </td>
-                  <td class='px-4 py-3'>
-                    <div class='flex gap-1.5'>
-                      <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
-                      {#if u.deletedAt}
-                        <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
-                      {:else}
-                        <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
-                        <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
-                      {/if}
-                    </div>
-                  </td>
-                </tr>
+      <div class='overflow-x-auto'>
+        <table class='w-full text-sm'>
+          <thead>
+            <tr class='border-b border-slate-800 bg-slate-950/50'>
+              {#each SORTABLE_KEYS as key}
+                <th class='px-4 py-3 text-left'>
+                  <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
+                    {SORTABLE_LABELS[key]}
+                    <ArrowUpDown size={12} />
+                  </button>
+                </th>
               {/each}
-              {#if paginated.length === 0}
-                <tr><td colspan={8} class='h-24 text-center text-slate-500'>No users found.</td></tr>
-              {/if}
-            </tbody>
-          </table>
-        </div>
+              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Status</th>
+              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each paginated as u (u.id)}
+              <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30 {u.deletedAt ? 'opacity-60' : ''}">
+                <td class='px-4 py-3 font-semibold text-slate-50'>{u.studentId}</td>
+                <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
+                <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
+                <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
+                <td class='px-4 py-3 text-slate-300'>{u.yearLevel ?? '—'}</td>
+                <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
+                <td class='px-4 py-3'>
+                  <div class='flex flex-wrap gap-1'>
+                    {#if u.deletedAt}
+                      <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
+                    {/if}
+                  </div>
+                </td>
+                <td class='px-4 py-3'>
+                  <div class='flex gap-1.5'>
+                    <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
+                    {#if u.deletedAt}
+                      <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
+                    {:else}
+                      <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
+                      <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+            {#if paginated.length === 0}
+              <tr><td colspan={8} class='h-24 text-center text-slate-500'>No users found.</td></tr>
+            {/if}
+          </tbody>
+        </table>
+      </div>
 
-        <!-- Pagination -->
-        <div class='flex items-center justify-between border-t border-slate-800 px-4 py-3'>
-          <p class='text-xs text-slate-500'>{filtered.length} user(s)</p>
-          <div class='flex items-center gap-2'>
-            <button
-              disabled={pageIndex === 0}
-              onclick={() => pageIndex--}
-              class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
-            >←</button>
-            <span class='text-sm font-semibold text-slate-100'>{pageIndex + 1} / {pageCount}</span>
-            <button
-              disabled={pageIndex >= pageCount - 1}
-              onclick={() => pageIndex++}
-              class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
-            >→</button>
-          </div>
+      <!-- Pagination -->
+      <div class='flex items-center justify-between border-t border-slate-800 px-4 py-3'>
+        <p class='text-xs text-slate-500'>{filtered.length} user(s)</p>
+        <div class='flex items-center gap-2'>
+          <button
+            disabled={pageIndex === 0}
+            onclick={() => pageIndex--}
+            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
+          >←</button>
+          <span class='text-sm font-semibold text-slate-100'>{pageIndex + 1} / {pageCount}</span>
+          <button
+            disabled={pageIndex >= pageCount - 1}
+            onclick={() => pageIndex++}
+            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
+          >→</button>
         </div>
-      {/if}
+      </div>
     </div>
   </div>
 </div>
@@ -362,8 +355,9 @@
       <div class='space-y-3'>
         {#each EDIT_FIELDS as field}
           <div>
-            <label class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
+            <label for={field} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
             <input
+              id={field}
               type='text'
               value={editForm[field]}
               oninput={e => editForm[field] = e.currentTarget.value}

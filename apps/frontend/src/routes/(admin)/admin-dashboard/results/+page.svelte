@@ -1,10 +1,9 @@
 <script lang='ts'>
   import type { TElection, TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { getVotingState, listResults, listElections } from '$lib/api/elections'
+  import { listResults } from '$lib/api/elections'
   import { authStore } from '$lib/stores/auth'
   import { ArrowLeft, BarChart3, Loader, Trophy, Download } from 'lucide-svelte'
-  import { onMount } from 'svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { addToast } from '$lib/stores/toast'
@@ -15,11 +14,18 @@
     totalVotes: number
   }
 
-  let elections = $state<TElection[]>([])
-  let selectedElectionId = $state<string>('')
+  let { data } = $props()
+  let elections = $derived<TElection[]>(data.elections)
+  // svelte-ignore state_referenced_locally
+  let selectedElectionId = $state<string>(data.selectedElectionId)
+
+  $effect(() => {
+    selectedElectionId = data.selectedElectionId
+  })
+
   let resultsData = $state<TVoteResultsResponse | null>(null)
   let electionName = $state('')
-  let isLoading = $state(true)
+  let isLoading = $state(false)
   let isError = $state(false)
 
   const user = $derived($authStore.user)
@@ -41,29 +47,7 @@
     })
   })
 
-  onMount(async () => {
-    try {
-      elections = await listElections()
-      
-      const state = await getVotingState()
-      const activeElection = state.open || state.lastClosed
-      
-      const filtered = elections.filter(e => e.status !== 'draft')
-      if (activeElection && filtered.some(e => e.id === activeElection.id)) {
-        selectedElectionId = activeElection.id
-      } else if (filtered.length > 0) {
-        selectedElectionId = filtered[0].id
-      } else {
-        selectedElectionId = ''
-      }
-    }
-    catch {
-      addToast('error', 'Failed to load elections list')
-      isError = true
-      isLoading = false
-    }
-  })
-
+  // Fetch results when selectedElectionId changes
   $effect(() => {
     if (!selectedElectionId) {
       resultsData = {

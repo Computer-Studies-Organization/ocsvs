@@ -1,9 +1,7 @@
 <script lang='ts'>
-  import { onMount } from 'svelte'
-  import { allCandidates } from '$lib/api/candidates'
-  import { getVotingState } from '$lib/api/elections'
-  import { listPositions } from '$lib/api/positions'
   import { submitElectionVotes } from '$lib/api/votes'
+  import { invalidate } from '$app/navigation'
+  import { electionCache, candidateCache } from '$lib/cache'
   import {
     deriveVotingPageState,
     type TVotingPageState,
@@ -25,9 +23,10 @@
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, User, Vote } from 'lucide-svelte'
 
-  let apiState = $state<TVotingState | null>(null)
-  let positions = $state<TPosition[] | null>(null)
-  let candidates = $state<TCandidate[] | null>(null)
+  let { data } = $props()
+  let apiState = $derived<TVotingState | null>(data.votingState)
+  let positions = $derived<TPosition[] | null>(data.positions)
+  let candidates = $derived<TCandidate[] | null>(data.candidates)
   let loadError = $state<string | null>(null)
   let isSubmitting = $state(false)
 
@@ -38,37 +37,15 @@
     pageState = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
   })
 
-  async function load() {
-    loadError = null
-    apiState = null
-    positions = null
-    candidates = null
-    try {
-      const state = await getVotingState()
-      apiState = state
-      if (state.open) {
-        const [candsRes, posRes] = await Promise.all([
-          allCandidates({ electionId: state.open.id }),
-          listPositions(state.open.id),
-        ])
-        candidates = candsRes.data
-        positions = posRes
-      }
-    }
-    catch (e: unknown) {
-      loadError = extractErrorMessage(e, 'Failed to load election')
-    }
-  }
-
-  onMount(load)
-
   async function submit() {
     if (pageState.kind !== 'stepper') return
     isSubmitting = true
     loadError = null
     try {
       await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
-      await load()
+      await electionCache.fetchVotingState(true)
+      candidateCache.invalidate(pageState.election.id)
+      await invalidate('app:voting')
       addToast('success', 'Vote submitted')
     }
     catch (e: unknown) {

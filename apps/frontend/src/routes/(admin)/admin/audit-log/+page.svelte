@@ -12,9 +12,9 @@
     X,
   } from "lucide-svelte";
   import {
-    fetchAuditLog,
     type AuditLogEntry,
     type AuditLogFilters,
+    fetchAuditLog,
   } from "$lib/api/audit-log";
   import { getElection } from "$lib/api/elections";
   import { fetchUser } from "$lib/api/users";
@@ -97,11 +97,9 @@
     errorMsg = "";
     try {
       const filters = buildFilters();
-      if (cursor) filters.cursor = cursor;
-      filters.limit = 50;
-      const res = await fetchAuditLog(filters);
-      items = res.items;
-      nextCursor = res.nextCursor;
+      const page = await fetchAuditLog({ ...filters, cursor, limit: 50 });
+      items = page.items;
+      nextCursor = page.nextCursor;
     } catch (e: any) {
       errorMsg = e.message || "Failed to load audit log";
     } finally {
@@ -169,9 +167,9 @@
         const c = await getCandidate(entry.targetId);
         name = c.fullName;
       } else if (entry.targetType === "position") {
-        // Need electionId from description or we resolve generically
-        // Position IDs need an election context; try fetching via description parsing
-        // For now, show the ID as fallback
+        // Positions live under an election, so resolving a name needs the
+        // electionId context. Until the audit log returns that (or a
+        // /positions/:id endpoint exists), display the raw id.
         name = entry.targetId;
       }
       resolvedNames[key] = name || entry.targetId;

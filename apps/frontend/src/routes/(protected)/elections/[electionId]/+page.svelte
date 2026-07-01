@@ -1,62 +1,24 @@
 <script lang='ts'>
-  import { onMount } from 'svelte'
-  import { page } from '$app/state'
   import { goto } from '$app/navigation'
-  import { getElection, listResults, getVotingState } from '$lib/api/elections'
-  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { electionCache, resultCache } from '$lib/cache'
   import type { TElection, TResults } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import { ArrowLeft, BarChart3, Info, Trophy, Vote } from 'lucide-svelte'
 
-  let election = $state<TElection | null>(null)
-  let results = $state<TResults>([])
-  let hasVoted = $state(false)
-  let isLoading = $state(true)
-  let error = $state('')
-
-  const electionId = $derived(page.params.electionId)
-
-  async function load() {
-    if (!electionId) return
-    isLoading = true
-    error = ''
-    try {
-      // 1. Fetch election details
-      const e = await getElection(electionId)
-      election = e
-
-      if (e.status === 'closed' || e.status === 'archived') {
-        // Closed/Archived elections are public immediately
-        results = await listResults(electionId)
-      } else if (e.status === 'open') {
-        // Open elections: Check if the user has voted
-        const votingState = await getVotingState()
-        hasVoted = votingState.myVotes.electionId === electionId && votingState.myVotes.votes.length > 0
-        if (hasVoted) {
-          results = await listResults(electionId)
-        }
-      }
-    }
-    catch (err: unknown) {
-      error = extractErrorMessage(err, 'Failed to load election details')
-    }
-    finally {
-      isLoading = false
-    }
-  }
+  let { data } = $props()
+  let election = $derived(data.election)
+  let results = $derived<TResults>(data.results ?? [])
+  let hasVoted = $derived(data.hasVoted)
 
   async function poll() {
-    if (!electionId || election?.status !== 'open' || !hasVoted) return
+    if (election?.status !== 'open' || !hasVoted) return
+    if (document.hidden) return
     try {
-      const [res, e] = await Promise.all([
-        listResults(electionId),
-        getElection(electionId)
-      ])
-      results = res
-      election = e
-    } catch (err) {
-      // Fail silently (polling is best-effort; errors are expected on temporary network blips)
+      await electionCache.fetchAll(true)
+      await resultCache.fetch(election.id, true)
+    } catch {
+      // Fail silently (polling is best-effort)
     }
   }
 
@@ -65,10 +27,16 @@
     if (election?.status !== 'open' || !hasVoted) return
 
     const intervalId = setInterval(poll, 5000)
-    return () => clearInterval(intervalId)
+    const onVisibility = () => {
+      // Refresh immediately on tab focus so users don't wait up to 5s.
+      if (!document.hidden) poll()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   })
-
-  onMount(load)
 </script>
 
 <div class='relative min-h-[100dvh] w-full overflow-hidden bg-slate-900 text-slate-100'>
@@ -80,22 +48,18 @@
     <!-- Header -->
     <header class='relative flex flex-col gap-4 border-b border-slate-800/70 pb-4 sm:flex-row sm:items-start sm:justify-between'>
       <div class='space-y-2'>
-        {#if election}
-          <div class='flex items-center gap-3'>
-            <StatusBadge status={election.status} />
-            {#if election.status === 'open'}
-              <span class='inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-emerald-400'>
-                <span class='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse'></span>
-                Live Polling
-              </span>
-            {/if}
-          </div>
-          <h1 class='text-2xl font-black tracking-tight text-slate-50 sm:text-3xl'>{election.name}</h1>
-          {#if election.description}
-            <p class='text-sm text-slate-400'>{election.description}</p>
+        <div class='flex items-center gap-3'>
+          <StatusBadge status={election.status} />
+          {#if election.status === 'open'}
+            <span class='inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-emerald-400'>
+              <span class='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse'></span>
+              Live Polling
+            </span>
           {/if}
-        {:else}
-          <h1 class='text-2xl font-black tracking-tight text-slate-50 sm:text-3xl'>Election Results</h1>
+        </div>
+        <h1 class='text-2xl font-black tracking-tight text-slate-50 sm:text-3xl'>{election.name}</h1>
+        {#if election.description}
+          <p class='text-sm text-slate-400'>{election.description}</p>
         {/if}
       </div>
 
@@ -112,13 +76,7 @@
 
     <!-- Main Content Area -->
     <main class='flex-1 space-y-6'>
-      {#if isLoading}
-        <SkeletonCard />
-      {:else if error}
-        <div class='rounded-2xl border border-red-500/20 bg-red-950/20 p-8 text-center text-red-400 shadow-2xl'>
-          <p>{error}</p>
-        </div>
-      {:else if !election}
+      {#if !election}
         <div class='flex min-h-[40vh] items-center justify-center p-8'>
           <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
             <Info size={48} class='mx-auto mb-4 text-slate-500' />
