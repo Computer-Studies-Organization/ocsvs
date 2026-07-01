@@ -44,20 +44,13 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
   if (!row) {
     throw new Error("Position row missing immediately after create");
   }
-  try {
-    await auditLogRepo.insert(db, {
-      action: "position.create",
-      targetType: "position",
-      targetId: newId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "position.create", targetId: newId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "position.create",
+    targetType: "position",
+    targetId: newId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json(row, httpStatusCodes.CREATED);
 };
@@ -84,20 +77,13 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
   if (!updated) {
     throw new Error("Position row missing immediately after update");
   }
-  try {
-    await auditLogRepo.insert(db, {
-      action: "position.update",
-      targetType: "position",
-      targetId: positionId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "position.update", targetId: positionId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "position.update",
+    targetType: "position",
+    targetId: positionId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json(updated, httpStatusCodes.OK);
 };
@@ -125,20 +111,13 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
     return c.json({ message: ERROR_MESSAGES.POSITION_HAS_CANDIDATES }, httpStatusCodes.CONFLICT);
   }
   await positionRepo.delete(db, positionId);
-  try {
-    await auditLogRepo.insert(db, {
-      action: "position.delete",
-      targetType: "position",
-      targetId: positionId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "position.delete", targetId: positionId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "position.delete",
+    targetType: "position",
+    targetId: positionId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };

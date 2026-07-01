@@ -1,4 +1,3 @@
-import type { TElectionStatus } from "@/database/schema";
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   createElectionRoute,
@@ -8,23 +7,16 @@ import type {
   transitionElectionRoute,
   updateElectionRoute,
 } from "@/routes/elections/routes";
+
 import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
-import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { assertTransition, TransitionError } from "@/lib/election-lifecycle";
+import type { TElectionStatus } from "@/database/schema";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
-
-export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = async (c) => {
-  const { db } = createDb(c);
-  const { status } = c.req.valid("query");
-  return c.json(
-    await electionRepo.list(db, status ? { status: status as TElectionStatus } : undefined),
-    httpStatusCodes.OK,
-  );
-};
 
 export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> = async (c) => {
   if (c.var.authUser?.role !== "admin") {
@@ -39,21 +31,24 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
   if (!row) {
     throw new Error("Election row missing immediately after create");
   }
-  try {
-    await auditLogRepo.insert(db, {
-      action: "election.create",
-      targetType: "election",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "election.create", targetId: id },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "election.create",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
+
   return c.json(row, httpStatusCodes.CREATED);
+};
+
+export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = async (c) => {
+  const { db } = createDb(c);
+  const { status } = c.req.valid("query");
+  return c.json(
+    await electionRepo.list(db, status ? { status: status as TElectionStatus } : undefined),
+    httpStatusCodes.OK,
+  );
 };
 
 export const getCurrentElectionHandler: AppRouteHandler<typeof getCurrentElectionRoute> = async (
@@ -107,20 +102,13 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   if (!updated) {
     throw new Error("Election row missing immediately after update");
   }
-  try {
-    await auditLogRepo.insert(db, {
-      action: "election.update",
-      targetType: "election",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "election.update", targetId: id },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "election.update",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json(updated, httpStatusCodes.OK);
 };
@@ -160,21 +148,14 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
     opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
     closesAt: resolvedClosesAt,
   });
-  try {
-    await auditLogRepo.insert(db, {
-      action: "election.transition",
-      targetType: "election",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-      description: `${existing.status} \u2192 ${to}`,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "election.transition", targetId: id },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "election.transition",
+    targetType: "election",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+    description: `${existing.status} \u2192 ${to}`,
+  });
 
   const messageKey = (
     existing.status === "draft" && to === "open"

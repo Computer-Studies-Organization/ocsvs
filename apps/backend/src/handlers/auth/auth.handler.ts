@@ -15,6 +15,9 @@ import {
 } from "@/lib/session";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
+/** Dummy hash for constant-time comparison on user-not-found path (prevents timing attacks). */
+const DUMMY_HASH = "AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
 /** Mask student number for logging — keep last 4 chars for correlation. */
 function maskStudentId(id: string): string {
   if (id.length <= 4) return "****";
@@ -79,6 +82,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   if (!result) {
     c.var.logger.warn({ studentNumber: maskStudentId(studentNumber) }, "User not found");
+    await verifyPassword(password, DUMMY_HASH);
     return c.json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS }, httpStatusCodes.UNAUTHORIZED);
   }
 

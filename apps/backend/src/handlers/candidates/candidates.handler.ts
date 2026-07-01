@@ -45,20 +45,13 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
     manifesto,
   });
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "candidate.create",
-      targetType: "candidate",
-      targetId: candidateId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "candidate.create", targetId: candidateId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "candidate.create",
+    targetType: "candidate",
+    targetId: candidateId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json(
     {
@@ -138,20 +131,13 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
 
   await candidateRepo.update(db, id, updateData);
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "candidate.update",
-      targetType: "candidate",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "candidate.update", targetId: id },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "candidate.update",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   const updatedCandidate = await candidateRepo.getForAdminView(db, id);
   if (updatedCandidate) {
@@ -189,20 +175,13 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
 
   await candidateRepo.softDelete(db, id);
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "candidate.deactivate",
-      targetType: "candidate",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "candidate.deactivate", targetId: id },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "candidate.deactivate",
+    targetType: "candidate",
+    targetId: id,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };

@@ -98,20 +98,13 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
     await userRepo.updateUser(db, userId, userFields);
   }
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "user.update",
-      targetType: "user",
-      targetId: userId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "user.update", targetId: userId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "user.update",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   // Fetch updated user
   const updatedUser = await userAccountQueries.findById(db, userId);
@@ -160,20 +153,13 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
 
   await accountRepo.softDelete(db, user.accountId);
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "user.soft_delete",
-      targetType: "user",
-      targetId: userId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "user.soft_delete", targetId: userId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "user.soft_delete",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: "User archived successfully" }, httpStatusCodes.OK);
 };
@@ -199,20 +185,13 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
 
   await accountRepo.restore(db, user.accountId);
 
-  try {
-    await auditLogRepo.insert(db, {
-      action: "user.restore",
-      targetType: "user",
-      targetId: userId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger.error(
-      { auditErr, action: "user.restore", targetId: userId },
-      "audit insert failed",
-    );
-  }
+  await auditLogRepo.insert(db, {
+    action: "user.restore",
+    targetType: "user",
+    targetId: userId,
+    actorAccountIdSnapshot: actorAccountId,
+    actorUsernameSnapshot: actorUsername,
+  });
 
   return c.json({ message: "User restored successfully" }, httpStatusCodes.OK);
 };
