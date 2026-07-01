@@ -31,5 +31,5 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  return (await response.json()) as T;
 }
