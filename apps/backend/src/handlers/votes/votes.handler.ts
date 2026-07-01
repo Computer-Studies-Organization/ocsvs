@@ -9,115 +9,33 @@ import { eq } from "drizzle-orm";
 import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { positionRepo } from "@/database/repositories/position.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
-import { positions, votes } from "@/database/schema";
+import { positions } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
+import { ballotCaster } from "@/lib/ballot-caster";
 
 export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => {
   const { electionId, votes: voteItems } = c.req.valid("json");
   const authUser = c.get("authUser");
   const { db } = createDb(c);
-  const now = Math.floor(Date.now() / 1000);
 
-  // Get the user associated with this account
-  const user = await userRepo.findByAccountId(db, authUser.id);
-
-  if (!user) {
-    return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.BAD_REQUEST);
-  }
-
-  // Fetch the election and verify it's open
-  const election = await electionRepo.findById(db, electionId);
-  if (!election) {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-  if (
-    election.status !== "open" ||
-    election.opensAt === null ||
-    election.closesAt === null ||
-    now < election.opensAt ||
-    now > election.closesAt
-  ) {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_OPEN }, httpStatusCodes.CONFLICT);
-  }
-
-  // Source of truth for "has voted" is the votes table (unique index on
-  // (user_id, position_id, election_id)). The legacy users.has_voted column
-  // is gone.
-  const hasExistingVotes = await voteRepo.existsForUserInElection(db, user.id, electionId);
-
-  if (hasExistingVotes) {
-    return c.json({ message: ERROR_MESSAGES.VOTE_ALREADY_CAST }, httpStatusCodes.CONFLICT);
-  }
-
-  // Extract candidate IDs
-  const candidateIds = voteItems.map((v) => v.candidateId);
-
-  // Batch validate all candidates are active
-  const candidateMap = await candidateRepo.findActiveByIds(db, candidateIds);
-  if (candidateMap.size !== candidateIds.length) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-
-  // Defensive check: the request body says (candidateId, positionId) per vote,
-  // and the database row for that candidate must carry the same positionId.
-  // This catches a client mistake without a round-trip; the DB unique index
-  // `(user_id, position_id, election_id)` is the source of truth.
-  const positionIds = new Set<string>();
-  for (const voteItem of voteItems) {
-    const candidate = candidateMap.get(voteItem.candidateId);
-    if (!candidate || candidate.positionId !== voteItem.positionId) {
-      return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
-    }
-    if (positionIds.has(candidate.positionId)) {
-      return c.json(
-        { message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE },
-        httpStatusCodes.UNPROCESSABLE_ENTITY,
-      );
-    }
-    positionIds.add(candidate.positionId);
-  }
-
-  // Verify that all submitted positions belong to the target election.
-  // Without this check, a crafted request could submit votes with a
-  // positionId from a different election, corrupting results queries.
-  const electionPositions = await positionRepo.listByElection(db, electionId);
-  const validPositionIds = new Set(electionPositions.map((p) => p.id));
-  for (const pid of positionIds) {
-    if (!validPositionIds.has(pid)) {
-      return c.json({ message: ERROR_MESSAGES.INVALID_CANDIDATE }, httpStatusCodes.BAD_REQUEST);
-    }
-  }
-
-  const insertedVotes: (typeof votes.$inferInsert)[] = voteItems.map((voteItem) => {
-    const voteId = crypto.randomUUID();
-    return {
-      id: voteId,
-      userId: user.id,
-      candidateId: voteItem.candidateId,
-      positionId: voteItem.positionId,
-      electionId,
-      createdAt: now,
-      updatedAt: now,
-    };
+  const result = await ballotCaster.cast(db, {
+    accountId: authUser.id,
+    electionId,
+    selections: voteItems,
   });
 
-  // Atomic insert. The (user_id, position_id, election_id) unique index on
-  // `votes` prevents double-voting per position; an attempt to vote twice will
-  // surface as a unique-constraint violation from libSQL.
-  await db.batch([db.insert(votes).values(insertedVotes)]);
-
-  // Get the created votes
-  const createdVotes = await voteRepo.findByUserId(db, user.id);
+  if (!result.success) {
+    return c.json({ message: result.error.message }, result.error.status);
+  }
 
   return c.json(
     {
       message: ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY,
-      votes: createdVotes,
+      votes: result.data.votes,
     },
     httpStatusCodes.OK,
   );

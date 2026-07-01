@@ -90,6 +90,7 @@ const {
   mockFindElectionById,
   mockFindLatestClosed,
   mockGetElectionResults,
+  mockCast,
 } = vi.hoisted(() => ({
   mockFindActiveByIds: vi.fn(),
   mockListWithVoteCount: vi.fn(),
@@ -105,6 +106,13 @@ const {
   mockFindElectionById: vi.fn(),
   mockFindLatestClosed: vi.fn(),
   mockGetElectionResults: vi.fn(),
+  mockCast: vi.fn(),
+}));
+
+vi.mock("@/lib/ballot-caster", () => ({
+  ballotCaster: {
+    cast: mockCast,
+  },
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -181,6 +189,7 @@ describe("votes Routes (repository)", () => {
     mockGetCurrentElection.mockReset();
     mockListByElection.mockReset();
     mockFindElectionById.mockReset();
+    mockCast.mockReset();
     const nowSecs = Math.floor(Date.now() / 1000);
     mockFindElectionById.mockResolvedValue({
       id: testElectionId,
@@ -246,43 +255,31 @@ describe("votes Routes (repository)", () => {
   describe("pOST /votes - Submit Vote", () => {
     it("should successfully submit votes for multiple candidates", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockExistsForUserInElection.mockResolvedValue(false);
-      mockFindActiveByIds.mockResolvedValue(
-        new Map([
-          [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
-          [testCandidateId2, { id: testCandidateId2, positionId: testPositionId2 }],
-        ]),
-      );
-      mockListByElection.mockResolvedValue([
-        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
-        { id: testPositionId2, electionId: testElectionId, name: "VP", displayOrder: 1 },
-      ]);
-      mockDb.insert.mockImplementationOnce(() => mockDb);
-      mockDb.values.mockImplementationOnce(() => mockDb);
-      mockDb.run.mockResolvedValueOnce({ changes: 2 });
-      mockFindByUserId.mockResolvedValue([
-        {
-          id: testVoteId1,
-          userId: testUserId,
-          candidateId: testCandidateId1,
-          positionId: testPositionId1,
-          electionId: testElectionId,
-          createdAt: Math.floor(Date.now() / 1000),
-          updatedAt: Math.floor(Date.now() / 1000),
+      mockCast.mockResolvedValue({
+        success: true,
+        data: {
+          votes: [
+            {
+              id: testVoteId1,
+              userId: testUserId,
+              candidateId: testCandidateId1,
+              positionId: testPositionId1,
+              electionId: testElectionId,
+              createdAt: Math.floor(Date.now() / 1000),
+              updatedAt: Math.floor(Date.now() / 1000),
+            },
+            {
+              id: testVoteId2,
+              userId: testUserId,
+              candidateId: testCandidateId2,
+              positionId: testPositionId2,
+              electionId: testElectionId,
+              createdAt: Math.floor(Date.now() / 1000),
+              updatedAt: Math.floor(Date.now() / 1000),
+            },
+          ],
         },
-        {
-          id: testVoteId2,
-          userId: testUserId,
-          candidateId: testCandidateId2,
-          positionId: testPositionId2,
-          electionId: testElectionId,
-          createdAt: Math.floor(Date.now() / 1000),
-          updatedAt: Math.floor(Date.now() / 1000),
-        },
-      ]);
+      });
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -304,11 +301,14 @@ describe("votes Routes (repository)", () => {
 
     it("should return 409 if user has already voted", async () => {
       setUser();
-      mockFindByAccountId.mockResolvedValue({
-        id: testUserId,
-        accountId: testUserAccountId,
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "VOTE_ALREADY_CAST",
+          message: ERROR_MESSAGES.VOTE_ALREADY_CAST,
+          status: 409,
+        },
       });
-      mockExistsForUserInElection.mockResolvedValue(true);
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -326,19 +326,14 @@ describe("votes Routes (repository)", () => {
 
     it("should return 422 for duplicate position votes", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockExistsForUserInElection.mockResolvedValue(false);
-
-      mockFindActiveByIds.mockResolvedValue(
-        new Map([
-          [testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }],
-          [testCandidateId2, { id: testCandidateId2, positionId: testPositionId1 }],
-        ]),
-      );
-      mockListByElection.mockResolvedValue([
-        { id: testPositionId1, electionId: testElectionId, name: "President", displayOrder: 0 },
-      ]);
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "DUPLICATE_POSITION_VOTE",
+          message: ERROR_MESSAGES.DUPLICATE_POSITION_VOTE,
+          status: 422,
+        },
+      });
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -359,11 +354,14 @@ describe("votes Routes (repository)", () => {
 
     it("should return 404 for non-existent candidate", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockExistsForUserInElection.mockResolvedValue(false);
-
-      mockFindActiveByIds.mockResolvedValue(new Map());
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "CANDIDATE_NOT_FOUND",
+          message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND,
+          status: 404,
+        },
+      });
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -381,12 +379,14 @@ describe("votes Routes (repository)", () => {
 
     it("should return 400 when candidate positionId does not match the request", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockExistsForUserInElection.mockResolvedValue(false);
-      mockFindActiveByIds.mockResolvedValue(
-        new Map([[testCandidateId1, { id: testCandidateId1, positionId: testPositionId1 }]]),
-      );
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "INVALID_CANDIDATE",
+          message: ERROR_MESSAGES.INVALID_CANDIDATE,
+          status: 400,
+        },
+      });
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -404,9 +404,14 @@ describe("votes Routes (repository)", () => {
 
     it("should return 404 when target election is not found", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockFindElectionById.mockResolvedValue(null);
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "ELECTION_NOT_FOUND",
+          message: ERROR_MESSAGES.ELECTION_NOT_FOUND,
+          status: 404,
+        },
+      });
 
       const res = await router.request("/votes", {
         method: "POST",
@@ -424,60 +429,13 @@ describe("votes Routes (repository)", () => {
 
     it("should return 409 when target election is not open", async () => {
       setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      mockFindElectionById.mockResolvedValue({ id: testElectionId, status: "draft" });
-
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      expect(res.status).toBe(409);
-      const json = (await res.json()) as any;
-      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
-    });
-
-    it("should return 409 when target election has not opened yet", async () => {
-      setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      const nowSecs = Math.floor(Date.now() / 1000);
-      mockFindElectionById.mockResolvedValue({
-        id: testElectionId,
-        status: "open",
-        opensAt: nowSecs + 3600,
-        closesAt: nowSecs + 7200,
-      });
-
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      expect(res.status).toBe(409);
-      const json = (await res.json()) as any;
-      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_OPEN);
-    });
-
-    it("should return 409 when target election has already closed", async () => {
-      setUser();
-      const mockUser = { id: testUserId, accountId: testUserAccountId };
-      mockFindByAccountId.mockResolvedValue(mockUser);
-      const nowSecs = Math.floor(Date.now() / 1000);
-      mockFindElectionById.mockResolvedValue({
-        id: testElectionId,
-        status: "open",
-        opensAt: nowSecs - 7200,
-        closesAt: nowSecs - 3600,
+      mockCast.mockResolvedValue({
+        success: false,
+        error: {
+          code: "ELECTION_NOT_OPEN",
+          message: ERROR_MESSAGES.ELECTION_NOT_OPEN,
+          status: 409,
+        },
       });
 
       const res = await router.request("/votes", {
