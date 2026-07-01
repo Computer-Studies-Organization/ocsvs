@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import {
   CANDIDATE_FIELD_LABELS,
@@ -23,7 +22,7 @@ test("register draft validation rejects invalid student ID format", () => {
     password: "password123",
   });
 
-  assert.equal(message, "Invalid Student ID format (e.g. C25-01-10306-MAN121)");
+  expect(message).toBe("Invalid Student ID format (e.g. C25-01-10306-MAN121)");
 });
 
 test("register draft validation accepts a backend-compatible payload", () => {
@@ -39,8 +38,8 @@ test("register draft validation accepts a backend-compatible payload", () => {
     password: "password123",
   } as const;
 
-  assert.equal(getRegisterUserDraftValidationMessage(draft), null);
-  assert.equal(isRegisterUserDraftComplete(draft), true);
+  expect(getRegisterUserDraftValidationMessage(draft)).toBeNull();
+  expect(isRegisterUserDraftComplete(draft)).toBe(true);
 });
 
 test("register mutation errors prefer explicit API messages", () => {
@@ -56,7 +55,7 @@ test("register mutation errors prefer explicit API messages", () => {
     REGISTER_FIELD_LABELS,
   );
 
-  assert.equal(message, "User already exists");
+  expect(message).toBe("User already exists");
 });
 
 test("register mutation errors format validation issues when the API returns zod details", () => {
@@ -79,7 +78,7 @@ test("register mutation errors format validation issues when the API returns zod
     REGISTER_FIELD_LABELS,
   );
 
-  assert.equal(message, "Student ID: Too small: expected string to have >=18 characters");
+  expect(message).toBe("Student ID: Too small: expected string to have >=18 characters");
 });
 
 test("candidate mutation errors use candidate field labels when the API returns zod details", () => {
@@ -102,5 +101,5 @@ test("candidate mutation errors use candidate field labels when the API returns 
     CANDIDATE_FIELD_LABELS,
   );
 
-  assert.equal(message, "Full name: Too small: expected string to have >=1 characters");
+  expect(message).toBe("Full name: Too small: expected string to have >=1 characters");
 });

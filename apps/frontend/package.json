@@ -13,7 +13,7 @@
     "typecheck": "pnpm check",
     "lint": "oxlint . && oxfmt --check .",
     "lint:fix": "oxlint . --fix && oxfmt .",
-    "test": "node --experimental-test-module-mocks --import ./test-setup.ts --import tsx --test 'src/lib/**/*.test.ts'",
+    "test": "vitest run",
     "clean": "rm -rf dist .svelte-kit"
   },
   "dependencies": {
@@ -37,6 +37,8 @@
     "tailwindcss": "^4.3.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
-    "vite": "^8.0.7"
+    "vite": "^8.0.7",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,7 +1,5 @@
 import type { TUsersData } from "./types";
-import assert from "node:assert/strict";
-
-import test from "node:test";
+import { expect, test } from "vitest";
 import { getCandidateUserLabel, resolveCandidateUserSelection } from "./adminUsers";
 
 const baseUser = {
@@ -41,10 +39,10 @@ const duplicateNameUsers: TUsersData[] = [
 test("candidate picker resolves users by accountId instead of display name", () => {
   const selectedUser = resolveCandidateUserSelection(duplicateNameUsers, "account-2");
 
-  assert.equal(selectedUser?.accountId, "account-2");
-  assert.equal(selectedUser?.studentId, "C23-00-0002-MAN121");
+  expect(selectedUser?.accountId).toBe("account-2");
+  expect(selectedUser?.studentId).toBe("C23-00-0002-MAN121");
 });
 
 test("candidate picker labels include student id so duplicate names stay distinguishable", () => {
-  assert.equal(getCandidateUserLabel(duplicateNameUsers[0]), "Alex Cruz (C23-00-0001-MAN121)");
+  expect(getCandidateUserLabel(duplicateNameUsers[0])).toBe("Alex Cruz (C23-00-0001-MAN121)");
 });

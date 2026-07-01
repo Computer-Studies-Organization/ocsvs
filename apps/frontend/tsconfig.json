@@ -12,7 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "paths": {
-      "$env/static/public": ["./test-shims/env-static-public.ts"],
       "$lib": ["./src/lib"],
       "$lib/*": ["./src/lib/*"],
       "$app/types": ["./.svelte-kit/types/index.d.ts"]

@@ -1,11 +1,10 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { mergeVoteCounts } from "./vote-count-utils";
 
 test("mergeVoteCounts returns empty map for empty inputs", () => {
   const result = mergeVoteCounts([], []);
-  assert.deepEqual(result.voteCounts, {});
-  assert.equal(result.isLoading, false);
+  expect(result.voteCounts).toEqual({});
+  expect(result.isLoading).toBe(false);
 });
 
 test("mergeVoteCounts extracts voteCount from object data", () => {
@@ -22,8 +21,8 @@ test("mergeVoteCounts extracts voteCount from object data", () => {
       },
     ],
   );
-  assert.deepEqual(result.voteCounts, { c1: 5, c2: 12 });
-  assert.equal(result.isLoading, false);
+  expect(result.voteCounts).toEqual({ c1: 5, c2: 12 });
+  expect(result.isLoading).toBe(false);
 });
 
 test("mergeVoteCounts extracts voteCount from full API response shape", () => {
@@ -36,8 +35,8 @@ test("mergeVoteCounts extracts voteCount from full API response shape", () => {
       },
     ],
   );
-  assert.deepEqual(result.voteCounts, { c1: 42 });
-  assert.equal(result.isLoading, false);
+  expect(result.voteCounts).toEqual({ c1: 42 });
+  expect(result.isLoading).toBe(false);
 });
 
 test("mergeVoteCounts reports loading when any query is loading", () => {
@@ -51,7 +50,7 @@ test("mergeVoteCounts reports loading when any query is loading", () => {
       { data: undefined, isLoading: true },
     ],
   );
-  assert.equal(result.isLoading, true);
+  expect(result.isLoading).toBe(true);
 });
 
 test("mergeVoteCounts skips entries with no query result", () => {
@@ -64,7 +63,7 @@ test("mergeVoteCounts skips entries with no query result", () => {
       },
     ],
   );
-  assert.deepEqual(result.voteCounts, { c1: 5 });
+  expect(result.voteCounts).toEqual({ c1: 5 });
 });
 
 test("mergeVoteCounts handles undefined data gracefully", () => {
@@ -78,6 +77,6 @@ test("mergeVoteCounts handles undefined data gracefully", () => {
       },
     ],
   );
-  assert.deepEqual(result.voteCounts, { c2: 3 });
-  assert.equal(result.isLoading, false);
+  expect(result.voteCounts).toEqual({ c2: 3 });
+  expect(result.isLoading).toBe(false);
 });

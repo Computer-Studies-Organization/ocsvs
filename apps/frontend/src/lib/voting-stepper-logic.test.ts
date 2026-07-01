@@ -1,6 +1,5 @@
 import type { TStepperPosition } from "./voting-stepper-logic";
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
   allPositionsVoted,
   createVotingState,
@@ -43,82 +42,82 @@ const positions: TStepperPosition[] = [
 
 test("createVotingState initializes all positions to null and index to 0", () => {
   const state = createVotingState(positions);
-  assert.deepEqual(state.selectedVotes, { "pos-1": null, "pos-2": null, "pos-3": null });
-  assert.equal(state.currentPositionIndex, 0);
+  expect(state.selectedVotes).toEqual({ "pos-1": null, "pos-2": null, "pos-3": null });
+  expect(state.currentPositionIndex).toBe(0);
 });
 
 test("selectCandidate sets vote for correct position", () => {
   const state = createVotingState(positions);
   const next = selectCandidate(state, "pos-1", "c1");
-  assert.equal(next.selectedVotes["pos-1"], "c1");
-  assert.equal(next.selectedVotes["pos-2"], null);
+  expect(next.selectedVotes["pos-1"]).toBe("c1");
+  expect(next.selectedVotes["pos-2"]).toBeNull();
 });
 
 test("selectCandidate can change an existing vote", () => {
   let state = createVotingState(positions);
   state = selectCandidate(state, "pos-1", "c1");
   state = selectCandidate(state, "pos-1", "c2");
-  assert.equal(state.selectedVotes["pos-1"], "c2");
+  expect(state.selectedVotes["pos-1"]).toBe("c2");
 });
 
 test("goNext advances index", () => {
   const state = createVotingState(positions);
   const next = goNext(state, positions.length);
-  assert.equal(next.currentPositionIndex, 1);
+  expect(next.currentPositionIndex).toBe(1);
 });
 
 test("goNext does not exceed last index", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 2 };
   const next = goNext(state, 3);
-  assert.equal(next.currentPositionIndex, 2);
+  expect(next.currentPositionIndex).toBe(2);
 });
 
 test("goNext does not go below 0 when totalPositions is 0", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 0 };
   const next = goNext(state, 0);
-  assert.equal(next.currentPositionIndex, 0);
+  expect(next.currentPositionIndex).toBe(0);
 });
 
 test("goPrevious decrements index", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 2 };
   const next = goPrevious(state);
-  assert.equal(next.currentPositionIndex, 1);
+  expect(next.currentPositionIndex).toBe(1);
 });
 
 test("goPrevious does not go below 0", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 0 };
   const next = goPrevious(state);
-  assert.equal(next.currentPositionIndex, 0);
+  expect(next.currentPositionIndex).toBe(0);
 });
 
 test("isFirstPosition true at 0, false otherwise", () => {
-  assert.equal(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 0 }), true);
-  assert.equal(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 1 }), false);
+  expect(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 0 })).toBe(true);
+  expect(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 1 })).toBe(false);
 });
 
 test("isLastPosition true at last, false otherwise", () => {
-  assert.equal(isLastPosition({ selectedVotes: {}, currentPositionIndex: 2 }, 3), true);
-  assert.equal(isLastPosition({ selectedVotes: {}, currentPositionIndex: 0 }, 3), false);
+  expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 2 }, 3)).toBe(true);
+  expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 0 }, 3)).toBe(false);
 });
 
 test("hasCurrentVote false when no vote for current position", () => {
   const state = createVotingState(positions);
-  assert.equal(hasCurrentVote(state, positions), false);
+  expect(hasCurrentVote(state, positions)).toBe(false);
 });
 
 test("hasCurrentVote true when vote exists for current position", () => {
   const state = selectCandidate(createVotingState(positions), "pos-1", "c1");
-  assert.equal(hasCurrentVote(state, positions), true);
+  expect(hasCurrentVote(state, positions)).toBe(true);
 });
 
 test("hasCurrentVote false when current index is out of bounds", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 99 };
-  assert.equal(hasCurrentVote(state, positions), false);
+  expect(hasCurrentVote(state, positions)).toBe(false);
 });
 
 test("allPositionsVoted false when some positions have no vote", () => {
   const state = selectCandidate(createVotingState(positions), "pos-1", "c1");
-  assert.equal(allPositionsVoted(state, positions), false);
+  expect(allPositionsVoted(state, positions)).toBe(false);
 });
 
 test("allPositionsVoted true when all positions have votes", () => {
@@ -126,19 +125,19 @@ test("allPositionsVoted true when all positions have votes", () => {
   state = selectCandidate(state, "pos-1", "c1");
   state = selectCandidate(state, "pos-2", "c3");
   state = selectCandidate(state, "pos-3", "c5");
-  assert.equal(allPositionsVoted(state, positions), true);
+  expect(allPositionsVoted(state, positions)).toBe(true);
 });
 
 test("allPositionsVoted true for empty positions", () => {
   const state = { selectedVotes: {}, currentPositionIndex: 0 };
-  assert.equal(allPositionsVoted(state, []), true);
+  expect(allPositionsVoted(state, [])).toBe(true);
 });
 
 test("getSelectedVotes returns only non-null selections with positionId and candidateId", () => {
   let state = createVotingState(positions);
   state = selectCandidate(state, "pos-1", "c1");
   state = selectCandidate(state, "pos-3", "c5");
-  assert.deepEqual(getSelectedVotes(state), [
+  expect(getSelectedVotes(state)).toEqual([
     { positionId: "pos-1", candidateId: "c1" },
     { positionId: "pos-3", candidateId: "c5" },
   ]);
@@ -146,17 +145,17 @@ test("getSelectedVotes returns only non-null selections with positionId and cand
 
 test("getSelectedVotes returns empty array when nothing selected", () => {
   const state = createVotingState(positions);
-  assert.deepEqual(getSelectedVotes(state), []);
+  expect(getSelectedVotes(state)).toEqual([]);
 });
 
 test("getSelectedCount counts non-null votes", () => {
   let state = createVotingState(positions);
   state = selectCandidate(state, "pos-1", "c1");
   state = selectCandidate(state, "pos-3", "c5");
-  assert.equal(getSelectedCount(state), 2);
+  expect(getSelectedCount(state)).toBe(2);
 });
 
 test("getSelectedCount returns 0 when nothing selected", () => {
   const state = createVotingState(positions);
-  assert.equal(getSelectedCount(state), 0);
+  expect(getSelectedCount(state)).toBe(0);
 });

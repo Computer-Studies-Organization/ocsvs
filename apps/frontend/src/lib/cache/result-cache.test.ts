@@ -1,18 +1,11 @@
-import assert from "node:assert/strict";
-import test, { mock } from "node:test";
+import { expect, test, vi } from "vitest";
 import type { TResults } from "$lib/types";
 import type { ResultCache as TResultCache } from "./result-cache.svelte";
 import type { CacheEntry as TCacheEntry } from "./cache-entry.svelte";
 
-// Stub the API import BEFORE ResultCache is loaded — its top-level
-// `import { listResults } from "$lib/api/elections"` transitively pulls
-// in `$env/static/public` (a SvelteKit virtual module), which tsx can't
-// resolve. The mock short-circuits the entire chain.
-mock.module("$lib/api/elections", {
-  namedExports: {
-    listResults: async (_electionId: string) => [],
-  },
-});
+vi.mock("$lib/api/elections", () => ({
+  listResults: async (_electionId: string) => [],
+}));
 
 const { ResultCache } = await import("./result-cache.svelte");
 const { CacheEntry } = await import("./cache-entry.svelte");
@@ -54,7 +47,7 @@ test("ResultCache.fetch returns cached results for the given electionId", async 
   seedEntry(cache, "e1", results);
 
   const result = await cache.fetch("e1");
-  assert.deepEqual(result, results);
+  expect(result).toEqual(results);
 });
 
 test("ResultCache.fetch scopes by electionId — separate entries don't bleed", async () => {
@@ -65,8 +58,8 @@ test("ResultCache.fetch scopes by electionId — separate entries don't bleed", 
   const a = await cache.fetch("e1");
   const b = await cache.fetch("e2");
 
-  assert.deepEqual(a, results);
-  assert.deepEqual(b, otherResults);
+  expect(a).toEqual(results);
+  expect(b).toEqual(otherResults);
 });
 
 test("ResultCache.fetch returns the cached value on repeat calls", async () => {
@@ -75,8 +68,8 @@ test("ResultCache.fetch returns the cached value on repeat calls", async () => {
 
   const a = await cache.fetch("e1");
   const b = await cache.fetch("e1");
-  assert.deepEqual(a, results);
-  assert.deepEqual(b, results);
+  expect(a).toEqual(results);
+  expect(b).toEqual(results);
 });
 
 test("ResultCache.invalidate(electionId) removes only that key", () => {
@@ -86,8 +79,8 @@ test("ResultCache.invalidate(electionId) removes only that key", () => {
 
   cache.invalidate("e1");
 
-  assert.equal(entriesOf(cache).has("e1"), false);
-  assert.equal(entriesOf(cache).has("e2"), true);
+  expect(entriesOf(cache).has("e1")).toBe(false);
+  expect(entriesOf(cache).has("e2")).toBe(true);
 });
 
 test("ResultCache.invalidate() with no arg clears every entry", () => {
@@ -97,12 +90,11 @@ test("ResultCache.invalidate() with no arg clears every entry", () => {
 
   cache.invalidate();
 
-  assert.equal(entriesOf(cache).size, 0);
+  expect(entriesOf(cache).size).toBe(0);
 });
 
 test("ResultCache.invalidate(electionId) on a missing key is a no-op", () => {
   const cache = new (ResultCache as new () => any)();
-  // Should not throw
   cache.invalidate("nonexistent");
-  assert.equal(entriesOf(cache).size, 0);
+  expect(entriesOf(cache).size).toBe(0);
 });

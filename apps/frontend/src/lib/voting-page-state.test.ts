@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
+
 import { hasVotedIn, pickEmptyCardVariant } from "./voting-page-state";
 import type { TVotingState } from "./types";
 
@@ -15,7 +15,7 @@ test("pickEmptyCardVariant returns 'next-draft' when only nextDraft is present",
     ...base,
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
   };
-  assert.equal(pickEmptyCardVariant(state), "next-draft");
+  expect(pickEmptyCardVariant(state)).toBe("next-draft");
 });
 
 test("pickEmptyCardVariant returns 'last-closed' when only lastClosed is present", () => {
@@ -23,7 +23,7 @@ test("pickEmptyCardVariant returns 'last-closed' when only lastClosed is present
     ...base,
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
   };
-  assert.equal(pickEmptyCardVariant(state), "last-closed");
+  expect(pickEmptyCardVariant(state)).toBe("last-closed");
 });
 
 test("pickEmptyCardVariant returns 'both' when nextDraft and lastClosed are both present", () => {
@@ -32,11 +32,11 @@ test("pickEmptyCardVariant returns 'both' when nextDraft and lastClosed are both
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
   };
-  assert.equal(pickEmptyCardVariant(state), "both");
+  expect(pickEmptyCardVariant(state)).toBe("both");
 });
 
 test("pickEmptyCardVariant returns 'none' when neither nextDraft nor lastClosed is present", () => {
-  assert.equal(pickEmptyCardVariant(base), "none");
+  expect(pickEmptyCardVariant(base)).toBe("none");
 });
 
 test("hasVotedIn returns true when myVotes match the open election and have at least one vote", () => {
@@ -54,7 +54,7 @@ test("hasVotedIn returns true when myVotes match the open election and have at l
     },
     myVotes: { electionId: "e1", votes: [{ candidateId: "c1", positionId: "p1" }] },
   };
-  assert.equal(hasVotedIn(state, "e1"), true);
+  expect(hasVotedIn(state, "e1")).toBe(true);
 });
 
 test("hasVotedIn returns false when myVotes are for a different election", () => {
@@ -72,7 +72,7 @@ test("hasVotedIn returns false when myVotes are for a different election", () =>
     },
     myVotes: { electionId: "e0", votes: [{ candidateId: "c1", positionId: "p1" }] },
   };
-  assert.equal(hasVotedIn(state, "e1"), false);
+  expect(hasVotedIn(state, "e1")).toBe(false);
 });
 
 import { buildStepperPositions, deriveVotingPageState } from "./voting-page-state";
@@ -145,7 +145,7 @@ const sampleCandidates: TCandidate[] = [
 ];
 
 test("deriveVotingPageState returns loading when apiState is null and no error", () => {
-  assert.deepEqual(deriveVotingPageState(emptyInput), { kind: "loading" });
+  expect(deriveVotingPageState(emptyInput)).toEqual({ kind: "loading" });
 });
 
 test("deriveVotingPageState returns error when loadError is set, even if apiState is also set", () => {
@@ -154,7 +154,7 @@ test("deriveVotingPageState returns error when loadError is set, even if apiStat
     apiState: apiStateWithOpen,
     loadError: "boom",
   });
-  assert.deepEqual(result, { kind: "error", message: "boom" });
+  expect(result).toEqual({ kind: "error", message: "boom" });
 });
 
 test("deriveVotingPageState returns empty/next-draft when only nextDraft is present", () => {
@@ -165,12 +165,12 @@ test("deriveVotingPageState returns empty/next-draft when only nextDraft is pres
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
-  assert.equal(result.kind, "empty");
+  expect(result.kind).toBe("empty");
   if (result.kind !== "empty") throw new Error("narrow");
-  assert.equal(result.variant, "next-draft");
-  assert.equal(result.nextDraft?.name, "Fall");
-  assert.equal(result.lastClosed, null);
-  assert.equal(result.isAdmin, false);
+  expect(result.variant).toBe("next-draft");
+  expect(result.nextDraft?.name).toBe("Fall");
+  expect(result.lastClosed).toBeNull();
+  expect(result.isAdmin).toBe(false);
 });
 
 test("deriveVotingPageState returns empty/last-closed when only lastClosed is present", () => {
@@ -181,9 +181,9 @@ test("deriveVotingPageState returns empty/last-closed when only lastClosed is pr
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
-  assert.equal(result.kind, "empty");
+  expect(result.kind).toBe("empty");
   if (result.kind !== "empty") throw new Error("narrow");
-  assert.equal(result.variant, "last-closed");
+  expect(result.variant).toBe("last-closed");
 });
 
 test("deriveVotingPageState returns empty/both when nextDraft and lastClosed are both present", () => {
@@ -194,9 +194,9 @@ test("deriveVotingPageState returns empty/both when nextDraft and lastClosed are
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
-  assert.equal(result.kind, "empty");
+  expect(result.kind).toBe("empty");
   if (result.kind !== "empty") throw new Error("narrow");
-  assert.equal(result.variant, "both");
+  expect(result.variant).toBe("both");
 });
 
 test("deriveVotingPageState returns empty/none when neither is present", () => {
@@ -204,9 +204,9 @@ test("deriveVotingPageState returns empty/none when neither is present", () => {
     ...emptyInput,
     apiState: { ...apiStateWithOpen, open: null },
   });
-  assert.equal(result.kind, "empty");
+  expect(result.kind).toBe("empty");
   if (result.kind !== "empty") throw new Error("narrow");
-  assert.equal(result.variant, "none");
+  expect(result.variant).toBe("none");
 });
 
 test("deriveVotingPageState propagates isAdmin on the empty variant", () => {
@@ -215,14 +215,14 @@ test("deriveVotingPageState propagates isAdmin on the empty variant", () => {
     isAdmin: true,
     apiState: { ...apiStateWithOpen, open: null },
   });
-  assert.equal(result.kind, "empty");
+  expect(result.kind).toBe("empty");
   if (result.kind !== "empty") throw new Error("narrow");
-  assert.equal(result.isAdmin, true);
+  expect(result.isAdmin).toBe(true);
 });
 
 test("deriveVotingPageState returns voted when apiState.open is set and myVotes match", () => {
   const result = deriveVotingPageState({ ...emptyInput, apiState: apiStateVoted });
-  assert.deepEqual(result, { kind: "voted", election: openElection });
+  expect(result).toEqual({ kind: "voted", election: openElection });
 });
 
 test("deriveVotingPageState returns stepper when apiState.open is set and user has not voted", () => {
@@ -232,9 +232,9 @@ test("deriveVotingPageState returns stepper when apiState.open is set and user h
     positions: samplePositions,
     candidates: sampleCandidates,
   });
-  assert.equal(result.kind, "stepper");
+  expect(result.kind).toBe("stepper");
   if (result.kind !== "stepper") throw new Error("narrow");
-  assert.equal(result.election, openElection);
+  expect(result.election).toBe(openElection);
 });
 
 test("deriveVotingPageState stepper positions are sorted by displayOrder, candidates filtered by positionId, empty positions removed", () => {
@@ -244,17 +244,14 @@ test("deriveVotingPageState stepper positions are sorted by displayOrder, candid
     positions: samplePositions,
     candidates: sampleCandidates,
   });
-  assert.equal(result.kind, "stepper");
+  expect(result.kind).toBe("stepper");
   if (result.kind !== "stepper") throw new Error("narrow");
-  assert.equal(result.positions.length, 2);
-  assert.equal(result.positions[0]?.id, "p1");
-  assert.equal(result.positions[1]?.id, "p2");
-  assert.equal(result.positions[0]?.candidates.length, 2);
-  assert.equal(result.positions[1]?.candidates.length, 1);
-  assert.deepEqual(
-    result.positions[0]?.candidates.map((c) => c.id),
-    ["c1", "c3"],
-  );
+  expect(result.positions.length).toBe(2);
+  expect(result.positions[0]?.id).toBe("p1");
+  expect(result.positions[1]?.id).toBe("p2");
+  expect(result.positions[0]?.candidates.length).toBe(2);
+  expect(result.positions[1]?.candidates.length).toBe(1);
+  expect(result.positions[0]?.candidates.map((c) => c.id)).toEqual(["c1", "c3"]);
 });
 
 test("deriveVotingPageState stepper voting is initialised from createVotingState(positions)", () => {
@@ -264,11 +261,11 @@ test("deriveVotingPageState stepper voting is initialised from createVotingState
     positions: samplePositions,
     candidates: sampleCandidates,
   });
-  assert.equal(result.kind, "stepper");
+  expect(result.kind).toBe("stepper");
   if (result.kind !== "stepper") throw new Error("narrow");
-  assert.equal(result.voting.currentPositionIndex, 0);
-  assert.equal(result.voting.selectedVotes["p1"], null);
-  assert.equal(result.voting.selectedVotes["p2"], null);
+  expect(result.voting.currentPositionIndex).toBe(0);
+  expect(result.voting.selectedVotes["p1"]).toBeNull();
+  expect(result.voting.selectedVotes["p2"]).toBeNull();
 });
 
 test("deriveVotingPageState stepper positions are empty when positions or candidates are null", () => {
@@ -278,9 +275,9 @@ test("deriveVotingPageState stepper positions are empty when positions or candid
     positions: samplePositions,
     candidates: null,
   });
-  assert.equal(result.kind, "stepper");
+  expect(result.kind).toBe("stepper");
   if (result.kind !== "stepper") throw new Error("narrow");
-  assert.equal(result.positions.length, 0);
+  expect(result.positions.length).toBe(0);
 });
 
 test("buildStepperPositions filters out positions with no candidates", () => {
@@ -306,8 +303,8 @@ test("buildStepperPositions filters out positions with no candidates", () => {
       imageUrl: null,
     },
   ]);
-  assert.equal(result.length, 1);
-  assert.equal(result[0]?.id, "p1");
+  expect(result.length).toBe(1);
+  expect(result[0]?.id).toBe("p1");
 });
 
 test("hasVotedIn returns false when there are no votes", () => {
@@ -325,7 +322,7 @@ test("hasVotedIn returns false when there are no votes", () => {
     },
     myVotes: { electionId: null, votes: [] },
   };
-  assert.equal(hasVotedIn(state, "e1"), false);
+  expect(hasVotedIn(state, "e1")).toBe(false);
 });
 
 test("hasVotedIn returns false when electionId is null", () => {
@@ -343,5 +340,5 @@ test("hasVotedIn returns false when electionId is null", () => {
     },
     myVotes: { electionId: "e1", votes: [] },
   };
-  assert.equal(hasVotedIn(state, "e1"), false);
+  expect(hasVotedIn(state, "e1")).toBe(false);
 });

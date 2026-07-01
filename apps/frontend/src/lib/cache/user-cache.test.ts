@@ -1,21 +1,14 @@
-import assert from "node:assert/strict";
-import test, { mock } from "node:test";
+import { expect, test, vi } from "vitest";
 import type { TUsersData } from "$lib/types";
 import type { UserCache as TUserCache } from "./user-cache.svelte";
 import type { CacheEntry as TCacheEntry } from "./cache-entry.svelte";
 
-// Stub the API import BEFORE UserCache is loaded — its top-level
-// `import { fetchUsers } from "$lib/api/users"` transitively pulls
-// in `$env/static/public` (a SvelteKit virtual module), which tsx can't
-// resolve. The mock short-circuits the entire chain.
-mock.module("$lib/api/users", {
-  namedExports: {
-    fetchUsers: async (_opts: object) => ({
-      data: [],
-      meta: { total: 0, page: 1, limit: 0, totalPages: 1 },
-    }),
-  },
-});
+vi.mock("$lib/api/users", () => ({
+  fetchUsers: async (_opts: object) => ({
+    data: [],
+    meta: { total: 0, page: 1, limit: 0, totalPages: 1 },
+  }),
+}));
 
 const { UserCache } = await import("./user-cache.svelte");
 
@@ -56,47 +49,47 @@ test("UserCache.fetch returns data after seed", async () => {
   seed(cache, users);
 
   const result = await cache.fetch();
-  assert.deepEqual(result, users);
+  expect(result).toEqual(users);
 });
 
 test("UserCache.fetch returns null when no data has been loaded", async () => {
   const cache = new (UserCache as new () => any)();
   // The fetcher is mocked to return [], so a fetch() with empty state will
   // populate data with []. Verify the no-data path by checking initial state.
-  assert.equal(cache.data, null);
+  expect(cache.data).toBeNull();
 });
 
 test("UserCache.data / loading / error getters reflect the underlying entry", () => {
   const cache = new (UserCache as new () => any)();
   seed(cache, users);
-  assert.deepEqual(cache.data, users);
-  assert.equal(cache.loading, false);
-  assert.equal(cache.error, null);
+  expect(cache.data).toEqual(users);
+  expect(cache.loading).toBe(false);
+  expect(cache.error).toBeNull();
 });
 
 test("UserCache.error surfaces when the underlying entry has an error", () => {
   const cache = new (UserCache as new () => any)();
   const e = entryOf(cache);
   e.error = "boom";
-  assert.equal(cache.error, "boom");
+  expect(cache.error).toBe("boom");
 });
 
 test("UserCache.loading reflects the underlying entry's loading flag", () => {
   const cache = new (UserCache as new () => any)();
   const e = entryOf(cache);
   e.loading = true;
-  assert.equal(cache.loading, true);
+  expect(cache.loading).toBe(true);
 });
 
 test("UserCache.invalidate() clears the underlying entry", () => {
   const cache = new (UserCache as new () => any)();
   seed(cache, users);
-  assert.deepEqual(cache.data, users);
+  expect(cache.data).toEqual(users);
 
   cache.invalidate();
 
-  assert.equal(cache.data, null);
-  assert.equal(entryOf(cache).lastFetched, 0);
+  expect(cache.data).toBeNull();
+  expect(entryOf(cache).lastFetched).toBe(0);
 });
 
 test("UserCache.fetch with force=true re-runs the fetcher even when data is cached", async () => {
@@ -107,6 +100,6 @@ test("UserCache.fetch with force=true re-runs the fetcher even when data is cach
   // Force-refresh: cache.data is non-null so without force it would short-circuit.
   // The mock fetcher returns [], so force=true should overwrite the cached data.
   const result = await cache.fetch(true);
-  assert.deepEqual(result, []);
-  assert.deepEqual(cache.data, []);
+  expect(result).toEqual([]);
+  expect(cache.data).toEqual([]);
 });

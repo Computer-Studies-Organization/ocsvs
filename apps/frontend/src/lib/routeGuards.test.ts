@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { describe, expect, test } from "vitest";
 
 import {
   getAdminElectionsRouteRedirectPath,
@@ -27,46 +26,48 @@ const standardUser = {
   },
 };
 
-test("public routes redirect authenticated admins to the admin dashboard", () => {
-  assert.equal(getPublicRouteRedirectPath(adminUser), "/admin-dashboard");
-});
+describe("routeGuards", () => {
+  test("public routes redirect authenticated admins to the admin dashboard", () => {
+    expect(getPublicRouteRedirectPath(adminUser)).toBe("/admin-dashboard");
+  });
 
-test("public routes redirect authenticated users to the dashboard", () => {
-  assert.equal(getPublicRouteRedirectPath(standardUser), "/voting");
-});
+  test("public routes redirect authenticated users to the dashboard", () => {
+    expect(getPublicRouteRedirectPath(standardUser)).toBe("/voting");
+  });
 
-test("public routes allow unauthenticated users to continue", () => {
-  assert.equal(getPublicRouteRedirectPath(null), null);
-});
+  test("public routes allow unauthenticated users to continue", () => {
+    expect(getPublicRouteRedirectPath(null)).toBeNull();
+  });
 
-test("protected routes redirect unauthenticated users to login", () => {
-  assert.equal(getProtectedRouteRedirectPath(null), "/auth");
-});
+  test("protected routes redirect unauthenticated users to login", () => {
+    expect(getProtectedRouteRedirectPath(null)).toBe("/auth");
+  });
 
-test("protected routes allow authenticated users to continue", () => {
-  assert.equal(getProtectedRouteRedirectPath(standardUser), null);
-});
+  test("protected routes allow authenticated users to continue", () => {
+    expect(getProtectedRouteRedirectPath(standardUser)).toBeNull();
+  });
 
-test("admin routes redirect unauthenticated users to login", () => {
-  assert.equal(getAdminRouteRedirectPath(null), "/auth");
-});
+  test("admin routes redirect unauthenticated users to login", () => {
+    expect(getAdminRouteRedirectPath(null)).toBe("/auth");
+  });
 
-test("admin routes redirect non-admin users to the dashboard", () => {
-  assert.equal(getAdminRouteRedirectPath(standardUser), "/voting");
-});
+  test("admin routes redirect non-admin users to the dashboard", () => {
+    expect(getAdminRouteRedirectPath(standardUser)).toBe("/voting");
+  });
 
-test("admin routes allow admins to continue", () => {
-  assert.equal(getAdminRouteRedirectPath(adminUser), null);
-});
+  test("admin routes allow admins to continue", () => {
+    expect(getAdminRouteRedirectPath(adminUser)).toBeNull();
+  });
 
-test("admin-elections routes redirect unauthenticated users to login", () => {
-  assert.equal(getAdminElectionsRouteRedirectPath(null), "/auth");
-});
+  test("admin-elections routes redirect unauthenticated users to login", () => {
+    expect(getAdminElectionsRouteRedirectPath(null)).toBe("/auth");
+  });
 
-test("admin-elections routes redirect non-admin users to the dashboard", () => {
-  assert.equal(getAdminElectionsRouteRedirectPath(standardUser), "/voting");
-});
+  test("admin-elections routes redirect non-admin users to the dashboard", () => {
+    expect(getAdminElectionsRouteRedirectPath(standardUser)).toBe("/voting");
+  });
 
-test("admin-elections routes allow admins to continue", () => {
-  assert.equal(getAdminElectionsRouteRedirectPath(adminUser), null);
+  test("admin-elections routes allow admins to continue", () => {
+    expect(getAdminElectionsRouteRedirectPath(adminUser)).toBeNull();
+  });
 });
