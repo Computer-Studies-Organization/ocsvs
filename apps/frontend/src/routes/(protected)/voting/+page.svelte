@@ -22,6 +22,7 @@
   import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, User, Vote } from 'lucide-svelte'
+  import Countdown from '$lib/components/ui/countdown.svelte'
 
   let { data } = $props()
   let apiState = $derived<TVotingState | null>(data.votingState)
@@ -36,6 +37,22 @@
   $effect(() => {
     pageState = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
   })
+
+  let lastAutoFetch = 0
+  async function guardedAutoRefresh() {
+    const nowMs = Date.now()
+    if (nowMs - lastAutoFetch < 10000) {
+      return
+    }
+    lastAutoFetch = nowMs
+    try {
+      await electionCache.fetchVotingState(true)
+      await invalidate('app:voting')
+    }
+    catch (e) {
+      console.error('Failed to auto-refresh voting state', e)
+    }
+  }
 
   async function submit() {
     if (pageState.kind !== 'stepper') return
@@ -85,15 +102,7 @@
     }).format(date)
   }
 
-  function formatCountdown(unixSeconds: number): string {
-    const ms = unixSeconds * 1000 - Date.now()
-    if (ms <= 0) return 'opening now'
-    const days = Math.floor(ms / 86_400_000)
-    if (days > 0) return `in ${days} day${days === 1 ? '' : 's'}`
-    const hours = Math.floor(ms / 3_600_000)
-    if (hours > 0) return `in ${hours} hour${hours === 1 ? '' : 's'}`
-    return 'soon'
-  }
+
 </script>
 
 {#if pageState.kind === 'loading'}
@@ -132,7 +141,15 @@
         {@const d = pageState.nextDraft}
         <Calendar size={48} class='mx-auto mb-4 text-sky-400' />
         <h1 class='text-2xl font-bold text-slate-100'>Next election: {d.name}</h1>
-        <p class='mt-2 text-slate-400'>Opens {d.opensAt ? `${formatTimestamp(d.opensAt)} — ${formatCountdown(d.opensAt)}` : 'Date TBD'}.</p>
+        <p class='mt-2 text-slate-400'>Opens {d.opensAt ? formatTimestamp(d.opensAt) : 'Date TBD'}.</p>
+        {#if d.opensAt}
+          <Countdown
+            targetUnixSeconds={d.opensAt}
+            prefix="Opens in "
+            class="text-sky-400 text-sm font-semibold justify-center mt-2"
+            onZero={guardedAutoRefresh}
+          />
+        {/if}
       {:else if pageState.variant === 'last-closed' && pageState.lastClosed}
         {@const c = pageState.lastClosed}
         {@const totalVotes = c.results.reduce((s, r) => s + r.totalVotes, 0)}
@@ -180,10 +197,25 @@
   {@const isReview = isReviewStep(pageState.voting, totalPositions)}
   {@const currentPosition = pageState.positions[pageState.voting.currentPositionIndex]}
   <div class='mx-auto max-w-3xl p-6'>
-    <h1 class='text-3xl font-black text-slate-100'>{pageState.election.name}</h1>
-    {#if pageState.election.description}
-      <p class='mt-2 text-slate-400'>{pageState.election.description}</p>
-    {/if}
+    <div class='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+      <div>
+        <h1 class='text-3xl font-black text-slate-100'>{pageState.election.name}</h1>
+        {#if pageState.election.description}
+          <p class='mt-2 text-slate-400'>{pageState.election.description}</p>
+        {/if}
+      </div>
+      {#if pageState.election.closesAt}
+        <Countdown
+          targetUnixSeconds={pageState.election.closesAt}
+          prefix="Closes in "
+          class="text-amber-400 bg-amber-500/5 border border-amber-500/20 px-3.5 py-1.5 rounded-xl self-start sm:self-center"
+          onZero={async () => {
+            await guardedAutoRefresh()
+            addToast('info', 'This election has closed.')
+          }}
+        />
+      {/if}
+    </div>
 
     {#if !isReview}
       {#if currentPosition}

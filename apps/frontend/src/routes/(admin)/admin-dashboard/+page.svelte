@@ -1,6 +1,7 @@
 <script lang='ts'>
   import type { AdminStats } from '$lib/api/admin-stats'
-  import { goto } from '$app/navigation'
+  import { goto, invalidateAll } from '$app/navigation'
+  import Countdown from '$lib/components/ui/countdown.svelte'
   import {
     Users,
     FileText,
@@ -155,9 +156,20 @@
               </div>
 
               {#if stats.activeElection.closesAt}
-                <div class='flex items-center gap-1.5 text-xs text-slate-400 bg-slate-950/65 rounded-xl px-4 py-2 border border-slate-850 w-fit'>
-                  <Calendar size={14} class='text-slate-500' />
-                  <span>Closes at: <span class='font-semibold text-slate-350'>{formatTimestamp(stats.activeElection.closesAt)}</span></span>
+                <div class='flex flex-wrap items-center gap-3 text-xs bg-slate-950/65 rounded-xl px-4 py-2 border border-slate-850 w-fit'>
+                  <div class='flex items-center gap-1.5 text-slate-400'>
+                    <Calendar size={14} class='text-slate-500' />
+                    <span>Closes at: <span class='font-semibold text-slate-350'>{formatTimestamp(stats.activeElection.closesAt)}</span></span>
+                  </div>
+                  <div class='h-3 w-px bg-slate-800 hidden sm:block'></div>
+                  <Countdown
+                    targetUnixSeconds={stats.activeElection.closesAt}
+                    prefix="Time left: "
+                    class="text-amber-400 font-semibold"
+                    onZero={async () => {
+                      await invalidateAll()
+                    }}
+                  />
                 </div>
               {/if}
             </div>

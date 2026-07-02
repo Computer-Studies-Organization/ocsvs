@@ -8,6 +8,7 @@
 
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import { Calendar, Inbox, Vote } from 'lucide-svelte'
+  import Countdown from '$lib/components/ui/countdown.svelte'
 
   let elections = $state<TElection[]>([])
   let isLoading = $state(true)
@@ -103,7 +104,7 @@
             {#if election.status === 'open'}
               <div class='flex items-center gap-2 text-sky-400'>
                 <Vote size={14} />
-                <span>Ends: {formatTimestamp(election.closesAt)}</span>
+                <span>Ends: {formatTimestamp(election.closesAt)} {#if election.closesAt}(<Countdown targetUnixSeconds={election.closesAt} plainText={true} /> left){/if}</span>
               </div>
             {:else if election.status === 'closed' || election.status === 'archived'}
               <div class='flex items-center gap-2'>
