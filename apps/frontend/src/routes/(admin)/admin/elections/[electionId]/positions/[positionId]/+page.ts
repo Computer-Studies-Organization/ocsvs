@@ -1,15 +1,15 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
-import { electionCache, positionCache, candidateCache } from "$lib/cache";
+import { appCache } from "$lib/cache";
 
 export const load: PageLoad = async ({ params, depends }) => {
   depends("app:position");
   const { electionId, positionId } = params;
 
   const [election, allPos, candidates] = await Promise.all([
-    electionCache.fetch(electionId),
-    positionCache.fetch(electionId),
-    candidateCache.fetch(electionId, positionId, false, true),
+    appCache.get("election", { id: electionId }).fetch(),
+    appCache.get("positions", { electionId }).fetch(),
+    appCache.get("candidates", { electionId, positionId, includeInactive: true }).fetch(),
   ]);
 
   if (!election) error(404, "Election not found");

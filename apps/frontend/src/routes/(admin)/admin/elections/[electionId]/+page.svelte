@@ -11,7 +11,7 @@
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TPosition } from '$lib/types'
-  import { electionCache, positionCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
 
   let { data } = $props()
   let election = $derived(data.election)
@@ -54,8 +54,9 @@
       isCreateOpen = false
       createName = ''
       createOrder = ''
-      electionCache.invalidate()
-      positionCache.invalidate(election.id)
+      appCache.invalidate({ resource: 'elections' })
+      appCache.invalidate({ resource: 'election', params: { id: election.id } })
+      appCache.invalidate({ params: { electionId: election.id } })
       await invalidate('app:election')
       addToast('success', 'Position created')
     }
@@ -100,7 +101,7 @@
         >
           View Audit Trail →
         </a>
-        <TransitionButton {election} onsuccess={async () => { electionCache.invalidate(); positionCache.invalidate(election.id); await invalidate('app:election') }} />
+        <TransitionButton {election} onsuccess={async () => { appCache.invalidate({ resource: 'elections' }); appCache.invalidate({ resource: 'election', params: { id: election.id } }); appCache.invalidate({ params: { electionId: election.id } }); appCache.invalidate({ resource: 'votingState' }); await invalidate('app:election') }} />
       </div>
     </header>
 

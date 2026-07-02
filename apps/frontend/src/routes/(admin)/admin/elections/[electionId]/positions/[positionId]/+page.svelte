@@ -14,7 +14,7 @@
   import { createCandidateSchema } from '$lib/validation/candidate'
   import { updatePositionSchema } from '$lib/validation/position'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
-  import { positionCache, candidateCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
 
   type CandidateRow = {
     id: string
@@ -94,8 +94,7 @@
         displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
       })
       isEditOpen = false
-      positionCache.invalidate(election.id)
-      candidateCache.invalidate(election.id)
+      appCache.invalidate({ params: { electionId: election.id } })
       await invalidate('app:position')
       addToast('success', 'Position updated')
     }
@@ -141,8 +140,7 @@
       createAccountId = ''
       createFullName = ''
       createManifesto = ''
-      positionCache.invalidate(election.id)
-      candidateCache.invalidate(election.id)
+      appCache.invalidate({ params: { electionId: election.id } })
       await invalidate('app:position')
       addToast('success', 'Candidate added')
     }

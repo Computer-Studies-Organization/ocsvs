@@ -1,7 +1,7 @@
 <script lang='ts'>
   import { submitElectionVotes } from '$lib/api/votes'
   import { invalidate } from '$app/navigation'
-  import { electionCache, candidateCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
   import {
     deriveVotingPageState,
     type TVotingPageState,
@@ -46,7 +46,7 @@
     }
     lastAutoFetch = nowMs
     try {
-      await electionCache.fetchVotingState(true)
+      await appCache.get('votingState', {}).fetch(true)
       await invalidate('app:voting')
     }
     catch (e) {
@@ -60,8 +60,8 @@
     loadError = null
     try {
       await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
-      await electionCache.fetchVotingState(true)
-      candidateCache.invalidate(pageState.election.id)
+      await appCache.get('votingState', {}).fetch(true)
+      appCache.invalidate({ params: { electionId: pageState.election.id } })
       await invalidate('app:voting')
       addToast('success', 'Vote submitted')
     }

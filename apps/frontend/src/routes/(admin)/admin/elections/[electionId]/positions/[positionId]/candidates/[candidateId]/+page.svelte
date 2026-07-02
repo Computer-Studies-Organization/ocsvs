@@ -10,7 +10,7 @@
   import { validate } from '$lib/validation/helpers'
   import { updateCandidateSchema } from '$lib/validation/candidate'
   import type { TElection, TPosition, TUsersData } from '$lib/types'
-  import { candidateCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
 
   type CandidateRecord = {
     id: string
@@ -66,7 +66,7 @@
         manifesto: editManifesto,
         isActive: editIsActive ? 1 : 0,
       })
-      candidateCache.invalidate(electionId)
+      appCache.invalidate({ params: { electionId } })
       await invalidate('app:candidate')
       addToast('success', 'Candidate updated')
     }
@@ -92,7 +92,7 @@
     isDeleting = true
     try {
       await deleteCandidate(candidateId)
-      candidateCache.invalidate(electionId)
+      appCache.invalidate({ params: { electionId } })
       isDeleteOpen = false
       addToast('success', 'Candidate deleted')
       await goto(`/admin/elections/${electionId}/positions/${positionId}`)
@@ -110,7 +110,7 @@
     imageError = ''
     try {
       await uploadCandidateImage(candidateId, file)
-      candidateCache.invalidate(electionId)
+      appCache.invalidate({ params: { electionId } })
       await invalidate('app:candidate')
     } catch (err: unknown) {
       imageError = extractErrorMessage(err, 'Failed to upload image')
@@ -123,7 +123,7 @@
     imageError = ''
     try {
       await deleteCandidateImage(candidateId)
-      candidateCache.invalidate(electionId)
+      appCache.invalidate({ params: { electionId } })
       await invalidate('app:candidate')
     } catch (err: unknown) {
       imageError = extractErrorMessage(err, 'Failed to delete image')

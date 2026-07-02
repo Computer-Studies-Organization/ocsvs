@@ -1,6 +1,6 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
-  import { electionCache, resultCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
   import type { TElection, TResults } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
@@ -15,8 +15,8 @@
     if (election?.status !== 'open' || !hasVoted) return
     if (document.hidden) return
     try {
-      await electionCache.fetchAll(true)
-      await resultCache.fetch(election.id, true)
+      await appCache.get('elections', {}).fetch(true)
+      await appCache.get('results', { electionId: election.id }).fetch(true)
     } catch {
       // Fail silently (polling is best-effort)
     }

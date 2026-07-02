@@ -3,7 +3,7 @@
   import { goto, invalidate } from '$app/navigation'
   import { deleteUser, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
-  import { userCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
   import {
     Archive,
     ArrowUpDown,
@@ -147,7 +147,7 @@
       })
       editMsg = 'Saved!'
       addToast('success', 'User updated')
-      userCache.invalidate()
+      appCache.invalidate({ resource: 'users' })
       await invalidate('app:users')
       setTimeout(() => {
         editUser = null
@@ -168,7 +168,7 @@
     isActionLoading = true
     try {
       await deleteUser(archiveConfirmUser.id)
-      userCache.invalidate()
+      appCache.invalidate({ resource: 'users' })
       await invalidate('app:users')
       archiveConfirmUser = null
       addToast('success', 'User archived')
@@ -188,7 +188,7 @@
     isActionLoading = true
     try {
       await restoreUser(restoreConfirmUser.id)
-      userCache.invalidate()
+      appCache.invalidate({ resource: 'users' })
       await invalidate('app:users')
       restoreConfirmUser = null
       addToast('success', 'User restored')

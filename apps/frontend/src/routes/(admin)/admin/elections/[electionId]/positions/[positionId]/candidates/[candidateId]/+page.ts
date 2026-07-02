@@ -2,7 +2,7 @@ import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { getCandidate } from "$lib/api/candidates";
 import { fetchUser } from "$lib/api/users";
-import { electionCache, positionCache } from "$lib/cache";
+import { appCache } from "$lib/cache";
 
 export const load: PageLoad = async ({ params, depends }) => {
   depends("app:candidate");
@@ -19,8 +19,8 @@ export const load: PageLoad = async ({ params, depends }) => {
   };
 
   const [election, positions, user] = await Promise.all([
-    electionCache.fetch(electionId),
-    positionCache.fetch(electionId),
+    appCache.get("election", { id: electionId }).fetch(),
+    appCache.get("positions", { electionId }).fetch(),
     fetchUser(cand.accountId).catch(() => null),
   ]);
 

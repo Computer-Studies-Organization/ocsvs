@@ -1,10 +1,10 @@
 import type { PageLoad } from "./$types";
-import { electionCache } from "$lib/cache";
+import { appCache } from "$lib/cache";
 
 export const load: PageLoad = async () => {
   const [elections, state] = await Promise.all([
-    electionCache.fetchAll(),
-    electionCache.fetchVotingState(),
+    appCache.get("elections", {}).fetch(),
+    appCache.get("votingState", {}).fetch(),
   ]);
 
   const electionList = elections ?? [];

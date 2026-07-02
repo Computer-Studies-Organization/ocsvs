@@ -11,7 +11,7 @@
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TElectionStatus } from '$lib/types'
-  import { electionCache } from '$lib/cache'
+  import { appCache } from '$lib/cache'
 
   let { data } = $props()
   let elections = $derived(data.elections)
@@ -52,7 +52,8 @@
       isCreateOpen = false
       createName = ''
       createDescription = ''
-      electionCache.invalidate()
+      appCache.invalidate({ resource: 'elections' })
+      appCache.invalidate({ resource: 'votingState' })
       await invalidate('app:elections')
       addToast('success', 'Election created')
     }

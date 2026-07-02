@@ -1,6 +1,6 @@
 // This app is intentionally SPA-only. The cache layer in `src/lib/cache/`
-// holds tab-scoped module-level singletons (`userCache`, `electionCache`, etc.)
-// that are populated by universal load functions and mutated by Svelte 5
+// holds a tab-scoped module-level singleton (`appCache`) that is populated by
+// universal load functions and mutated by Svelte 5
 // runes. Keeping the module-level state alive across navigations requires
 // the layout (and therefore every route) to run on a single client-side
 // runtime. SSR would either re-instantiate the caches per request (defeating

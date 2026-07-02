@@ -1,18 +1,24 @@
+import { listElections, getElection, getVotingState, listResults } from "$lib/api/elections";
+import { listPositions } from "$lib/api/positions";
+import { allCandidates } from "$lib/api/candidates";
+import { fetchUsers } from "$lib/api/users";
+import { AppCache } from "./app-cache.svelte";
+import type { ApiClientAdapter } from "./api-client";
+
+// Build the production adapter
+const productionApi: ApiClientAdapter = {
+  listElections,
+  getElection,
+  getVotingState,
+  listPositions,
+  allCandidates,
+  listResults,
+  fetchUsers,
+};
+
 export { CacheEntry } from "./cache-entry.svelte";
-export { UserCache } from "./user-cache.svelte";
-export { ElectionCache } from "./election-cache.svelte";
-export { PositionCache } from "./position-cache.svelte";
-export { CandidateCache } from "./candidate-cache.svelte";
-export { ResultCache } from "./result-cache.svelte";
+export { AppCache } from "./app-cache.svelte";
+export type { ApiClientAdapter } from "./api-client";
 
-import { UserCache } from "./user-cache.svelte";
-import { ElectionCache } from "./election-cache.svelte";
-import { PositionCache } from "./position-cache.svelte";
-import { CandidateCache } from "./candidate-cache.svelte";
-import { ResultCache } from "./result-cache.svelte";
-
-export const userCache = new UserCache();
-export const electionCache = new ElectionCache();
-export const positionCache = new PositionCache();
-export const candidateCache = new CandidateCache();
-export const resultCache = new ResultCache();
+// Export the singleton configured for production
+export const appCache = new AppCache(productionApi);
