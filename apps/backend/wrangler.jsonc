@@ -16,4 +16,16 @@
     "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
     "B2_PUBLIC_ACCESS": "false",
   },
+  "ratelimits": [
+    {
+      "name": "LOGIN_IP_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 30, "period": 60 },
+    },
+    {
+      "name": "REGISTER_IP_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 10, "period": 60 },
+    },
+  ],
 }

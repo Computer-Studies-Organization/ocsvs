@@ -179,6 +179,24 @@ export const auditLog = sqliteTable(
   ],
 );
 
+export const loginAttempts = sqliteTable(
+  "login_attempts",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    attemptedAt: integer("attempted_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    ipAddress: text("ip_address"),
+  },
+  (table) => [
+    index("idx_login_attempts_identifier_attempted_at").on(
+      table.identifier,
+      desc(table.attemptedAt),
+    ),
+  ],
+);
+
 export const DbSelectUserSchema = createSelectSchema(users);
 export const SelectAccountSchema = createSelectSchema(accounts);
 export const SelectSessionSchema = createSelectSchema(sessions);

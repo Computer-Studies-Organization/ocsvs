@@ -2,7 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
 import { AUDIT_ACTIONS } from "@/lib/constants/audit-actions";
 import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./openapi-schemas";
-import { DbSelectUserSchema, auditLog, elections, positions } from "./schema";
+import { DbSelectUserSchema, auditLog, elections, loginAttempts, positions } from "./schema";
 
 describe("user schema exports", () => {
   it("uses distinct names for database and API user schemas", () => {
@@ -125,3 +125,14 @@ describe("audit_log schema", () => {
   });
 });
 // === end audit log ===
+
+describe("login_attempts schema", () => {
+  const expectedColumns = ["id", "identifier", "attemptedAt", "ipAddress"] as const;
+
+  it("exports the loginAttempts Drizzle table with the 4 expected columns", () => {
+    expect(loginAttempts).toBeDefined();
+    const columnKeys = Object.keys(loginAttempts).sort();
+    expect(columnKeys).toEqual([...expectedColumns].sort());
+    expect(columnKeys).toHaveLength(4);
+  });
+});

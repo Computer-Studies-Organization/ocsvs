@@ -42,6 +42,8 @@ export const ERROR_MESSAGES = {
   DUPLICATE_POSITION_VOTE: "Cannot vote for multiple candidates in the same position",
   CURRENT_PASSWORD_INCORRECT: "Current password is incorrect",
   PASSWORD_TOO_SHORT: "Password must be at least 8 characters",
+  RATE_LIMITED_IP: "Too many requests. Please try again later.",
+  RATE_LIMITED_ACCOUNT: "Too many failed login attempts. Please try again later.",
 
   // Success messages
   CANDIDATE_CREATED_SUCCESSFULLY: "Candidate created successfully",

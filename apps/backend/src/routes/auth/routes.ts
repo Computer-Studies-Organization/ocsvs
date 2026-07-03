@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { TooManyRequestsSchema } from "@/database/openapi-schemas";
 import jsonContent, { jsonContentRequired } from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -67,6 +68,10 @@ export const registerRoute = createRoute({
       }),
       "Internal server error",
     ),
+    [httpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      TooManyRequestsSchema,
+      "Too many requests - rate limit exceeded",
+    ),
   },
 });
 
@@ -107,6 +112,10 @@ export const loginRoute = createRoute({
         message: z.string(),
       }),
       "Internal server error",
+    ),
+    [httpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      TooManyRequestsSchema,
+      "Too many requests - rate limit exceeded (per-IP or per-account lockout)",
     ),
   },
 });

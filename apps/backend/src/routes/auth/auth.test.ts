@@ -74,6 +74,24 @@ vi.mock("@/database/queries/user-account.queries", () => ({
   },
 }));
 
+// Mock the login-attempt repository (per-identifier lockout layer)
+const { mockGetRecentAttempts, mockRecordAttempt, mockClearAttempts, mockDeleteExpiredAttempts } =
+  vi.hoisted(() => ({
+    mockGetRecentAttempts: vi.fn(),
+    mockRecordAttempt: vi.fn(),
+    mockClearAttempts: vi.fn(),
+    mockDeleteExpiredAttempts: vi.fn(),
+  }));
+
+vi.mock("@/database/repositories/login-attempt.repository", () => ({
+  loginAttemptRepo: {
+    getRecentAttempts: mockGetRecentAttempts,
+    recordAttempt: mockRecordAttempt,
+    clearAttempts: mockClearAttempts,
+    deleteExpiredAttempts: mockDeleteExpiredAttempts,
+  },
+}));
+
 // Mock password functions
 const { mockVerifyPassword } = vi.hoisted(() => ({
   mockVerifyPassword: vi.fn(),
@@ -99,12 +117,23 @@ vi.mock("@/lib/session", () => ({
   deleteSession: mockDeleteSession,
 }));
 
+// Mock the rate-limit middleware so the router can import it
+vi.mock("@/middleware/rate-limit", () => ({
+  createIpRateLimiter: () => async (_c: any, next: any) => {
+    await next();
+  },
+  getClientIp: () => "1.2.3.4",
+}));
+
 // Import router AFTER all mocks are set up
 const { default: router } = await import("./auth.index");
 
 describe("auth Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Defaults: no prior failed attempts, so existing login tests pass through the lockout check.
+    mockGetRecentAttempts.mockResolvedValue([]);
+    mockDeleteExpiredAttempts.mockResolvedValue(undefined);
   });
 
   it("should register a new user", async () => {
@@ -341,6 +370,108 @@ describe("auth Routes", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("Invalid credentials");
     expect(mockCreateSession).not.toHaveBeenCalled();
+  });
+
+  it("should block login when 5 recent failed attempts exist (lockout)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockGetRecentAttempts.mockResolvedValue([
+      { attemptedAt: now - 800 },
+      { attemptedAt: now - 700 },
+      { attemptedAt: now - 600 },
+      { attemptedAt: now - 500 },
+      { attemptedAt: now - 400 },
+    ]);
+
+    const res = await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+      }),
+    });
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).not.toBeNull();
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Too many failed login attempts. Please try again later.");
+    // Must NOT have looked up the user or attempted a session
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
+    expect(mockCreateSession).not.toHaveBeenCalled();
+  });
+
+  it("should record a failed attempt when login fails (user not found)", async () => {
+    mockGetRecentAttempts.mockResolvedValue([]);
+    mockFindByStudentId.mockResolvedValue(null);
+
+    await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+      }),
+    });
+
+    expect(mockRecordAttempt).toHaveBeenCalledTimes(1);
+    expect(mockRecordAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      "C23-01-1234-CSA001",
+      expect.any(String),
+    );
+  });
+
+  it("should record a failed attempt when the password is wrong", async () => {
+    mockGetRecentAttempts.mockResolvedValue([]);
+    mockFindByStudentId.mockResolvedValue({
+      id: "test-user-id",
+      email: "test@example.com",
+      username: "testuser",
+      role: "user",
+      password_hash: "hashed-password",
+      deletedAt: null,
+    });
+    mockVerifyPassword.mockResolvedValue(false);
+
+    await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "wrongpassword",
+      }),
+    });
+
+    expect(mockRecordAttempt).toHaveBeenCalledTimes(1);
+  });
+
+  it("should clear attempts on successful login", async () => {
+    mockGetRecentAttempts.mockResolvedValue([]);
+    mockFindByStudentId.mockResolvedValue({
+      id: "test-user-id",
+      email: "test@example.com",
+      username: "testuser",
+      role: "user",
+      password_hash: "hashed-password",
+      deletedAt: null,
+    });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockCreateSession.mockResolvedValue({
+      id: "session-id",
+      expiresAt: Date.now() + 86400000,
+    });
+
+    await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+      }),
+    });
+
+    expect(mockClearAttempts).toHaveBeenCalledTimes(1);
+    expect(mockRecordAttempt).not.toHaveBeenCalled();
   });
 
   it("should logout successfully even without active session", async () => {

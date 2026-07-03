@@ -29,6 +29,13 @@
       "when": 1782424679898,
       "tag": "0003_certain_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783014163191,
+      "tag": "0004_classy_champions",
+      "breakpoints": true
     }
   ]
 }

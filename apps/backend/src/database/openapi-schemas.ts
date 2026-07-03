@@ -538,3 +538,12 @@ export const AdminStatsSchema = z
   })
   .openapi("AdminStats");
 export type AdminStatsT = z.infer<typeof AdminStatsSchema>;
+
+export const TooManyRequestsSchema = z
+  .object({
+    message: z.string().openapi({
+      description: "Rate limit exceeded message",
+      example: "Too many requests. Please try again later.",
+    }),
+  })
+  .openapi("TooManyRequests");
