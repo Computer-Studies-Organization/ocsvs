@@ -108,14 +108,14 @@ https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/abc-123/def-4
 
 ## 5. Environment Variables
 
-| Variable | Required | Where to Set | Purpose |
-|---|---|---|---|
-| `TURSO_DATABASE_URL` | Yes | `.env` / `.dev.vars` | libSQL / Turso connection |
-| `TURSO_AUTH_TOKEN` | Yes* | `.env` / `.dev.vars` | Required for remote Turso |
-| `B2_APPLICATION_KEY_ID` | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth |
-| `B2_APPLICATION_KEY` | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth |
-| `B2_BUCKET_NAME` | Yes (for images) | `wrangler.jsonc` `vars` | Target bucket |
-| `PUBLIC_API_BASE_URL` | Yes (frontend) | apps/frontend `.env` | Backend URL (`http://localhost:8787`) |
+| Variable                | Required              | Where to Set                    | Purpose                               |
+| ----------------------- | --------------------- | ------------------------------- | ------------------------------------- |
+| `TURSO_DATABASE_URL`    | Yes                   | `.env` / `.dev.vars`            | libSQL / Turso connection             |
+| `TURSO_AUTH_TOKEN`      | Yes\*                 | `.env` / `.dev.vars`            | Required for remote Turso             |
+| `B2_APPLICATION_KEY_ID` | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth                               |
+| `B2_APPLICATION_KEY`    | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth                               |
+| `B2_BUCKET_NAME`        | Yes (for images)      | `wrangler.jsonc` `vars`         | Target bucket                         |
+| `PUBLIC_API_BASE_URL`   | Yes (frontend)        | apps/frontend `.env`            | Backend URL (`http://localhost:8787`) |
 
 > `*` Local SQLite (`file:./local.db`) typically does not need `TURSO_AUTH_TOKEN`.
 
@@ -172,27 +172,27 @@ The backend serves the built frontend from `../frontend/dist` as Cloudflare Asse
 
 ## 9. Troubleshooting Backblaze
 
-| Symptom | Fix |
-|---|---|
-| `B2 credentials are not configured` | Add `B2_APPLICATION_KEY_ID` and `B2_APPLICATION_KEY` to `.dev.vars` (local) or set via `wrangler secret put` (production). |
-| `B2 bucket "..." not found` | Create the bucket in the B2 console with the exact name `cso-voting-candidates`, or update `wrangler.jsonc`. |
-| Images 403 / not loading | Ensure the bucket type is **`allPublic`**. Private buckets block direct browser access. |
-| Upload returns 415 | File must be `image/jpeg`, `image/png`, or `image/webp` and under **5 MB**. |
-| Old image stays after delete | B2 delete is best-effort; the DB reference is always cleared. Old orphaned files can be purged via B2 lifecycle rules if needed. |
+| Symptom                             | Fix                                                                                                                              |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `B2 credentials are not configured` | Add `B2_APPLICATION_KEY_ID` and `B2_APPLICATION_KEY` to `.dev.vars` (local) or set via `wrangler secret put` (production).       |
+| `B2 bucket "..." not found`         | Create the bucket in the B2 console with the exact name `cso-voting-candidates`, or update `wrangler.jsonc`.                     |
+| Images 403 / not loading            | Ensure the bucket type is **`allPublic`**. Private buckets block direct browser access.                                          |
+| Upload returns 415                  | File must be `image/jpeg`, `image/png`, or `image/webp` and under **5 MB**.                                                      |
+| Old image stays after delete        | B2 delete is best-effort; the DB reference is always cleared. Old orphaned files can be purged via B2 lifecycle rules if needed. |
 
 ## 10. Key Files
 
-| What | Where |
-|---|---|
-| B2 client | `apps/backend/src/lib/b2-client.ts` |
-| Image upload/delete handlers | `apps/backend/src/handlers/candidates/image.handler.ts` |
-| Candidate routes | `apps/backend/src/routes/candidates/routes.ts` |
-| DB schema + migration | `apps/backend/src/database/schema.ts`, `apps/backend/src/database/migrations/0002_famous_supernaut.sql` |
-| OpenAPI schemas | `apps/backend/src/database/openapi-schemas.ts` |
-| Frontend types | `apps/frontend/src/lib/types.ts` |
-| Image upload component | `apps/frontend/src/lib/components/ui/image-upload.svelte` |
-| Frontend candidate API | `apps/frontend/src/lib/api/candidates.ts` |
-| Worker env binding defaults | `apps/backend/wrangler.jsonc` |
+| What                         | Where                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| B2 client                    | `apps/backend/src/lib/b2-client.ts`                                                                     |
+| Image upload/delete handlers | `apps/backend/src/handlers/candidates/image.handler.ts`                                                 |
+| Candidate routes             | `apps/backend/src/routes/candidates/routes.ts`                                                          |
+| DB schema + migration        | `apps/backend/src/database/schema.ts`, `apps/backend/src/database/migrations/0002_famous_supernaut.sql` |
+| OpenAPI schemas              | `apps/backend/src/database/openapi-schemas.ts`                                                          |
+| Frontend types               | `apps/frontend/src/lib/types.ts`                                                                        |
+| Image upload component       | `apps/frontend/src/lib/components/ui/image-upload.svelte`                                               |
+| Frontend candidate API       | `apps/frontend/src/lib/api/candidates.ts`                                                               |
+| Worker env binding defaults  | `apps/backend/wrangler.jsonc`                                                                           |
 
 ## 11. Next Steps After Setup
 

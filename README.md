@@ -5,20 +5,24 @@ A modern, secure, and transparent voting platform engineered for the Computer St
 ## ✨ Tech Stack
 
 ### Active Frontend
+
 - **Framework:** SvelteKit 2 + Svelte 5
 - **Styling:** Tailwind 4
 - **Routing:** SvelteKit file-based routing
 
 ### Archived Frontend
+
 - **Framework:** React 19 (`apps/frontend-react`) — previous implementation, currently archived
 
 ### Backend
+
 - **Framework:** Hono (Cloudflare Workers)
 - **Database:** Cloudflare D1
 - **ORM:** Drizzle ORM
 - **Validation:** Zod
 
 ### Monorepo
+
 - **Manager:** pnpm workspaces
 
 ## 🚀 Getting Started
@@ -28,6 +32,7 @@ New to the repo? See [ONBOARDING.md](./ONBOARDING.md) for setup, including Backb
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - **Node.js**: >= 18.0.0
 - **pnpm**: >= 9.0.0
 
