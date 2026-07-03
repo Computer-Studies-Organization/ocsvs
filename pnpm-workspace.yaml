@@ -1,4 +1,4 @@
 packages:
-  - 'apps/*'
-  - '!apps/frontend-react'
-  - 'packages/*'
+  - "apps/*"
+  - "!apps/frontend-react"
+  - "packages/*"
