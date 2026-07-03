@@ -1,20 +1,9 @@
 <script lang='ts'>
-  import { ArrowLeft, Edit, Loader, Plus, Users } from 'lucide-svelte'
-  import { invalidate } from '$app/navigation'
-  import { updatePosition } from '$lib/api/positions'
-  import { createCandidate } from '$lib/api/candidates'
-  import { fetchUsers } from '$lib/api/users'
-  import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
-  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
-  import Modal from '$lib/components/ui/modal.svelte'
+  import { ArrowLeft, Edit, Plus, Users } from 'lucide-svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
-  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
-  import { validate } from '$lib/validation/helpers'
-  import { createCandidateSchema } from '$lib/validation/candidate'
-  import { updatePositionSchema } from '$lib/validation/position'
-  import type { TElection, TPosition, TUsersData } from '$lib/types'
-  import { appCache } from '$lib/cache'
+  import type { TElection, TPosition } from '$lib/types'
+  import AddCandidateModal from '$lib/components/admin/add-candidate-modal.svelte'
+  import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
 
   type CandidateRow = {
     id: string
@@ -26,130 +15,24 @@
   let election = $derived(data.election)
   let position = $derived(data.position)
   let candidates = $derived<CandidateRow[]>(data.candidates)
-  let users = $state<TUsersData[]>([])
-  let usersError = $state('')
+
   let isCreateOpen = $state(false)
-  let createAccountId = $state('')
-  let createFullName = $state('')
-  let createManifesto = $state('')
-  let createBusy = $state(false)
-  let createErrors = $state<Record<string, string>>({})
-
   let isEditOpen = $state(false)
-  let editName = $state('')
-  let editOrder = $state('')
-  let editBusy = $state(false)
-  let editErrors = $state<Record<string, string>>({})
-
-  // Load users on mount for the create modal
-  $effect(() => {
-    fetchUsers({ limit: 100 })
-      .then(res => { users = res.data })
-      .catch(e => { usersError = extractErrorMessage(e, 'Failed to load users'); users = [] })
-  })
 
   function openCreate() {
-    createAccountId = ''
-    createFullName = ''
-    createManifesto = ''
-    createErrors = {}
     isCreateOpen = true
   }
 
   function closeCreate() {
-    if (createBusy) return
     isCreateOpen = false
   }
 
   function openEdit() {
-    if (!position) return
-    editName = position.name
-    editOrder = String(position.displayOrder ?? '')
-    editErrors = {}
     isEditOpen = true
   }
 
   function closeEdit() {
-    if (editBusy) return
     isEditOpen = false
-  }
-
-  async function submitEdit(e: SubmitEvent) {
-    e.preventDefault()
-    if (!election || !position) return
-    const orderNum = Number.parseInt(editOrder, 10)
-    const result = validate(updatePositionSchema, {
-      name: editName.trim(),
-      displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
-    })
-    if (!result.ok) {
-      editErrors = result.errors
-      return
-    }
-    editErrors = {}
-    editBusy = true
-    try {
-      await updatePosition(election.id, position.id, {
-        name: editName.trim(),
-        displayOrder: Number.isFinite(orderNum) ? orderNum : undefined,
-      })
-      isEditOpen = false
-      appCache.invalidate({ params: { electionId: election.id } })
-      await invalidate('app:position')
-      addToast('success', 'Position updated')
-    }
-    catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to update position'))
-    }
-    finally {
-      editBusy = false
-    }
-  }
-
-  function handleUserSelect(accountId: string) {
-    const selected = resolveCandidateUserSelection(users, accountId)
-    createAccountId = selected?.accountId ?? ''
-    createFullName = selected ? `${selected.firstName} ${selected.lastName}` : ''
-  }
-
-  async function submitCreate(e: SubmitEvent) {
-    e.preventDefault()
-    if (!position || !election) return
-    const result = validate(createCandidateSchema, {
-      fullName: createFullName.trim(),
-      manifesto: createManifesto.trim(),
-    })
-    if (!result.ok) {
-      createErrors = result.errors
-      return
-    }
-    if (!createAccountId) {
-      createErrors = { ...createErrors, user: 'User is required' }
-      return
-    }
-    createErrors = {}
-    createBusy = true
-    try {
-      await createCandidate({
-        fullName: createFullName.trim(),
-        accountId: createAccountId,
-        positionId: position.id,
-        manifesto: createManifesto.trim(),
-      } as never)
-      isCreateOpen = false
-      createAccountId = ''
-      createFullName = ''
-      createManifesto = ''
-      appCache.invalidate({ params: { electionId: election.id } })
-      await invalidate('app:position')
-      addToast('success', 'Candidate added')
-    }
-    catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to add candidate'))
-    }
-    finally {
-      createBusy = false
-    }
   }
 </script>
 
@@ -261,156 +144,20 @@
   </div>
 </div>
 
-<!-- Add Candidate Modal -->
-<Modal open={isCreateOpen} onclose={closeCreate}>
-  <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Add candidate</h2>
+{#if election && position}
+  <AddCandidateModal
+    open={isCreateOpen}
+    onclose={closeCreate}
+    electionId={election.id}
+    positionId={position.id}
+    onsuccess={closeCreate}
+  />
 
-  {#if usersError}
-    <div class='mb-4 rounded-xl border border-yellow-500/30 px-4 py-2 text-sm' style='background: oklch(0.25 0.025 250); color: oklch(0.95 0.008 250)'>
-      {usersError}
-    </div>
-  {/if}
-
-  <form onsubmit={submitCreate} class='space-y-5'>
-    <div class='space-y-2'>
-      <label for='createAccountId' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-        User
-      </label>
-      <select
-        id='createAccountId'
-        value={createAccountId}
-        onchange={(e) => { handleUserSelect(e.currentTarget.value); if (createErrors.user) createErrors.user = '' }}
-        required
-        disabled={createBusy}
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {createErrors.user ? 'border-red-500' : ''}'
-        style='background: oklch(0.16 0.020 250); border-color: {createErrors.user ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
-      >
-        <option value=''>Select a user</option>
-        {#each users as u (u.accountId)}
-          <option value={u.accountId}>{getCandidateUserLabel(u)}</option>
-        {/each}
-      </select>
-      {#if createErrors.user}
-        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.user}</p>
-      {/if}
-    </div>
-
-    <div class='space-y-2'>
-      <label for='createFullName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-        Full name
-      </label>
-      <input
-        id='createFullName'
-        type='text'
-        value={createFullName}
-        readonly
-        required
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
-      />
-    </div>
-
-    <div class='space-y-2'>
-      <label for='createManifesto' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-        Manifesto
-      </label>
-      <textarea
-        id='createManifesto'
-        bind:value={createManifesto}
-        rows={5}
-        required
-        disabled={createBusy}
-        oninput={() => { if (createErrors.manifesto) createErrors.manifesto = '' }}
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none {createErrors.manifesto ? 'border-red-500' : ''}'
-        style='background: oklch(0.16 0.020 250); border-color: {createErrors.manifesto ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
-      ></textarea>
-      {#if createErrors.manifesto}
-        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{createErrors.manifesto}</p>
-      {/if}
-    </div>
-
-    <div class='flex gap-3 pt-2'>
-      <button
-        type='button'
-        onclick={closeCreate}
-        disabled={createBusy}
-        class='flex-1 px-4 py-3 rounded-xl font-bold transition cursor-pointer'
-        style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
-      >
-        Cancel
-      </button>
-      <button
-        type='submit'
-        disabled={createBusy || !createAccountId || !createFullName.trim() || !createManifesto.trim()}
-        class='flex-1 px-4 py-3 rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-        style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
-      >
-        {#if createBusy}<Loader class='animate-spin' size={18} />{/if}
-        {createBusy ? 'Adding…' : 'Add candidate'}
-      </button>
-    </div>
-  </form>
-</Modal>
-
-<!-- Edit Position Modal -->
-<Modal open={isEditOpen} onclose={closeEdit}>
-  <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Edit position</h2>
-
-  <form onsubmit={submitEdit} class='space-y-5'>
-    <div class='space-y-2'>
-      <label for='editPositionName' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-        Name
-      </label>
-      <input
-        id='editPositionName'
-        type='text'
-        bind:value={editName}
-        required
-        disabled={editBusy}
-        placeholder='President'
-        oninput={() => { if (editErrors.name) editErrors.name = '' }}
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {editErrors.name ? 'border-red-500' : ''}'
-        style='background: oklch(0.16 0.020 250); border-color: {editErrors.name ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
-      />
-      {#if editErrors.name}
-        <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{editErrors.name}</p>
-      {/if}
-    </div>
-
-    <div class='space-y-2'>
-      <label for='editPositionOrder' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-        Display order (optional)
-      </label>
-      <input
-        id='editPositionOrder'
-        type='number'
-        bind:value={editOrder}
-        disabled={editBusy}
-        placeholder='0'
-        class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
-        style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
-      />
-    </div>
-
-    <div class='flex gap-3 pt-2'>
-      <button
-        type='button'
-        onclick={closeEdit}
-        disabled={editBusy}
-        class='flex-1 px-4 py-3 rounded-xl font-bold transition cursor-pointer'
-        style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
-      >
-        Cancel
-      </button>
-      <button
-        type='submit'
-        disabled={editBusy || !editName.trim()}
-        class='flex-1 px-4 py-3 rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-        style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
-      >
-        {#if editBusy}<Loader class='animate-spin' size={18} />{/if}
-        {editBusy ? 'Saving…' : 'Save changes'}
-      </button>
-    </div>
-  </form>
-</Modal>
+  <EditPositionModal
+    open={isEditOpen}
+    onclose={closeEdit}
+    electionId={election.id}
+    position={position}
+    onsuccess={closeEdit}
+  />
+{/if}

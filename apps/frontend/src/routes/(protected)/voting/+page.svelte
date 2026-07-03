@@ -21,8 +21,11 @@
   import { authStore } from '$lib/stores/auth'
   import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
-  import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Info, User, Vote } from 'lucide-svelte'
+  import { Calendar, CheckCircle, Info, Vote } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
+  import VotingCandidateCard from '$lib/components/ui/voting-candidate-card.svelte'
+  import BallotReview from '$lib/components/ui/ballot-review.svelte'
+  import StepperNavigation from '$lib/components/ui/stepper-navigation.svelte'
 
   let { data } = $props()
   let apiState = $derived<TVotingState | null>(data.votingState)
@@ -224,104 +227,33 @@
           <p class='mt-1 text-sm text-slate-400'>Select one candidate.</p>
           <div class='mt-6 space-y-3'>
             {#each currentPosition.candidates as c (c.id)}
-              <button
-                type='button'
+              <VotingCandidateCard
+                candidate={c}
+                selected={pageState.voting.selectedVotes[currentPosition.id] === c.id}
                 onclick={() => selectAt(currentPosition.id, c.id)}
-                class='flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all cursor-pointer'
-                style:background={pageState.voting.selectedVotes[currentPosition.id] === c.id ? 'oklch(0.30 0.08 250)' : 'oklch(0.22 0.025 250)'}
-                style:border-color={pageState.voting.selectedVotes[currentPosition.id] === c.id ? 'oklch(0.55 0.15 250)' : 'oklch(0.30 0.025 250)'}
-              >
-                {#if c.imageUrl}
-                  <img
-                    src={c.imageUrl}
-                    alt={c.fullName}
-                    class='h-10 w-10 rounded-full object-cover'
-                  />
-                {:else}
-                  <div class='flex h-10 w-10 items-center justify-center rounded-full bg-slate-800'>
-                    <User size={20} class='text-slate-400' />
-                  </div>
-                {/if}
-                <span class='font-semibold text-slate-100'>{c.fullName}</span>
-                {#if pageState.voting.selectedVotes[currentPosition.id] === c.id}
-                  <span class='ml-auto text-blue-400 font-medium'>Selected</span>
-                {/if}
-              </button>
+              />
             {/each}
           </div>
         </div>
       {/if}
     {:else}
-      <div class='mt-8 rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl'>
-        <h2 class='text-xl font-bold text-slate-100 mb-2'>Review Your Ballot</h2>
-        <p class='text-sm text-slate-400 mb-6'>Please review your selections carefully. Once submitted, your ballot cannot be changed or resubmitted.</p>
-        
-        <div class='divide-y divide-white/5 space-y-4'>
-          {#each pageState.positions as pos, idx}
-            {@const selectedCandidateId = pageState.voting.selectedVotes[pos.id]}
-            {@const selectedCandidate = pos.candidates.find(c => c.id === selectedCandidateId)}
-            <div class='pt-4 first:pt-0 flex items-center justify-between gap-4'>
-              <div>
-                <h3 class='font-semibold text-slate-200'>{pos.name}</h3>
-                {#if selectedCandidate}
-                  <div class='flex items-center gap-2 mt-1'>
-                    {#if selectedCandidate.imageUrl}
-                      <img src={selectedCandidate.imageUrl} alt={selectedCandidate.fullName} class='h-6 w-6 rounded-full object-cover' />
-                    {:else}
-                      <div class='flex h-6 w-6 items-center justify-center rounded-full bg-slate-800'>
-                        <User size={12} class='text-slate-400' />
-                      </div>
-                    {/if}
-                    <span class='text-slate-300 font-medium text-sm'>{selectedCandidate.fullName}</span>
-                  </div>
-                {:else}
-                  <p class='text-red-400 text-sm mt-1 font-semibold flex items-center gap-1'>
-                    <Info size={14} /> No candidate selected
-                  </p>
-                {/if}
-              </div>
-              <button
-                type='button'
-                onclick={() => goToPosition(idx)}
-                class='text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer'
-              >
-                Change
-              </button>
-            </div>
-          {/each}
-        </div>
-      </div>
+      <BallotReview
+        positions={pageState.positions}
+        selectedVotes={pageState.voting.selectedVotes}
+        ongoToPosition={goToPosition}
+      />
     {/if}
 
-    <div class='mt-6 flex items-center justify-between'>
-      <button
-        type='button'
-        onclick={previous}
-        disabled={pageState.voting.currentPositionIndex === 0 || isSubmitting}
-        class='flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-slate-100 disabled:opacity-50 cursor-pointer'
-      >
-        <ArrowLeft size={18} /> Previous
-      </button>
-      
-      {#if !isReview}
-        <p class='text-sm text-slate-400'>{Object.values(pageState.voting.selectedVotes).filter(id => id !== null).length} / {totalPositions} selected</p>
-        <button
-          type='button'
-          onclick={next}
-          class='flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white cursor-pointer'
-        >
-          Next <ArrowRight size={18} />
-        </button>
-      {:else}
-        <button
-          type='button'
-          onclick={submit}
-          disabled={!allPositionsVoted(pageState.voting, pageState.positions) || isSubmitting}
-          class='flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50 cursor-pointer'
-        >
-          {isSubmitting ? 'Submitting…' : 'Submit votes'}
-        </button>
-      {/if}
-    </div>
+    <StepperNavigation
+      currentPositionIndex={pageState.voting.currentPositionIndex}
+      isSubmitting={isSubmitting}
+      isReview={isReview}
+      selectedVotesCount={Object.values(pageState.voting.selectedVotes).filter(id => id !== null).length}
+      totalPositions={totalPositions}
+      onprevious={previous}
+      onnext={next}
+      onsubmit={submit}
+      canSubmit={allPositionsVoted(pageState.voting, pageState.positions)}
+    />
   </div>
 {/if}
