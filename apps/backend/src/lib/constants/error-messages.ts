@@ -20,6 +20,7 @@ export const ERROR_MESSAGES = {
   // Conflict errors
   ANOTHER_ELECTION_IS_OPEN: "Another election is currently open. Close it first.",
   CANDIDATE_ALREADY_EXISTS: "Candidate already exists for this position",
+  POSITION_ALREADY_EXISTS: "Position name or display order already exists for this election",
   ELECTION_HAS_NO_POSITIONS: "Cannot open an election with no positions",
   ELECTION_NOT_IN_DRAFT: "This operation is only allowed while the election is in draft",
   ELECTION_NOT_OPEN: "This election is not currently open for voting",

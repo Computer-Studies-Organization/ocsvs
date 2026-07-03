@@ -1,5 +1,5 @@
 import type { Database } from "./database.type";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { positions } from "@/database/schema";
 
 export type PositionRow = typeof positions.$inferSelect;
@@ -11,13 +11,24 @@ export const positionRepo = {
   ): Promise<string> {
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
+
+    let displayOrder = data.displayOrder;
+    if (displayOrder === undefined) {
+      const result = await db
+        .select({ maxOrder: sql<number>`max(${positions.displayOrder})` })
+        .from(positions)
+        .where(eq(positions.electionId, data.electionId))
+        .get();
+      displayOrder = (result?.maxOrder ?? -1) + 1;
+    }
+
     await db
       .insert(positions)
       .values({
         id,
         electionId: data.electionId,
         name: data.name,
-        displayOrder: data.displayOrder ?? 0,
+        displayOrder,
         createdAt: now,
         updatedAt: now,
       })

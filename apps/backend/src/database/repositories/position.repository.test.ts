@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { positions } from "@/database/schema";
 
 const chain: any = {
   values: vi.fn(() => chain),
@@ -23,9 +24,31 @@ import { positionRepo } from "./position.repository";
 beforeEach(() => vi.clearAllMocks());
 
 describe("positionRepo", () => {
-  it("create returns an id", async () => {
+  it("create returns an id and auto-increments displayOrder when omitted", async () => {
+    chain.get.mockReturnValueOnce({ maxOrder: 2 });
     const id = await positionRepo.create(mockDb as any, { electionId: "e1", name: "Chairman" });
     expect(typeof id).toBe("string");
+    expect(mockDb.insert).toHaveBeenCalledWith(positions);
+    expect(chain.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayOrder: 3,
+      }),
+    );
+  });
+
+  it("create uses provided displayOrder when present", async () => {
+    const id = await positionRepo.create(mockDb as any, {
+      electionId: "e1",
+      name: "Chairman",
+      displayOrder: 5,
+    });
+    expect(typeof id).toBe("string");
+    expect(mockDb.insert).toHaveBeenCalledWith(positions);
+    expect(chain.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayOrder: 5,
+      }),
+    );
   });
 
   it("findById returns row or null", async () => {

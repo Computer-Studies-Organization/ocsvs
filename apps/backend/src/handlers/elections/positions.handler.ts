@@ -11,6 +11,7 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const listPositionsHandler: AppRouteHandler<typeof listPositionsRoute> = async (c) => {
@@ -35,24 +36,31 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
   if (election.status !== "draft") {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
-  const newId = await positionRepo.create(db, {
-    electionId: id,
-    name: body.name,
-    displayOrder: body.displayOrder,
-  });
-  const row = await positionRepo.findById(db, newId);
-  if (!row) {
-    throw new Error("Position row missing immediately after create");
-  }
-  await auditLogRepo.insert(db, {
-    action: "position.create",
-    targetType: "position",
-    targetId: newId,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    const newId = await positionRepo.create(db, {
+      electionId: id,
+      name: body.name,
+      displayOrder: body.displayOrder,
+    });
+    const row = await positionRepo.findById(db, newId);
+    if (!row) {
+      throw new Error("Position row missing immediately after create");
+    }
+    await auditLogRepo.insert(db, {
+      action: "position.create",
+      targetType: "position",
+      targetId: newId,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
 
-  return c.json(row, httpStatusCodes.CREATED);
+    return c.json(row, httpStatusCodes.CREATED);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return c.json({ message: ERROR_MESSAGES.POSITION_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
+    }
+    throw error;
+  }
 };
 
 export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> = async (c) => {
@@ -72,20 +80,27 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
   if (!election || election.status !== "draft") {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
-  await positionRepo.update(db, positionId, body);
-  const updated = await positionRepo.findById(db, positionId);
-  if (!updated) {
-    throw new Error("Position row missing immediately after update");
-  }
-  await auditLogRepo.insert(db, {
-    action: "position.update",
-    targetType: "position",
-    targetId: positionId,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
+  try {
+    await positionRepo.update(db, positionId, body);
+    const updated = await positionRepo.findById(db, positionId);
+    if (!updated) {
+      throw new Error("Position row missing immediately after update");
+    }
+    await auditLogRepo.insert(db, {
+      action: "position.update",
+      targetType: "position",
+      targetId: positionId,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
 
-  return c.json(updated, httpStatusCodes.OK);
+    return c.json(updated, httpStatusCodes.OK);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return c.json({ message: ERROR_MESSAGES.POSITION_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
+    }
+    throw error;
+  }
 };
 
 export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> = async (c) => {

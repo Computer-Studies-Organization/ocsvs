@@ -223,6 +223,22 @@ describe("positions routes", () => {
       expect(json.id).toBe(positionId);
       expect(json.name).toBe("President");
     });
+
+    it("returns 409 when there is a unique constraint conflict (e.g. duplicate name/displayOrder)", async () => {
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      const dbError = new Error(
+        "UNIQUE constraint failed: positions.election_id, positions.display_order",
+      );
+      mockCreate.mockRejectedValue(dbError);
+      const res = await router.request(`/elections/${electionId}/positions`, {
+        method: "POST",
+        body: JSON.stringify({ name: "President" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.POSITION_ALREADY_EXISTS);
+    });
   });
 
   describe("pATCH /elections/:id/positions/:positionId (updatePosition)", () => {
@@ -284,6 +300,23 @@ describe("positions routes", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.name).toBe("Renamed");
+    });
+
+    it("returns 409 when update conflicts with another position (e.g. duplicate displayOrder)", async () => {
+      mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      const dbError = new Error(
+        "UNIQUE constraint failed: positions.election_id, positions.display_order",
+      );
+      mockUpdate.mockRejectedValue(dbError);
+      const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ displayOrder: 2 }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.POSITION_ALREADY_EXISTS);
     });
   });
 

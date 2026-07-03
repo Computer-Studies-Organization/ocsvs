@@ -94,7 +94,10 @@ export const positions = sqliteTable(
     name: text("name").notNull(),
     displayOrder: integer("display_order").notNull().default(0),
   },
-  (table) => [uniqueIndex("idx_positions_election_name").on(table.electionId, table.name)],
+  (table) => [
+    uniqueIndex("idx_positions_election_name").on(table.electionId, table.name),
+    uniqueIndex("idx_positions_election_display_order").on(table.electionId, table.displayOrder),
+  ],
 );
 
 // NOTE: libSQL/Turso defaults to `PRAGMA foreign_keys = ON`, so the FK

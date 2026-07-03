@@ -36,6 +36,13 @@
       "when": 1783014163191,
       "tag": "0004_classy_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783057906045,
+      "tag": "0005_harsh_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }
