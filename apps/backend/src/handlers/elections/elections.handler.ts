@@ -143,11 +143,18 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
       : to === "closed"
         ? Math.floor(Date.now() / 1000)
         : (existing.closesAt ?? undefined);
-  await electionRepo.updateStatus(db, id, {
+  const updated = await electionRepo.updateStatus(db, id, {
+    existingStatus: existing.status as TElectionStatus,
     status: to,
     opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
     closesAt: resolvedClosesAt,
   });
+  if (!updated) {
+    return c.json(
+      { message: ERROR_MESSAGES.ELECTION_TRANSITION_CONFLICT },
+      httpStatusCodes.CONFLICT,
+    );
+  }
   await auditLogRepo.insert(db, {
     action: "election.transition",
     targetType: "election",

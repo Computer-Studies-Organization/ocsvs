@@ -360,7 +360,12 @@ describe("elections routes", () => {
       expect(mockUpdateStatus).toHaveBeenCalledWith(
         mockDb,
         electionId,
-        expect.objectContaining({ status: "open", opensAt: 1738000000, closesAt: 1738604800 }),
+        expect.objectContaining({
+          existingStatus: "draft",
+          status: "open",
+          opensAt: 1738000000,
+          closesAt: 1738604800,
+        }),
       );
     });
 
@@ -380,8 +385,22 @@ describe("elections routes", () => {
       expect(mockUpdateStatus).toHaveBeenCalledWith(
         mockDb,
         electionId,
-        expect.objectContaining({ status: "closed", opensAt: 1738000000 }),
+        expect.objectContaining({ existingStatus: "open", status: "closed", opensAt: 1738000000 }),
       );
+    });
+
+    it("returns 409 when updateStatus returns false (concurrent race)", async () => {
+      mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      mockCountPositions.mockResolvedValue(2);
+      mockUpdateStatus.mockResolvedValue(false); // another request won the race
+      const res = await router.request(`/elections/${electionId}/transitions`, {
+        method: "POST",
+        body: JSON.stringify({ to: "open", opensAt: 1738000000, closesAt: 1738604800 }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_TRANSITION_CONFLICT);
     });
   });
 });

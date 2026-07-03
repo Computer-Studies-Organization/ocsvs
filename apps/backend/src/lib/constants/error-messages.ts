@@ -24,6 +24,8 @@ export const ERROR_MESSAGES = {
   ELECTION_HAS_NO_POSITIONS: "Cannot open an election with no positions",
   ELECTION_NOT_IN_DRAFT: "This operation is only allowed while the election is in draft",
   ELECTION_NOT_OPEN: "This election is not currently open for voting",
+  ELECTION_TRANSITION_CONFLICT:
+    "Election status changed by a concurrent request. Please try again.",
   INVALID_TRANSITION: "Invalid status transition for this election",
   POSITION_HAS_CANDIDATES: "Cannot delete a position that has candidates",
   USER_ALREADY_EXISTS: "User already exists",

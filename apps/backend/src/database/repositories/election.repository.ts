@@ -1,5 +1,5 @@
 import type { Database } from "./database.type";
-import { asc, desc, eq, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
 export type ElectionRow = typeof elections.$inferSelect;
@@ -57,13 +57,22 @@ export const electionRepo = {
   async updateStatus(
     db: Database,
     id: string,
-    data: { status: TElectionStatus; opensAt?: number | null; closesAt?: number | null },
+    data: {
+      existingStatus: TElectionStatus;
+      status: TElectionStatus;
+      opensAt?: number | null;
+      closesAt?: number | null;
+    },
   ): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
     const set: Record<string, unknown> = { status: data.status, updatedAt: now };
     if (data.opensAt !== undefined) set.opensAt = data.opensAt;
     if (data.closesAt !== undefined) set.closesAt = data.closesAt;
-    const result = await db.update(elections).set(set).where(eq(elections.id, id)).run();
+    const result = await db
+      .update(elections)
+      .set(set)
+      .where(and(eq(elections.id, id), eq(elections.status, data.existingStatus)))
+      .run();
     return result.rowsAffected > 0;
   },
 

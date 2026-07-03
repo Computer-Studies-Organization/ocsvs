@@ -42,7 +42,12 @@ describe("electionRepo", () => {
     expect((await electionRepo.findOpen(mockDb as any))?.id).toBe("e1");
   });
   it("updateStatus updates and reports affected", async () => {
-    expect(await electionRepo.updateStatus(mockDb as any, "e1", { status: "open" })).toBe(true);
+    expect(
+      await electionRepo.updateStatus(mockDb as any, "e1", {
+        existingStatus: "draft",
+        status: "open",
+      }),
+    ).toBe(true);
   });
   it("updateMetadata updates and reports affected", async () => {
     expect(await electionRepo.updateMetadata(mockDb as any, "e1", { name: "New" })).toBe(true);
