@@ -75,7 +75,7 @@ cf-typegen:
 
 # Bulk import students from a PDF file
 db-import-students pdf_path *args="":
-    pnpm --filter @cso-voting/backend db:import-students {{pdf_path}} {{args}}
+    pnpm --filter @cso-voting/backend db:import-students "{{absolute_path(pdf_path)}}" {{args}}
 
 # Deploy backend to Cloudflare Workers (wrangler deploy --minify)
 deploy:

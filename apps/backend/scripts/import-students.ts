@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { Writable } from "node:stream";
+import readline from "node:readline";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { eq } from "drizzle-orm";
 import { accounts, users, auditLog } from "../src/database/schema";
 import type { AuditAction } from "../src/lib/constants/audit-actions";
-import { hashPassword } from "../src/lib/password";
+import { hashPassword, verifyPassword } from "../src/lib/password";
 import "dotenv/config";
 
 const require = createRequire(import.meta.url);
@@ -238,6 +240,117 @@ export function writeCredentialsCsv(
   return csvPath;
 }
 
+async function askQuestion(query: string, isPassword = false): Promise<string> {
+  return new Promise((resolve) => {
+    const mutableStdout = new Writable({
+      write(chunk, encoding, callback) {
+        if (!isPassword) {
+          process.stdout.write(chunk, encoding);
+        } else {
+          const str = chunk.toString();
+          if (str === query || str === "\n" || str === "\r\n") {
+            process.stdout.write(chunk, encoding);
+          }
+        }
+        callback();
+      },
+    });
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: mutableStdout,
+      terminal: true,
+    });
+
+    if (isPassword) {
+      process.stdout.write(query);
+    }
+
+    rl.question(isPassword ? "" : query, (answer) => {
+      rl.close();
+      if (isPassword) {
+        process.stdout.write("\n");
+      }
+      resolve(answer.trim());
+    });
+  });
+}
+
+export async function authenticateAdmin(db: any): Promise<{ id: string; username: string }> {
+  let identifier = process.env.ADMIN_IDENTIFIER || process.env.ADMIN_USERNAME;
+  let password = process.env.ADMIN_PASSWORD;
+
+  const args = process.argv;
+  const adminUserArgIndex = args.findIndex((a) => a === "--admin-user" || a === "-u");
+  if (adminUserArgIndex !== -1 && args[adminUserArgIndex + 1]) {
+    identifier = args[adminUserArgIndex + 1];
+  }
+  const adminPassArgIndex = args.findIndex((a) => a === "--admin-pass" || a === "-p");
+  if (adminPassArgIndex !== -1 && args[adminPassArgIndex + 1]) {
+    password = args[adminPassArgIndex + 1];
+  }
+
+  if (!identifier) {
+    identifier = await askQuestion("Admin Username or Student ID: ");
+  }
+  if (!password) {
+    password = await askQuestion("Admin Password: ", true);
+  }
+
+  if (!identifier || !password) {
+    console.error("Error: Authentication credentials cannot be empty.");
+    process.exit(1);
+  }
+
+  // Look up account by username
+  let adminAccount = await db
+    .select({
+      id: accounts.id,
+      username: accounts.username,
+      passwordHash: accounts.password_hash,
+      role: accounts.role,
+    })
+    .from(accounts)
+    .where(eq(accounts.username, identifier))
+    .get();
+
+  // If not found, try by studentId via user join
+  if (!adminAccount) {
+    const joined = await db
+      .select({
+        id: accounts.id,
+        username: accounts.username,
+        passwordHash: accounts.password_hash,
+        role: accounts.role,
+      })
+      .from(accounts)
+      .innerJoin(users, eq(accounts.id, users.accountId))
+      .where(eq(users.studentId, identifier))
+      .get();
+    if (joined) {
+      adminAccount = joined;
+    }
+  }
+
+  if (!adminAccount) {
+    console.error("Error: Invalid admin credentials (user not found).");
+    process.exit(1);
+  }
+
+  if (adminAccount.role !== "admin") {
+    console.error("Error: Access denied. The specified account is not an admin.");
+    process.exit(1);
+  }
+
+  const isValid = await verifyPassword(password, adminAccount.passwordHash);
+  if (!isValid) {
+    console.error("Error: Invalid admin credentials (password incorrect).");
+    process.exit(1);
+  }
+
+  return { id: adminAccount.id, username: adminAccount.username };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const pdfPathArg = args.find((arg) => !arg.startsWith("-"));
@@ -299,15 +412,11 @@ async function main() {
       (await db.select({ studentId: users.studentId }).from(users).all()).map((r) => r.studentId),
     );
 
-    // Fetch an admin user to act as actor for the audit log
-    const adminUser = await db
-      .select({ id: accounts.id, username: accounts.username })
-      .from(accounts)
-      .where(eq(accounts.role, "admin"))
-      .get();
-
-    const actorId = adminUser?.id || "00000000-0000-0000-0000-000000000000";
-    const actorUsername = adminUser?.username || "system";
+    // Authenticate the admin performing this operation
+    console.log("Authenticating admin user...");
+    const adminUser = await authenticateAdmin(db);
+    const actorId = adminUser.id;
+    const actorUsername = adminUser.username;
 
     const csvRows: string[] = [
       "Student ID,Username,Password,First Name,Last Name,Course,Year Level",
