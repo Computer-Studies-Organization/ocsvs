@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { Database, DbClient } from "./database.type";
 import { and, desc, eq, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { auditLog } from "@/database/schema";
 import type { AuditAction, TargetType } from "@/lib/constants/audit-actions";
@@ -95,7 +95,7 @@ export const auditLogRepo = {
    * Returns the generated `{ id, createdAt }` so callers (handlers) can echo
    * them back in the response without a follow-up SELECT.
    */
-  async insert(db: Database, entry: AuditLogEntry): Promise<{ id: string; createdAt: number }> {
+  async insert(db: DbClient, entry: AuditLogEntry): Promise<{ id: string; createdAt: number }> {
     const id = crypto.randomUUID();
     const createdAt = Math.floor(Date.now() / 1000);
 

@@ -24,7 +24,7 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
  * `apps/backend/src/handlers/elections/elections.handler.ts`.
  */
 export const listAuditLog: AppRouteHandler<typeof listAuditLogRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const filters = c.req.valid("query");
@@ -65,7 +65,7 @@ function makeListAuditLogByTarget<R extends RouteConfig>(
   _route: R,
 ): AppRouteHandler<R> {
   return (async (c: Context<AppBindings>) => {
-    if (c.var.authUser?.role !== "admin") {
+    if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
       return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
     }
     const params = c.req.param();

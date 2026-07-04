@@ -19,7 +19,7 @@ import type { TElectionStatus } from "@/database/schema";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -82,7 +82,7 @@ export const getElectionHandler: AppRouteHandler<typeof getElectionRoute> = asyn
 };
 
 export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -116,7 +116,7 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
 export const transitionElectionHandler: AppRouteHandler<typeof transitionElectionRoute> = async (
   c,
 ) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;

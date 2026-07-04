@@ -33,6 +33,10 @@ export const ERROR_MESSAGES = {
   VOTE_ALREADY_CAST: "You have already voted",
   CANNOT_DELETE_SELF: "You cannot delete your own account",
   CANNOT_DELETE_LAST_ADMIN: "Cannot delete the last admin account",
+  CANNOT_DELETE_ADMIN: "Only super admins can delete admin accounts",
+  USER_IS_CANDIDATE: "Cannot delete a user who is a candidate",
+  CONFIRMATION_REQUIRED: "Confirmation is required. Please type DELETE to confirm.",
+  USER_ALREADY_ARCHIVED: "User is already archived",
 
   // Validation errors
   INVALID_REQUEST: "Invalid request",

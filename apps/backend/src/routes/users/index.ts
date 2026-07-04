@@ -6,6 +6,7 @@ import { getUserAuditRoute } from "./audit.routes";
 import {
   deleteUserRoute,
   getUserRoute,
+  hardDeleteUserRoute,
   importUsersRoute,
   listUsersRoute,
   restoreUserRoute,
@@ -22,6 +23,7 @@ router.openapi(importUsersRoute, handlers.importUsers);
 router.openapi(updateUserRoute, handlers.updateUser);
 router.openapi(deleteUserRoute, handlers.deleteUser);
 router.openapi(restoreUserRoute, handlers.restoreUser);
+router.openapi(hardDeleteUserRoute, handlers.hardDeleteUser);
 
 // ── Audit routes ──────────────────────────────────────────────────────────
 // Admin guard is enforced by the `requireAdmin` middleware above and

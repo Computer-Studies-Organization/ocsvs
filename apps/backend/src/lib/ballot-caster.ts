@@ -59,7 +59,7 @@ export type BallotCastingError =
 
 export interface VoteRecord {
   id: string;
-  userId: string;
+  userId: string | null;
   candidateId: string;
   positionId: string;
   electionId: string;

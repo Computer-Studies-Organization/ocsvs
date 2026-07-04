@@ -25,7 +25,7 @@ export const VoteItemSchema = z.object({
 
 export const VoteResponseSchema = z.object({
   id: z.string(),
-  userId: z.string(),
+  userId: z.string().nullable(),
   candidateId: z.string(),
   positionId: z.string(),
   electionId: z.string(),

@@ -119,7 +119,7 @@
             >
               Exit Admin
             </a>
-          {:else if $authStore.user.user.role === 'admin'}
+          {:else if $authStore.user.user.role === 'admin' || $authStore.user.user.role === 'super_admin'}
             <a
               href='/admin-dashboard'
               class='hidden sm:flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition'

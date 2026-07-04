@@ -7,7 +7,7 @@ import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 

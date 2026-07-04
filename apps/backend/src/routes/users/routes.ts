@@ -276,3 +276,53 @@ export const importUsersRoute = createRoute({
     [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
   },
 });
+
+export const hardDeleteUserRoute = createRoute({
+  tags: ["Users"],
+  method: "post",
+  path: "/users/{userId}/hard-delete",
+  security: [{ sessionAuth: [] }],
+  request: {
+    params: z.object({
+      userId: z.string(),
+    }),
+    body: jsonContent(
+      z.object({
+        confirm: z.literal("DELETE"),
+      }),
+      "Confirmation to permanently delete user",
+    ),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "User permanently deleted",
+    ),
+    [httpStatusCodes.BAD_REQUEST]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Validation error (confirmation required, user is candidate, etc.)",
+    ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "User not found",
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Unauthorized",
+    ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Forbidden (only super_admin can delete admins)",
+    ),
+  },
+});

@@ -1,4 +1,4 @@
-import type { Database } from "../repositories/database.type";
+import type { Database, DbClient } from "../repositories/database.type";
 import { and, count, desc, eq, isNull, like, or } from "drizzle-orm";
 import { accounts, users } from "@/database/schema";
 
@@ -68,7 +68,7 @@ export interface DeleteStatus {
 
 export const userAccountQueries = {
   /** Find user by user ID — joined with account */
-  async findById(db: Database, userId: string): Promise<AdminView | null> {
+  async findById(db: DbClient, userId: string): Promise<AdminView | null> {
     const row = await db
       .select({
         id: users.id,
@@ -224,7 +224,7 @@ export const userAccountQueries = {
   },
 
   /** Account delete status — used by delete/restore operations */
-  async getAccountDeleteStatus(db: Database, userId: string): Promise<DeleteStatus | null> {
+  async getAccountDeleteStatus(db: DbClient, userId: string): Promise<DeleteStatus | null> {
     return (
       (await db
         .select({

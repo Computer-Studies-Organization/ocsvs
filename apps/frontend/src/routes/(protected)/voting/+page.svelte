@@ -34,7 +34,7 @@
   let loadError = $state<string | null>(null)
   let isSubmitting = $state(false)
 
-  const isAdmin = $derived($authStore.user?.user?.role === UserRole.ADMIN)
+  const isAdmin = $derived($authStore.user?.user?.role === UserRole.ADMIN || $authStore.user?.user?.role === UserRole.SUPER_ADMIN)
 
   let pageState = $state<TVotingPageState>({ kind: 'loading' })
   $effect(() => {
