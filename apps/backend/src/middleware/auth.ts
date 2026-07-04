@@ -39,7 +39,7 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
 
 export const requireAdmin = createMiddleware<AppBindings>(async (c, next) => {
   const user = c.get("authUser");
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && user.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, 403);
   }
 

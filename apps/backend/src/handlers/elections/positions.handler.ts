@@ -21,7 +21,7 @@ export const listPositionsHandler: AppRouteHandler<typeof listPositionsRoute> = 
 };
 
 export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -64,7 +64,7 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
 };
 
 export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -104,7 +104,7 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
 };
 
 export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin") {
+  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;

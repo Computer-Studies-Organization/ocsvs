@@ -22,7 +22,7 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
   // If election is open, only admins or users who have voted can access results
   if (election.status === "open") {
     const user = c.var.authUser;
-    if (user && user.role !== "admin") {
+    if (user && user.role !== "admin" && user.role !== "super_admin") {
       const studentUser = await userRepo.findByAccountId(db, user.id);
       if (!studentUser) {
         return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);

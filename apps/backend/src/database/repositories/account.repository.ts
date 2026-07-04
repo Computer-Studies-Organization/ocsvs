@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { Database, DbClient } from "./database.type";
 import { and, eq, or, sql } from "drizzle-orm";
 import { accounts, sessions, users } from "@/database/schema";
 
@@ -157,5 +157,25 @@ export const accountRepo = {
       .set({ deletedAt: null, updatedAt: now })
       .where(eq(accounts.id, accountId))
       .run();
+  },
+
+  // Hard delete account: deletes sessions, users, then accounts
+  // Note: votes.user_id is SET NULL via FK constraint (preserves votes)
+  async hardDelete(db: DbClient, accountId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.accountId, accountId));
+    await db.delete(users).where(eq(users.accountId, accountId));
+    await db.delete(accounts).where(eq(accounts.id, accountId));
+  },
+
+  // Count active admin and super_admin accounts
+  async countActiveAdminsAndSuperAdmins(db: DbClient): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(accounts)
+      .where(
+        and(sql`${accounts.role} IN ('admin', 'super_admin')`, sql`${accounts.deletedAt} IS NULL`),
+      )
+      .get();
+    return result?.count ?? 0;
   },
 };

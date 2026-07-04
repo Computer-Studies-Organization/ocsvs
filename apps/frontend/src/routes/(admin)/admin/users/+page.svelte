@@ -1,7 +1,7 @@
 <script lang='ts'>
   import type { TUsersData } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
-  import { deleteUser, restoreUser, updateUser } from '$lib/api/users'
+  import { deleteUser, hardDeleteUser, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
   import { appCache } from '$lib/cache'
   import {
@@ -12,6 +12,7 @@
     Loader,
     RotateCcw,
     Search,
+    Trash2,
     X,
   } from 'lucide-svelte'
   import { addToast } from '$lib/stores/toast'
@@ -63,6 +64,8 @@
   let editMsg = $state('')
   let archiveConfirmUser = $state<TUsersData | null>(null)
   let restoreConfirmUser = $state<TUsersData | null>(null)
+  let hardDeleteConfirmUser = $state<TUsersData | null>(null)
+  let hardDeleteConfirmText = $state('')
   let isActionLoading = $state(false)
   let actionMsg = $state('')
 
@@ -202,6 +205,27 @@
     }
   }
 
+  async function handleHardDelete() {
+    if (!hardDeleteConfirmUser || hardDeleteConfirmText !== 'DELETE')
+      return
+    isActionLoading = true
+    try {
+      await hardDeleteUser(hardDeleteConfirmUser.id, 'DELETE')
+      appCache.invalidate({ resource: 'users' })
+      await invalidate('app:users')
+      hardDeleteConfirmUser = null
+      hardDeleteConfirmText = ''
+      addToast('success', 'User permanently deleted')
+    }
+    catch (e: any) {
+      actionMsg = e.message || 'Failed to delete'
+      addToast('error', e.message || 'Failed to delete')
+    }
+    finally {
+      isActionLoading = false
+    }
+  }
+
 
 </script>
 
@@ -285,6 +309,9 @@
                     {:else}
                       <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
                       <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
+                      {#if $authStore.user?.user.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
+                        <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
+                      {/if}
                     {/if}
                   </div>
                 </td>
@@ -448,6 +475,38 @@
         >
           {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
           Restore
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Hard Delete Confirm -->
+{#if hardDeleteConfirmUser}
+  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
+    <div class='w-full max-w-sm rounded-2xl border border-red-800/40 bg-slate-900 p-6 shadow-2xl'>
+      <h3 class='mb-2 text-lg font-bold text-slate-50'>⚠️ Permanently Delete User?</h3>
+      <p class='mb-4 text-sm text-slate-400'>This will permanently delete <span class='font-semibold text-slate-200'>{hardDeleteConfirmUser.firstName} {hardDeleteConfirmUser.lastName}</span> and cannot be undone.</p>
+      <p class='mb-4 text-xs text-slate-500'>This action removes: account credentials, user profile, and all active sessions.</p>
+      <div class='mb-4'>
+        <label for='hard-delete-confirm' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Type DELETE to confirm</label>
+        <input
+          id='hard-delete-confirm'
+          type='text'
+          bind:value={hardDeleteConfirmText}
+          placeholder='DELETE'
+          class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-red-400 focus:outline-none'
+        />
+      </div>
+      <div class='flex gap-2 justify-end'>
+        <button onclick={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+        <button
+          onclick={handleHardDelete}
+          disabled={isActionLoading || hardDeleteConfirmText !== 'DELETE'}
+          class='flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60 cursor-pointer'
+        >
+          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
+          Delete Permanently
         </button>
       </div>
     </div>

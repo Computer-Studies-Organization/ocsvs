@@ -42,7 +42,7 @@
   let showConfirm = $state(false)
 
   const user = $derived($authStore.user)
-  const isAdmin = $derived(user?.user?.role === UserRole.ADMIN)
+  const isAdmin = $derived(user?.user?.role === UserRole.ADMIN || user?.user?.role === UserRole.SUPER_ADMIN)
 
   async function handleProfileSubmit(e: SubmitEvent) {
     e.preventDefault()

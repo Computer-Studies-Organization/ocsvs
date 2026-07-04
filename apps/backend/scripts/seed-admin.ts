@@ -94,7 +94,7 @@ async function main() {
   await client.batch([
     {
       sql: `INSERT INTO accounts (id, username, email, password_hash, role, created_at, updated_at, last_login)
-            VALUES (?, ?, ?, ?, 'admin', ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, 'super_admin', ?, ?, ?)`,
       args: [ADMIN.accountId, ADMIN.username, ADMIN.email, passwordHash, now, now, now],
     },
     {
@@ -118,7 +118,7 @@ async function main() {
   console.log(`  Username:   ${ADMIN.username}`);
   console.log(`  Password:   ${ADMIN.password}`);
   console.log(`  Student ID: ${ADMIN.studentId}`);
-  console.log(`  Role:       admin`);
+  console.log(`  Role:       super_admin`);
   console.log(`  Account ID: ${ADMIN.accountId}`);
 }
 

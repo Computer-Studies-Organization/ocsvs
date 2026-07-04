@@ -17,6 +17,15 @@ const adminUser = {
   },
 };
 
+const superAdminUser = {
+  user: {
+    id: "superadmin-id",
+    email: "superadmin@example.com",
+    username: "superadmin",
+    role: UserRole.SUPER_ADMIN,
+  },
+};
+
 const standardUser = {
   user: {
     id: "user-id",
@@ -29,6 +38,10 @@ const standardUser = {
 describe("routeGuards", () => {
   test("public routes redirect authenticated admins to the admin dashboard", () => {
     expect(getPublicRouteRedirectPath(adminUser)).toBe("/admin-dashboard");
+  });
+
+  test("public routes redirect authenticated super_admins to the admin dashboard", () => {
+    expect(getPublicRouteRedirectPath(superAdminUser)).toBe("/admin-dashboard");
   });
 
   test("public routes redirect authenticated users to the dashboard", () => {
@@ -59,6 +72,10 @@ describe("routeGuards", () => {
     expect(getAdminRouteRedirectPath(adminUser)).toBeNull();
   });
 
+  test("admin routes allow super_admins to continue", () => {
+    expect(getAdminRouteRedirectPath(superAdminUser)).toBeNull();
+  });
+
   test("admin-elections routes redirect unauthenticated users to login", () => {
     expect(getAdminElectionsRouteRedirectPath(null)).toBe("/auth");
   });
@@ -69,5 +86,9 @@ describe("routeGuards", () => {
 
   test("admin-elections routes allow admins to continue", () => {
     expect(getAdminElectionsRouteRedirectPath(adminUser)).toBeNull();
+  });
+
+  test("admin-elections routes allow super_admins to continue", () => {
+    expect(getAdminElectionsRouteRedirectPath(superAdminUser)).toBeNull();
   });
 });

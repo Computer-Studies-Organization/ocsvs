@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { Database, DbClient } from "./database.type";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { candidates, positions, votes } from "@/database/schema";
 
@@ -253,6 +253,17 @@ export const candidateRepo = {
           eq(candidates.isActive, 1),
         ),
       )
+      .limit(1)
+      .get();
+    return res !== undefined;
+  },
+
+  // Check if account is a candidate (active or deactivated)
+  async isCandidate(db: DbClient, accountId: string): Promise<boolean> {
+    const res = await db
+      .select({ id: candidates.id })
+      .from(candidates)
+      .where(eq(candidates.accountId, accountId))
       .limit(1)
       .get();
     return res !== undefined;

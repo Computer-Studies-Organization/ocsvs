@@ -2,6 +2,7 @@ import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   deleteUserRoute,
   getUserRoute,
+  hardDeleteUserRoute,
   importUsersRoute,
   listUsersRoute,
   restoreUserRoute,
@@ -9,6 +10,7 @@ import type {
 } from "@/routes/users/routes";
 import { createDb } from "@/config/db";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
@@ -55,7 +57,7 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
 };
 
 export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin") {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -123,7 +125,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 };
 
 export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin") {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -172,7 +174,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
 };
 
 export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin") {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
   const actorAccountId = c.var.authUser.id;
@@ -226,7 +228,7 @@ function generateVoterUsername(
 }
 
 export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin") {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
@@ -356,4 +358,104 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
     },
     httpStatusCodes.OK,
   );
+};
+
+export const hardDeleteUser: AppRouteHandler<typeof hardDeleteUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
+  const { db } = createDb(c);
+  const { userId } = c.req.valid("param");
+  // confirm is validated by Zod at route level to be "DELETE"
+
+  // Perform checks and hard delete atomically in a transaction
+  const result = await db.transaction(async (tx) => {
+    // Get user's accountId and check status inside transaction to avoid TOCTOU
+    const user = await userAccountQueries.getAccountDeleteStatus(tx, userId);
+
+    if (!user) {
+      return {
+        error: ERROR_MESSAGES.USER_NOT_FOUND,
+        statusCode: httpStatusCodes.NOT_FOUND,
+      };
+    }
+
+    // Check if already archived
+    if (user.deletedAt !== null) {
+      return {
+        error: ERROR_MESSAGES.USER_ALREADY_ARCHIVED,
+        statusCode: httpStatusCodes.BAD_REQUEST,
+      };
+    }
+
+    // Prevent admin from deleting themselves
+    if (actorAccountId === user.accountId) {
+      return {
+        error: ERROR_MESSAGES.CANNOT_DELETE_SELF,
+        statusCode: httpStatusCodes.BAD_REQUEST,
+      };
+    }
+
+    // Role-based permission checks
+    const isTargetAdmin = user.role === "admin" || user.role === "super_admin";
+
+    if (isTargetAdmin) {
+      // Only super_admin can delete admins/super_admins
+      const requesterRole = c.var.authUser.role as string;
+      if (requesterRole !== "super_admin") {
+        return {
+          error: ERROR_MESSAGES.CANNOT_DELETE_ADMIN,
+          statusCode: httpStatusCodes.FORBIDDEN,
+        };
+      }
+    }
+
+    // Check if user is a candidate (active or deactivated)
+    const isCandidate = await candidateRepo.isCandidate(tx, user.accountId);
+    if (isCandidate) {
+      return {
+        error: ERROR_MESSAGES.USER_IS_CANDIDATE,
+        statusCode: httpStatusCodes.BAD_REQUEST,
+      };
+    }
+
+    if (isTargetAdmin) {
+      // Cannot delete the last admin/super_admin
+      const adminCount = await accountRepo.countActiveAdminsAndSuperAdmins(tx);
+      if (adminCount <= 1) {
+        return {
+          error: ERROR_MESSAGES.CANNOT_DELETE_LAST_ADMIN,
+          statusCode: httpStatusCodes.BAD_REQUEST,
+        };
+      }
+    }
+
+    // Get username and studentId for audit log before deletion
+    const userWithDetails = await userAccountQueries.findById(tx, userId);
+    const username = userWithDetails?.username ?? "unknown";
+    const studentId = userWithDetails?.studentId ?? "unknown";
+
+    // Perform hard delete
+    await accountRepo.hardDelete(tx, user.accountId);
+
+    // Create audit log entry
+    await auditLogRepo.insert(tx, {
+      action: "user.hard_delete",
+      targetType: "user",
+      targetId: userId,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+      description: `Permanently deleted: ${username} (${studentId})`,
+    });
+
+    return { success: true };
+  });
+
+  if ("error" in result && result.error) {
+    return c.json({ message: result.error }, result.statusCode as 400 | 403 | 404);
+  }
+
+  return c.json({ message: "User permanently deleted" }, httpStatusCodes.OK);
 };

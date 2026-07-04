@@ -7,6 +7,7 @@ export type TCourse = (typeof COURSE_VALUES)[number];
 export enum UserRole {
   ADMIN = "admin",
   USER = "user",
+  SUPER_ADMIN = "super_admin",
 }
 
 export interface TUserData {

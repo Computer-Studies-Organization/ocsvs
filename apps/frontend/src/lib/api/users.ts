@@ -83,3 +83,13 @@ export async function importUsers(data: {
 }): Promise<ImportUsersResponse> {
   return apiFetch("/users/import", { method: "POST", body: JSON.stringify(data) });
 }
+
+export async function hardDeleteUser(
+  userId: string,
+  confirm: string,
+): Promise<{ message: string }> {
+  return apiFetch(`/users/${userId}/hard-delete`, {
+    method: "POST",
+    body: JSON.stringify({ confirm }),
+  });
+}

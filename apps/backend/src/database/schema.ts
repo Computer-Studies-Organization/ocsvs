@@ -3,7 +3,7 @@ import { desc, sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from "drizzle-zod";
 
-export const ROLES = z.enum(["user", "admin"]);
+export const ROLES = z.enum(["user", "admin", "super_admin"]);
 
 export const ELECTION_STATUS = z.enum(["draft", "open", "closed", "archived"]);
 export type TElectionStatus = z.infer<typeof ELECTION_STATUS>;
@@ -105,8 +105,10 @@ export const positions = sqliteTable(
 // on `candidates.position_id`, `votes.position_id`, and `votes.election_id`
 // prevents orphaned references. The unique indexes
 // (`votes_user_position_election_unique_idx` and
-// `votes_user_candidate_unique_idx`) provide additional integrity guarantees
-// per the design spec.
+// `votes_user_candidate_unique_idx`) provide additional integrity guarantees.
+// Note that when users are hard deleted, votes.user_id is SET NULL, which
+// bypasses these unique index constraints in SQLite, allowing multiple anonymized
+// votes to coexist without collision.
 export const candidates = sqliteTable("candidates", {
   createdAt: integer("created_at")
     .notNull()
@@ -137,9 +139,7 @@ export const votes = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
     id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     candidateId: text("candidate_id")
       .notNull()
       .references(() => candidates.id),
