@@ -2,6 +2,7 @@ import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   deleteUserRoute,
   getUserRoute,
+  importUsersRoute,
   listUsersRoute,
   restoreUserRoute,
   updateUserRoute,
@@ -12,6 +13,9 @@ import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { inArray } from "drizzle-orm";
+import { accounts, auditLog, users } from "@/database/schema";
+import { hashPassword } from "@/lib/password";
 
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -197,4 +201,159 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
   });
 
   return c.json({ message: "User restored successfully" }, httpStatusCodes.OK);
+};
+
+function generateVoterUsername(
+  firstName: string,
+  lastName: string,
+  studentId: string,
+  existingUsernames: Set<string>,
+): string {
+  const cleanFirst = firstName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanLast = lastName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  let baseUsername = `${cleanFirst}.${cleanLast}`;
+  if (baseUsername.length < 3) {
+    baseUsername = studentId.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  let username = baseUsername;
+  let counter = 1;
+  while (existingUsernames.has(username)) {
+    username = `${baseUsername}.${counter}`;
+    counter++;
+  }
+  existingUsernames.add(username);
+  return username;
+}
+
+export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
+  const { db } = createDb(c);
+
+  const { users: importPayload } = c.req.valid("json");
+
+  if (!importPayload || importPayload.length === 0) {
+    return c.json(
+      {
+        message: "Empty import list",
+        imported: [],
+        skipped: [],
+      },
+      httpStatusCodes.OK,
+    );
+  }
+
+  const studentIdsToCheck = importPayload.map((u) => u.studentId);
+  const existingUsers = await db
+    .select({ studentId: users.studentId })
+    .from(users)
+    .where(inArray(users.studentId, studentIdsToCheck))
+    .all();
+
+  const existingStudentIdsSet = new Set(existingUsers.map((u) => u.studentId));
+
+  const existingAccounts = await db.select({ username: accounts.username }).from(accounts).all();
+
+  const existingUsernamesSet = new Set(existingAccounts.map((a) => a.username));
+
+  const imported: {
+    studentId: string;
+    fullName: string;
+    username: string;
+    password: string;
+  }[] = [];
+
+  const skipped: {
+    studentId: string;
+    reason: string;
+  }[] = [];
+
+  const dbOps: any[] = [];
+  const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  for (const record of importPayload) {
+    if (existingStudentIdsSet.has(record.studentId)) {
+      skipped.push({
+        studentId: record.studentId,
+        reason: "Student ID already exists in the system",
+      });
+      continue;
+    }
+    existingStudentIdsSet.add(record.studentId);
+
+    const randomBytes = new Uint8Array(10);
+    crypto.getRandomValues(randomBytes);
+    let rawPassword = "";
+    for (let i = 0; i < 10; i++) {
+      rawPassword += charset[randomBytes[i] % charset.length];
+    }
+
+    const hashedPassword = await hashPassword(rawPassword);
+    const username = generateVoterUsername(
+      record.firstName,
+      record.lastName,
+      record.studentId,
+      existingUsernamesSet,
+    );
+
+    const accountId = crypto.randomUUID();
+    const userId = crypto.randomUUID();
+
+    dbOps.push(
+      db.insert(accounts).values({
+        id: accountId,
+        role: "user",
+        username,
+        password_hash: hashedPassword,
+      }),
+    );
+
+    dbOps.push(
+      db.insert(users).values({
+        id: userId,
+        accountId,
+        studentId: record.studentId,
+        firstName: record.firstName,
+        lastName: record.lastName,
+        course: record.course,
+        yearLevel: record.yearLevel,
+      }),
+    );
+
+    dbOps.push(
+      db.insert(auditLog).values({
+        id: crypto.randomUUID(),
+        action: "user.create",
+        targetType: "user",
+        targetId: userId,
+        actorAccountIdSnapshot: actorAccountId,
+        actorUsernameSnapshot: actorUsername,
+        description: `Bulk imported student account: ${record.studentId}`,
+      }),
+    );
+
+    imported.push({
+      studentId: record.studentId,
+      fullName: `${record.firstName} ${record.lastName}`.trim().toUpperCase(),
+      username,
+      password: rawPassword,
+    });
+  }
+
+  if (dbOps.length > 0) {
+    await db.batch(dbOps as any);
+  }
+
+  return c.json(
+    {
+      message: "Import completed successfully",
+      imported,
+      skipped,
+    },
+    httpStatusCodes.OK,
+  );
 };

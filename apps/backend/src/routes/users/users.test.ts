@@ -1,15 +1,20 @@
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import router from "./index";
+
+const { mockAuthUser } = vi.hoisted(() => ({
+  mockAuthUser: {
+    id: "test-user-id",
+    email: "test@example.com",
+    username: "testuser",
+    role: "admin",
+  },
+}));
 
 // Mock the auth middleware
 vi.mock("@/middleware/auth", () => ({
   requireAuth: async (c: any, next: any) => {
-    c.set("authUser", {
-      id: "test-user-id",
-      email: "test@example.com",
-      username: "testuser",
-      role: "admin",
-    });
+    c.set("authUser", mockAuthUser);
     await next();
   },
   requireAdmin: async (_c: any, next: any) => {
@@ -17,9 +22,37 @@ vi.mock("@/middleware/auth", () => ({
   },
 }));
 
+const { mockDb, mockDbAll, mockDbBatch } = vi.hoisted(() => {
+  const mockDbAll = vi.fn();
+  const mockDbWhere = vi.fn();
+  const mockDbFrom = vi.fn();
+  const mockDbSelect = vi.fn();
+  const mockDbBatch = vi.fn();
+  const mockDbInsert = vi.fn();
+  const mockDbValues = vi.fn();
+
+  mockDbSelect.mockImplementation(() => ({ from: mockDbFrom }));
+  mockDbFrom.mockImplementation(() => ({
+    where: mockDbWhere,
+    all: mockDbAll,
+  }));
+  mockDbWhere.mockImplementation(() => ({ all: mockDbAll }));
+  mockDbInsert.mockImplementation(() => ({ values: mockDbValues }));
+
+  return {
+    mockDb: {
+      select: mockDbSelect,
+      batch: mockDbBatch,
+      insert: mockDbInsert,
+    },
+    mockDbAll,
+    mockDbBatch,
+  };
+});
+
 // Mock the database (handler still calls createDb)
 vi.mock("@/config/db", () => ({
-  createDb: vi.fn(() => ({ db: {} })),
+  createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
 // Mock the users repository (single-table ops only)
@@ -91,6 +124,7 @@ vi.mock("@/database/repositories/account.repository", () => ({
 describe("users Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthUser.role = "admin";
   });
 
   it("should return paginated list of users", async () => {
@@ -209,7 +243,7 @@ describe("users Routes", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as any;
       expect(body.message).toBe("User archived successfully");
-      expect(mockSoftDelete).toHaveBeenCalledWith({}, "other-account-id");
+      expect(mockSoftDelete).toHaveBeenCalledWith(mockDb, "other-account-id");
       expect(mockAuditLogInsert).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
@@ -234,7 +268,7 @@ describe("users Routes", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(mockSoftDelete).toHaveBeenCalledWith({}, "other-account-id");
+      expect(mockSoftDelete).toHaveBeenCalledWith(mockDb, "other-account-id");
     });
 
     it("should return 400 when admin tries to delete themselves", async () => {
@@ -298,6 +332,134 @@ describe("users Routes", () => {
       expect(res.status).toBe(404);
       const body = (await res.json()) as any;
       expect(body.message).toBe("User not found");
+    });
+  });
+
+  describe("POST /users/import", () => {
+    it("should reject non-admin requests", async () => {
+      mockAuthUser.role = "user";
+      const res = await router.request("/users/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          users: [
+            {
+              studentId: "2021-0001",
+              firstName: "Alice",
+              lastName: "Smith",
+              course: "BSCS",
+              yearLevel: "1st Year",
+            },
+          ],
+        }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.FORBIDDEN);
+    });
+
+    it("should successfully import new students", async () => {
+      mockDbAll.mockResolvedValueOnce([]); // existingUsers
+      mockDbAll.mockResolvedValueOnce([]); // existingAccounts
+      mockDbBatch.mockResolvedValueOnce([]);
+
+      const res = await router.request("/users/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          users: [
+            {
+              studentId: "2021-0001",
+              firstName: "Alice",
+              lastName: "Smith",
+              course: "BSCS",
+              yearLevel: "1st Year",
+            },
+            {
+              studentId: "2021-0002",
+              firstName: "Bob",
+              lastName: "Jones",
+              course: "BSIT",
+              yearLevel: "2nd Year",
+            },
+          ],
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("Import completed successfully");
+      expect(body.imported).toHaveLength(2);
+      expect(body.skipped).toHaveLength(0);
+
+      expect(body.imported[0]).toEqual(
+        expect.objectContaining({
+          studentId: "2021-0001",
+          fullName: "ALICE SMITH",
+          username: "alice.smith",
+          password: expect.any(String),
+        }),
+      );
+      expect(body.imported[1]).toEqual(
+        expect.objectContaining({
+          studentId: "2021-0002",
+          fullName: "BOB JONES",
+          username: "bob.jones",
+          password: expect.any(String),
+        }),
+      );
+
+      expect(mockDbBatch).toHaveBeenCalled();
+    });
+
+    it("should handle duplicate student IDs (skipped records)", async () => {
+      mockDbAll.mockResolvedValueOnce([{ studentId: "2021-0001" }]); // existingUsers
+      mockDbAll.mockResolvedValueOnce([]); // existingAccounts
+      mockDbBatch.mockResolvedValueOnce([]);
+
+      const res = await router.request("/users/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          users: [
+            {
+              studentId: "2021-0001",
+              firstName: "Alice",
+              lastName: "Smith",
+              course: "BSCS",
+              yearLevel: "1st Year",
+            },
+            {
+              studentId: "2021-0002",
+              firstName: "Bob",
+              lastName: "Jones",
+              course: "BSIT",
+              yearLevel: "2nd Year",
+            },
+          ],
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("Import completed successfully");
+      expect(body.imported).toHaveLength(1);
+      expect(body.skipped).toHaveLength(1);
+
+      expect(body.imported[0].studentId).toBe("2021-0002");
+      expect(body.skipped[0]).toEqual({
+        studentId: "2021-0001",
+        reason: "Student ID already exists in the system",
+      });
+
+      expect(mockDbBatch).toHaveBeenCalled();
     });
   });
 });

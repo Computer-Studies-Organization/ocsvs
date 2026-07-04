@@ -23,6 +23,7 @@ dist/
 .env
 .dev.vars
 .worktrees
+credentials.csv
 
 # DB
 *.db

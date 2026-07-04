@@ -6,6 +6,7 @@ import { getUserAuditRoute } from "./audit.routes";
 import {
   deleteUserRoute,
   getUserRoute,
+  importUsersRoute,
   listUsersRoute,
   restoreUserRoute,
   updateUserRoute,
@@ -17,6 +18,7 @@ router.use("/users", requireAdmin);
 router.use("/users/*", requireAdmin);
 router.openapi(listUsersRoute, handlers.listUsers);
 router.openapi(getUserRoute, handlers.getUser);
+router.openapi(importUsersRoute, handlers.importUsers);
 router.openapi(updateUserRoute, handlers.updateUser);
 router.openapi(deleteUserRoute, handlers.deleteUser);
 router.openapi(restoreUserRoute, handlers.restoreUser);
