@@ -53,3 +53,33 @@ export async function deleteUser(userId: string): Promise<{ message: string }> {
 export async function restoreUser(userId: string): Promise<{ message: string }> {
   return apiFetch(`/users/${userId}/restore`, { method: "POST" });
 }
+
+export interface ImportedUser {
+  studentId: string;
+  fullName: string;
+  username: string;
+  password: string;
+}
+
+export interface SkippedUser {
+  studentId: string;
+  reason: string;
+}
+
+export interface ImportUsersResponse {
+  message: string;
+  imported: ImportedUser[];
+  skipped: SkippedUser[];
+}
+
+export async function importUsers(data: {
+  users: {
+    studentId: string;
+    firstName: string;
+    lastName: string;
+    course: string;
+    yearLevel: string;
+  }[];
+}): Promise<ImportUsersResponse> {
+  return apiFetch("/users/import", { method: "POST", body: JSON.stringify(data) });
+}

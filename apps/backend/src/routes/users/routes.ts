@@ -227,3 +227,52 @@ export const restoreUserRoute = createRoute({
     ),
   },
 });
+
+export const ImportUsersBodySchema = z
+  .object({
+    users: z.array(
+      z.object({
+        studentId: z.string(),
+        firstName: z.string(),
+        lastName: z.string(),
+        course: z.string(),
+        yearLevel: z.string(),
+      }),
+    ),
+  })
+  .openapi("ImportUsersBody");
+
+export const ImportUsersResponseSchema = z
+  .object({
+    message: z.string(),
+    imported: z.array(
+      z.object({
+        studentId: z.string(),
+        fullName: z.string(),
+        username: z.string(),
+        password: z.string(),
+      }),
+    ),
+    skipped: z.array(
+      z.object({
+        studentId: z.string(),
+        reason: z.string(),
+      }),
+    ),
+  })
+  .openapi("ImportUsersResponse");
+
+export const importUsersRoute = createRoute({
+  tags: ["Users"],
+  method: "post",
+  path: "/users/import",
+  security: [{ sessionAuth: [] }],
+  request: {
+    body: jsonContent(ImportUsersBodySchema, "Voter import payload"),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(ImportUsersResponseSchema, "Import results summary"),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(z.object({ message: z.string() }), "Unauthorized"),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
+  },
+});
