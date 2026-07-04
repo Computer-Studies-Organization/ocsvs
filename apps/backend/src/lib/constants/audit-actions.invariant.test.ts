@@ -15,21 +15,24 @@ function walk(dir: string, acc: string[] = []): string[] {
 }
 
 describe("audit-actions enum drift", () => {
-  it("every auditLogRepo.insert() action literal in handlers is in AUDIT_ACTIONS.options", () => {
-    const handlersDir = path.join(process.cwd(), "src", "handlers");
-    const files = walk(handlersDir);
-    const re = /auditLogRepo\.insert\(\s*\w+\s*,\s*\{\s*action:\s*"([^"]+)"/g;
+  it("every emitted audit action literal is in AUDIT_ACTIONS.options", () => {
+    const files = [
+      ...walk(path.join(process.cwd(), "src", "handlers")),
+      ...walk(path.join(process.cwd(), "scripts")),
+    ];
+    const re =
+      /(?:auditLogRepo\.insert\(\s*\w+\s*,\s*\{\s*action:\s*"([^"]+)"|const\s+\w+_AUDIT_ACTION\s*=\s*"([^"]+)"\s+satisfies\s+AuditAction)/g;
 
     const found = new Set<string>();
     for (const f of files) {
       const content = fs.readFileSync(f, "utf8");
       for (const m of content.matchAll(re)) {
-        found.add(m[1]);
+        found.add(m[1] ?? m[2]);
       }
     }
 
-    // All 12 actions must appear as string literals in the handlers.
-    expect(found.size).toBe(12);
+    // All canonical actions must appear as emitted literals in handlers or scripts.
+    expect(found.size).toBe(AUDIT_ACTIONS.options.length);
 
     // Every literal must be a valid action.
     const valid = new Set<string>(AUDIT_ACTIONS.options);
