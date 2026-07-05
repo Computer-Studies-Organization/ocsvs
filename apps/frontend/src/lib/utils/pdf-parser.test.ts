@@ -129,4 +129,25 @@ describe("pdf-parser parseLines", () => {
       parseErrorMessage: undefined,
     });
   });
+
+  it("should flag a parse error when the course info line is missing entirely", () => {
+    const lines = [
+      "ACLC College",
+      "C23-01-095",
+      "DELA CRUZ, JUAN CARLOS",
+      "Showing 1 to 1 of 1 entries",
+    ];
+
+    const result = parseLines(lines);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      studentId: "C23-01-095",
+      lastName: "DELA CRUZ",
+      firstName: "JUAN CARLOS",
+      course: "BSCS",
+      yearLevel: "1st Year",
+      hasParseError: true,
+      parseErrorMessage: "Could not detect student course information.",
+    });
+  });
 });

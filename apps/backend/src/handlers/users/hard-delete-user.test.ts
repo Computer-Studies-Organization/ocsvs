@@ -245,11 +245,16 @@ describe("hardDeleteUser handler", () => {
     expect(body.message).toBe(ERROR_MESSAGES.USER_NOT_FOUND);
   });
 
-  it("should return 400 if user is already archived", async () => {
+  it("should successfully hard delete an archived/soft-deleted user", async () => {
     mockGetAccountDeleteStatus.mockResolvedValue({
       accountId: "target-user-id",
       deletedAt: 1234567,
       role: "user",
+    });
+    mockIsCandidate.mockResolvedValue(false);
+    mockFindById.mockResolvedValue({
+      username: "targetuser",
+      studentId: "C24-1234",
     });
 
     const res = await router.request("/users/some-user-id/hard-delete", {
@@ -258,8 +263,9 @@ describe("hardDeleteUser handler", () => {
       body: JSON.stringify({ confirm: "DELETE" }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(body.message).toBe(ERROR_MESSAGES.USER_ALREADY_ARCHIVED);
+    expect(body.message).toBe("User permanently deleted");
+    expect(mockHardDelete).toHaveBeenCalledWith(mockDb, "target-user-id");
   });
 });

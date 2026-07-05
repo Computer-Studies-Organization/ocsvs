@@ -87,12 +87,14 @@ const {
   mockSoftDelete,
   mockRestore,
   mockCountActiveAdmins,
+  mockCountActiveAdminsAndSuperAdmins,
 } = vi.hoisted(() => ({
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockSoftDelete: vi.fn(),
   mockRestore: vi.fn(),
   mockCountActiveAdmins: vi.fn(),
+  mockCountActiveAdminsAndSuperAdmins: vi.fn(),
 }));
 
 const { mockAuditLogInsert } = vi.hoisted(() => ({
@@ -117,6 +119,7 @@ vi.mock("@/database/repositories/account.repository", () => ({
     getPasswordHash: vi.fn(),
     softDelete: mockSoftDelete,
     countActiveAdmins: mockCountActiveAdmins,
+    countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     restore: mockRestore,
   },
 }));
@@ -228,12 +231,13 @@ describe("users Routes", () => {
 
   describe("DELETE /:id - deleteUser", () => {
     it("should delete user successfully", async () => {
+      mockAuthUser.role = "super_admin";
       mockGetAccountDeleteStatus.mockResolvedValue({
         accountId: "other-account-id",
         deletedAt: null,
         role: "admin",
       });
-      mockCountActiveAdmins.mockResolvedValue(2);
+      mockCountActiveAdminsAndSuperAdmins.mockResolvedValue(2);
       mockSoftDelete.mockResolvedValue(undefined);
 
       const res = await router.request("/users/some-user-id", {
@@ -289,12 +293,13 @@ describe("users Routes", () => {
     });
 
     it("should return 400 when trying to delete the last admin", async () => {
+      mockAuthUser.role = "super_admin";
       mockGetAccountDeleteStatus.mockResolvedValue({
         accountId: "other-account-id",
         deletedAt: null,
         role: "admin",
       });
-      mockCountActiveAdmins.mockResolvedValue(1);
+      mockCountActiveAdminsAndSuperAdmins.mockResolvedValue(1);
 
       const res = await router.request("/users/some-user-id", {
         method: "DELETE",
@@ -303,6 +308,24 @@ describe("users Routes", () => {
       expect(res.status).toBe(400);
       const body = (await res.json()) as any;
       expect(body.message).toBe("Cannot delete the last admin account");
+      expect(mockSoftDelete).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when regular admin tries to delete another admin", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: null,
+        role: "admin",
+      });
+
+      const res = await router.request("/users/some-user-id", {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_DELETE_ADMIN);
       expect(mockSoftDelete).not.toHaveBeenCalled();
     });
 
