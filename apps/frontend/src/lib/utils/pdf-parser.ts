@@ -68,11 +68,7 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
           break;
         }
 
-        if (
-          nextLine.toLowerCase().includes("bscs") ||
-          nextLine.toLowerCase().includes("bsit") ||
-          nextLine.toLowerCase().includes("act")
-        ) {
+        if (/\b(bscs|bsit|act)\b/i.test(nextLine)) {
           courseInfoLine = nextLine;
           break;
         } else {
@@ -82,19 +78,13 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
       }
 
       // Extract course details
-      const lowerLine = courseInfoLine.toLowerCase();
       let courseIndex = -1;
       let detectedCourse = "BSCS";
 
-      if (lowerLine.includes("bscs")) {
-        courseIndex = lowerLine.indexOf("bscs");
-        detectedCourse = "BSCS";
-      } else if (lowerLine.includes("bsit")) {
-        courseIndex = lowerLine.indexOf("bsit");
-        detectedCourse = "BSIT";
-      } else if (lowerLine.includes("act")) {
-        courseIndex = lowerLine.indexOf("act");
-        detectedCourse = "ACT";
+      const match = /\b(bscs|bsit|act)\b/i.exec(courseInfoLine);
+      if (match) {
+        courseIndex = match.index;
+        detectedCourse = match[1].toUpperCase();
       }
 
       if (courseIndex !== -1) {

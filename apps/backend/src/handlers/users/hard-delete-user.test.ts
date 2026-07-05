@@ -268,4 +268,31 @@ describe("hardDeleteUser handler", () => {
     expect(body.message).toBe("User permanently deleted");
     expect(mockHardDelete).toHaveBeenCalledWith(mockDb, "target-user-id");
   });
+
+  it("should allow super_admin to hard delete an archived admin even if active admin count is 1", async () => {
+    mockAuthUser.id = "superadmin-id";
+    mockAuthUser.role = "super_admin";
+    mockGetAccountDeleteStatus.mockResolvedValue({
+      accountId: "target-admin-id",
+      deletedAt: 1234567,
+      role: "admin",
+    });
+    mockIsCandidate.mockResolvedValue(false);
+    mockCountActiveAdminsAndSuperAdmins.mockResolvedValue(1);
+    mockFindById.mockResolvedValue({
+      username: "targetadmin",
+      studentId: "C24-5678",
+    });
+
+    const res = await router.request("/users/some-user-id/hard-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: "DELETE" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("User permanently deleted");
+    expect(mockHardDelete).toHaveBeenCalledWith(mockDb, "target-admin-id");
+  });
 });
