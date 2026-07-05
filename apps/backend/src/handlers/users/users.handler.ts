@@ -149,9 +149,17 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
     return c.json({ message: ERROR_MESSAGES.CANNOT_DELETE_SELF }, httpStatusCodes.BAD_REQUEST);
   }
 
-  // Prevent deleting the last admin
-  if (user.role === "admin") {
-    const adminCount = await accountRepo.countActiveAdmins(db);
+  // Role-based permission checks: only super_admin can delete admins/super_admins
+  const isTargetAdmin = user.role === "admin" || user.role === "super_admin";
+
+  if (isTargetAdmin) {
+    const requesterRole = c.var.authUser.role as string;
+    if (requesterRole !== "super_admin") {
+      return c.json({ message: ERROR_MESSAGES.CANNOT_DELETE_ADMIN }, httpStatusCodes.FORBIDDEN);
+    }
+
+    // Cannot delete the last admin/super_admin
+    const adminCount = await accountRepo.countActiveAdminsAndSuperAdmins(db);
     if (adminCount <= 1) {
       return c.json(
         { message: ERROR_MESSAGES.CANNOT_DELETE_LAST_ADMIN },
@@ -287,11 +295,14 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
     }
     existingStudentIdsSet.add(record.studentId);
 
-    const randomBytes = new Uint8Array(10);
-    crypto.getRandomValues(randomBytes);
     let rawPassword = "";
-    for (let i = 0; i < 10; i++) {
-      rawPassword += charset[randomBytes[i] % charset.length];
+    while (rawPassword.length < 10) {
+      const byte = new Uint8Array(1);
+      crypto.getRandomValues(byte);
+      if (byte[0] < 228) {
+        // 228 = 57 * 4, eliminating modulo bias
+        rawPassword += charset[byte[0] % charset.length];
+      }
     }
 
     const hashedPassword = await hashPassword(rawPassword);
@@ -379,14 +390,6 @@ export const hardDeleteUser: AppRouteHandler<typeof hardDeleteUserRoute> = async
       return {
         error: ERROR_MESSAGES.USER_NOT_FOUND,
         statusCode: httpStatusCodes.NOT_FOUND,
-      };
-    }
-
-    // Check if already archived
-    if (user.deletedAt !== null) {
-      return {
-        error: ERROR_MESSAGES.USER_ALREADY_ARCHIVED,
-        statusCode: httpStatusCodes.BAD_REQUEST,
       };
     }
 

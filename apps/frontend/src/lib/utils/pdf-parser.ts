@@ -156,6 +156,37 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
           hasParseError,
           parseErrorMessage,
         });
+      } else {
+        const fullName = nameParts.join(" ").replace(/\s+/g, " ").trim() || "Unknown";
+        let lastName = "";
+        let firstName = "";
+
+        if (fullName.includes(",")) {
+          const commaIndex = fullName.indexOf(",");
+          lastName = fullName.substring(0, commaIndex).trim();
+          firstName = fullName.substring(commaIndex + 1).trim();
+          if (!lastName) lastName = "Unknown";
+          if (!firstName) firstName = "Unknown";
+        } else {
+          const nameWords = fullName.split(" ");
+          if (nameWords.length >= 2) {
+            lastName = nameWords[0];
+            firstName = nameWords.slice(1).join(" ");
+          } else {
+            lastName = nameWords[0] || "Unknown";
+            firstName = "Unknown";
+          }
+        }
+
+        records.push({
+          studentId,
+          lastName,
+          firstName,
+          course: "BSCS", // Fallback default
+          yearLevel: "1st Year", // Fallback default
+          hasParseError: true,
+          parseErrorMessage: "Could not detect student course information.",
+        });
       }
       i = j;
     }

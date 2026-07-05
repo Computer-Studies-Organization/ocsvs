@@ -54,8 +54,8 @@
     if (!rec.studentId.trim()) {
       return "Student ID is required";
     }
-    if (!/^C\d{2}-\d{2}-\d+$/.test(rec.studentId.trim())) {
-      return "Invalid ID format (expected e.g. C23-01-095)";
+    if (!/^C\d{2}-\d{2}-[A-Za-z0-9-]+$/.test(rec.studentId.trim())) {
+      return "Invalid ID format (expected e.g. C23-01-095-MAN121)";
     }
     if (!rec.firstName.trim()) {
       return "First Name is required";
