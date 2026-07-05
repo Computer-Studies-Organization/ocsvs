@@ -54,8 +54,8 @@
     if (!rec.studentId.trim()) {
       return "Student ID is required";
     }
-    if (!/^C\d{2}-\d{2}-[A-Za-z0-9-]+$/.test(rec.studentId.trim())) {
-      return "Invalid ID format (expected e.g. C23-01-095-MAN121)";
+    if (!/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/.test(rec.studentId.trim())) {
+      return "Invalid ID format (expected e.g. C25-01-10306-MAN121)";
     }
     if (!rec.firstName.trim()) {
       return "First Name is required";
@@ -443,9 +443,9 @@
                               <input
                                 type="text"
                                 bind:value={record.studentId}
-                                placeholder="e.g. C23-01-095"
+                                placeholder="e.g. C25-01-10306-MAN121"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
-                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-[A-Za-z0-9-]+$/.test(record.studentId.trim())) 
+                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/.test(record.studentId.trim())) 
                                     ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50' 
                                     : 'border-slate-800 focus:border-amber-500 focus:outline-none'}"
                               />
@@ -658,7 +658,7 @@
                             <td class="px-4 py-3 font-semibold text-slate-50">{voter.studentId}</td>
                             <td class="px-4 py-3 font-semibold text-slate-50">{voter.fullName}</td>
                             <td class="px-4 py-3 text-slate-300">{voter.username}</td>
-                            <td class="px-4 py-3 font-mono text-amber-300 font-bold select-all cursor-pointer" title="Double click to select">{voter.password}</td>
+                            <td class="px-4 py-3 font-mono text-amber-300 font-bold select-all cursor-pointer" title="Click to select all">{voter.password}</td>
                           </tr>
                         {/each}
                       </tbody>

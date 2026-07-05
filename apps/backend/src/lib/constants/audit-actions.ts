@@ -40,6 +40,7 @@ export const AUDIT_ACTIONS = z.enum([
   "candidate.deactivate",
   "user.update",
   "user.create",
+  "user.bulk_import",
   "user.soft_delete",
   "user.restore",
   "user.hard_delete",

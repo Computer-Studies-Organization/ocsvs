@@ -16,7 +16,7 @@ import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { inArray } from "drizzle-orm";
-import { accounts, auditLog, users } from "@/database/schema";
+import { accounts, users } from "@/database/schema";
 import { hashPassword } from "@/lib/password";
 
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -337,18 +337,6 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
       }),
     );
 
-    dbOps.push(
-      db.insert(auditLog).values({
-        id: crypto.randomUUID(),
-        action: "user.create",
-        targetType: "user",
-        targetId: userId,
-        actorAccountIdSnapshot: actorAccountId,
-        actorUsernameSnapshot: actorUsername,
-        description: `Bulk imported student account: ${record.studentId}`,
-      }),
-    );
-
     imported.push({
       studentId: record.studentId,
       fullName: `${record.firstName} ${record.lastName}`.trim().toUpperCase(),
@@ -359,6 +347,15 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
 
   if (dbOps.length > 0) {
     await db.batch(dbOps as any);
+
+    await auditLogRepo.insert(db, {
+      action: "user.bulk_import",
+      targetType: "user",
+      targetId: crypto.randomUUID(),
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+      description: `Bulk imported ${imported.length} voter account${imported.length !== 1 ? "s" : ""}${skipped.length > 0 ? ` (${skipped.length} skipped)` : ""}`,
+    });
   }
 
   return c.json(

@@ -168,6 +168,32 @@ export const VoteSchema = z.object({
 });
 
 // Type aliases for convenience - use these in route definitions
+/** Extended schema for admin-facing user endpoints (GET /users, GET /users/:id).
+ * Mirrors the AdminView interface returned by userAccountQueries.findById / listForAdmin.
+ */
+export const AdminUserApiSchema = UserApiSchema.extend({
+  username: z.string().openapi({
+    description: "Account username",
+    example: "john.doe",
+  }),
+  email: z.string().nullable().openapi({
+    description: "Account email address (nullable)",
+    example: "john.doe@school.edu",
+  }),
+  role: z.string().openapi({
+    description: "Account role (user, admin, super_admin)",
+    example: "user",
+  }),
+  deletedAt: z.number().int().nullable().openapi({
+    description: "Soft-delete timestamp (null if active)",
+    example: null,
+  }),
+  lastLogin: z.number().int().nullable().openapi({
+    description: "Last login timestamp (null if never logged in)",
+    example: 1738000000,
+  }),
+});
+
 export const UserOpenApiSchema = UserApiSchema;
 export const SelectAccountSchema = AccountSchema;
 export const SelectSessionSchema = SessionSchema;
