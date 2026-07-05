@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { UserApiSchema } from "@/database/openapi-schemas";
+import { AdminUserApiSchema } from "@/database/openapi-schemas";
 import { booleanQuery } from "@/lib/validation/boolean-query";
 import jsonContent from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -36,7 +36,7 @@ export const listUsersRoute = createRoute({
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       z.object({
-        data: z.array(UserApiSchema as any),
+        data: z.array(AdminUserApiSchema),
         meta: z.object({
           total: z.number().int(),
           page: z.number().int(),
@@ -72,7 +72,7 @@ export const getUserRoute = createRoute({
     }),
   },
   responses: {
-    [httpStatusCodes.OK]: jsonContent(UserApiSchema as any, "User details"),
+    [httpStatusCodes.OK]: jsonContent(AdminUserApiSchema, "User details"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),
@@ -109,7 +109,7 @@ export const updateUserRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        user: UserApiSchema as any,
+        user: AdminUserApiSchema,
       }),
       "User updated successfully",
     ),
