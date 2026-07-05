@@ -150,4 +150,26 @@ describe("pdf-parser parseLines", () => {
       parseErrorMessage: "Could not detect student course information.",
     });
   });
+
+  it("should not match substring 'act' inside student names (e.g. ACTION, JOHN)", () => {
+    const lines = [
+      "ACLC College",
+      "C23-01-095",
+      "ACTION, JOHN",
+      "ACT 2ND YEAR",
+      "Showing 1 to 1 of 1 entries",
+    ];
+
+    const result = parseLines(lines);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      studentId: "C23-01-095",
+      lastName: "ACTION",
+      firstName: "JOHN",
+      course: "ACT",
+      yearLevel: "2nd Year",
+      hasParseError: false,
+      parseErrorMessage: undefined,
+    });
+  });
 });

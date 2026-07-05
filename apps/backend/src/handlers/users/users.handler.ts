@@ -424,7 +424,7 @@ export const hardDeleteUser: AppRouteHandler<typeof hardDeleteUserRoute> = async
       };
     }
 
-    if (isTargetAdmin) {
+    if (isTargetAdmin && user.deletedAt === null) {
       // Cannot delete the last admin/super_admin
       const adminCount = await accountRepo.countActiveAdminsAndSuperAdmins(tx);
       if (adminCount <= 1) {
