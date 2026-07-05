@@ -445,7 +445,7 @@
                                 bind:value={record.studentId}
                                 placeholder="e.g. C23-01-095"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
-                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d+$/.test(record.studentId.trim())) 
+                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-[A-Za-z0-9-]+$/.test(record.studentId.trim())) 
                                     ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50' 
                                     : 'border-slate-800 focus:border-amber-500 focus:outline-none'}"
                               />
