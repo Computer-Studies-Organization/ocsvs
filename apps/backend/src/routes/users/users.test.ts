@@ -511,7 +511,7 @@ describe("users Routes", () => {
         body: JSON.stringify({
           users: [
             {
-              studentId: "2021-0001",
+              studentId: "C25-01-10001-MAN121",
               firstName: "Alice",
               lastName: "Smith",
               course: "BSCS",
@@ -539,14 +539,14 @@ describe("users Routes", () => {
         body: JSON.stringify({
           users: [
             {
-              studentId: "2021-0001",
+              studentId: "C25-01-10001-MAN121",
               firstName: "Alice",
               lastName: "Smith",
               course: "BSCS",
               yearLevel: "1st Year",
             },
             {
-              studentId: "2021-0002",
+              studentId: "C25-01-10002-MAN121",
               firstName: "Bob",
               lastName: "Jones",
               course: "BSIT",
@@ -564,7 +564,7 @@ describe("users Routes", () => {
 
       expect(body.imported[0]).toEqual(
         expect.objectContaining({
-          studentId: "2021-0001",
+          studentId: "C25-01-10001-MAN121",
           fullName: "ALICE SMITH",
           username: "alice.smith",
           password: expect.any(String),
@@ -572,7 +572,7 @@ describe("users Routes", () => {
       );
       expect(body.imported[1]).toEqual(
         expect.objectContaining({
-          studentId: "2021-0002",
+          studentId: "C25-01-10002-MAN121",
           fullName: "BOB JONES",
           username: "bob.jones",
           password: expect.any(String),
@@ -583,7 +583,7 @@ describe("users Routes", () => {
     });
 
     it("should handle duplicate student IDs (skipped records)", async () => {
-      mockDbAll.mockResolvedValueOnce([{ studentId: "2021-0001" }]); // existingUsers
+      mockDbAll.mockResolvedValueOnce([{ studentId: "C25-01-10001-MAN121" }]); // existingUsers
       mockDbAll.mockResolvedValueOnce([]); // existingAccounts
       mockDbBatch.mockResolvedValueOnce([]);
 
@@ -595,14 +595,14 @@ describe("users Routes", () => {
         body: JSON.stringify({
           users: [
             {
-              studentId: "2021-0001",
+              studentId: "C25-01-10001-MAN121",
               firstName: "Alice",
               lastName: "Smith",
               course: "BSCS",
               yearLevel: "1st Year",
             },
             {
-              studentId: "2021-0002",
+              studentId: "C25-01-10002-MAN121",
               firstName: "Bob",
               lastName: "Jones",
               course: "BSIT",
@@ -618,9 +618,9 @@ describe("users Routes", () => {
       expect(body.imported).toHaveLength(1);
       expect(body.skipped).toHaveLength(1);
 
-      expect(body.imported[0].studentId).toBe("2021-0002");
+      expect(body.imported[0].studentId).toBe("C25-01-10002-MAN121");
       expect(body.skipped[0]).toEqual({
-        studentId: "2021-0001",
+        studentId: "C25-01-10001-MAN121",
         reason: "Student ID already exists in the system",
       });
 

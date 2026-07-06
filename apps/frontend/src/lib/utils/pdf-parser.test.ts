@@ -29,7 +29,7 @@ describe("pdf-parser parseLines", () => {
   it("should parse single-line student IDs", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-BSC301",
       "DOE",
       "JOHN BSCS 2ND OLD PAYMENT",
       "Showing 1 to 1 of 1 entries",
@@ -38,7 +38,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "DOE",
       firstName: "JOHN",
       course: "BSCS",
@@ -49,12 +49,18 @@ describe("pdf-parser parseLines", () => {
   });
 
   it("should flag missing year level on course info line", () => {
-    const lines = ["ACLC College", "C23-01-095", "DOE", "JOHN BSCS", "Showing 1 to 1 of 1 entries"];
+    const lines = [
+      "ACLC College",
+      "C23-01-0095-BSC301",
+      "DOE",
+      "JOHN BSCS",
+      "Showing 1 to 1 of 1 entries",
+    ];
 
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "DOE",
       firstName: "JOHN",
       course: "BSCS",
@@ -67,7 +73,7 @@ describe("pdf-parser parseLines", () => {
   it("should flag unparseable year level on course info line", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-BSC301",
       "DOE",
       "JOHN BSCS 5TH OLD PAYMENT",
       "Showing 1 to 1 of 1 entries",
@@ -76,7 +82,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "DOE",
       firstName: "JOHN",
       course: "BSCS",
@@ -89,7 +95,7 @@ describe("pdf-parser parseLines", () => {
   it("should parse student names with trailing commas (LASTNAME, FIRSTNAME format)", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-BSC301",
       "ROSALES, KIM R",
       "BSCS 1ST YEAR",
       "Showing 1 to 1 of 1 entries",
@@ -98,7 +104,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "ROSALES",
       firstName: "KIM R",
       course: "BSCS",
@@ -111,7 +117,7 @@ describe("pdf-parser parseLines", () => {
   it("should parse student names with multi-word last names separated by comma", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-BSC301",
       "DELA CRUZ, JUAN CARLOS",
       "BSCS 1ST YEAR",
       "Showing 1 to 1 of 1 entries",
@@ -120,7 +126,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "DELA CRUZ",
       firstName: "JUAN CARLOS",
       course: "BSCS",
@@ -133,7 +139,7 @@ describe("pdf-parser parseLines", () => {
   it("should flag a parse error when the course info line is missing entirely", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-BSC301",
       "DELA CRUZ, JUAN CARLOS",
       "Showing 1 to 1 of 1 entries",
     ];
@@ -141,7 +147,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-BSC301",
       lastName: "DELA CRUZ",
       firstName: "JUAN CARLOS",
       course: "BSCS",
@@ -154,7 +160,7 @@ describe("pdf-parser parseLines", () => {
   it("should not match substring 'act' inside student names (e.g. ACTION, JOHN)", () => {
     const lines = [
       "ACLC College",
-      "C23-01-095",
+      "C23-01-0095-ACT301",
       "ACTION, JOHN",
       "ACT 2ND YEAR",
       "Showing 1 to 1 of 1 entries",
@@ -163,7 +169,7 @@ describe("pdf-parser parseLines", () => {
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-095",
+      studentId: "C23-01-0095-ACT301",
       lastName: "ACTION",
       firstName: "JOHN",
       course: "ACT",
