@@ -160,6 +160,23 @@ export const votes = sqliteTable(
   ],
 );
 
+// One row is written atomically alongside vote inserts. No user_id is stored
+// here — the count is durable across voter hard-deletes, giving accurate
+// turnout statistics even after anonymisation.
+export const ballotSnapshots = sqliteTable(
+  "ballot_snapshots",
+  {
+    id: text("id").primaryKey(),
+    electionId: text("election_id")
+      .notNull()
+      .references(() => elections.id, { onDelete: "restrict" }),
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index("idx_ballot_snapshots_election_id").on(table.electionId)],
+);
+
 export const auditLog = sqliteTable(
   "audit_log",
   {
@@ -207,3 +224,4 @@ export const SelectElectionSchema = createSelectSchema(elections);
 export const SelectPositionSchema = createSelectSchema(positions);
 export const SelectCandidateSchema = createSelectSchema(candidates);
 export const SelectVoteSchema = createSelectSchema(votes);
+export const SelectBallotSnapshotSchema = createSelectSchema(ballotSnapshots);
