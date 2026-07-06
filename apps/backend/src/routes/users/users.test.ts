@@ -358,6 +358,148 @@ describe("users Routes", () => {
     });
   });
 
+  describe("PATCH /users/:id - updateUser role checks", () => {
+    it("should return 403 when regular admin tries to update an admin account", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: null,
+        role: "admin",
+      });
+
+      const res = await router.request("/users/some-user-id", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "hacked" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_UPDATE_ADMIN);
+      expect(mockUpdateAccount).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when regular admin tries to update a super_admin account", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: null,
+        role: "super_admin",
+      });
+
+      const res = await router.request("/users/some-user-id", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "hacked" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_UPDATE_ADMIN);
+      expect(mockUpdateAccount).not.toHaveBeenCalled();
+    });
+
+    it("should allow super_admin to update an admin account", async () => {
+      mockAuthUser.role = "super_admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: null,
+        role: "admin",
+      });
+      mockUsernameExists.mockResolvedValue(false);
+      mockUpdateAccount.mockResolvedValue(undefined);
+      mockFindById.mockResolvedValue({
+        id: "some-user-id",
+        username: "newname",
+        role: "admin",
+        deletedAt: null,
+      });
+
+      const res = await router.request("/users/some-user-id", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "newname" }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockUpdateAccount).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /users/:id/restore - restoreUser role checks", () => {
+    it("should return 403 when regular admin tries to restore an archived admin", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: 1234567890,
+        role: "admin",
+      });
+
+      const res = await router.request("/users/some-user-id/restore", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESTORE_ADMIN);
+      expect(mockRestore).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when regular admin tries to restore an archived super_admin", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: 1234567890,
+        role: "super_admin",
+      });
+
+      const res = await router.request("/users/some-user-id/restore", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESTORE_ADMIN);
+      expect(mockRestore).not.toHaveBeenCalled();
+    });
+
+    it("should allow super_admin to restore an archived admin", async () => {
+      mockAuthUser.role = "super_admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: 1234567890,
+        role: "admin",
+      });
+      mockRestore.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/some-user-id/restore", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User restored successfully");
+      expect(mockRestore).toHaveBeenCalledWith(mockDb, "other-account-id");
+    });
+
+    it("should allow regular admin to restore an archived regular user", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "other-account-id",
+        deletedAt: 1234567890,
+        role: "user",
+      });
+      mockRestore.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/some-user-id/restore", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockRestore).toHaveBeenCalledWith(mockDb, "other-account-id");
+    });
+  });
+
   describe("POST /users/import", () => {
     it("should reject non-admin requests", async () => {
       mockAuthUser.role = "user";

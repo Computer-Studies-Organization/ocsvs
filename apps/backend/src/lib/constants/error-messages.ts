@@ -34,6 +34,8 @@ export const ERROR_MESSAGES = {
   CANNOT_DELETE_SELF: "You cannot delete your own account",
   CANNOT_DELETE_LAST_ADMIN: "Cannot delete the last admin account",
   CANNOT_DELETE_ADMIN: "Only super admins can delete admin accounts",
+  CANNOT_RESTORE_ADMIN: "Only super admins can restore admin accounts",
+  CANNOT_UPDATE_ADMIN: "Only super admins can update admin accounts",
   USER_IS_CANDIDATE: "Cannot delete a user who is a candidate",
   CONFIRMATION_REQUIRED: "Confirmation is required. Please type DELETE to confirm.",
   USER_ALREADY_ARCHIVED: "User is already archived",
