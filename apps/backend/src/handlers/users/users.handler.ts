@@ -66,11 +66,17 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
   const { userId } = c.req.valid("param");
   const updateData = c.req.valid("json");
 
-  // Get user's accountId
-  const user = await userRepo.getAccountId(db, userId);
+  // Get user's accountId and role for permission checks
+  const user = await userAccountQueries.getAccountDeleteStatus(db, userId);
 
   if (!user) {
     return c.json({ message: "User not found" }, httpStatusCodes.NOT_FOUND);
+  }
+
+  // Prevent regular admin from updating another admin/super_admin
+  const isTargetAdmin = user.role === "admin" || user.role === "super_admin";
+  if (isTargetAdmin && c.var.authUser.role !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.CANNOT_UPDATE_ADMIN }, httpStatusCodes.FORBIDDEN);
   }
 
   // Check for duplicate username if updating
@@ -198,6 +204,12 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
 
   if (user.deletedAt === null) {
     return c.json({ message: "User is not archived" }, httpStatusCodes.BAD_REQUEST);
+  }
+
+  // Prevent regular admin from restoring admin/super_admin accounts
+  const isTargetAdmin = user.role === "admin" || user.role === "super_admin";
+  if (isTargetAdmin && c.var.authUser.role !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.CANNOT_RESTORE_ADMIN }, httpStatusCodes.FORBIDDEN);
   }
 
   await accountRepo.restore(db, user.accountId);
