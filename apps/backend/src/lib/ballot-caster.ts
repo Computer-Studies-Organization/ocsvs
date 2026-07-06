@@ -5,7 +5,7 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
-import { votes } from "@/database/schema";
+import { ballotSnapshots, votes } from "@/database/schema";
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -224,7 +224,11 @@ export class DrizzleBallotCaster implements BallotCastingModule {
       }));
 
       if (recordsToInsert.length > 0) {
-        await db.batch([db.insert(votes).values(recordsToInsert)]);
+        const snapshotId = crypto.randomUUID();
+        await db.batch([
+          db.insert(votes).values(recordsToInsert),
+          db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
+        ]);
       }
 
       // 9. Fetch created votes

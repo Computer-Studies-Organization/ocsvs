@@ -1,8 +1,8 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type { getAdminStatsRoute } from "@/routes/admin-stats/routes";
 import { createDb } from "@/config/db";
-import { accounts, elections, votes, auditLog } from "@/database/schema";
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { accounts, elections, ballotSnapshots, auditLog } from "@/database/schema";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -30,11 +30,14 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
 
   let activeElection = null;
   if (openElection) {
-    // Turnout is count of unique users who cast votes in this election
+    // Turnout is count of ballot submissions recorded at vote time.
+    // Using ballot_snapshots (one row per submitted ballot) instead of
+    // count(distinct votes.userId) so that anonymised votes from hard-deleted
+    // users are still counted accurately.
     const turnoutResult = await db
-      .select({ count: sql<number>`count(distinct ${votes.userId})` })
-      .from(votes)
-      .where(eq(votes.electionId, openElection.id))
+      .select({ count: count() })
+      .from(ballotSnapshots)
+      .where(eq(ballotSnapshots.electionId, openElection.id))
       .get();
 
     const votedCount = turnoutResult?.count ?? 0;
