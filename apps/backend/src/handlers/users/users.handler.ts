@@ -15,7 +15,7 @@ import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import { inArray } from "drizzle-orm";
+import { inArray, like, or } from "drizzle-orm";
 import { accounts, users } from "@/database/schema";
 import { hashPassword } from "@/lib/password";
 
@@ -278,7 +278,27 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
 
   const existingStudentIdsSet = new Set(existingUsers.map((u) => u.studentId));
 
-  const existingAccounts = await db.select({ username: accounts.username }).from(accounts).all();
+  // Build a LIKE-prefix query for only the base usernames in this batch, avoiding a
+  // full-table scan. intra-batch collisions are still resolved by mutating the Set below.
+  const batchBaseUsernames = [
+    ...new Set(
+      importPayload.map((record) => {
+        const cleanFirst = record.firstName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const cleanLast = record.lastName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const base = `${cleanFirst}.${cleanLast}`;
+        return base.length >= 3 ? base : record.studentId.toLowerCase().replace(/[^a-z0-9]/g, "");
+      }),
+    ),
+  ];
+  const prefixConditions = batchBaseUsernames.map((b) => like(accounts.username, `${b}%`));
+  const existingAccounts =
+    prefixConditions.length > 0
+      ? await db
+          .select({ username: accounts.username })
+          .from(accounts)
+          .where(or(...prefixConditions))
+          .all()
+      : [];
 
   const existingUsernamesSet = new Set(existingAccounts.map((a) => a.username));
 
