@@ -225,6 +225,12 @@ export class DrizzleBallotCaster implements BallotCastingModule {
 
       if (recordsToInsert.length > 0) {
         const snapshotId = crypto.randomUUID();
+        // NOTE: The ballot_snapshots insert is kept atomic with the votes insert
+        // inside db.batch. Since ballot_snapshots contains no user_id to prevent
+        // double-casting directly, we rely on the unique constraint on the votes
+        // table (votes_user_position_election_unique_idx) to fail the entire
+        // transaction if a user attempts to vote twice. This prevents duplicate
+        // snapshot entries in concurrent race conditions.
         await db.batch([
           db.insert(votes).values(recordsToInsert),
           db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
