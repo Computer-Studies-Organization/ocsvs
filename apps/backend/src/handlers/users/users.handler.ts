@@ -15,6 +15,7 @@ import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isUniqueConstraintError } from "@/lib/errors";
 import { inArray, like, or } from "drizzle-orm";
 import { accounts, users } from "@/database/schema";
 import { hashPassword } from "@/lib/password";
@@ -378,7 +379,21 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
   }
 
   if (dbOps.length > 0) {
-    await db.batch(dbOps as any);
+    try {
+      await db.batch(dbOps as any);
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        return c.json(
+          {
+            message: ERROR_MESSAGES.IMPORT_CONFLICT,
+            imported: [],
+            skipped: [],
+          },
+          httpStatusCodes.CONFLICT,
+        );
+      }
+      throw err;
+    }
 
     await auditLogRepo.insert(db, {
       action: "user.bulk_import",

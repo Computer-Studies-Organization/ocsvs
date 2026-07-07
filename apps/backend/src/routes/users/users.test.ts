@@ -626,5 +626,37 @@ describe("users Routes", () => {
 
       expect(mockDbBatch).toHaveBeenCalled();
     });
+
+    it("should return 409 Conflict when a database unique constraint conflict occurs", async () => {
+      mockDbAll.mockResolvedValueOnce([]); // existingUsers
+      mockDbAll.mockResolvedValueOnce([]); // existingAccounts
+
+      const uniqueConstraintError = new Error("UNIQUE constraint failed: accounts.username");
+      mockDbBatch.mockRejectedValueOnce(uniqueConstraintError);
+
+      const res = await router.request("/users/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          users: [
+            {
+              studentId: "C25-01-10001-MAN121",
+              firstName: "Alice",
+              lastName: "Smith",
+              course: "BSCS",
+              yearLevel: "1st Year",
+            },
+          ],
+        }),
+      });
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.IMPORT_CONFLICT);
+      expect(body.imported).toHaveLength(0);
+      expect(body.skipped).toHaveLength(0);
+    });
   });
 });
