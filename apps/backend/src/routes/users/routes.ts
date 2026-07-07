@@ -233,15 +233,17 @@ const IMPORT_YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as c
 
 export const ImportUsersBodySchema = z
   .object({
-    users: z.array(
-      z.object({
-        studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/),
-        firstName: z.string().min(1),
-        lastName: z.string().min(1),
-        course: z.enum(IMPORT_COURSES),
-        yearLevel: z.enum(IMPORT_YEAR_LEVELS),
-      }),
-    ),
+    users: z
+      .array(
+        z.object({
+          studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/),
+          firstName: z.string().min(1),
+          lastName: z.string().min(1),
+          course: z.enum(IMPORT_COURSES),
+          yearLevel: z.enum(IMPORT_YEAR_LEVELS),
+        }),
+      )
+      .max(500, "Maximum batch size is 500 records per request"),
   })
   .openapi("ImportUsersBody");
 
