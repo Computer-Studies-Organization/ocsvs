@@ -443,6 +443,7 @@
                               <input
                                 type="text"
                                 bind:value={record.studentId}
+                                oninput={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 placeholder="e.g. C25-01-10306-MAN121"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
                                   {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/.test(record.studentId.trim())) 
@@ -454,6 +455,7 @@
                               <input
                                 type="text"
                                 bind:value={record.lastName}
+                                oninput={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 placeholder="Last Name"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
                                   {err && !record.lastName.trim() 
@@ -465,6 +467,7 @@
                               <input
                                 type="text"
                                 bind:value={record.firstName}
+                                oninput={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 placeholder="First Name"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
                                   {err && !record.firstName.trim() 
@@ -475,6 +478,7 @@
                             <td class="px-4 py-3">
                               <select
                                 bind:value={record.course}
+                                onchange={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm font-semibold transition focus:border-amber-500 focus:outline-none"
                               >
                                 {#each COURSES as course}

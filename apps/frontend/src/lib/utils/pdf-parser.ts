@@ -1,3 +1,5 @@
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
 export interface ParsedStudentRecord {
   studentId: string;
   lastName: string;
@@ -10,10 +12,9 @@ export interface ParsedStudentRecord {
 }
 
 export async function parseRosterPdf(file: File): Promise<ParsedStudentRecord[]> {
-  // 1. Dynamic import of pdfjs from CDN inside browser context
+  // 1. Dynamic import of pdfjs; worker is served from local origin via Vite ?url import
   const pdfjs = (await import("pdfjs-dist")) as any;
-  pdfjs.GlobalWorkerOptions.workerSrc =
-    "https://unpkg.com/pdfjs-dist@6.1.200/build/pdf.worker.min.mjs";
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
