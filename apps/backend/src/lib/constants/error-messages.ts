@@ -30,6 +30,8 @@ export const ERROR_MESSAGES = {
   POSITION_HAS_CANDIDATES: "Cannot delete a position that has candidates",
   USER_ALREADY_EXISTS: "User already exists",
   USERNAME_ALREADY_EXISTS: "Username already exists",
+  IMPORT_CONFLICT:
+    "Import failed: a username conflict was detected due to a concurrent import. Please retry.",
   VOTE_ALREADY_CAST: "You have already voted",
   CANNOT_DELETE_SELF: "You cannot delete your own account",
   CANNOT_DELETE_LAST_ADMIN: "Cannot delete the last admin account",

@@ -275,6 +275,10 @@ export const importUsersRoute = createRoute({
   },
   responses: {
     [httpStatusCodes.OK]: jsonContent(ImportUsersResponseSchema, "Import results summary"),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      ImportUsersResponseSchema,
+      "Concurrent import username conflict — retry",
+    ),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(z.object({ message: z.string() }), "Unauthorized"),
     [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
   },
