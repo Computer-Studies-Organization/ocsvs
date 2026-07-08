@@ -60,7 +60,7 @@
         password: loginData.password,
       })
       authStore.set({ user: userData, loading: false })
-      if (userData.user.role === 'admin') {
+      if (userData.user.role === 'admin' || userData.user.role === 'super_admin') {
         goto('/admin-dashboard', { replaceState: true })
       }
       else {

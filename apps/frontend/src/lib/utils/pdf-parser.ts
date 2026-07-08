@@ -48,9 +48,16 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
       if (line.match(/^C\d{2}-\d{2}-$/)) {
         const part1 = line;
         const part2 = lines[i + 1] || "";
-        const part3 = lines[i + 2] || "";
-        studentId = (part1 + part2 + part3).trim();
-        j = i + 3;
+        // A 3-part split has a trailing dash on part2 (e.g. "10306-");
+        // a 2-part split has the full remainder in part2 (e.g. "10306-MAN121").
+        if (part2.endsWith("-")) {
+          const part3 = lines[i + 2] || "";
+          studentId = (part1 + part2 + part3).trim();
+          j = i + 3;
+        } else {
+          studentId = (part1 + part2).trim();
+          j = i + 2;
+        }
       } else {
         studentId = line.trim();
         j = i + 1;
