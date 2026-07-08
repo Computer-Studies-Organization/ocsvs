@@ -187,6 +187,7 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
         });
       }
       i = j;
+      continue; // bypass outer i++; j already points to the next line to examine
     }
     i++;
   }
