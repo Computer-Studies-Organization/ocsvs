@@ -182,6 +182,37 @@ describe("pdf-parser parseLines", () => {
     });
   });
 
+  it("should not drop the next record when a preceding record has no course line", () => {
+    // Regression: the inner loop broke on the second student's ID (the sentinel),
+    // leaving j pointing at it. i = j; i++ then skipped it entirely.
+    const lines = [
+      "ACLC College",
+      "C23-01-0001-BSC301", // student 1 — no course line; second ID becomes the break sentinel
+      "DOE",
+      "C23-01-0002-BSC301", // student 2 — was silently skipped before the fix
+      "SMITH",
+      "JOHN BSCS 1ST",
+      "Showing 1 to 2 of 2 entries",
+    ];
+
+    const result = parseLines(lines);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      studentId: "C23-01-0001-BSC301",
+      lastName: "DOE",
+      hasParseError: true,
+      parseErrorMessage: "Could not detect student course information.",
+    });
+    expect(result[1]).toMatchObject({
+      studentId: "C23-01-0002-BSC301",
+      lastName: "SMITH",
+      firstName: "JOHN",
+      course: "BSCS",
+      yearLevel: "1st Year",
+      hasParseError: false,
+    });
+  });
+
   it("should not match substring 'act' inside student names (e.g. ACTION, JOHN)", () => {
     const lines = [
       "ACLC College",
