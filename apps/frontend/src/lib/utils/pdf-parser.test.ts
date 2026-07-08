@@ -26,6 +26,31 @@ describe("pdf-parser parseLines", () => {
     });
   });
 
+  it("should parse split student IDs spanning 2 lines (prefix + full remainder)", () => {
+    // Regression: previously the parser always consumed 3 lines, pulling the
+    // student's last name into the ID and skipping it during name parsing.
+    const lines = [
+      "ACLC College",
+      "C25-01-",
+      "10306-MAN121",
+      "ROSALES",
+      "KIM R BSCS 1ST OLD PAYMENT",
+      "Showing 1 to 1 of 1 entries",
+    ];
+
+    const result = parseLines(lines);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      studentId: "C25-01-10306-MAN121",
+      lastName: "ROSALES",
+      firstName: "KIM R",
+      course: "BSCS",
+      yearLevel: "1st Year",
+      hasParseError: false,
+      parseErrorMessage: undefined,
+    });
+  });
+
   it("should parse single-line student IDs", () => {
     const lines = [
       "ACLC College",
