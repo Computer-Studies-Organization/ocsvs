@@ -1,5 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { B2Client, ALLOWED_TYPES, MAX_SIZE } from "./b2-client";
+import {
+  B2Client,
+  ALLOWED_TYPES,
+  MAX_SIZE,
+  getImageStorage,
+  InMemoryImageStorage,
+  B2ImageStorage,
+} from "./b2-client";
 
 // Mock the B2 SDK
 vi.mock("backblaze-b2", () => ({
@@ -141,5 +148,34 @@ describe("B2Client", () => {
       expect(result.valid).toBe(false);
       expect(result.error).toContain("Unsupported file type");
     });
+  });
+});
+
+describe("getImageStorage", () => {
+  const validConfig = {
+    B2_APPLICATION_KEY_ID: "key-id",
+    B2_APPLICATION_KEY: "key",
+    B2_BUCKET_NAME: "bucket",
+    B2_PUBLIC_BASE_URL: "https://b2.com",
+  };
+
+  it("should return B2ImageStorage when all credentials are provided", () => {
+    const storage = getImageStorage(validConfig);
+    expect(storage).toBeInstanceOf(B2ImageStorage);
+  });
+
+  it("should return InMemoryImageStorage when credentials are missing in non-production", () => {
+    const storage = getImageStorage({ ...validConfig, B2_APPLICATION_KEY: undefined });
+    expect(storage).toBeInstanceOf(InMemoryImageStorage);
+  });
+
+  it("should throw an error when credentials are missing in production", () => {
+    expect(() =>
+      getImageStorage({
+        ...validConfig,
+        B2_APPLICATION_KEY: undefined,
+        NODE_ENV: "production",
+      }),
+    ).toThrow("Missing required Backblaze B2 environment variables in production");
   });
 });

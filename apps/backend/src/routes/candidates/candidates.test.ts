@@ -90,6 +90,7 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
 
 vi.mock("@/lib/b2-client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/b2-client")>("@/lib/b2-client");
+  const { ImageValidationError } = actual;
   return {
     ...actual,
     B2Client: vi.fn().mockImplementation(() => ({
@@ -98,6 +99,32 @@ vi.mock("@/lib/b2-client", async () => {
       uploadImage: mockUploadImage,
       deleteImage: mockDeleteImage,
       downloadImage: mockDownloadImage,
+    })),
+    getImageStorage: vi.fn().mockImplementation(() => ({
+      async upload(candidateId: string, file: File) {
+        const validation = mockValidateFile({ size: file.size, type: file.type });
+        if (validation && validation.valid === false) {
+          throw new ImageValidationError(validation.error || "Invalid file");
+        }
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const magicCheck = mockValidateMagicBytes(buffer, file.type);
+        if (magicCheck && magicCheck.valid === false) {
+          throw new ImageValidationError(magicCheck.error || "Invalid file content");
+        }
+        return mockUploadImage(candidateId, buffer, file.type, file.name);
+      },
+      async delete(imageUrl: string) {
+        const key = imageUrl.includes("/candidates/")
+          ? imageUrl.substring(imageUrl.indexOf("/candidates/") + 1)
+          : imageUrl;
+        return mockDeleteImage(key);
+      },
+      async download(imageUrl: string) {
+        const key = imageUrl.includes("/candidates/")
+          ? imageUrl.substring(imageUrl.indexOf("/candidates/") + 1)
+          : imageUrl;
+        return mockDownloadImage(key);
+      },
     })),
   };
 });

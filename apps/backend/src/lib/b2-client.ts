@@ -233,3 +233,195 @@ export function resolveCandidateImageUrl(
   }
   return imageUrl;
 }
+
+export interface UploadResult {
+  url: string;
+  key: string;
+}
+
+export interface DownloadedImage {
+  data: ArrayBuffer;
+  contentType: string;
+}
+
+export class ImageValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImageValidationError";
+  }
+}
+
+export interface ImageStorage {
+  /**
+   * Uploads an image for a Candidate.
+   * Performs file size validation, mime-type verification, and magic-byte signature check.
+   * Internally generates the secure candidate key and returns the public URL.
+   *
+   * Invariants:
+   * - Only JPEG, PNG, and WebP files are accepted.
+   * - File size must be under 5MB.
+   * - Content bytes must match the declared file MIME type (magic bytes check).
+   *
+   * Throws:
+   * - ImageValidationError (for validation failures like bad size, format, or mismatching magic bytes)
+   * - Error (for transient connection or system failures)
+   */
+  upload(candidateId: string, file: File): Promise<UploadResult>;
+
+  /**
+   * Deletes the candidate image from storage if it exists.
+   * Uses either the raw storage key or the full image URL to locate and remove the file.
+   *
+   * Invariants:
+   * - Idempotent: If the file does not exist, it treats it as success and does not throw.
+   */
+  delete(imageUrl: string): Promise<void>;
+
+  /**
+   * Downloads the candidate image from storage.
+   * Returns the raw image data and its verified content type.
+   */
+  download(imageUrl: string): Promise<DownloadedImage>;
+}
+
+export class B2ImageStorage implements ImageStorage {
+  private client: B2Client;
+  private bucketName: string;
+  private publicBaseUrl: string;
+
+  constructor(config: B2Config) {
+    this.client = new B2Client(config);
+    this.bucketName = config.bucketName;
+    this.publicBaseUrl = config.publicBaseUrl;
+  }
+
+  async upload(candidateId: string, file: File): Promise<UploadResult> {
+    const validation = this.client.validateFile({
+      size: file.size,
+      type: file.type,
+    });
+    if (!validation.valid) {
+      throw new ImageValidationError(validation.error || "Unsupported media type");
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const magicCheck = this.client.validateMagicBytes(buffer, file.type);
+    if (!magicCheck.valid) {
+      throw new ImageValidationError(magicCheck.error || "Unsupported media type");
+    }
+
+    return this.client.uploadImage(candidateId, buffer, file.type, file.name);
+  }
+
+  async delete(imageUrl: string): Promise<void> {
+    const key = this.parseKeyFromUrl(imageUrl);
+    await this.client.deleteImage(key);
+  }
+
+  async download(imageUrl: string): Promise<DownloadedImage> {
+    const key = this.parseKeyFromUrl(imageUrl);
+    return this.client.downloadImage(key);
+  }
+
+  private parseKeyFromUrl(imageUrl: string): string {
+    const bucketPrefix = `${this.publicBaseUrl}/${this.bucketName}/`;
+    if (imageUrl.startsWith(bucketPrefix)) {
+      return imageUrl.substring(bucketPrefix.length);
+    }
+    const index = imageUrl.indexOf("/candidates/");
+    if (index !== -1) {
+      return imageUrl.substring(index + 1);
+    }
+    throw new Error(`Invalid candidate image URL: ${imageUrl}`);
+  }
+}
+
+export class InMemoryImageStorage implements ImageStorage {
+  private files = new Map<string, { data: Buffer; type: string; name: string }>();
+
+  async upload(candidateId: string, file: File): Promise<UploadResult> {
+    if (!ALLOWED_TYPES.includes(file.type as any)) {
+      throw new ImageValidationError(`Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`);
+    }
+    if (file.size > MAX_SIZE) {
+      throw new ImageValidationError(`File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`);
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    // Create a temporary B2Client instance to use its validation logic locally
+    const validator = new B2Client({
+      applicationKeyId: "mock",
+      applicationKey: "mock",
+      bucketName: "mock",
+      publicBaseUrl: "https://mock.b2.com",
+    });
+    const magicCheck = validator.validateMagicBytes(buffer, file.type);
+    if (!magicCheck.valid) {
+      throw new ImageValidationError(magicCheck.error || "Unsupported media type");
+    }
+
+    const uuid = crypto.randomUUID();
+    const parts = file.name.split(".");
+    const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
+    const key = `candidates/${candidateId}/${uuid}.${ext}`;
+    const url = `https://mock.b2.com/mock-bucket/${key}`;
+
+    this.files.set(key, { data: buffer, type: file.type, name: file.name });
+    return { url, key };
+  }
+
+  async delete(imageUrl: string): Promise<void> {
+    const key = this.parseKeyFromUrl(imageUrl);
+    this.files.delete(key);
+  }
+
+  async download(imageUrl: string): Promise<DownloadedImage> {
+    const key = this.parseKeyFromUrl(imageUrl);
+    const file = this.files.get(key);
+    if (!file) {
+      throw new Error(`File not found: ${key}`);
+    }
+    return {
+      data: (file.data.buffer as ArrayBuffer).slice(
+        file.data.byteOffset,
+        file.data.byteOffset + file.data.byteLength,
+      ),
+      contentType: file.type,
+    };
+  }
+
+  private parseKeyFromUrl(imageUrl: string): string {
+    const index = imageUrl.indexOf("/candidates/");
+    if (index !== -1) {
+      return imageUrl.substring(index + 1);
+    }
+    return imageUrl;
+  }
+}
+
+export function getImageStorage(env: {
+  NODE_ENV?: string;
+  B2_APPLICATION_KEY_ID?: string;
+  B2_APPLICATION_KEY?: string;
+  B2_BUCKET_NAME?: string;
+  B2_PUBLIC_BASE_URL?: string;
+}): ImageStorage {
+  const hasCredentials =
+    env.B2_APPLICATION_KEY_ID &&
+    env.B2_APPLICATION_KEY &&
+    env.B2_BUCKET_NAME &&
+    env.B2_PUBLIC_BASE_URL;
+
+  if (!hasCredentials) {
+    if (env.NODE_ENV === "production") {
+      throw new Error("Missing required Backblaze B2 environment variables in production");
+    }
+    return new InMemoryImageStorage();
+  }
+  return new B2ImageStorage({
+    applicationKeyId: env.B2_APPLICATION_KEY_ID!,
+    applicationKey: env.B2_APPLICATION_KEY!,
+    bucketName: env.B2_BUCKET_NAME!,
+    publicBaseUrl: env.B2_PUBLIC_BASE_URL!,
+  });
+}
