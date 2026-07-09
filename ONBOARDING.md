@@ -4,7 +4,7 @@ Computer Studies Organization Voting System (OCSVS). This file is the fastest pa
 
 ## 1. Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 20.16.0 < 21 || >= 22.3.0
 - **pnpm** >= 9.0.0
 - **wrangler** (comes via devDependencies)
 - **Backblaze B2** account (free tier works for staging)

@@ -33,7 +33,7 @@ New to the repo? See [ONBOARDING.md](./ONBOARDING.md) for setup, including Backb
 
 ### Prerequisites
 
-- **Node.js**: >= 18.0.0
+- **Node.js**: >= 20.16.0 < 21 || >= 22.3.0
 - **pnpm**: >= 9.0.0
 
 ### Installation
