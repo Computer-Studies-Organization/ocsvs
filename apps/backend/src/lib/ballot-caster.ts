@@ -74,10 +74,12 @@ export interface CastBallotResult {
 export type Result<T, E> = { success: true; data: T } | { success: false; error: E };
 
 export interface BallotCastingModule {
+  // Kept on Database because implementation uses db.batch which cannot run on a transaction handle (DbClient / Transaction).
   cast(db: Database, input: CastBallotInput): Promise<Result<CastBallotResult, BallotCastingError>>;
 }
 
 export class DrizzleBallotCaster implements BallotCastingModule {
+  // Kept on Database because db.batch is used internally (which cannot compose/run on a transaction handle).
   async cast(
     db: Database,
     input: CastBallotInput,

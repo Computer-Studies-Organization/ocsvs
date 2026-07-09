@@ -1,4 +1,4 @@
-import type { Database, DbClient } from "./database.type";
+import type { DbClient } from "./database.type";
 import { and, desc, eq, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { auditLog } from "@/database/schema";
 import type { AuditAction, TargetType } from "@/lib/constants/audit-actions";
@@ -130,7 +130,7 @@ export const auditLogRepo = {
    * because Drizzle's `.limit()` is the single source of truth for row
    * count and there's no ambiguity — a short page means "no more rows".
    */
-  async list(db: Database, filters: AuditLogListFilters = {}): Promise<AuditLogListResult> {
+  async list(db: DbClient, filters: AuditLogListFilters = {}): Promise<AuditLogListResult> {
     const limit = clampLimit(filters.limit);
 
     const conditions: SQL[] = [];
@@ -195,7 +195,7 @@ export const auditLogRepo = {
    * cursor-based pagination used by `list()`.
    */
   async listByTarget(
-    db: Database,
+    db: DbClient,
     targetType: TargetType,
     targetId: string,
     limit?: number,

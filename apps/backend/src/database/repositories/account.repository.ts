@@ -33,6 +33,7 @@ export const accountRepo = {
   },
 
   // Create account + user (used by auth register)
+  // Kept on Database because db.batch cannot be nested/run inside a transaction handle (DbClient / Transaction).
   async create(
     db: Database,
     data: {
@@ -100,6 +101,7 @@ export const accountRepo = {
   // Wraps both writes in a single libSQL batch (implicit transaction): either
   // both apply or neither does, closing the window where sessions could be
   // deleted while the password remains unchanged (and vice versa).
+  // Kept on Database because db.batch cannot be nested/run inside a transaction handle (DbClient / Transaction).
   async changePasswordAndInvalidateSessions(
     db: Database,
     accountId: string,

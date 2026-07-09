@@ -18,7 +18,6 @@ export interface TransitionParams {
   actor: { id: string; username: string };
   opensAt?: number;
   closesAt?: number;
-  skipAudit?: boolean;
 }
 
 export interface TransitionResult {
@@ -123,18 +122,16 @@ export const ElectionLifecycleCoordinator = {
       }
 
       // 6. Write Audit Log
-      if (!params.skipAudit) {
-        const description = `${fromStatus} \u2192 ${toStatus}`;
+      const description = `${fromStatus} \u2192 ${toStatus}`;
 
-        await auditLogRepo.insert(tx, {
-          action: "election.transition",
-          targetType: "election",
-          targetId: electionId,
-          actorAccountIdSnapshot: params.actor.id,
-          actorUsernameSnapshot: params.actor.username,
-          description,
-        });
-      }
+      await auditLogRepo.insert(tx, {
+        action: "election.transition",
+        targetType: "election",
+        targetId: electionId,
+        actorAccountIdSnapshot: params.actor.id,
+        actorUsernameSnapshot: params.actor.username,
+        description,
+      });
 
       // 7. Resolve success message key
       const messageKey = (
