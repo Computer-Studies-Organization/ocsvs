@@ -18,6 +18,7 @@ describe("audit-actions enum drift", () => {
   it("every emitted audit action literal is in AUDIT_ACTIONS.options", () => {
     const files = [
       ...walk(path.join(process.cwd(), "src", "handlers")),
+      ...walk(path.join(process.cwd(), "src", "lib")),
       ...walk(path.join(process.cwd(), "scripts")),
     ];
     const re =

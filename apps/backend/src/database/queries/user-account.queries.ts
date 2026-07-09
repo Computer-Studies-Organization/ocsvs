@@ -1,4 +1,4 @@
-import type { Database, DbClient } from "../repositories/database.type";
+import type { DbClient } from "../repositories/database.type";
 import { and, count, desc, eq, isNull, like, or } from "drizzle-orm";
 import { accounts, users } from "@/database/schema";
 
@@ -95,7 +95,7 @@ export const userAccountQueries = {
   },
 
   /** Find by student ID — returns auth fields including password_hash */
-  async findByStudentId(db: Database, studentId: string): Promise<AuthView | null> {
+  async findByStudentId(db: DbClient, studentId: string): Promise<AuthView | null> {
     return (
       (await db
         .select({
@@ -118,7 +118,7 @@ export const userAccountQueries = {
 
   /** Admin list: paginated, filtered. Voting status is not part of the user row. */
   async listForAdmin(
-    db: Database,
+    db: DbClient,
     opts: {
       page?: number;
       limit?: number;
@@ -202,7 +202,7 @@ export const userAccountQueries = {
   },
 
   /** Profile view — display-safe, no password_hash */
-  async getProfile(db: Database, accountId: string): Promise<ProfileView | null> {
+  async getProfile(db: DbClient, accountId: string): Promise<ProfileView | null> {
     return (
       (await db
         .select({

@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { DbClient } from "./database.type";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { loginAttempts } from "@/database/schema";
 
@@ -6,7 +6,7 @@ export type LoginAttemptRow = typeof loginAttempts.$inferSelect;
 
 export const loginAttemptRepo = {
   async getRecentAttempts(
-    db: Database,
+    db: DbClient,
     identifier: string,
     windowSeconds: number,
   ): Promise<Pick<LoginAttemptRow, "attemptedAt">[]> {
@@ -21,7 +21,7 @@ export const loginAttemptRepo = {
       .all();
   },
 
-  async recordAttempt(db: Database, identifier: string, ipAddress: string | null): Promise<void> {
+  async recordAttempt(db: DbClient, identifier: string, ipAddress: string | null): Promise<void> {
     await db
       .insert(loginAttempts)
       .values({
@@ -33,12 +33,12 @@ export const loginAttemptRepo = {
       .run();
   },
 
-  async clearAttempts(db: Database, identifier: string): Promise<void> {
+  async clearAttempts(db: DbClient, identifier: string): Promise<void> {
     await db.delete(loginAttempts).where(eq(loginAttempts.identifier, identifier)).run();
   },
 
   async deleteExpiredAttempts(
-    db: Database,
+    db: DbClient,
     identifier: string,
     windowSeconds: number,
   ): Promise<void> {

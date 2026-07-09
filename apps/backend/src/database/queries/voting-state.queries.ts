@@ -1,4 +1,4 @@
-import type { Database } from "../repositories/database.type";
+import type { DbClient } from "../repositories/database.type";
 import type { ResultsPosition } from "@/database/queries/election.queries";
 import { electionRepo, type ElectionRow } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
@@ -31,7 +31,7 @@ export interface VotingState {
   myVotes: MyVotes;
 }
 
-export async function getVotingState(db: Database, accountId: string): Promise<VotingState> {
+export async function getVotingState(db: DbClient, accountId: string): Promise<VotingState> {
   const now = Math.floor(Date.now() / 1000);
   const [dbOpen, draftRow, closedRow] = await Promise.all([
     electionRepo.findOpen(db),
@@ -92,7 +92,7 @@ export async function getVotingState(db: Database, accountId: string): Promise<V
 }
 
 async function getMyVotesForOpen(
-  db: Database,
+  db: DbClient,
   accountId: string,
   openId: string | null,
 ): Promise<MyVotes> {

@@ -1,4 +1,4 @@
-import type { Database, DbClient } from "./database.type";
+import type { DbClient } from "./database.type";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { candidates, positions, votes } from "@/database/schema";
 
@@ -25,7 +25,7 @@ export interface VoteCountResult {
 export const candidateRepo = {
   // Ballot: minimal fields, active-only
   async listForBallot(
-    db: Database,
+    db: DbClient,
   ): Promise<{ id: string; fullName: string; positionId: string }[]> {
     return await db
       .select({
@@ -40,7 +40,7 @@ export const candidateRepo = {
 
   // Admin table: full candidate records, paginated, opt inactive include
   async listForAdminTable(
-    db: Database,
+    db: DbClient,
     opts: { page?: number; limit?: number; includeInactive?: boolean; positionId?: string } = {},
   ): Promise<AdminListResult> {
     const page = opts.page ?? 1;
@@ -87,7 +87,7 @@ export const candidateRepo = {
 
   // Single-candidate read for vote validation (active-only, minimal fields)
   async getForValidation(
-    db: Database,
+    db: DbClient,
     id: string,
   ): Promise<{ id: string; positionId: string } | null> {
     return (
@@ -101,7 +101,7 @@ export const candidateRepo = {
 
   // Single-candidate full view for admin (optionally include inactive)
   async getForAdminView(
-    db: Database,
+    db: DbClient,
     id: string,
     opts: { includeInactive?: boolean } = {},
   ): Promise<CandidateRow | null> {
@@ -130,7 +130,7 @@ export const candidateRepo = {
   },
 
   // Count of active candidates
-  async countActive(db: Database): Promise<number> {
+  async countActive(db: DbClient): Promise<number> {
     const res = await db
       .select({ count: count() })
       .from(candidates)
@@ -141,7 +141,7 @@ export const candidateRepo = {
 
   // Count of candidates for a position (active-only by default)
   async countByPositionId(
-    db: Database,
+    db: DbClient,
     positionId: string,
     opts: { includeInactive?: boolean } = {},
   ): Promise<number> {
@@ -155,7 +155,7 @@ export const candidateRepo = {
 
   // Batch find active candidates by IDs — returns Map for O(1) lookup
   async findActiveByIds(
-    db: Database,
+    db: DbClient,
     ids: string[],
   ): Promise<Map<string, { id: string; positionId: string }>> {
     const rows = await db
@@ -170,7 +170,7 @@ export const candidateRepo = {
 
   // Insert new candidate (always active)
   async create(
-    db: Database,
+    db: DbClient,
     data: {
       fullName: string;
       accountId: string;
@@ -198,7 +198,7 @@ export const candidateRepo = {
 
   // Update candidate (preserves isActive unless explicitly updated)
   async update(
-    db: Database,
+    db: DbClient,
     id: string,
     data: Partial<{
       fullName?: string;
@@ -215,7 +215,7 @@ export const candidateRepo = {
   },
 
   // Update candidate image URL
-  async updateImageUrl(db: Database, id: string, imageUrl: string | null): Promise<boolean> {
+  async updateImageUrl(db: DbClient, id: string, imageUrl: string | null): Promise<boolean> {
     const result = await db
       .update(candidates)
       .set({
@@ -228,7 +228,7 @@ export const candidateRepo = {
   },
 
   // Soft-delete: set isActive = 0
-  async softDelete(db: Database, id: string): Promise<boolean> {
+  async softDelete(db: DbClient, id: string): Promise<boolean> {
     const result = await db
       .update(candidates)
       .set({ isActive: 0, updatedAt: Math.floor(Date.now() / 1000) })
@@ -239,7 +239,7 @@ export const candidateRepo = {
 
   // Check if active candidate exists for the given account+position (used in create)
   async existsActiveForAccountPosition(
-    db: Database,
+    db: DbClient,
     accountId: string,
     positionId: string,
   ): Promise<boolean> {
@@ -270,7 +270,7 @@ export const candidateRepo = {
   },
 
   // Specialized query for vote results: active candidates with vote counts
-  async listWithVoteCount(db: Database): Promise<VoteCountResult[]> {
+  async listWithVoteCount(db: DbClient): Promise<VoteCountResult[]> {
     const rows = await db
       .select({
         candidateId: candidates.id,

@@ -1,4 +1,4 @@
-import type { Database } from "../repositories/database.type";
+import type { DbClient } from "../repositories/database.type";
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { candidates, elections, positions, votes } from "@/database/schema";
 
@@ -39,13 +39,13 @@ export interface ResultsPosition {
 }
 
 export const electionQueries = {
-  async getCurrentElection(db: Database): Promise<ElectionWithPositions | null> {
+  async getCurrentElection(db: DbClient): Promise<ElectionWithPositions | null> {
     const election = await db.select().from(elections).where(eq(elections.status, "open")).get();
     if (!election) return null;
     return this.getElectionWithPositions(db, election.id);
   },
 
-  async getElectionWithPositions(db: Database, id: string): Promise<ElectionWithPositions | null> {
+  async getElectionWithPositions(db: DbClient, id: string): Promise<ElectionWithPositions | null> {
     const election = await db.select().from(elections).where(eq(elections.id, id)).get();
     if (!election) return null;
     const positionRows = await db
@@ -82,7 +82,7 @@ export const electionQueries = {
     };
   },
 
-  async countPositions(db: Database, electionId: string): Promise<number> {
+  async countPositions(db: DbClient, electionId: string): Promise<number> {
     const row = await db
       .select({ count: count() })
       .from(positions)
@@ -91,7 +91,7 @@ export const electionQueries = {
     return (row as { count: number } | null)?.count ?? 0;
   },
 
-  async getResults(db: Database, electionId: string): Promise<ResultsPosition[]> {
+  async getResults(db: DbClient, electionId: string): Promise<ResultsPosition[]> {
     const rows = await db
       .select({
         positionId: positions.id,

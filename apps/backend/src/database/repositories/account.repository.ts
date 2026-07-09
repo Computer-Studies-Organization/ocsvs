@@ -5,7 +5,7 @@ import { accounts, sessions, users } from "@/database/schema";
 export const accountRepo = {
   // Check if account exists by username or email (used by auth register)
   async accountExists(
-    db: Database,
+    db: DbClient,
     username: string,
     email?: string | null,
   ): Promise<{ id: string } | null> {
@@ -23,7 +23,7 @@ export const accountRepo = {
   },
 
   // Check if username exists (excluding a specific account)
-  async usernameExists(db: Database, username: string, excludeAccountId: string): Promise<boolean> {
+  async usernameExists(db: DbClient, username: string, excludeAccountId: string): Promise<boolean> {
     const existing = await db
       .select({ id: accounts.id })
       .from(accounts)
@@ -69,7 +69,7 @@ export const accountRepo = {
 
   // Update account fields
   async updateAccount(
-    db: Database,
+    db: DbClient,
     accountId: string,
     data: Partial<{
       username: string;
@@ -87,7 +87,7 @@ export const accountRepo = {
   },
 
   // Update password hash (used by changePassword)
-  async updatePassword(db: Database, accountId: string, passwordHash: string): Promise<void> {
+  async updatePassword(db: DbClient, accountId: string, passwordHash: string): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
@@ -117,7 +117,7 @@ export const accountRepo = {
 
   // Get password hash for account (used by auth changePassword)
   async getPasswordHash(
-    db: Database,
+    db: DbClient,
     accountId: string,
   ): Promise<{ password_hash: string } | null> {
     return (
@@ -130,7 +130,7 @@ export const accountRepo = {
   },
 
   // Soft delete account
-  async softDelete(db: Database, accountId: string): Promise<void> {
+  async softDelete(db: DbClient, accountId: string): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)
@@ -140,7 +140,7 @@ export const accountRepo = {
   },
 
   // Count active (non-deleted) admin accounts
-  async countActiveAdmins(db: Database): Promise<number> {
+  async countActiveAdmins(db: DbClient): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(accounts)
@@ -150,7 +150,7 @@ export const accountRepo = {
   },
 
   // Restore soft-deleted account
-  async restore(db: Database, accountId: string): Promise<void> {
+  async restore(db: DbClient, accountId: string): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     await db
       .update(accounts)

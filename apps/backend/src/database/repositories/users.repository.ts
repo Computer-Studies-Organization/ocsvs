@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { DbClient } from "./database.type";
 import { eq } from "drizzle-orm";
 import { users } from "@/database/schema";
 
@@ -13,14 +13,14 @@ import { users } from "@/database/schema";
 export const userRepo = {
   /** Find user by account ID (single table) */
   async findByAccountId(
-    db: Database,
+    db: DbClient,
     accountId: string,
   ): Promise<typeof users.$inferSelect | null> {
     return (await db.select().from(users).where(eq(users.accountId, accountId)).get()) ?? null;
   },
 
   /** Get account ID for a user (single table) */
-  async getAccountId(db: Database, userId: string): Promise<{ accountId: string } | null> {
+  async getAccountId(db: DbClient, userId: string): Promise<{ accountId: string } | null> {
     return (
       (await db
         .select({ accountId: users.accountId })
@@ -32,7 +32,7 @@ export const userRepo = {
 
   /** Update user profile fields (single table) */
   async updateUser(
-    db: Database,
+    db: DbClient,
     userId: string,
     data: Partial<{
       firstName: string;

@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { DbClient } from "./database.type";
 import { asc, eq, sql } from "drizzle-orm";
 import { positions } from "@/database/schema";
 
@@ -6,7 +6,7 @@ export type PositionRow = typeof positions.$inferSelect;
 
 export const positionRepo = {
   async create(
-    db: Database,
+    db: DbClient,
     data: { electionId: string; name: string; displayOrder?: number },
   ): Promise<string> {
     const id = crypto.randomUUID();
@@ -36,11 +36,11 @@ export const positionRepo = {
     return id;
   },
 
-  async findById(db: Database, id: string): Promise<PositionRow | null> {
+  async findById(db: DbClient, id: string): Promise<PositionRow | null> {
     return (await db.select().from(positions).where(eq(positions.id, id)).get()) ?? null;
   },
 
-  async listByElection(db: Database, electionId: string): Promise<PositionRow[]> {
+  async listByElection(db: DbClient, electionId: string): Promise<PositionRow[]> {
     return await db
       .select()
       .from(positions)
@@ -50,7 +50,7 @@ export const positionRepo = {
   },
 
   async update(
-    db: Database,
+    db: DbClient,
     id: string,
     data: Partial<Pick<PositionRow, "name" | "displayOrder">>,
   ): Promise<boolean> {
@@ -62,7 +62,7 @@ export const positionRepo = {
     return result.rowsAffected > 0;
   },
 
-  async delete(db: Database, id: string): Promise<boolean> {
+  async delete(db: DbClient, id: string): Promise<boolean> {
     const result = await db.delete(positions).where(eq(positions.id, id)).run();
     return result.rowsAffected > 0;
   },

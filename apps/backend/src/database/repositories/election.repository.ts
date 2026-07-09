@@ -1,4 +1,4 @@
-import type { Database } from "./database.type";
+import type { DbClient } from "./database.type";
 import { and, asc, desc, eq, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
@@ -10,7 +10,7 @@ export interface ListElectionsOpts {
 
 export const electionRepo = {
   async create(
-    db: Database,
+    db: DbClient,
     data: {
       name: string;
       description?: string | null;
@@ -36,11 +36,11 @@ export const electionRepo = {
     return id;
   },
 
-  async findById(db: Database, id: string): Promise<ElectionRow | null> {
+  async findById(db: DbClient, id: string): Promise<ElectionRow | null> {
     return (await db.select().from(elections).where(eq(elections.id, id)).get()) ?? null;
   },
 
-  async list(db: Database, opts: ListElectionsOpts = {}): Promise<ElectionRow[]> {
+  async list(db: DbClient, opts: ListElectionsOpts = {}): Promise<ElectionRow[]> {
     const where: SQL | undefined = opts.status ? eq(elections.status, opts.status) : undefined;
     return await db
       .select()
@@ -50,12 +50,12 @@ export const electionRepo = {
       .all();
   },
 
-  async findOpen(db: Database): Promise<ElectionRow | null> {
+  async findOpen(db: DbClient): Promise<ElectionRow | null> {
     return (await db.select().from(elections).where(eq(elections.status, "open")).get()) ?? null;
   },
 
   async updateStatus(
-    db: Database,
+    db: DbClient,
     id: string,
     data: {
       existingStatus: TElectionStatus;
@@ -77,7 +77,7 @@ export const electionRepo = {
   },
 
   async updateMetadata(
-    db: Database,
+    db: DbClient,
     id: string,
     data: Partial<Pick<ElectionRow, "name" | "description" | "opensAt" | "closesAt">>,
   ): Promise<boolean> {
@@ -90,7 +90,7 @@ export const electionRepo = {
     return result.rowsAffected > 0;
   },
 
-  async findEarliestDraft(db: Database): Promise<ElectionRow | null> {
+  async findEarliestDraft(db: DbClient): Promise<ElectionRow | null> {
     return (
       (await db
         .select()
@@ -101,7 +101,7 @@ export const electionRepo = {
     );
   },
 
-  async findLatestClosed(db: Database): Promise<ElectionRow | null> {
+  async findLatestClosed(db: DbClient): Promise<ElectionRow | null> {
     return (
       (await db
         .select()

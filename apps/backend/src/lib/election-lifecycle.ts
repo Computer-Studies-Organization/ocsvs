@@ -11,12 +11,15 @@ const TRANSITIONS: ReadonlyArray<readonly [TElectionStatus, TElectionStatus]> = 
 export type TransitionErrorCode =
   | "INVALID_TRANSITION"
   | "ELECTION_HAS_NO_POSITIONS"
-  | "INVALID_TRANSITION_BODY";
+  | "INVALID_TRANSITION_BODY"
+  | "ELECTION_NOT_FOUND"
+  | "ANOTHER_ELECTION_IS_OPEN"
+  | "ELECTION_TRANSITION_CONFLICT";
 
 export class TransitionError extends Error {
   readonly code: TransitionErrorCode;
-  readonly status: 400 | 409;
-  constructor(code: TransitionErrorCode, status: 400 | 409) {
+  readonly status: 400 | 404 | 409;
+  constructor(code: TransitionErrorCode, status: 400 | 404 | 409) {
     super(ERROR_MESSAGES[code]);
     this.code = code;
     this.status = status;

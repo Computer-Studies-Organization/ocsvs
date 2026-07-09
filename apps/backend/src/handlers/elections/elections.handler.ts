@@ -14,7 +14,8 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import { assertTransition, TransitionError } from "@/lib/election-lifecycle";
+import { TransitionError } from "@/lib/election-lifecycle";
+import { ElectionLifecycleCoordinator } from "@/lib/election-lifecycle-coordinator";
 import type { TElectionStatus } from "@/database/schema";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -26,18 +27,16 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
   const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
   const body = c.req.valid("json");
-  const id = await electionRepo.create(db, body);
+
+  const id = await ElectionLifecycleCoordinator.create(db, body, {
+    id: actorAccountId,
+    username: actorUsername,
+  });
+
   const row = await electionRepo.findById(db, id);
   if (!row) {
     throw new Error("Election row missing immediately after create");
   }
-  await auditLogRepo.insert(db, {
-    action: "election.create",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
 
   return c.json(row, httpStatusCodes.CREATED);
 };
@@ -124,54 +123,19 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const { to, opensAt, closesAt } = c.req.valid("json");
-  const existing = await electionRepo.findById(db, id);
-  if (!existing) {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
+
   try {
-    const positionCount = await electionQueries.countPositions(db, id);
-    assertTransition(existing.status as TElectionStatus, to, { opensAt, closesAt }, positionCount);
+    const result = await ElectionLifecycleCoordinator.transition(db, id, {
+      to: to as TElectionStatus,
+      opensAt,
+      closesAt,
+      actor: { id: actorAccountId, username: actorUsername },
+    });
+    return c.json({ message: ERROR_MESSAGES[result.messageKey] }, httpStatusCodes.OK);
   } catch (err) {
     if (err instanceof TransitionError) {
       return c.json({ message: err.message }, err.status);
     }
     throw err;
   }
-  const resolvedClosesAt =
-    closesAt !== undefined
-      ? closesAt
-      : to === "closed"
-        ? Math.floor(Date.now() / 1000)
-        : (existing.closesAt ?? undefined);
-  const updated = await electionRepo.updateStatus(db, id, {
-    existingStatus: existing.status as TElectionStatus,
-    status: to,
-    opensAt: opensAt !== undefined ? opensAt : (existing.opensAt ?? undefined),
-    closesAt: resolvedClosesAt,
-  });
-  if (!updated) {
-    return c.json(
-      { message: ERROR_MESSAGES.ELECTION_TRANSITION_CONFLICT },
-      httpStatusCodes.CONFLICT,
-    );
-  }
-  await auditLogRepo.insert(db, {
-    action: "election.transition",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-    description: `${existing.status} \u2192 ${to}`,
-  });
-
-  const messageKey = (
-    existing.status === "draft" && to === "open"
-      ? "ELECTION_OPENED_SUCCESSFULLY"
-      : to === "closed"
-        ? "ELECTION_CLOSED_SUCCESSFULLY"
-        : to === "archived"
-          ? "ELECTION_ARCHIVED_SUCCESSFULLY"
-          : "ELECTION_REOPENED_SUCCESSFULLY"
-  ) as keyof typeof ERROR_MESSAGES;
-  return c.json({ message: ERROR_MESSAGES[messageKey] }, httpStatusCodes.OK);
 };
