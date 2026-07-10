@@ -22,7 +22,7 @@ describe("audit-actions enum drift", () => {
       ...walk(path.join(process.cwd(), "scripts")),
     ];
     const re =
-      /(?:auditLogRepo\.insert\(\s*\w+\s*,\s*\{\s*action:\s*"([^"]+)"|const\s+\w+_AUDIT_ACTION\s*=\s*"([^"]+)"\s+satisfies\s+AuditAction)/g;
+      /(?:(?:auditLogRepo|auditLogger)\.insert\(\s*\w+\s*,\s*\{\s*action:\s*"([^"]+)"|const\s+\w+_AUDIT_ACTION\s*=\s*"([^"]+)"\s+satisfies\s+AuditAction)/g;
 
     const found = new Set<string>();
     for (const f of files) {

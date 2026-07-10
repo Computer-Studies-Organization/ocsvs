@@ -22,12 +22,11 @@ vi.mock("@/middleware/auth", () => ({
   },
 }));
 
-const { mockDb, mockDbAll, mockDbBatch } = vi.hoisted(() => {
+const { mockDb, mockDbAll, mockDbValues } = vi.hoisted(() => {
   const mockDbAll = vi.fn();
   const mockDbWhere = vi.fn();
   const mockDbFrom = vi.fn();
   const mockDbSelect = vi.fn();
-  const mockDbBatch = vi.fn();
   const mockDbInsert = vi.fn();
   const mockDbValues = vi.fn();
 
@@ -42,11 +41,16 @@ const { mockDb, mockDbAll, mockDbBatch } = vi.hoisted(() => {
   return {
     mockDb: {
       select: mockDbSelect,
-      batch: mockDbBatch,
       insert: mockDbInsert,
+      delete: vi.fn(() => ({
+        where: vi.fn(() => ({
+          run: vi.fn(),
+        })),
+      })),
+      transaction: vi.fn(async (cb) => await cb(mockDb)),
     },
     mockDbAll,
-    mockDbBatch,
+    mockDbValues,
   };
 });
 
@@ -88,6 +92,8 @@ const {
   mockRestore,
   mockCountActiveAdmins,
   mockCountActiveAdminsAndSuperAdmins,
+  mockHardDelete,
+  mockIsCandidate,
 } = vi.hoisted(() => ({
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
@@ -95,6 +101,8 @@ const {
   mockRestore: vi.fn(),
   mockCountActiveAdmins: vi.fn(),
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
+  mockHardDelete: vi.fn(),
+  mockIsCandidate: vi.fn(),
 }));
 
 const { mockAuditLogInsert } = vi.hoisted(() => ({
@@ -106,6 +114,12 @@ vi.mock("@/database/repositories/audit-log.repository", () => ({
     insert: mockAuditLogInsert,
     list: vi.fn(),
     listByTarget: vi.fn(),
+  },
+}));
+
+vi.mock("@/database/repositories/candidates.repository", () => ({
+  candidateRepo: {
+    isCandidate: mockIsCandidate,
   },
 }));
 
@@ -121,6 +135,7 @@ vi.mock("@/database/repositories/account.repository", () => ({
     countActiveAdmins: mockCountActiveAdmins,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     restore: mockRestore,
+    hardDelete: mockHardDelete,
   },
 }));
 
@@ -529,7 +544,7 @@ describe("users Routes", () => {
     it("should successfully import new students", async () => {
       mockDbAll.mockResolvedValueOnce([]); // existingUsers
       mockDbAll.mockResolvedValueOnce([]); // existingAccounts
-      mockDbBatch.mockResolvedValueOnce([]);
+      mockDbValues.mockResolvedValue([]);
 
       const res = await router.request("/users/import", {
         method: "POST",
@@ -579,13 +594,13 @@ describe("users Routes", () => {
         }),
       );
 
-      expect(mockDbBatch).toHaveBeenCalled();
+      expect(mockDbValues).toHaveBeenCalled();
     });
 
     it("should handle duplicate student IDs (skipped records)", async () => {
       mockDbAll.mockResolvedValueOnce([{ studentId: "C25-01-10001-MAN121" }]); // existingUsers
       mockDbAll.mockResolvedValueOnce([]); // existingAccounts
-      mockDbBatch.mockResolvedValueOnce([]);
+      mockDbValues.mockResolvedValue([]);
 
       const res = await router.request("/users/import", {
         method: "POST",
@@ -624,7 +639,7 @@ describe("users Routes", () => {
         reason: "Student ID already exists in the system",
       });
 
-      expect(mockDbBatch).toHaveBeenCalled();
+      expect(mockDbValues).toHaveBeenCalled();
     });
 
     it("should return 409 Conflict when a database unique constraint conflict occurs", async () => {
@@ -632,7 +647,7 @@ describe("users Routes", () => {
       mockDbAll.mockResolvedValueOnce([]); // existingAccounts
 
       const uniqueConstraintError = new Error("UNIQUE constraint failed: accounts.username");
-      mockDbBatch.mockRejectedValueOnce(uniqueConstraintError);
+      mockDbValues.mockRejectedValueOnce(uniqueConstraintError);
 
       const res = await router.request("/users/import", {
         method: "POST",
@@ -657,6 +672,91 @@ describe("users Routes", () => {
       expect(body.message).toBe(ERROR_MESSAGES.IMPORT_CONFLICT);
       expect(body.imported).toHaveLength(0);
       expect(body.skipped).toHaveLength(0);
+    });
+  });
+
+  describe("POST /users/:id/hard-delete - hardDeleteUser", () => {
+    it("should reject non-admin requests", async () => {
+      mockAuthUser.role = "user";
+      const res = await router.request("/users/some-user-id/hard-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.FORBIDDEN);
+    });
+
+    it("should allow super_admin to hard delete a regular user", async () => {
+      mockAuthUser.role = "super_admin";
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "other-account-id",
+        role: "user",
+        deletedAt: null,
+      });
+      mockIsCandidate.mockResolvedValueOnce(false);
+      mockFindById.mockResolvedValueOnce({ username: "johndoe", studentId: "stud-123" });
+      mockHardDelete.mockResolvedValueOnce(undefined);
+
+      const res = await router.request("/users/some-user-id/hard-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User permanently deleted");
+      expect(mockHardDelete).toHaveBeenCalledWith(expect.anything(), "other-account-id");
+    });
+
+    it("should reject regular admin trying to hard delete an admin", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "other-account-id",
+        role: "admin",
+        deletedAt: null,
+      });
+
+      const res = await router.request("/users/some-user-id/hard-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_DELETE_ADMIN);
+    });
+
+    it("should reject hard delete if user is a candidate", async () => {
+      mockAuthUser.role = "super_admin";
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "other-account-id",
+        role: "user",
+        deletedAt: null,
+      });
+      mockIsCandidate.mockResolvedValueOnce(true);
+
+      const res = await router.request("/users/some-user-id/hard-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.USER_IS_CANDIDATE);
     });
   });
 });

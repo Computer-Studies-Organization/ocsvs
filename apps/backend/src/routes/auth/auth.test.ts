@@ -36,8 +36,32 @@ vi.mock("@/middleware/auth", () => ({
 }));
 
 // Mock the database
+const mockDb: any = {
+  select: vi.fn(() => ({
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
+        get: vi.fn().mockResolvedValue(null),
+        all: vi.fn().mockResolvedValue([]),
+      })),
+      get: vi.fn().mockResolvedValue(null),
+      all: vi.fn().mockResolvedValue([]),
+    })),
+  })),
+  insert: vi.fn(() => ({
+    values: vi.fn(() => ({
+      run: vi.fn(),
+    })),
+  })),
+  delete: vi.fn(() => ({
+    where: vi.fn(() => ({
+      run: vi.fn(),
+    })),
+  })),
+  transaction: vi.fn(async (cb) => await cb(mockDb)),
+};
+
 vi.mock("@/config/db", () => ({
-  createDb: vi.fn(() => ({ db: {} })),
+  createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
 // Mock the account repository
