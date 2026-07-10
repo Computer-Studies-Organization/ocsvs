@@ -5,10 +5,13 @@ import type {
   uploadImageRoute,
 } from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
-import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { getImageStorage, ImageValidationError, resolveCandidateImageUrl } from "@/lib/b2-client";
+import { getImageStorage, resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import {
+  candidateLifecycleCoordinator,
+  CandidateLifecycleError,
+} from "@/lib/candidate-lifecycle-coordinator";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) => {
@@ -22,12 +25,6 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
 
-  // Check candidate exists
-  const candidate = await candidateRepo.getForAdminView(db, id);
-  if (!candidate) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-
   // Get file from form data
   const formData = await c.req.formData();
   const file = formData.get("image") as File | null;
@@ -37,47 +34,21 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   }
 
   try {
-    const { url } = await storage.upload(id, file);
+    const updatedCandidate = await candidateLifecycleCoordinator.uploadAvatar(
+      db,
+      id,
+      file,
+      storage,
+      { id: actorAccountId, username: actorUsername },
+      c.var.logger,
+    );
 
-    // Update database
-    await candidateRepo.updateImageUrl(db, id, url);
-
-    // Delete old image if exists
-    if (candidate.imageUrl) {
-      try {
-        await storage.delete(candidate.imageUrl);
-      } catch (error) {
-        // Log but continue - old image cleanup is best-effort
-        console.warn("Failed to delete old B2 image:", error);
-      }
-    }
-
-    // Write audit log
-    try {
-      await auditLogRepo.insert(db, {
-        action: "candidate.update",
-        targetType: "candidate",
-        targetId: id,
-        actorAccountIdSnapshot: actorAccountId,
-        actorUsernameSnapshot: actorUsername,
-      });
-    } catch (auditErr) {
-      c.var.logger?.error(
-        { auditErr, action: "candidate.update", targetId: id },
-        "audit insert failed",
-      );
-    }
-
-    // Return updated candidate
-    const updatedCandidate = await candidateRepo.getForAdminView(db, id);
-    if (updatedCandidate) {
-      updatedCandidate.imageUrl = resolveCandidateImageUrl(
-        updatedCandidate.imageUrl,
-        updatedCandidate.id,
-        c.env,
-        c.req.url,
-      );
-    }
+    updatedCandidate.imageUrl = resolveCandidateImageUrl(
+      updatedCandidate.imageUrl,
+      updatedCandidate.id,
+      c.env,
+      c.req.url,
+    );
 
     return c.json(
       {
@@ -87,8 +58,8 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
       httpStatusCodes.OK,
     );
   } catch (error) {
-    if (error instanceof ImageValidationError) {
-      return c.json({ message: error.message }, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
     }
     throw error;
   }
@@ -105,59 +76,35 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
 
-  // Check candidate exists
-  const candidate = await candidateRepo.getForAdminView(db, id);
-  if (!candidate) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-
-  // Delete from storage if image exists
-  if (candidate.imageUrl) {
-    try {
-      await storage.delete(candidate.imageUrl);
-    } catch (error) {
-      // Log but continue - we still want to clear the DB reference
-      console.warn("Failed to delete B2 image:", error);
-    }
-  }
-
-  // Clear imageUrl in database
-  await candidateRepo.updateImageUrl(db, id, null);
-
-  // Write audit log
   try {
-    await auditLogRepo.insert(db, {
-      action: "candidate.update",
-      targetType: "candidate",
-      targetId: id,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
-    });
-  } catch (auditErr) {
-    c.var.logger?.error(
-      { auditErr, action: "candidate.update", targetId: id },
-      "audit insert failed",
+    const updatedCandidate = await candidateLifecycleCoordinator.deleteAvatar(
+      db,
+      id,
+      storage,
+      { id: actorAccountId, username: actorUsername },
+      c.var.logger,
     );
-  }
 
-  // Return updated candidate
-  const updatedCandidate = await candidateRepo.getForAdminView(db, id);
-  if (updatedCandidate) {
     updatedCandidate.imageUrl = resolveCandidateImageUrl(
       updatedCandidate.imageUrl,
       updatedCandidate.id,
       c.env,
       c.req.url,
     );
-  }
 
-  return c.json(
-    {
-      message: ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
-      candidate: updatedCandidate,
-    },
-    httpStatusCodes.OK,
-  );
+    return c.json(
+      {
+        message: ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
+        candidate: updatedCandidate,
+      },
+      httpStatusCodes.OK,
+    );
+  } catch (error) {
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
+    }
+    throw error;
+  }
 };
 
 export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> = async (c) => {

@@ -36,6 +36,7 @@ function createMockDb() {
     delete: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
     batch: vi.fn().mockResolvedValue(undefined),
+    transaction: vi.fn(async (cb) => await cb(mockDb)),
   };
 }
 
@@ -43,6 +44,18 @@ mockDb = createMockDb();
 
 vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
+}));
+
+vi.mock("@/database/repositories/position.repository", () => ({
+  positionRepo: {
+    findById: vi.fn().mockResolvedValue({ id: "pos-101", electionId: "el-123" }),
+  },
+}));
+
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findById: vi.fn().mockResolvedValue({ id: "el-123", status: "draft" }),
+  },
 }));
 
 // Hoisted mocks
@@ -382,6 +395,7 @@ describe("candidate Routes (repository)", () => {
     it("should upload candidate image, update database, and write audit log", async () => {
       const candidateId = "cand-1";
       mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });
+      mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });
       mockValidateFile.mockReturnValue({ valid: true });
       mockUploadImage.mockResolvedValue({ url: "https://b2.com/image.png", key: "key" });
       mockUpdateImageUrl.mockResolvedValue(true);
@@ -431,6 +445,10 @@ describe("candidate Routes (repository)", () => {
 
     it("should delete old image from B2 first if it exists", async () => {
       const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/old.png",
+      });
       mockGetForAdminView.mockResolvedValueOnce({
         id: candidateId,
         imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/old.png",
@@ -509,6 +527,10 @@ describe("candidate Routes (repository)", () => {
   describe("DELETE /candidates/:id/image (deleteImage)", () => {
     it("should delete candidate image from B2, update database, and write audit log", async () => {
       const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/image.png",
+      });
       mockGetForAdminView.mockResolvedValueOnce({
         id: candidateId,
         imageUrl: "https://b2.com/file/cso-voting-candidates/candidates/cand-1/image.png",

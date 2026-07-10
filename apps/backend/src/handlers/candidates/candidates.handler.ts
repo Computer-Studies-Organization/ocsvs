@@ -6,13 +6,14 @@ import type {
   listCandidatesRoute,
   updateCandidateRoute,
 } from "@/routes/candidates/routes";
-import { eq } from "drizzle-orm";
 import { createDb } from "@/config/db";
-import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { accounts } from "@/database/schema";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import {
+  candidateLifecycleCoordinator,
+  CandidateLifecycleError,
+} from "@/lib/candidate-lifecycle-coordinator";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = async (c) => {
@@ -25,47 +26,26 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
   const { fullName, accountId, positionId, manifesto } = c.req.valid("json");
   const { db } = createDb(c);
 
-  // Verify account exists
-  const account = await db.select().from(accounts).where(eq(accounts.id, accountId)).get();
+  try {
+    const candidate = await candidateLifecycleCoordinator.create(
+      db,
+      { fullName, accountId, positionId, manifesto },
+      { id: actorAccountId, username: actorUsername },
+    );
 
-  if (!account) {
-    return c.json({ message: ERROR_MESSAGES.ACCOUNT_NOT_FOUND }, httpStatusCodes.BAD_REQUEST);
-  }
-
-  // Ensure no active candidate for same account+position
-  const exists = await candidateRepo.existsActiveForAccountPosition(db, accountId, positionId);
-  if (exists) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
-  }
-
-  const candidateId = await candidateRepo.create(db, {
-    fullName,
-    accountId,
-    positionId,
-    manifesto,
-  });
-
-  await auditLogRepo.insert(db, {
-    action: "candidate.create",
-    targetType: "candidate",
-    targetId: candidateId,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
-
-  return c.json(
-    {
-      message: ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY,
-      candidate: {
-        id: candidateId,
-        fullName,
-        accountId,
-        positionId,
-        manifesto,
+    return c.json(
+      {
+        message: ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY,
+        candidate,
       },
-    },
-    httpStatusCodes.OK,
-  );
+      httpStatusCodes.OK,
+    );
+  } catch (error) {
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
+    }
+    throw error;
+  }
 };
 
 export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async (c) => {
@@ -124,38 +104,32 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
   const updateData = c.req.valid("json");
   const { db } = createDb(c);
 
-  const existingCandidate = await candidateRepo.getForAdminView(db, id);
-  if (!existingCandidate) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
+  try {
+    const updatedCandidate = await candidateLifecycleCoordinator.update(db, id, updateData, {
+      id: actorAccountId,
+      username: actorUsername,
+    });
 
-  await candidateRepo.update(db, id, updateData);
-
-  await auditLogRepo.insert(db, {
-    action: "candidate.update",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
-
-  const updatedCandidate = await candidateRepo.getForAdminView(db, id);
-  if (updatedCandidate) {
     updatedCandidate.imageUrl = resolveCandidateImageUrl(
       updatedCandidate.imageUrl,
       updatedCandidate.id,
       c.env,
       c.req.url,
     );
-  }
 
-  return c.json(
-    {
-      message: ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
-      candidate: updatedCandidate,
-    },
-    httpStatusCodes.OK,
-  );
+    return c.json(
+      {
+        message: ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
+        candidate: updatedCandidate,
+      },
+      httpStatusCodes.OK,
+    );
+  } catch (error) {
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
+    }
+    throw error;
+  }
 };
 
 export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = async (c) => {
@@ -168,20 +142,17 @@ export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = asy
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
 
-  const existingCandidate = await candidateRepo.getForAdminView(db, id);
-  if (!existingCandidate) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  try {
+    await candidateLifecycleCoordinator.deactivate(db, id, {
+      id: actorAccountId,
+      username: actorUsername,
+    });
+
+    return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
+  } catch (error) {
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
+    }
+    throw error;
   }
-
-  await candidateRepo.softDelete(db, id);
-
-  await auditLogRepo.insert(db, {
-    action: "candidate.deactivate",
-    targetType: "candidate",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
-
-  return c.json({ message: ERROR_MESSAGES.CANDIDATE_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
 };
