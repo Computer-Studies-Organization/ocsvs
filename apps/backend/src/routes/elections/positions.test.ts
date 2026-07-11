@@ -27,7 +27,7 @@ vi.mock("@/middleware/auth", () => ({
 let mockDb: any;
 
 function createMockDb() {
-  return {
+  const dbInst = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -42,7 +42,9 @@ function createMockDb() {
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
+    transaction: vi.fn(async (cb) => await cb(dbInst)),
   };
+  return dbInst;
 }
 
 mockDb = createMockDb();

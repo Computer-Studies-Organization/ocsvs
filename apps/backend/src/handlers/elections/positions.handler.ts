@@ -37,21 +37,24 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
   try {
-    const newId = await positionRepo.create(db, {
-      electionId: id,
-      name: body.name,
-      displayOrder: body.displayOrder,
-    });
-    const row = await positionRepo.findById(db, newId);
-    if (!row) {
-      throw new Error("Position row missing immediately after create");
-    }
-    await auditLogRepo.insert(db, {
-      action: "position.create",
-      targetType: "position",
-      targetId: newId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
+    const row = await db.transaction(async (tx) => {
+      const newId = await positionRepo.create(tx, {
+        electionId: id,
+        name: body.name,
+        displayOrder: body.displayOrder,
+      });
+      const createdRow = await positionRepo.findById(tx, newId);
+      if (!createdRow) {
+        throw new Error("Position row missing immediately after create");
+      }
+      await auditLogRepo.insert(tx, {
+        action: "position.create",
+        targetType: "position",
+        targetId: newId,
+        actorAccountIdSnapshot: actorAccountId,
+        actorUsernameSnapshot: actorUsername,
+      });
+      return createdRow;
     });
 
     return c.json(row, httpStatusCodes.CREATED);
@@ -81,17 +84,20 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
   }
   try {
-    await positionRepo.update(db, positionId, body);
-    const updated = await positionRepo.findById(db, positionId);
-    if (!updated) {
-      throw new Error("Position row missing immediately after update");
-    }
-    await auditLogRepo.insert(db, {
-      action: "position.update",
-      targetType: "position",
-      targetId: positionId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
+    const updated = await db.transaction(async (tx) => {
+      await positionRepo.update(tx, positionId, body);
+      const updatedRow = await positionRepo.findById(tx, positionId);
+      if (!updatedRow) {
+        throw new Error("Position row missing immediately after update");
+      }
+      await auditLogRepo.insert(tx, {
+        action: "position.update",
+        targetType: "position",
+        targetId: positionId,
+        actorAccountIdSnapshot: actorAccountId,
+        actorUsernameSnapshot: actorUsername,
+      });
+      return updatedRow;
     });
 
     return c.json(updated, httpStatusCodes.OK);
@@ -125,13 +131,15 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
   if (candCount > 0) {
     return c.json({ message: ERROR_MESSAGES.POSITION_HAS_CANDIDATES }, httpStatusCodes.CONFLICT);
   }
-  await positionRepo.delete(db, positionId);
-  await auditLogRepo.insert(db, {
-    action: "position.delete",
-    targetType: "position",
-    targetId: positionId,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
+  await db.transaction(async (tx) => {
+    await positionRepo.delete(tx, positionId);
+    await auditLogRepo.insert(tx, {
+      action: "position.delete",
+      targetType: "position",
+      targetId: positionId,
+      actorAccountIdSnapshot: actorAccountId,
+      actorUsernameSnapshot: actorUsername,
+    });
   });
 
   return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
