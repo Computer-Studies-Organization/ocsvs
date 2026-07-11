@@ -145,13 +145,14 @@
 </div>
 
 {#if election && position}
-  <AddCandidateModal
-    open={isCreateOpen}
-    onclose={closeCreate}
-    electionId={election.id}
-    positionId={position.id}
-    onsuccess={closeCreate}
-  />
+  {#if isCreateOpen}
+    <AddCandidateModal
+      onclose={closeCreate}
+      electionId={election.id}
+      positionId={position.id}
+      onsuccess={closeCreate}
+    />
+  {/if}
 
   <EditPositionModal
     open={isEditOpen}

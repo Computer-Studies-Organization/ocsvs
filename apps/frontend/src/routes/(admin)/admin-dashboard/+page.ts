@@ -5,7 +5,7 @@ export const load: PageLoad = async () => {
   try {
     const stats = await fetchAdminStats();
     return { stats };
-  } catch (error) {
+  } catch {
     return {
       stats: {
         votersCount: 0,

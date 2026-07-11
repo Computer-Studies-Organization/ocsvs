@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { createCandidate } from '$lib/api/candidates'
   import { fetchUsers } from '$lib/api/users'
@@ -13,13 +14,11 @@
   import type { TUsersData } from '$lib/types'
 
   let {
-    open,
     onclose,
     electionId,
     positionId,
     onsuccess,
   }: {
-    open: boolean
     onclose: () => void
     electionId: string
     positionId: string
@@ -34,19 +33,11 @@
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
 
-  // Fetch users when modal opens
-  $effect(() => {
-    if (open) {
-      createAccountId = ''
-      createFullName = ''
-      createManifesto = ''
-      createErrors = {}
-      usersError = ''
-      
-      fetchUsers({ limit: 100 })
-        .then(res => { users = res.data })
-        .catch(e => { usersError = extractErrorMessage(e, 'Failed to load users'); users = [] })
-    }
+  // Fetch users on mount (modal is conditionally mounted by parent)
+  onMount(() => {
+    fetchUsers({ limit: 100 })
+      .then(res => { users = res.data })
+      .catch(e => { usersError = extractErrorMessage(e, 'Failed to load users'); users = [] })
   })
 
   function handleUserSelect(accountId: string) {
@@ -97,7 +88,7 @@
   }
 </script>
 
-<Modal {open} onclose={handleClose}>
+<Modal open={true} onclose={handleClose}>
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add candidate</h2>
 
   {#if usersError}

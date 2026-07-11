@@ -37,8 +37,21 @@
   const isAdmin = $derived($authStore.user?.user?.role === UserRole.ADMIN || $authStore.user?.user?.role === UserRole.SUPER_ADMIN)
 
   let pageState = $state<TVotingPageState>({ kind: 'loading' })
+
+  // Re-derive page state from API data, but preserve the user's in-progress
+  // selections when the open election hasn't changed (e.g. auto-refresh).
   $effect(() => {
-    pageState = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
+    const next = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
+    if (
+      next.kind === 'stepper' &&
+      pageState.kind === 'stepper' &&
+      next.election.id === pageState.election.id
+    ) {
+      // Same election still open: keep current voting progress, only refresh positions/candidates.
+      pageState = { ...next, voting: pageState.voting }
+      return
+    }
+    pageState = next
   })
 
   let lastAutoFetch = 0

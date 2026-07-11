@@ -3,28 +3,25 @@
   import Spinner from '$lib/components/ui/spinner.svelte'
   import { getAdminRouteRedirectPath } from '$lib/routeGuards'
   import { authStore } from '$lib/stores/auth'
-  import { derived } from 'svelte/store'
   import Header from '$lib/components/ui/Header.svelte'
 
   const { children } = $props()
 
-  const state = derived(authStore, $authStore => ({
-    loading: $authStore.loading,
-    redirect: getAdminRouteRedirectPath($authStore.user),
-  }))
+  const loading = $derived($authStore.loading)
+  const redirect = $derived(getAdminRouteRedirectPath($authStore.user))
 
   $effect(() => {
-    if (!$state.loading && $state.redirect) {
-      goto($state.redirect, { replaceState: true })
+    if (!loading && redirect) {
+      goto(redirect, { replaceState: true })
     }
   })
 </script>
 
-{#if $state.loading}
+{#if loading}
   <div class='flex min-h-screen w-full items-center justify-center bg-slate-950 text-slate-100'>
     <Spinner size={40} />
   </div>
-{:else if !$state.redirect}
+{:else if !redirect}
   <div class='min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col'>
     <Header adminMode={true} />
     <main class='flex-1 flex flex-col'>

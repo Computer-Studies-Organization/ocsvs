@@ -1,32 +1,21 @@
 <script lang='ts'>
   import type { TElection, TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { listResults } from '$lib/api/elections'
   import { authStore } from '$lib/stores/auth'
-  import { ArrowLeft, BarChart3, Loader, Trophy, Download } from 'lucide-svelte'
+  import { ArrowLeft, BarChart3, Trophy, Download } from 'lucide-svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
-  import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { addToast } from '$lib/stores/toast'
 
   interface CandidateWithPct extends TVoteCount { percentage: number }
-  interface PositionResult extends TVoteResults {
+  interface PositionResult extends Omit<TVoteResults, 'candidates'> {
     candidates: CandidateWithPct[]
     totalVotes: number
   }
 
   let { data } = $props()
   let elections = $derived<TElection[]>(data.elections)
-  // svelte-ignore state_referenced_locally
-  let selectedElectionId = $state<string>(data.selectedElectionId)
-
-  $effect(() => {
-    selectedElectionId = data.selectedElectionId
-  })
-
-  let resultsData = $state<TVoteResultsResponse | null>(null)
-  let electionName = $state('')
-  let isLoading = $state(false)
-  let isError = $state(false)
+  let resultsData = $derived<TVoteResultsResponse>(data.resultsData)
+  let isError = $derived(Boolean(data.resultsError))
 
   const user = $derived($authStore.user)
 
@@ -47,75 +36,13 @@
     })
   })
 
-  // Fetch results when selectedElectionId changes
-  $effect(() => {
-    if (!selectedElectionId) {
-      resultsData = {
-        results: [],
-        meta: {
-          totalVotes: 0,
-          totalPositions: 0
-        }
-      }
-      isLoading = false
-      return
-    }
-
-    let active = true
-    async function loadResults() {
-      isLoading = true
-      isError = false
-      try {
-        const selected = elections.find(e => e.id === selectedElectionId)
-        if (selected) {
-          electionName = selected.name
-        }
-        const results = await listResults(selectedElectionId)
-        const mappedResults = results.map(r => ({
-          positionId: r.positionId,
-          positionName: r.positionName,
-          candidates: r.candidates.map(c => ({
-            candidateId: c.candidateId,
-            candidateName: c.fullName,
-            positionId: r.positionId,
-            positionName: r.positionName,
-            voteCount: c.voteCount
-          }))
-        }))
-        const totalVotes = results.reduce((sum, r) => sum + r.totalVotes, 0)
-        
-        if (active) {
-          resultsData = {
-            results: mappedResults,
-            meta: {
-              totalVotes,
-              totalPositions: results.length
-            }
-          }
-        }
-      }
-      catch {
-        if (active) {
-          isError = true
-          addToast('error', 'Failed to load election results')
-        }
-      }
-      finally {
-        if (active) {
-          isLoading = false
-        }
-      }
-    }
-
-    loadResults()
-
-    return () => {
-      active = false
-    }
-  })
+  function selectElection(id: string) {
+    goto(`?electionId=${id}`, { keepFocus: true, noScroll: true })
+  }
 
   function exportToCSV() {
-    if (!resultsWithPercentages.length || !electionName) return
+    if (!resultsWithPercentages.length) return
+    const electionName = elections.find(e => e.id === data.selectedElectionId)?.name ?? ''
 
     const escapeCsv = (val: string) => {
       const stringVal = String(val)
@@ -203,8 +130,8 @@
         <div>
           <h1 class='text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl'>Vote Results</h1>
           <p class='mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500'>
-            {#if electionName}
-              Real-time Election Statistics — {electionName}
+            {#if data.selectedElectionId}
+              Real-time Election Statistics — {elections.find(e => e.id === data.selectedElectionId)?.name ?? ''}
             {:else}
               Real-time Election Statistics
             {/if}
@@ -236,21 +163,20 @@
         {#if visibleElections.length > 0}
           <select
             id='election-select'
-            bind:value={selectedElectionId}
+            value={data.selectedElectionId}
+            onchange={(e) => selectElection(e.currentTarget.value)}
             class='rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-100 focus:border-sky-400 focus:outline-none cursor-pointer'
           >
             {#each visibleElections as e (e.id)}
               <option value={e.id}>{e.name} ({e.status})</option>
             {/each}
           </select>
-        {:else if isLoading}
-          <div class='h-10 w-48 animate-pulse rounded-xl bg-slate-800'></div>
         {:else}
           <span class='text-sm text-slate-500 font-medium'>No visible elections available</span>
         {/if}
       </div>
 
-      {#if resultsWithPercentages.length > 0 && !isLoading && !isError}
+      {#if resultsWithPercentages.length > 0 && !isError}
         <button
           onclick={exportToCSV}
           class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 cursor-pointer'
@@ -287,15 +213,9 @@
 
     <!-- Results -->
     <div class='flex-1 space-y-6'>
-      {#if isLoading}
-        <div class='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-          {#each { length: 2 } as _}
-            <SkeletonCard />
-          {/each}
-        </div>
-      {:else if isError}
+      {#if isError}
         <div class='rounded-2xl border border-red-500/20 bg-red-500/5 p-8 backdrop-blur-xl'>
-          <p class='text-center text-red-400'>Failed to load results. Please try again later.</p>
+          <p class='text-center text-red-400'>{data.resultsError || 'Failed to load results. Please try again later.'}</p>
         </div>
       {:else if resultsWithPercentages.length === 0}
         <EmptyState
