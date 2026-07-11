@@ -66,25 +66,27 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.UNAUTHORIZED);
   }
 
-  // Update accounts table if account fields present
-  const accountFields: Record<string, unknown> = {};
-  if (updateData.username !== undefined) accountFields.username = updateData.username;
-  if (updateData.email !== undefined) {
-    accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null;
-  }
+  // Update accounts and users tables atomically
+  await db.transaction(async (tx) => {
+    const accountFields: Record<string, unknown> = {};
+    if (updateData.username !== undefined) accountFields.username = updateData.username;
+    if (updateData.email !== undefined) {
+      accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null;
+    }
 
-  if (Object.keys(accountFields).length > 0) {
-    await accountRepo.updateAccount(db, authUser.id, accountFields);
-  }
+    if (Object.keys(accountFields).length > 0) {
+      await accountRepo.updateAccount(tx, authUser.id, accountFields);
+    }
 
-  // Update users table if profile fields present
-  const userFields: Record<string, unknown> = {};
-  if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName;
-  if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName;
+    // Update users table if profile fields present
+    const userFields: Record<string, unknown> = {};
+    if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName;
+    if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName;
 
-  if (Object.keys(userFields).length > 0) {
-    await userRepo.updateUser(db, user.id, userFields);
-  }
+    if (Object.keys(userFields).length > 0) {
+      await userRepo.updateUser(tx, user.id, userFields);
+    }
+  });
 
   // Fetch updated profile
   const updatedProfile = await userAccountQueries.getProfile(db, authUser.id);

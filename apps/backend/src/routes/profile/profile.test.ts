@@ -17,10 +17,14 @@ vi.mock("@/middleware/auth", () => ({
   },
 }));
 
-// Mock the database
-vi.mock("@/config/db", () => ({
-  createDb: vi.fn(() => ({ db: {} })),
-}));
+vi.mock("@/config/db", () => {
+  const mockDb = {
+    transaction: vi.fn(async (cb) => await cb(mockDb)),
+  };
+  return {
+    createDb: vi.fn(() => ({ db: mockDb })),
+  };
+});
 
 // Mock the account repository
 const {
