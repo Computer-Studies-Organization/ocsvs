@@ -481,7 +481,7 @@
                                 onchange={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm font-semibold transition focus:border-amber-500 focus:outline-none"
                               >
-                                {#each COURSES as course}
+                                {#each COURSES as course (course)}
                                   <option value={course}>{course}</option>
                                 {/each}
                               </select>
@@ -495,7 +495,7 @@
                                 }}
                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm font-semibold transition focus:border-amber-500 focus:outline-none"
                               >
-                                {#each YEAR_LEVELS as level}
+                                {#each YEAR_LEVELS as level (level)}
                                   <option value={level}>{level}</option>
                                 {/each}
                               </select>
@@ -656,7 +656,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {#each importedList as voter, idx}
+                        {#each importedList as voter, idx (voter.studentId)}
                           <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/10">
                             <td class="px-4 py-3 text-center text-slate-500 font-semibold">{idx + 1}</td>
                             <td class="px-4 py-3 font-semibold text-slate-50">{voter.studentId}</td>
@@ -679,7 +679,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {#each skippedList as skip, idx}
+                        {#each skippedList as skip, idx (skip.studentId)}
                           <tr class="border-b border-slate-800/60 transition hover:bg-slate-850/30">
                             <td class="px-4 py-3 text-center text-slate-500 font-semibold">{idx + 1}</td>
                             <td class="px-4 py-3 font-semibold text-rose-400">{skip.studentId}</td>

@@ -3,26 +3,23 @@
   import Spinner from '$lib/components/ui/spinner.svelte'
   import { getPublicRouteRedirectPath } from '$lib/routeGuards'
   import { authStore } from '$lib/stores/auth'
-  import { derived } from 'svelte/store'
 
   const { children } = $props()
 
-  const state = derived(authStore, $authStore => ({
-    loading: $authStore.loading,
-    redirect: getPublicRouteRedirectPath($authStore.user),
-  }))
+  const loading = $derived($authStore.loading)
+  const redirect = $derived(getPublicRouteRedirectPath($authStore.user))
 
   $effect(() => {
-    if (!$state.loading && $state.redirect) {
-      goto($state.redirect, { replaceState: true })
+    if (!loading && redirect) {
+      goto(redirect, { replaceState: true })
     }
   })
 </script>
 
-{#if $state.loading}
+{#if loading}
   <div class='flex min-h-screen w-full items-center justify-center'>
     <Spinner size={40} />
   </div>
-{:else if !$state.redirect}
+{:else if !redirect}
   {@render children()}
 {/if}

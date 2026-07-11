@@ -338,7 +338,7 @@
                     class='w-full rounded-xl bg-slate-850 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-4 py-3 text-slate-100 focus:outline-none transition-all cursor-pointer'
                   >
                     <option value="">Select Year</option>
-                    {#each YEAR_LEVEL_VALUES as val}
+                    {#each YEAR_LEVEL_VALUES as val (val)}
                       <option value={val}>{val}</option>
                     {/each}
                   </select>
@@ -358,7 +358,7 @@
                     class='w-full rounded-xl bg-slate-850 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-4 py-3 text-slate-100 focus:outline-none transition-all cursor-pointer'
                   >
                     <option value="">Select Course</option>
-                    {#each COURSE_VALUES as val}
+                    {#each COURSE_VALUES as val (val)}
                       <option value={val}>{val}</option>
                     {/each}
                   </select>
@@ -488,7 +488,7 @@
           'End-to-end encrypted voting',
           'One student, one vote guarantee',
           'Real-time result transparency',
-        ] as feature}
+        ] as feature (feature)}
           <div class='flex items-center gap-3'>
             <CheckCircle
               size={20}

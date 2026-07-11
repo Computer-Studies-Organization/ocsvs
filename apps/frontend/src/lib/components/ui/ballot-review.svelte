@@ -18,7 +18,7 @@
   <p class="text-sm text-slate-400 mb-6">Please review your selections carefully. Once submitted, your ballot cannot be changed or resubmitted.</p>
   
   <div class="divide-y divide-white/5 space-y-4">
-    {#each positions as pos, idx}
+    {#each positions as pos, idx (pos.id)}
       {@const selectedCandidateId = selectedVotes[pos.id]}
       {@const selectedCandidate = pos.candidates.find(c => c.id === selectedCandidateId)}
       <div class="pt-4 first:pt-0 flex items-center justify-between gap-4">

@@ -202,7 +202,7 @@
         <div class='mt-6 rounded-xl border border-slate-700 bg-slate-950/60 p-4'>
           <p class='mb-3 text-xs font-bold uppercase tracking-wider text-slate-500'>Admin-Managed Fields</p>
           <div class='grid grid-cols-1 gap-4 md:grid-cols-3'>
-            {#each [['studentId', 'Student ID', profile?.studentId], ['yearLevel', 'Year Level', profile?.yearLevel], ['course', 'Course', profile?.course]] as [id, label, val]}
+            {#each [['studentId', 'Student ID', profile?.studentId], ['yearLevel', 'Year Level', profile?.yearLevel], ['course', 'Course', profile?.course]] as [id, label, val] (id)}
               <div>
                 <label for={id} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500'>{label}</label>
                 <input id={id} type='text' value={val ?? ''} disabled class='w-full cursor-not-allowed rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-500' />

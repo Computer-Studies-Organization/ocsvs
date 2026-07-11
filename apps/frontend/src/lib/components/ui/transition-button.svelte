@@ -54,7 +54,7 @@
   }
 </script>
 
-{#each allowed as t}
+{#each allowed as t (t)}
   <button
     type='button'
     onclick={() => openConfirm(t)}

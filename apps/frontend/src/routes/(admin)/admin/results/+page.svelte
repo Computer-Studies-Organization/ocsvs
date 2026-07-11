@@ -239,7 +239,7 @@
             bind:value={selectedElectionId}
             class='rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-100 focus:border-sky-400 focus:outline-none cursor-pointer'
           >
-            {#each visibleElections as e}
+            {#each visibleElections as e (e.id)}
               <option value={e.id}>{e.name} ({e.status})</option>
             {/each}
           </select>

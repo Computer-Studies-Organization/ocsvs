@@ -41,6 +41,8 @@
     onclick={onclose}
     onkeydown={(e) => { if (e.key === 'Escape') onclose() }}
   >
+    <!-- stop-propagation guard: inner clicks must not close the modal -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       class='relative w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[90vh] overflow-y-auto'
       role="document"

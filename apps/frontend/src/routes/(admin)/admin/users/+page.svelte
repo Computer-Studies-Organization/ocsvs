@@ -273,7 +273,7 @@
         <table class='w-full text-sm'>
           <thead>
             <tr class='border-b border-slate-800 bg-slate-950/50'>
-              {#each SORTABLE_KEYS as key}
+              {#each SORTABLE_KEYS as key (key)}
                 <th class='px-4 py-3 text-left'>
                   <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
                     {SORTABLE_LABELS[key]}
@@ -411,7 +411,7 @@
         <button onclick={() => editUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
       </div>
       <div class='space-y-3'>
-        {#each EDIT_FIELDS as field}
+        {#each EDIT_FIELDS as field (field)}
           <div>
             <label for={field} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
             <input

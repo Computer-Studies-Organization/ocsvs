@@ -266,7 +266,7 @@
             class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
           >
             <option value="">All actions</option>
-            {#each AUDIT_ACTIONS as action}
+            {#each AUDIT_ACTIONS as action (action)}
               <option value={action}>{action}</option>
             {/each}
           </select>
@@ -287,7 +287,7 @@
             class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
           >
             <option value="">All types</option>
-            {#each TARGET_TYPES as type}
+            {#each TARGET_TYPES as type (type)}
               <option value={type}>{type}</option>
             {/each}
           </select>

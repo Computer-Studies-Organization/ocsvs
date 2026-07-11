@@ -94,7 +94,7 @@
 </script>
 
 <div class="space-y-2">
-  <label class="block text-sm font-medium text-slate-300">Candidate Photo</label>
+  <label for="candidate-photo-input" class="block text-sm font-medium text-slate-300">Candidate Photo</label>
 
   {#if displayUrl}
     <div class="relative inline-block">
@@ -140,6 +140,7 @@
     </div>
     <input
       bind:this={fileInput}
+      id="candidate-photo-input"
       type="file"
       accept="image/jpeg,image/png,image/webp"
       onchange={handleFileSelect}
