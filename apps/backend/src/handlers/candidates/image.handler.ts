@@ -26,7 +26,16 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   const storage = getImageStorage(c.env);
 
   // Get file from form data
-  const formData = await c.req.formData();
+  let formData: FormData;
+  try {
+    formData = await c.req.formData();
+  } catch (err) {
+    c.var.logger?.warn(
+      { err, candidateId: id },
+      "Failed to parse multipart form data on candidate image upload",
+    );
+    return c.json({ message: ERROR_MESSAGES.INVALID_REQUEST }, httpStatusCodes.BAD_REQUEST);
+  }
   const file = formData.get("image") as File | null;
 
   if (!file) {
