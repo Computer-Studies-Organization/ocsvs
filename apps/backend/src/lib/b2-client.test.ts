@@ -178,4 +178,12 @@ describe("getImageStorage", () => {
       }),
     ).toThrow("Missing required Backblaze B2 environment variables in production");
   });
+
+  it("should return the same InMemoryImageStorage instance across calls in non-production", () => {
+    // Singleton: dev uploads must persist between requests within the same process.
+    const cfg = { ...validConfig, B2_APPLICATION_KEY: undefined };
+    const a = getImageStorage(cfg);
+    const b = getImageStorage(cfg);
+    expect(a).toBe(b);
+  });
 });

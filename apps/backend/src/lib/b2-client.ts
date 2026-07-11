@@ -399,6 +399,8 @@ export class InMemoryImageStorage implements ImageStorage {
   }
 }
 
+let localImageStorageInstance: InMemoryImageStorage | null = null;
+
 export function getImageStorage(env: {
   NODE_ENV?: string;
   B2_APPLICATION_KEY_ID?: string;
@@ -416,7 +418,10 @@ export function getImageStorage(env: {
     if (env.NODE_ENV === "production") {
       throw new Error("Missing required Backblaze B2 environment variables in production");
     }
-    return new InMemoryImageStorage();
+    if (!localImageStorageInstance) {
+      localImageStorageInstance = new InMemoryImageStorage();
+    }
+    return localImageStorageInstance;
   }
   return new B2ImageStorage({
     applicationKeyId: env.B2_APPLICATION_KEY_ID!,
