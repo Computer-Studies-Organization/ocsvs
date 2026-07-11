@@ -106,28 +106,30 @@ test("CacheEntry.invalidate during an in-flight fetch discards the stale result"
 });
 
 test("CacheEntry.fetch after invalidate during in-flight runs a fresh fetch", async () => {
+  let calls = 0;
   let resolveFirst!: (v: number) => void;
-  const entry = new CacheEntry<number>(
-    () =>
-      new Promise<number>((r) => {
+  const entry = new CacheEntry<number>(() => {
+    calls += 1;
+    if (calls === 1) {
+      return new Promise<number>((r) => {
         resolveFirst = r;
-      }),
-  );
+      });
+    }
+    return Promise.resolve(7);
+  });
 
   const first = entry.fetch();
-  entry.invalidate();
-  let calls = 0;
-  const secondEntry = new CacheEntry<number>(async () => {
-    calls += 1;
-    return 7;
-  });
-  const second = secondEntry.fetch();
-  expect(await second).toBe(7);
   expect(calls).toBe(1);
+
+  entry.invalidate();
+
+  const second = entry.fetch();
+  expect(calls).toBe(2);
+  expect(await second).toBe(7);
 
   resolveFirst(42);
   await first;
-  expect(entry.data).toBeNull();
+  expect(entry.data).toBe(7);
   expect(entry.error).toBeNull();
 });
 

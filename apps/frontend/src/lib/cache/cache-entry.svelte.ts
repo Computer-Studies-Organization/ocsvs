@@ -75,5 +75,6 @@ export class CacheEntry<T> {
     this.epoch++;
     this.data = null;
     this.lastFetched = 0;
+    this.inflight = null;
   }
 }
