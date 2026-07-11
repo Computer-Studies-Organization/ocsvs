@@ -15,6 +15,13 @@ import { createSession, setSessionCookie } from "@/lib/session";
 import { validateProfanity } from "@/lib/profanity";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
+class UsernameTakenError extends Error {
+  constructor() {
+    super(ERROR_MESSAGES.USERNAME_ALREADY_EXISTS);
+    this.name = "UsernameTakenError";
+  }
+}
+
 export const getMyProfile: AppRouteHandler<typeof getMyProfileRoute> = async (c) => {
   const { db } = createDb(c);
   const authUser = c.var.authUser;
@@ -76,9 +83,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
           authUser.id,
         );
         if (usernameTaken) {
-          const err = new Error(ERROR_MESSAGES.USERNAME_ALREADY_EXISTS);
-          err.name = "UsernameTakenError";
-          throw err;
+          throw new UsernameTakenError();
         }
       }
 
@@ -102,7 +107,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
       }
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "UsernameTakenError") {
+    if (error instanceof UsernameTakenError) {
       return c.json({ message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
     }
     if (isUniqueConstraintError(error)) {
