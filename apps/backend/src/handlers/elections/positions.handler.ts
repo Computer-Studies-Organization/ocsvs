@@ -14,6 +14,19 @@ import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
+// ponytail: local to this handler file. If a PositionLifecycleCoordinator is
+// ever extracted (mirroring CandidateLifecycleCoordinator), move this there.
+class PositionLifecycleError extends Error {
+  readonly code: "ELECTION_NOT_IN_DRAFT" | "POSITION_HAS_CANDIDATES";
+  readonly status: 409;
+  constructor(code: PositionLifecycleError["code"]) {
+    super(ERROR_MESSAGES[code]);
+    this.code = code;
+    this.status = 409;
+    this.name = "PositionLifecycleError";
+  }
+}
+
 export const listPositionsHandler: AppRouteHandler<typeof listPositionsRoute> = async (c) => {
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
@@ -33,11 +46,15 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
   if (!election) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  if (election.status !== "draft") {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
-  }
   try {
     const row = await db.transaction(async (tx) => {
+      // Re-verify draft status inside the transaction to close the TOCTOU
+      // window: the election could have been transitioned out of draft between
+      // the pre-check above and this write.
+      const current = await electionRepo.findById(tx, id);
+      if (!current || current.status !== "draft") {
+        throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT");
+      }
       const newId = await positionRepo.create(tx, {
         electionId: id,
         name: body.name,
@@ -59,6 +76,9 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
 
     return c.json(row, httpStatusCodes.CREATED);
   } catch (error) {
+    if (error instanceof PositionLifecycleError) {
+      return c.json({ message: error.message }, error.status);
+    }
     if (isUniqueConstraintError(error)) {
       return c.json({ message: ERROR_MESSAGES.POSITION_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
     }
@@ -80,11 +100,18 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
     return c.json({ message: ERROR_MESSAGES.POSITION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
   const election = await electionRepo.findById(db, id);
-  if (!election || election.status !== "draft") {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
+  if (!election) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
   try {
     const updated = await db.transaction(async (tx) => {
+      // Re-verify draft status inside the transaction to close the TOCTOU
+      // window: the election could have been transitioned out of draft between
+      // the pre-check above and this write.
+      const current = await electionRepo.findById(tx, id);
+      if (!current || current.status !== "draft") {
+        throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT");
+      }
       await positionRepo.update(tx, positionId, body);
       const updatedRow = await positionRepo.findById(tx, positionId);
       if (!updatedRow) {
@@ -102,6 +129,9 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
 
     return c.json(updated, httpStatusCodes.OK);
   } catch (error) {
+    if (error instanceof PositionLifecycleError) {
+      return c.json({ message: error.message }, error.status);
+    }
     if (isUniqueConstraintError(error)) {
       return c.json({ message: ERROR_MESSAGES.POSITION_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
     }
@@ -122,25 +152,40 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
     return c.json({ message: ERROR_MESSAGES.POSITION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
   const election = await electionRepo.findById(db, id);
-  if (!election || election.status !== "draft") {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
+  if (!election) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  const candCount = await candidateRepo.countByPositionId(db, positionId, {
-    includeInactive: true,
-  });
-  if (candCount > 0) {
-    return c.json({ message: ERROR_MESSAGES.POSITION_HAS_CANDIDATES }, httpStatusCodes.CONFLICT);
-  }
-  await db.transaction(async (tx) => {
-    await positionRepo.delete(tx, positionId);
-    await auditLogRepo.insert(tx, {
-      action: "position.delete",
-      targetType: "position",
-      targetId: positionId,
-      actorAccountIdSnapshot: actorAccountId,
-      actorUsernameSnapshot: actorUsername,
+  try {
+    await db.transaction(async (tx) => {
+      // Re-verify draft status and candidate count inside the transaction to
+      // close the TOCTOU window: the election could have been transitioned out
+      // of draft, or candidates added, between the pre-checks above and this
+      // write.
+      const current = await electionRepo.findById(tx, id);
+      if (!current || current.status !== "draft") {
+        throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT");
+      }
+      const candCount = await candidateRepo.countByPositionId(tx, positionId, {
+        includeInactive: true,
+      });
+      if (candCount > 0) {
+        throw new PositionLifecycleError("POSITION_HAS_CANDIDATES");
+      }
+      await positionRepo.delete(tx, positionId);
+      await auditLogRepo.insert(tx, {
+        action: "position.delete",
+        targetType: "position",
+        targetId: positionId,
+        actorAccountIdSnapshot: actorAccountId,
+        actorUsernameSnapshot: actorUsername,
+      });
     });
-  });
 
-  return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
+    return c.json({ message: ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
+  } catch (error) {
+    if (error instanceof PositionLifecycleError) {
+      return c.json({ message: error.message }, error.status);
+    }
+    throw error;
+  }
 };

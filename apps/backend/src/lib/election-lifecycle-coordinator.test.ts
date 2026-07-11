@@ -166,5 +166,52 @@ describe("ElectionLifecycleCoordinator", () => {
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "INVALID_TRANSITION", status: 409 }));
     });
+
+    // Regression: ANOTHER_ELECTION_IS_OPEN must take precedence over
+    // ELECTION_HAS_NO_POSITIONS / INVALID_TRANSITION when both conditions hold.
+    // assertTransition was moved AFTER the duplicate-open check (step 5) so
+    // validation sees resolved dates; this test locks in the resulting error
+    // ordering. All three are 409 so callers see the same status — only the
+    // message differs.
+    it("throws ANOTHER_ELECTION_IS_OPEN before ELECTION_HAS_NO_POSITIONS when both hold", async () => {
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "draft",
+        opensAt: null,
+        closesAt: null,
+      });
+      mockCountPositions.mockResolvedValueOnce(0);
+      mockFindOpen.mockResolvedValueOnce({ id: "other-open-id", status: "open" });
+
+      await expect(
+        ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+          to: "open",
+          actor: { id: "admin-id", username: "admin" },
+          opensAt: 1700000000,
+          closesAt: 1700003600,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ANOTHER_ELECTION_IS_OPEN", status: 409 }));
+    });
+
+    it("throws ANOTHER_ELECTION_IS_OPEN before INVALID_TRANSITION when both hold", async () => {
+      // closed -> open is not a valid transition, AND another election is open.
+      // The duplicate-open check (gated on toStatus === "open") runs in step 3,
+      // before assertTransition in step 5.
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "closed",
+        opensAt: null,
+        closesAt: null,
+      });
+      mockCountPositions.mockResolvedValueOnce(3);
+      mockFindOpen.mockResolvedValueOnce({ id: "other-open-id", status: "open" });
+
+      await expect(
+        ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+          to: "open",
+          actor: { id: "admin-id", username: "admin" },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ANOTHER_ELECTION_IS_OPEN", status: 409 }));
+    });
   });
 });

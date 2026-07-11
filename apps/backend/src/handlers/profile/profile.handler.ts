@@ -9,6 +9,7 @@ import { userAccountQueries } from "@/database/queries/user-account.queries";
 import { accountRepo } from "@/database/repositories/account.repository";
 import { userRepo } from "@/database/repositories/users.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isUniqueConstraintError } from "@/lib/errors";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSession, setSessionCookie } from "@/lib/session";
 import { validateProfanity } from "@/lib/profanity";
@@ -52,11 +53,6 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     if (!validation.isClean) {
       return c.json({ message: validation.message! }, httpStatusCodes.BAD_REQUEST);
     }
-
-    const usernameTaken = await accountRepo.usernameExists(db, updateData.username, authUser.id);
-    if (usernameTaken) {
-      return c.json({ message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
-    }
   }
 
   // Get user record by account ID for users table update
@@ -66,27 +62,54 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.UNAUTHORIZED);
   }
 
-  // Update accounts and users tables atomically
-  await db.transaction(async (tx) => {
-    const accountFields: Record<string, unknown> = {};
-    if (updateData.username !== undefined) accountFields.username = updateData.username;
-    if (updateData.email !== undefined) {
-      accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null;
-    }
+  // Update accounts and users tables atomically. The username-uniqueness check
+  // runs inside the transaction to close the TOCTOU window where another
+  // request could claim the username between the pre-check and the write. The
+  // accounts.username unique index is the hard guarantee; the in-tx check
+  // provides a clean 409 instead of relying solely on the constraint.
+  try {
+    await db.transaction(async (tx) => {
+      if (updateData.username) {
+        const usernameTaken = await accountRepo.usernameExists(
+          tx,
+          updateData.username,
+          authUser.id,
+        );
+        if (usernameTaken) {
+          const err = new Error(ERROR_MESSAGES.USERNAME_ALREADY_EXISTS);
+          err.name = "UsernameTakenError";
+          throw err;
+        }
+      }
 
-    if (Object.keys(accountFields).length > 0) {
-      await accountRepo.updateAccount(tx, authUser.id, accountFields);
-    }
+      const accountFields: Record<string, unknown> = {};
+      if (updateData.username !== undefined) accountFields.username = updateData.username;
+      if (updateData.email !== undefined) {
+        accountFields.email = updateData.email && updateData.email.trim() ? updateData.email : null;
+      }
 
-    // Update users table if profile fields present
-    const userFields: Record<string, unknown> = {};
-    if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName;
-    if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName;
+      if (Object.keys(accountFields).length > 0) {
+        await accountRepo.updateAccount(tx, authUser.id, accountFields);
+      }
 
-    if (Object.keys(userFields).length > 0) {
-      await userRepo.updateUser(tx, user.id, userFields);
+      // Update users table if profile fields present
+      const userFields: Record<string, unknown> = {};
+      if (updateData.firstName !== undefined) userFields.firstName = updateData.firstName;
+      if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName;
+
+      if (Object.keys(userFields).length > 0) {
+        await userRepo.updateUser(tx, user.id, userFields);
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "UsernameTakenError") {
+      return c.json({ message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
     }
-  });
+    if (isUniqueConstraintError(error)) {
+      return c.json({ message: ERROR_MESSAGES.USERNAME_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
+    }
+    throw error;
+  }
 
   // Fetch updated profile
   const updatedProfile = await userAccountQueries.getProfile(db, authUser.id);

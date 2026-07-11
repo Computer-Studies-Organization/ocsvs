@@ -279,6 +279,31 @@ describe("profile Routes", () => {
     expect(mockUpdateAccount).not.toHaveBeenCalled();
   });
 
+  // Regression (TOCTOU + defense-in-depth): if the username is claimed between
+  // the in-transaction uniqueness check and the write, the accounts.username
+  // unique index rejects the write. The handler must map that unique-constraint
+  // error to a clean 409 instead of surfacing a 500.
+  it("should return 409 when the username write hits a unique constraint (TOCTOU fallback)", async () => {
+    mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
+    mockFindByAccountId.mockResolvedValue({ id: "user-record-id" });
+    // In-tx uniqueness check passes (race: someone else claimed it microseconds ago)
+    mockUsernameExists.mockResolvedValue(false);
+    // ...but the DB write hits the unique index.
+    mockUpdateAccount.mockRejectedValue(new Error("UNIQUE constraint failed: accounts.username"));
+
+    const res = await router.request("/me/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "racedusername",
+      }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Username already exists");
+  });
+
   it("should reject profile update when user record not found", async () => {
     mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
     mockUsernameExists.mockResolvedValue(false);

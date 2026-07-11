@@ -430,3 +430,9 @@ export function getImageStorage(env: {
     publicBaseUrl: env.B2_PUBLIC_BASE_URL!,
   });
 }
+
+// ponytail: test-only singleton reset. Add when cross-test state isolation needed.
+// Exported so tests can assert fresh InMemoryImageStorage state between cases.
+export function _resetImageStorageForTest(): void {
+  localImageStorageInstance = null;
+}

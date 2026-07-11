@@ -211,6 +211,24 @@ describe("positions routes", () => {
       expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
     });
 
+    // Regression: election transitioned out of draft between the pre-check and
+    // the in-transaction re-verify (TOCTOU). The first findById (pre-check)
+    // returns draft; the second (inside tx) returns open → must still 409.
+    it("returns 409 when election is transitioned out of draft between pre-check and write (TOCTOU)", async () => {
+      mockElectionFindById
+        .mockResolvedValueOnce(makeElection({ status: "draft" }))
+        .mockResolvedValueOnce(makeElection({ status: "open" }));
+      const res = await router.request(`/elections/${electionId}/positions`, {
+        method: "POST",
+        body: JSON.stringify({ name: "President" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("returns 201 with the created position when election is draft", async () => {
       mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCreate.mockResolvedValue(positionId);
@@ -360,6 +378,22 @@ describe("positions routes", () => {
       expect(res.status).toBe(409);
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.POSITION_HAS_CANDIDATES);
+    });
+
+    // Regression: candidate added between the pre-check and the in-transaction
+    // re-verify (TOCTOU). countByPositionId returns 0 on the pre-check (removed
+    // from handler) — now only the in-tx count matters. Return 1 in-tx → 409.
+    it("returns 409 when a candidate is added between pre-check and delete (TOCTOU)", async () => {
+      mockFindById.mockResolvedValue(makePosition());
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      mockCountByPositionId.mockResolvedValue(1);
+      const res = await router.request(`/elections/${electionId}/positions/${positionId}`, {
+        method: "DELETE",
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.POSITION_HAS_CANDIDATES);
+      expect(mockDelete).not.toHaveBeenCalled();
     });
 
     it("returns 200 when position is empty", async () => {

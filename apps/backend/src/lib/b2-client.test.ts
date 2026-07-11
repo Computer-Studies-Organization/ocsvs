@@ -6,6 +6,7 @@ import {
   getImageStorage,
   InMemoryImageStorage,
   B2ImageStorage,
+  _resetImageStorageForTest,
 } from "./b2-client";
 
 // Mock the B2 SDK
@@ -185,5 +186,14 @@ describe("getImageStorage", () => {
     const a = getImageStorage(cfg);
     const b = getImageStorage(cfg);
     expect(a).toBe(b);
+  });
+
+  it("_resetImageStorageForTest clears the singleton so the next call returns a new instance", () => {
+    const cfg = { ...validConfig, B2_APPLICATION_KEY: undefined };
+    const before = getImageStorage(cfg);
+    _resetImageStorageForTest();
+    const after = getImageStorage(cfg);
+    expect(after).toBeInstanceOf(InMemoryImageStorage);
+    expect(after).not.toBe(before);
   });
 });
