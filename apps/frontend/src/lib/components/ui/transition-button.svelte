@@ -31,9 +31,14 @@
     try {
       const body: { to: TElectionStatus, opensAt?: number, closesAt?: number } = { to: activeTarget }
       if (activeTarget === 'open') {
-        const opensAt = Math.floor(Date.now() / 1000)
-        body.opensAt = opensAt
-        body.closesAt = opensAt + 7 * 24 * 3600
+        if (election.opensAt && election.closesAt) {
+          body.opensAt = election.opensAt
+          body.closesAt = election.closesAt
+        } else {
+          const opensAt = Math.floor(Date.now() / 1000)
+          body.opensAt = opensAt
+          body.closesAt = opensAt + 7 * 24 * 3600
+        }
       }
       await transitionElection(election.id, body)
       open = false

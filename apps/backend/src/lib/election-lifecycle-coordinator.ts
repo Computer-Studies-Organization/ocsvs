@@ -73,14 +73,8 @@ export const ElectionLifecycleCoordinator = {
       const fromStatus = existing.status as TElectionStatus;
       const toStatus = params.to;
 
-      // 2. Validate transition
+      // 2. Count positions
       const positionCount = await electionQueries.countPositions(tx, electionId);
-      assertTransition(
-        fromStatus,
-        toStatus,
-        { opensAt: params.opensAt, closesAt: params.closesAt },
-        positionCount,
-      );
 
       // 3. Prevent duplicate open elections at application level (backed by DB index)
       if (toStatus === "open") {
@@ -102,7 +96,17 @@ export const ElectionLifecycleCoordinator = {
             ? now
             : (existing.closesAt ?? null);
 
-      // 5. Update Status
+      // 5. Assert transition (using resolved dates). Validation must run AFTER
+      // timestamp resolution so it sees the dates that will actually be persisted,
+      // not the raw (possibly undefined) values from `params`.
+      assertTransition(
+        fromStatus,
+        toStatus,
+        { opensAt: resolvedOpensAt ?? undefined, closesAt: resolvedClosesAt ?? undefined },
+        positionCount,
+      );
+
+      // 6. Update Status
       try {
         const updated = await electionRepo.updateStatus(tx, electionId, {
           existingStatus: fromStatus,
@@ -121,7 +125,7 @@ export const ElectionLifecycleCoordinator = {
         throw err;
       }
 
-      // 6. Write Audit Log
+      // 7. Write Audit Log
       const description = `${fromStatus} \u2192 ${toStatus}`;
 
       await auditLogRepo.insert(tx, {
@@ -133,7 +137,7 @@ export const ElectionLifecycleCoordinator = {
         description,
       });
 
-      // 7. Resolve success message key
+      // 8. Resolve success message key
       const messageKey = (
         fromStatus === "draft" && toStatus === "open"
           ? "ELECTION_OPENED_SUCCESSFULLY"
