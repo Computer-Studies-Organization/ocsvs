@@ -1,7 +1,14 @@
 import { expect, test } from "vitest";
 
-import { hasVotedIn, pickEmptyCardVariant } from "./voting-page-state";
-import type { TVotingState } from "./types";
+import {
+  buildStepperPositions,
+  deriveVotingPageState,
+  hasVotedIn,
+  pickEmptyCardVariant,
+  preserveVotingState,
+} from "./voting-page-state";
+import type { TVotingPageState } from "./voting-page-state";
+import type { TCandidate, TElection, TPosition, TVotingState } from "./types";
 
 const base: TVotingState = {
   open: null,
@@ -74,9 +81,6 @@ test("hasVotedIn returns false when myVotes are for a different election", () =>
   };
   expect(hasVotedIn(state, "e1")).toBe(false);
 });
-
-import { buildStepperPositions, deriveVotingPageState } from "./voting-page-state";
-import type { TCandidate, TElection, TPosition } from "./types";
 
 const emptyInput = {
   apiState: null,
@@ -343,14 +347,12 @@ test("hasVotedIn returns false when electionId is null", () => {
   expect(hasVotedIn(state, "e1")).toBe(false);
 });
 
-import { preserveVotingState } from "./voting-page-state";
-import type { TVotingPageState } from "./voting-page-state";
-
 test("preserveVotingState preserves voting progress when transitioning between stepper states of the same election", () => {
+  const sharedPosition = { id: "p1", name: "President", displayOrder: 1, candidates: [] };
   const current: TVotingPageState = {
     kind: "stepper",
     election: openElection,
-    positions: [],
+    positions: [sharedPosition],
     voting: {
       currentPositionIndex: 1,
       selectedVotes: { p1: "c1" },
@@ -360,7 +362,7 @@ test("preserveVotingState preserves voting progress when transitioning between s
   const next: TVotingPageState = {
     kind: "stepper",
     election: openElection,
-    positions: [{ id: "p1", name: "President", displayOrder: 1, candidates: [] }],
+    positions: [sharedPosition],
     voting: {
       currentPositionIndex: 0,
       selectedVotes: {},
@@ -423,4 +425,119 @@ test("preserveVotingState does not preserve voting progress when transitioning t
 
   const result = preserveVotingState(next, current);
   expect(result.kind).toBe("voted");
+});
+
+test("preserveVotingState does not preserve voting progress when positions change structurally (added or removed)", () => {
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [{ id: "p1", name: "President", displayOrder: 1, candidates: [] }],
+    voting: {
+      currentPositionIndex: 1,
+      selectedVotes: { p1: "c1" },
+    },
+  };
+
+  const next: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    // p1 removed, p2 added
+    positions: [{ id: "p2", name: "Vice", displayOrder: 2, candidates: [] }],
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: {},
+    },
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("stepper");
+  if (result.kind === "stepper") {
+    expect(result.voting.selectedVotes).toEqual({});
+    expect(result.voting.currentPositionIndex).toBe(0);
+    expect(result.positions.length).toBe(1);
+    expect(result.positions[0]?.id).toBe("p2");
+  }
+});
+
+test("preserveVotingState preserves voting progress when positions are reordered but structurally identical", () => {
+  const p1 = {
+    id: "p1",
+    name: "President",
+    displayOrder: 1,
+    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null }],
+  };
+  const p2 = {
+    id: "p2",
+    name: "Vice",
+    displayOrder: 2,
+    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null }],
+  };
+
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [p1, p2],
+    voting: {
+      currentPositionIndex: 1,
+      selectedVotes: { p1: "c1", p2: "c2" },
+    },
+  };
+
+  const next: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [p2, p1], // reordered
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: {},
+    },
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("stepper");
+  if (result.kind === "stepper") {
+    expect(result.voting.selectedVotes).toEqual({ p1: "c1", p2: "c2" });
+    expect(result.voting.currentPositionIndex).toBe(1);
+  }
+});
+
+test("preserveVotingState discards voting progress when candidates within a position change structurally", () => {
+  const p1Current = {
+    id: "p1",
+    name: "President",
+    displayOrder: 1,
+    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null }],
+  };
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [p1Current],
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: { p1: "c1" },
+    },
+  };
+
+  const p1Next = {
+    id: "p1",
+    name: "President",
+    displayOrder: 1,
+    // c1 deactivated/removed, c2 added instead
+    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null }],
+  };
+  const next: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [p1Next],
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: {},
+    },
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("stepper");
+  if (result.kind === "stepper") {
+    expect(result.voting.selectedVotes).toEqual({});
+  }
 });

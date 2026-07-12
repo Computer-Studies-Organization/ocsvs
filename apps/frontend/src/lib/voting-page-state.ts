@@ -97,8 +97,8 @@ export function deriveVotingPageState(input: TVotingPageInput): TVotingPageState
  * to a new page state for the exact same election. This prevents auto-refresh
  * from wiping out selected candidates before the user submits their ballot.
  *
- * If the page state transitions to a non-stepper kind (e.g. election closed),
- * the selections are discarded as they are no longer relevant.
+ * If the page state transitions to a non-stepper kind (e.g. election closed) or
+ * if the candidate/position set changes structurally, the selections are discarded.
  */
 export function preserveVotingState(
   next: TVotingPageState,
@@ -109,6 +109,31 @@ export function preserveVotingState(
     current.kind === "stepper" &&
     next.election.id === current.election.id
   ) {
+    // Drop preserved selections when the position or candidate list has changed structurally
+    // (positions/candidates added or removed). Pure reordering is allowed: display order
+    // is server-controlled and `currentPositionIndex` is intentionally treated
+    // as a server-side mapping.
+    const currentSig = current.positions
+      .map(
+        (p) =>
+          `${p.id}:${p.candidates
+            .map((c) => c.id)
+            .sort()
+            .join(",")}`,
+      )
+      .sort()
+      .join("|");
+    const nextSig = next.positions
+      .map(
+        (p) =>
+          `${p.id}:${p.candidates
+            .map((c) => c.id)
+            .sort()
+            .join(",")}`,
+      )
+      .sort()
+      .join("|");
+    if (currentSig !== nextSig) return next;
     return { ...next, voting: current.voting };
   }
   return next;
