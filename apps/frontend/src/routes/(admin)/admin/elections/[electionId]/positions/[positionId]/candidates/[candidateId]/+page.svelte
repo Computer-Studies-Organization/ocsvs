@@ -1,5 +1,6 @@
 <script lang='ts'>
   import { goto, invalidate } from '$app/navigation'
+  import { untrack } from 'svelte'
   import { page } from '$app/state'
   import { ArrowLeft, Loader, Save, Trash2 } from 'lucide-svelte'
   import { updateCandidate, deleteCandidate, uploadCandidateImage, deleteCandidateImage } from '$lib/api/candidates'
@@ -37,16 +38,9 @@
   let isDeleting = $state(false)
   let imageError = $state('')
 
-  // svelte-ignore state_referenced_locally
-  let editManifesto = $state(candidate.manifesto ?? '')
-  // svelte-ignore state_referenced_locally
-  let editIsActive = $state(candidate.isActive === 1)
+  let editManifesto = $state(untrack(() => candidate.manifesto ?? ''))
+  let editIsActive = $state(untrack(() => candidate.isActive === 1))
   let editErrors = $state<Record<string, string>>({})
-
-  $effect(() => {
-    editManifesto = candidate.manifesto ?? ''
-    editIsActive = candidate.isActive === 1
-  })
 
   async function handleSave(e: SubmitEvent) {
     e.preventDefault()
@@ -172,6 +166,7 @@
         </a>
       </header>
 
+  {#key candidateId}
       <form
         onsubmit={handleSave}
         class='rounded-2xl border p-5 shadow-lg space-y-5'
@@ -254,6 +249,7 @@
           </button>
         </div>
       </form>
+      {/key}
     {/if}
   </div>
 </div>

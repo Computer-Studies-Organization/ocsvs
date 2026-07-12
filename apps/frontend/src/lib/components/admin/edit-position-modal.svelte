@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invalidate } from '$app/navigation'
+  import { untrack } from 'svelte'
   import { updatePosition } from '$lib/api/positions'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast'
@@ -11,31 +12,21 @@
   import type { TPosition } from '$lib/types'
 
   let {
-    open,
     onclose,
     electionId,
     position,
     onsuccess,
   }: {
-    open: boolean
     onclose: () => void
     electionId: string
     position: TPosition
     onsuccess: () => void
   } = $props()
 
-  let editName = $state('')
-  let editOrder = $state('')
+  let editName = $state(untrack(() => position.name))
+  let editOrder = $state(untrack(() => String(position.displayOrder ?? '')))
   let editBusy = $state(false)
   let editErrors = $state<Record<string, string>>({})
-
-  $effect(() => {
-    if (open && position) {
-      editName = position.name
-      editOrder = String(position.displayOrder ?? '')
-      editErrors = {}
-    }
-  })
 
   async function submitEdit(e: SubmitEvent) {
     e.preventDefault()
@@ -75,7 +66,7 @@
   }
 </script>
 
-<Modal {open} onclose={handleClose}>
+<Modal open={true} onclose={handleClose}>
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Edit position</h2>
 
   <form onsubmit={submitEdit} class="space-y-5">

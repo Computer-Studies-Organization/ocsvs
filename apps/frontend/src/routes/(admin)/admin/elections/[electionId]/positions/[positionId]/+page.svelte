@@ -154,11 +154,12 @@
     />
   {/if}
 
-  <EditPositionModal
-    open={isEditOpen}
-    onclose={closeEdit}
-    electionId={election.id}
-    position={position}
-    onsuccess={closeEdit}
-  />
+{#if isEditOpen}
+    <EditPositionModal
+      onclose={closeEdit}
+      electionId={election.id}
+      position={position}
+      onsuccess={closeEdit}
+    />
+  {/if}
 {/if}

@@ -10,12 +10,10 @@
   import { appCache } from '$lib/cache'
 
   let {
-    open,
     onclose,
     electionId,
     onsuccess,
   }: {
-    open: boolean
     onclose: () => void
     electionId: string
     onsuccess: () => void
@@ -25,14 +23,6 @@
   let createOrder = $state('')
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
-
-  $effect(() => {
-    if (open) {
-      createName = ''
-      createOrder = ''
-      createErrors = {}
-    }
-  })
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
@@ -73,7 +63,7 @@
   }
 </script>
 
-<Modal {open} onclose={handleClose}>
+<Modal open={true} onclose={handleClose}>
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add position</h2>
 
   <form onsubmit={submitCreate} class="space-y-5">

@@ -1,6 +1,7 @@
 <script lang='ts'>
   import type { TUsersData } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
+  import { untrack } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
   import { appCache } from '$lib/cache'
@@ -42,12 +43,7 @@
 
   let { data } = $props()
   let users = $derived<TUsersData[]>(data.users)
-  // svelte-ignore state_referenced_locally
-  let includeDeleted = $state(data.includeDeleted)
-
-  $effect(() => {
-    includeDeleted = data.includeDeleted
-  })
+  let includeDeleted = $state(untrack(() => data.includeDeleted))
 
   // State
   let search = $state('')
@@ -245,6 +241,7 @@
       </div>
     </header>
 
+    {#key data.includeDeleted}
     <!-- Search & Filters -->
     <div class='mb-4 flex flex-wrap gap-3'>
       <div class='relative flex-1 min-w-[200px]'>
@@ -345,6 +342,7 @@
         </div>
       </div>
     </div>
+    {/key}
   </div>
 </div>
 

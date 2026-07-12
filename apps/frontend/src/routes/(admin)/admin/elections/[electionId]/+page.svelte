@@ -107,9 +107,10 @@
   </div>
 </div>
 
+{#if isCreateOpen}
 <AddPositionModal
-  open={isCreateOpen}
   onclose={closeCreate}
   electionId={election.id}
   onsuccess={closeCreate}
 />
+{/if}

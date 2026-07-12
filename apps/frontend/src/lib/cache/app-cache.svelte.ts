@@ -83,7 +83,7 @@ const fetchers: {
 
 export class AppCache {
   private api: ApiClientAdapter;
-  private registry = $state<Map<string, RegistryEntry<any>>>(new Map());
+  private registry = new Map<string, RegistryEntry<any>>();
 
   constructor(api: ApiClientAdapter) {
     this.api = api;
