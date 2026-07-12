@@ -13,6 +13,8 @@
   import { appCache } from '$lib/cache'
   import type { TUsersData } from '$lib/types'
 
+  // NOTE: This component is always open when mounted.
+  // The parent component controls showing/hiding by conditionally mounting/unmounting it.
   let {
     onclose,
     electionId,

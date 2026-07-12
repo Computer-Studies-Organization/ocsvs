@@ -4,6 +4,7 @@
   import { appCache } from '$lib/cache'
   import {
     deriveVotingPageState,
+    preserveVotingState,
     type TVotingPageState,
   } from '$lib/voting-page-state'
   import {
@@ -42,16 +43,7 @@
   // selections when the open election hasn't changed (e.g. auto-refresh).
   $effect(() => {
     const next = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
-    if (
-      next.kind === 'stepper' &&
-      pageState.kind === 'stepper' &&
-      next.election.id === pageState.election.id
-    ) {
-      // Same election still open: keep current voting progress, only refresh positions/candidates.
-      pageState = { ...next, voting: pageState.voting }
-      return
-    }
-    pageState = next
+    pageState = preserveVotingState(next, pageState)
   })
 
   let lastAutoFetch = 0

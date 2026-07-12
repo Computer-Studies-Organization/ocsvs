@@ -342,3 +342,85 @@ test("hasVotedIn returns false when electionId is null", () => {
   };
   expect(hasVotedIn(state, "e1")).toBe(false);
 });
+
+import { preserveVotingState } from "./voting-page-state";
+import type { TVotingPageState } from "./voting-page-state";
+
+test("preserveVotingState preserves voting progress when transitioning between stepper states of the same election", () => {
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [],
+    voting: {
+      currentPositionIndex: 1,
+      selectedVotes: { p1: "c1" },
+    },
+  };
+
+  const next: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [{ id: "p1", name: "President", displayOrder: 1, candidates: [] }],
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: {},
+    },
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("stepper");
+  if (result.kind === "stepper") {
+    expect(result.voting.selectedVotes).toEqual({ p1: "c1" });
+    expect(result.voting.currentPositionIndex).toBe(1);
+    expect(result.positions.length).toBe(1);
+  }
+});
+
+test("preserveVotingState does not preserve voting progress when transitioning to a different election", () => {
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [],
+    voting: {
+      currentPositionIndex: 1,
+      selectedVotes: { p1: "c1" },
+    },
+  };
+
+  const next: TVotingPageState = {
+    kind: "stepper",
+    election: { ...openElection, id: "e2" },
+    positions: [],
+    voting: {
+      currentPositionIndex: 0,
+      selectedVotes: {},
+    },
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("stepper");
+  if (result.kind === "stepper") {
+    expect(result.voting.selectedVotes).toEqual({});
+    expect(result.voting.currentPositionIndex).toBe(0);
+  }
+});
+
+test("preserveVotingState does not preserve voting progress when transitioning to a non-stepper state", () => {
+  const current: TVotingPageState = {
+    kind: "stepper",
+    election: openElection,
+    positions: [],
+    voting: {
+      currentPositionIndex: 1,
+      selectedVotes: { p1: "c1" },
+    },
+  };
+
+  const next: TVotingPageState = {
+    kind: "voted",
+    election: openElection,
+  };
+
+  const result = preserveVotingState(next, current);
+  expect(result.kind).toBe("voted");
+});

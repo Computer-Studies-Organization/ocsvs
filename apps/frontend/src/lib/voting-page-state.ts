@@ -91,3 +91,25 @@ export function deriveVotingPageState(input: TVotingPageInput): TVotingPageState
     voting: createVotingState(positions),
   };
 }
+
+/**
+ * Preserves the user's in-progress selections (voting state) when transitioning
+ * to a new page state for the exact same election. This prevents auto-refresh
+ * from wiping out selected candidates before the user submits their ballot.
+ *
+ * If the page state transitions to a non-stepper kind (e.g. election closed),
+ * the selections are discarded as they are no longer relevant.
+ */
+export function preserveVotingState(
+  next: TVotingPageState,
+  current: TVotingPageState,
+): TVotingPageState {
+  if (
+    next.kind === "stepper" &&
+    current.kind === "stepper" &&
+    next.election.id === current.election.id
+  ) {
+    return { ...next, voting: current.voting };
+  }
+  return next;
+}
