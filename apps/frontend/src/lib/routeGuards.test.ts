@@ -9,30 +9,24 @@ import {
 import { UserRole } from "./types";
 
 const adminUser = {
-  user: {
-    id: "admin-id",
-    email: "admin@example.com",
-    username: "admin",
-    role: UserRole.ADMIN,
-  },
+  id: "admin-id",
+  email: "admin@example.com",
+  username: "admin",
+  role: UserRole.ADMIN,
 };
 
 const superAdminUser = {
-  user: {
-    id: "superadmin-id",
-    email: "superadmin@example.com",
-    username: "superadmin",
-    role: UserRole.SUPER_ADMIN,
-  },
+  id: "superadmin-id",
+  email: "superadmin@example.com",
+  username: "superadmin",
+  role: UserRole.SUPER_ADMIN,
 };
 
 const standardUser = {
-  user: {
-    id: "user-id",
-    email: "user@example.com",
-    username: "user",
-    role: UserRole.USER,
-  },
+  id: "user-id",
+  email: "user@example.com",
+  username: "user",
+  role: UserRole.USER,
 };
 
 describe("routeGuards", () => {

@@ -6,8 +6,8 @@
 
   const { children } = $props()
 
-  const loading = $derived($authStore.loading)
-  const redirect = $derived(getPublicRouteRedirectPath($authStore.user))
+  const loading = $derived(authStore.loading)
+  const redirect = $derived(getPublicRouteRedirectPath(authStore.user))
 
   $effect(() => {
     if (!loading && redirect) {

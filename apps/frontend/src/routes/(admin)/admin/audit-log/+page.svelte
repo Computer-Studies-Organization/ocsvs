@@ -16,8 +16,9 @@
     type AuditLogFilters,
     fetchAuditLog,
   } from "$lib/api/audit-log";
-  import { getElection } from "$lib/api/elections";
   import { fetchUser } from "$lib/api/users";
+  import { formatTimestamp } from "$lib/utils";
+  import { appCache } from "$lib/cache";
   import { getCandidate } from "$lib/api/candidates";
   import SkeletonTable from "$lib/components/ui/skeleton-table.svelte";
 
@@ -158,11 +159,22 @@
     try {
       let name = "";
       if (entry.targetType === "election") {
-        const e = await getElection(entry.targetId);
-        name = e.name;
+        const cacheEntry = appCache.get("election", { id: entry.targetId });
+        if (cacheEntry.data) {
+          name = cacheEntry.data.name;
+        } else {
+          const e = await cacheEntry.fetch();
+          if (e) name = e.name;
+        }
       } else if (entry.targetType === "user") {
-        const u = await fetchUser(entry.targetId);
-        name = `${u.firstName} ${u.lastName}`;
+        const cacheEntry = appCache.get("users", {});
+        const cachedUser = cacheEntry.data?.find(u => u.id === entry.targetId);
+        if (cachedUser) {
+          name = `${cachedUser.firstName} ${cachedUser.lastName}`;
+        } else {
+          const u = await fetchUser(entry.targetId);
+          name = `${u.firstName} ${u.lastName}`;
+        }
       } else if (entry.targetType === "candidate") {
         const c = await getCandidate(entry.targetId);
         name = c.fullName;
@@ -183,11 +195,6 @@
 
   function truncateId(id: string): string {
     return id.length > 16 ? id.slice(0, 16) + "…" : id;
-  }
-
-  function formatTimestamp(unixSeconds: number): string {
-    const d = new Date(unixSeconds * 1000);
-    return d.toLocaleString();
   }
 
   function getTargetLink(entry: AuditLogEntry): string | null {

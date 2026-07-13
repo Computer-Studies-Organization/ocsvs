@@ -4,6 +4,7 @@
   import { authStore } from '$lib/stores/auth'
   import { logout } from '$lib/api/auth'
   import { LogOut, Settings, UserCheck } from 'lucide-svelte'
+  import { UserRole } from '$lib/types'
 
   let { adminMode = false } = $props()
 
@@ -109,7 +110,7 @@
       </div>
 
       <!-- Right action menu -->
-      {#if $authStore.user}
+      {#if authStore.user}
         <div class='flex items-center gap-2 sm:gap-4'>
           <!-- Mode Shortcut Switcher -->
           {#if adminMode}
@@ -119,7 +120,7 @@
             >
               Exit Admin
             </a>
-          {:else if $authStore.user.user.role === 'admin' || $authStore.user.user.role === 'super_admin'}
+          {:else if authStore.user.role === UserRole.ADMIN || authStore.user.role === UserRole.SUPER_ADMIN}
             <a
               href='/admin-dashboard'
               class='hidden sm:flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition'
@@ -140,7 +141,7 @@
 
           <!-- User Indicator -->
           <span class='hidden md:inline-block text-xs font-medium text-slate-400'>
-            {$authStore.user.user.username}
+            {authStore.user.username}
           </span>
 
           <!-- Logout button -->

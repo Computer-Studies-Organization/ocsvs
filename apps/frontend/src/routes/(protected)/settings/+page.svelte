@@ -12,7 +12,7 @@
   import { updateProfileSchema, changePasswordSchema } from '$lib/validation/profile'
 
   let { data } = $props()
-  let profile = $derived(data.profile)
+  const profile = $derived(data.profile)
 
   // Profile form
   let firstName = $state('')
@@ -41,8 +41,8 @@
   let showNew = $state(false)
   let showConfirm = $state(false)
 
-  const user = $derived($authStore.user)
-  const isAdmin = $derived(user?.user?.role === UserRole.ADMIN || user?.user?.role === UserRole.SUPER_ADMIN)
+  const user = $derived(authStore.user)
+  const isAdmin = $derived(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN)
 
   async function handleProfileSubmit(e: SubmitEvent) {
     e.preventDefault()

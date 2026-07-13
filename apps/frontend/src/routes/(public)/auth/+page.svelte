@@ -4,7 +4,7 @@
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
   import { authStore } from '$lib/stores/auth'
-  import { COURSE_VALUES, YEAR_LEVEL_VALUES } from '$lib/types'
+  import { COURSE_VALUES, YEAR_LEVEL_VALUES, type TRegisterUser, type TCourse, type TYearLevel } from '$lib/types'
   import {
     EMPTY_REGISTER_USER_DRAFT,
     getMutationErrorMessage,
@@ -105,8 +105,17 @@
     message = ''
 
     try {
-      // Cast is safe due to isRegisterValid guard
-      await register(registerData as any)
+      const payload: TRegisterUser = {
+        studentId: registerData.studentId,
+        firstName: registerData.firstName,
+        lastName: registerData.lastName,
+        email: registerData.email || undefined,
+        username: registerData.username,
+        password: registerData.password,
+        yearLevel: registerData.yearLevel as TYearLevel,
+        course: registerData.course as TCourse,
+      }
+      await register(payload)
       // On success, notify user and switch to login
       message = 'Account created successfully! Please sign in.'
       mode = 'login'

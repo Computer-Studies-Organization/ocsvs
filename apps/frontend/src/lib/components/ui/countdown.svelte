@@ -20,12 +20,11 @@
   }>();
 
   let now = $state(Date.now());
-  let hasTriggeredZero = $state(false);
   
   $effect(() => {
     // Access targetUnixSeconds synchronously to register it as a dependency
     const target = targetUnixSeconds;
-    hasTriggeredZero = false;
+    let hasTriggeredZero = false;
 
     const interval = setInterval(() => {
       now = Date.now();

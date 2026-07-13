@@ -18,6 +18,7 @@
     withVoting,
   } from '$lib/voting-stepper-logic'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { formatTimestamp } from '$lib/utils'
   import { addToast } from '$lib/stores/toast'
   import { authStore } from '$lib/stores/auth'
   import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
@@ -29,13 +30,13 @@
   import StepperNavigation from '$lib/components/ui/stepper-navigation.svelte'
 
   let { data } = $props()
-  let apiState = $derived<TVotingState | null>(data.votingState)
-  let positions = $derived<TPosition[] | null>(data.positions)
-  let candidates = $derived<TCandidate[] | null>(data.candidates)
+  const apiState = $derived<TVotingState | null>(data.votingState)
+  const positions = $derived<TPosition[] | null>(data.positions)
+  const candidates = $derived<TCandidate[] | null>(data.candidates)
   let loadError = $state<string | null>(null)
   let isSubmitting = $state(false)
 
-  const isAdmin = $derived($authStore.user?.user?.role === UserRole.ADMIN || $authStore.user?.user?.role === UserRole.SUPER_ADMIN)
+  const isAdmin = $derived(authStore.user?.role === UserRole.ADMIN || authStore.user?.role === UserRole.SUPER_ADMIN)
 
   let pageState = $state<TVotingPageState>({ kind: 'loading' })
 
@@ -100,14 +101,6 @@
   function goToPosition(idx: number) {
     if (pageState.kind !== 'stepper') return
     pageState.voting.currentPositionIndex = idx
-  }
-
-  function formatTimestamp(unixSeconds: number): string {
-    const date = new Date(unixSeconds * 1000)
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(date)
   }
 
 

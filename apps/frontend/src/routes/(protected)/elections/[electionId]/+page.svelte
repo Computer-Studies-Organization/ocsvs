@@ -7,9 +7,9 @@
   import { ArrowLeft, BarChart3, Info, Trophy, Vote } from 'lucide-svelte'
 
   let { data } = $props()
-  let election = $derived(data.election)
-  let results = $derived<TResults>(data.results ?? [])
-  let hasVoted = $derived(data.hasVoted)
+  const election = $derived(data.election)
+  const results = $derived<TResults>(data.results ?? [])
+  const hasVoted = $derived(data.hasVoted)
 
   async function poll() {
     if (election?.status !== 'open' || !hasVoted) return

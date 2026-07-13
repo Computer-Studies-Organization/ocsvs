@@ -1,27 +1,29 @@
 import type { TUserData } from "$lib/types";
 import { UserRole } from "$lib/types";
 
-export function getPublicRouteRedirectPath(data: TUserData | null | undefined) {
-  if (data) {
-    return data.user.role === UserRole.ADMIN || data.user.role === UserRole.SUPER_ADMIN
+type TUserSession = TUserData["user"];
+
+export function getPublicRouteRedirectPath(user: TUserSession | null | undefined) {
+  if (user) {
+    return user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN
       ? "/admin-dashboard"
       : "/voting";
   }
   return null;
 }
 
-export function getProtectedRouteRedirectPath(data: TUserData | null | undefined) {
-  if (!data) {
+export function getProtectedRouteRedirectPath(user: TUserSession | null | undefined) {
+  if (!user) {
     return "/auth";
   }
   return null;
 }
 
-export function getAdminRouteRedirectPath(data: TUserData | null | undefined) {
-  if (!data) {
+export function getAdminRouteRedirectPath(user: TUserSession | null | undefined) {
+  if (!user) {
     return "/auth";
   }
-  if (data.user.role !== UserRole.ADMIN && data.user.role !== UserRole.SUPER_ADMIN) {
+  if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
     return "/voting";
   }
   return null;

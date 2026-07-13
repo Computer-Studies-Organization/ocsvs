@@ -5,14 +5,17 @@
   let {
     open = false,
     onclose = () => {},
+    ariaLabelledby,
     children,
   }: {
     open: boolean
     onclose: () => void
+    ariaLabelledby?: string
     children: import('svelte').Snippet
   } = $props()
 
   let closeBtn: HTMLButtonElement | undefined = $state()
+  let containerEl: HTMLElement | undefined = $state()
   let previousFocus: HTMLElement | null = null
 
   $effect(() => {
@@ -30,24 +33,68 @@
       document.body.style.overflow = ''
     }
   })
+
+  function getTabbableElements(container: HTMLElement): HTMLElement[] {
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"]), [contenteditable]'
+      )
+    ).filter(el => {
+      const style = window.getComputedStyle(el)
+      return style.display !== 'none' && style.visibility !== 'hidden'
+    })
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      onclose()
+      return
+    }
+
+    if (e.key === 'Tab' && containerEl) {
+      const tabbables = getTabbableElements(containerEl)
+      if (tabbables.length === 0) {
+        e.preventDefault()
+        return
+      }
+
+      const first = tabbables[0]
+      const last = tabbables[tabbables.length - 1]
+      const active = document.activeElement
+
+      if (e.shiftKey) {
+        if (active === first || !containerEl.contains(active)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (active === last || !containerEl.contains(active)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+  }
 </script>
 
 {#if open}
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4'
     role='dialog'
     aria-modal='true'
+    aria-labelledby={ariaLabelledby}
     tabindex="-1"
     onclick={onclose}
-    onkeydown={(e) => { if (e.key === 'Escape') onclose() }}
+    onkeydown={handleKeyDown}
+    bind:this={containerEl}
   >
     <!-- stop-propagation guard: inner clicks must not close the modal -->
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class='relative w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[90vh] overflow-y-auto'
-      role="document"
       onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
     >
       <button
         type='button'

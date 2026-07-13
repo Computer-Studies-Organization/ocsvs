@@ -9,8 +9,8 @@
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
 
   let { data } = $props()
-  let election = $derived(data.election)
-  let positions = $derived(data.positions)
+  const election = $derived(data.election)
+  const positions = $derived(data.positions)
   let isCreateOpen = $state(false)
 
   function openCreate() {
@@ -20,9 +20,17 @@
   function closeCreate() {
     isCreateOpen = false
   }
+
+  async function handleTransitionSuccess() {
+    appCache.invalidate({ resource: 'elections' })
+    appCache.invalidate({ resource: 'election', params: { id: election.id } })
+    appCache.invalidate({ params: { electionId: election.id } })
+    appCache.invalidate({ resource: 'votingState' })
+    await invalidate('app:election')
+  }
 </script>
 
-<div class='min-h-[100dvh]' style='background: oklch(0.16 0.020 250)'>
+<div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     <a
       href='/admin/elections'
@@ -54,7 +62,7 @@
         >
           View Audit Trail →
         </a>
-        <TransitionButton {election} onsuccess={async () => { appCache.invalidate({ resource: 'elections' }); appCache.invalidate({ resource: 'election', params: { id: election.id } }); appCache.invalidate({ params: { electionId: election.id } }); appCache.invalidate({ resource: 'votingState' }); await invalidate('app:election') }} />
+        <TransitionButton {election} onsuccess={handleTransitionSuccess} />
       </div>
     </header>
 

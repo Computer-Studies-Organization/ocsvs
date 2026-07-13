@@ -44,6 +44,7 @@
         <button
           type="button"
           onclick={() => ongoToPosition(idx)}
+          aria-label={`Change selection for ${pos.name}`}
           class="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer"
         >
           Change

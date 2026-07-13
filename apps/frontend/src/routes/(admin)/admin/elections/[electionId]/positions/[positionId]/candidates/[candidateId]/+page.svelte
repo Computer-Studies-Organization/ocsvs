@@ -24,10 +24,10 @@
   }
 
   let { data } = $props()
-  let candidate = $derived<CandidateRecord>(data.candidate)
-  let election = $derived<TElection>(data.election)
-  let position = $derived<TPosition | null>(data.position)
-  let user = $derived<TUsersData | null>(data.user)
+  const candidate = $derived<CandidateRecord>(data.candidate)
+  const election = $derived<TElection>(data.election)
+  const position = $derived<TPosition | null>(data.position)
+  const user = $derived<TUsersData | null>(data.user)
 
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
@@ -126,7 +126,7 @@
   }
 </script>
 
-<div class='min-h-[100dvh]' style='background: oklch(0.16 0.020 250)'>
+<div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8'>
     <a
       href={`/admin/elections/${electionId}/positions/${positionId}`}

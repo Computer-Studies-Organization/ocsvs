@@ -12,9 +12,10 @@
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TElectionStatus } from '$lib/types'
   import { appCache } from '$lib/cache'
+  import { formatDate } from '$lib/utils'
 
   let { data } = $props()
-  let elections = $derived(data.elections)
+  const elections = $derived(data.elections)
   let isCreateOpen = $state(false)
   let createName = $state('')
   let createDescription = $state('')
@@ -65,13 +66,9 @@
     }
   }
 
-  function formatDate(unixSeconds: number | null): string {
-    if (!unixSeconds) return ''
-    return new Date(unixSeconds * 1000).toLocaleString()
-  }
 </script>
 
-<div class='min-h-[100dvh]' style='background: oklch(0.16 0.020 250)'>
+<div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     <div class='flex flex-wrap items-center justify-between gap-4 mb-6'>
       <h1 class='text-3xl font-black' style='color: oklch(0.95 0.008 250)'>Elections</h1>

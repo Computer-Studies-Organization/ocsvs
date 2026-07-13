@@ -33,7 +33,7 @@
 </script>
 
 <div class='fixed bottom-4 right-4 z-50 flex flex-col gap-2 sm:bottom-6 sm:right-6'>
-  {#each $toasts as toast (toast.id)}
+  {#each toasts.list as toast (toast.id)}
     {@const Icon = icons[toast.type]}
     {@const c = colors[toast.type]}
     <div

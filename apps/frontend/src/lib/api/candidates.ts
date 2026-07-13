@@ -47,7 +47,9 @@ export async function getCandidate(id: string): Promise<TCandidate> {
   return apiFetch(`/candidates/${id}`);
 }
 
-export async function createCandidate(data: Omit<TCandidate, "id">): Promise<TCandidate> {
+export async function createCandidate(
+  data: Omit<TCandidate, "id" | "isActive" | "imageUrl">,
+): Promise<TCandidate> {
   return apiFetch("/candidates", { method: "POST", body: JSON.stringify(data) });
 }
 

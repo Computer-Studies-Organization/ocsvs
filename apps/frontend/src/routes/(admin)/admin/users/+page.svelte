@@ -1,7 +1,7 @@
 <script lang='ts'>
   import type { TUsersData } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
-  import { untrack } from 'svelte'
+  import { onDestroy, untrack } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
   import { appCache } from '$lib/cache'
@@ -17,6 +17,8 @@
     X,
   } from 'lucide-svelte'
   import { addToast } from '$lib/stores/toast'
+  import Modal from '$lib/components/ui/modal.svelte'
+  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
 
   type SortableKey = 'studentId' | 'firstName' | 'lastName' | 'username' | 'yearLevel' | 'course'
   const SORTABLE_KEYS: SortableKey[] = ['studentId', 'firstName', 'lastName', 'username', 'yearLevel', 'course']
@@ -42,7 +44,7 @@
   type EditForm = Record<EditField, string>
 
   let { data } = $props()
-  let users = $derived<TUsersData[]>(data.users)
+  const users = $derived<TUsersData[]>(data.users)
   let includeDeleted = $state(untrack(() => data.includeDeleted))
 
   // State
@@ -64,6 +66,12 @@
   let hardDeleteConfirmText = $state('')
   let isActionLoading = $state(false)
   let actionMsg = $state('')
+  let editTimeoutId: any
+
+  // Update local includeDeleted when SvelteKit page data updates (URL history sync)
+  $effect(() => {
+    includeDeleted = data.includeDeleted
+  })
 
   // Update URL when includeDeleted changes
   $effect(() => {
@@ -103,7 +111,14 @@
 
   $effect(() => {
     void includeDeleted
+    void search
     pageIndex = 0
+  })
+
+  onDestroy(() => {
+    if (editTimeoutId) {
+      clearTimeout(editTimeoutId)
+    }
   })
 
   function toggleSort(key: SortableKey) {
@@ -148,13 +163,13 @@
       addToast('success', 'User updated')
       appCache.invalidate({ resource: 'users' })
       await invalidate('app:users')
-      setTimeout(() => {
+      editTimeoutId = setTimeout(() => {
         editUser = null
       }, 800)
     }
-    catch (e: any) {
-      editMsg = e.message || 'Failed to save'
-      addToast('error', e.message || 'Failed to save')
+    catch (e: unknown) {
+      editMsg = extractErrorMessage(e, 'Failed to save')
+      addToast('error', editMsg)
     }
     finally {
       isEditSaving = false
@@ -165,6 +180,7 @@
     if (!archiveConfirmUser)
       return
     isActionLoading = true
+    actionMsg = ''
     try {
       await deleteUser(archiveConfirmUser.id)
       appCache.invalidate({ resource: 'users' })
@@ -172,9 +188,9 @@
       archiveConfirmUser = null
       addToast('success', 'User archived')
     }
-    catch (e: any) {
-      actionMsg = e.message || 'Failed to archive'
-      addToast('error', e.message || 'Failed to archive')
+    catch (e: unknown) {
+      actionMsg = extractErrorMessage(e, 'Failed to archive')
+      addToast('error', actionMsg)
     }
     finally {
       isActionLoading = false
@@ -185,6 +201,7 @@
     if (!restoreConfirmUser)
       return
     isActionLoading = true
+    actionMsg = ''
     try {
       await restoreUser(restoreConfirmUser.id)
       appCache.invalidate({ resource: 'users' })
@@ -192,9 +209,9 @@
       restoreConfirmUser = null
       addToast('success', 'User restored')
     }
-    catch (e: any) {
-      actionMsg = e.message || 'Failed to restore'
-      addToast('error', e.message || 'Failed to restore')
+    catch (e: unknown) {
+      actionMsg = extractErrorMessage(e, 'Failed to restore')
+      addToast('error', actionMsg)
     }
     finally {
       isActionLoading = false
@@ -205,6 +222,7 @@
     if (!hardDeleteConfirmUser || hardDeleteConfirmText !== 'DELETE')
       return
     isActionLoading = true
+    actionMsg = ''
     try {
       await hardDeleteUser(hardDeleteConfirmUser.id, 'DELETE')
       appCache.invalidate({ resource: 'users' })
@@ -213,16 +231,14 @@
       hardDeleteConfirmText = ''
       addToast('success', 'User permanently deleted')
     }
-    catch (e: any) {
-      actionMsg = e.message || 'Failed to delete'
-      addToast('error', e.message || 'Failed to delete')
+    catch (e: unknown) {
+      actionMsg = extractErrorMessage(e, 'Failed to delete')
+      addToast('error', actionMsg)
     }
     finally {
       isActionLoading = false
     }
   }
-
-
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
@@ -241,7 +257,6 @@
       </div>
     </header>
 
-    {#key data.includeDeleted}
     <!-- Search & Filters -->
     <div class='mb-4 flex flex-wrap gap-3'>
       <div class='relative flex-1 min-w-[200px]'>
@@ -303,13 +318,13 @@
                     <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
                     {#if u.deletedAt}
                       <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
-                      {#if $authStore.user?.user.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
+                      {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
                         <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
                       {/if}
                     {:else}
                       <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
                       <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
-                      {#if $authStore.user?.user.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
+                      {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
                         <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
                       {/if}
                     {/if}
@@ -342,174 +357,163 @@
         </div>
       </div>
     </div>
-    {/key}
   </div>
 </div>
 
 <!-- View Modal -->
-{#if viewUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl'>
-      <div class='mb-4 flex items-center justify-between'>
-        <h3 class='text-lg font-bold text-slate-50'>User Details</h3>
-        <button onclick={() => viewUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
+<Modal open={Boolean(viewUser)} onclose={() => viewUser = null} ariaLabelledby="view-user-title">
+  <div class='mb-4 flex items-center justify-between'>
+    <h3 id="view-user-title" class='text-lg font-bold text-slate-50'>User Details</h3>
+  </div>
+  {#if viewUser}
+    <div class='space-y-2 text-sm'>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Student ID</span>
+        <span class='font-semibold text-slate-50'>{viewUser.studentId}</span>
       </div>
-      <div class='space-y-2 text-sm'>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Student ID</span>
-          <span class='font-semibold text-slate-50'>{viewUser.studentId}</span>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>First Name</span>
+        <span class='font-semibold text-slate-50'>{viewUser.firstName}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Last Name</span>
+        <span class='font-semibold text-slate-50'>{viewUser.lastName}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Username</span>
+        <span class='font-semibold text-slate-50'>{viewUser.username ?? '—'}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Email</span>
+        <span class='font-semibold text-slate-50'>{viewUser.email ?? '—'}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Year Level</span>
+        <span class='font-semibold text-slate-50'>{viewUser.yearLevel ?? '—'}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Course</span>
+        <span class='font-semibold text-slate-50'>{viewUser.course ?? '—'}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Role</span>
+        <span class='font-semibold text-slate-50'>{viewUser.role ?? '—'}</span>
+      </div>
+      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+        <span class='text-slate-400'>Status</span>
+        <span class='font-semibold text-slate-50'>{viewUser.deletedAt ? 'Archived' : 'Active'}</span>
+      </div>
+      <a
+        href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
+        class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+      >
+        View Audit Trail →
+      </a>
+    </div>
+  {/if}
+</Modal>
+
+<!-- Edit Modal -->
+<Modal open={Boolean(editUser)} onclose={() => editUser = null} ariaLabelledby="edit-user-title">
+  <div class='mb-4 flex items-center justify-between'>
+    <h3 id="edit-user-title" class='text-lg font-bold text-slate-50'>Edit User</h3>
+  </div>
+  {#if editUser}
+    <div class='space-y-3'>
+      {#each EDIT_FIELDS as field (field)}
+        <div>
+          <label for={field} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
+          <input
+            id={field}
+            type='text'
+            value={editForm[field]}
+            oninput={e => editForm[field] = e.currentTarget.value}
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
+          />
         </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>First Name</span>
-          <span class='font-semibold text-slate-50'>{viewUser.firstName}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Last Name</span>
-          <span class='font-semibold text-slate-50'>{viewUser.lastName}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Username</span>
-          <span class='font-semibold text-slate-50'>{viewUser.username ?? '—'}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Email</span>
-          <span class='font-semibold text-slate-50'>{viewUser.email ?? '—'}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Year Level</span>
-          <span class='font-semibold text-slate-50'>{viewUser.yearLevel ?? '—'}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Course</span>
-          <span class='font-semibold text-slate-50'>{viewUser.course ?? '—'}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Role</span>
-          <span class='font-semibold text-slate-50'>{viewUser.role ?? '—'}</span>
-        </div>
-        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-          <span class='text-slate-400'>Status</span>
-          <span class='font-semibold text-slate-50'>{viewUser.deletedAt ? 'Archived' : 'Active'}</span>
-        </div>
-        <a
-          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
-          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+      {/each}
+      {#if editMsg}
+        <p class="text-sm {editMsg === 'Saved!' ? 'text-emerald-400' : 'text-red-400'}">{editMsg}</p>
+      {/if}
+      <div class='flex justify-end gap-2 pt-2'>
+        <button onclick={() => editUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+        <button
+          onclick={handleEditSave}
+          disabled={isEditSaving}
+          class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
         >
-          View Audit Trail →
-        </a>
+          {#if isEditSaving}<Loader class='animate-spin' size={14} />{/if}
+          Save
+        </button>
       </div>
     </div>
-  </div>
-{/if}
-{#if editUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl'>
-      <div class='mb-4 flex items-center justify-between'>
-        <h3 class='text-lg font-bold text-slate-50'>Edit User</h3>
-        <button onclick={() => editUser = null} class='rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 cursor-pointer'><X size={18} /></button>
-      </div>
-      <div class='space-y-3'>
-        {#each EDIT_FIELDS as field (field)}
-          <div>
-            <label for={field} class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>{EDIT_LABELS[field]}</label>
-            <input
-              id={field}
-              type='text'
-              value={editForm[field]}
-              oninput={e => editForm[field] = e.currentTarget.value}
-              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-sky-400 focus:outline-none'
-            />
-          </div>
-        {/each}
-        {#if editMsg}
-          <p class="text-sm {editMsg === 'Saved!' ? 'text-emerald-400' : 'text-red-400'}">{editMsg}</p>
-        {/if}
-        <div class='flex justify-end gap-2 pt-2'>
-          <button onclick={() => editUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-          <button
-            onclick={handleEditSave}
-            disabled={isEditSaving}
-            class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
-          >
-            {#if isEditSaving}<Loader class='animate-spin' size={14} />{/if}
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
+  {/if}
+</Modal>
 
 <!-- Archive Confirm -->
-{#if archiveConfirmUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-sm rounded-2xl border border-orange-800/40 bg-slate-900 p-6 shadow-2xl'>
-      <h3 class='mb-2 text-lg font-bold text-slate-50'>Archive User?</h3>
-      <p class='mb-4 text-sm text-slate-400'>Are you sure you want to archive <span class='font-semibold text-slate-200'>{archiveConfirmUser.firstName} {archiveConfirmUser.lastName}</span>? They will no longer be able to log in.</p>
-      <div class='flex gap-2 justify-end'>
-        <button onclick={() => archiveConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-        <button
-          onclick={handleArchive}
-          disabled={isActionLoading}
-          class='flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-60 cursor-pointer'
-        >
-          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
-          Archive
-        </button>
-      </div>
+<Modal open={Boolean(archiveConfirmUser)} onclose={() => archiveConfirmUser = null} ariaLabelledby="archive-user-title">
+  <h3 id="archive-user-title" class='mb-2 text-lg font-bold text-slate-50'>Archive User?</h3>
+  {#if archiveConfirmUser}
+    <p class='mb-4 text-sm text-slate-400'>Are you sure you want to archive <span class='font-semibold text-slate-200'>{archiveConfirmUser.firstName} {archiveConfirmUser.lastName}</span>? They will no longer be able to log in.</p>
+    <div class='flex gap-2 justify-end'>
+      <button onclick={() => archiveConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button
+        onclick={handleArchive}
+        disabled={isActionLoading}
+        class='flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-60 cursor-pointer'
+      >
+        {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
+        Archive
+      </button>
     </div>
-  </div>
-{/if}
+  {/if}
+</Modal>
 
 <!-- Restore Confirm -->
-{#if restoreConfirmUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-sm rounded-2xl border border-emerald-800/40 bg-slate-900 p-6 shadow-2xl'>
-      <h3 class='mb-2 text-lg font-bold text-slate-50'>Restore User?</h3>
-      <p class='mb-4 text-sm text-slate-400'>Restore <span class='font-semibold text-slate-200'>{restoreConfirmUser.firstName} {restoreConfirmUser.lastName}</span> so they can log in again.</p>
-      <div class='flex gap-2 justify-end'>
-        <button onclick={() => restoreConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-        <button
-          onclick={handleRestore}
-          disabled={isActionLoading}
-          class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60 cursor-pointer'
-        >
-          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
-          Restore
-        </button>
-      </div>
+<Modal open={Boolean(restoreConfirmUser)} onclose={() => restoreConfirmUser = null} ariaLabelledby="restore-user-title">
+  <h3 id="restore-user-title" class='mb-2 text-lg font-bold text-slate-50'>Restore User?</h3>
+  {#if restoreConfirmUser}
+    <p class='mb-4 text-sm text-slate-400'>Restore <span class='font-semibold text-slate-200'>{restoreConfirmUser.firstName} {restoreConfirmUser.lastName}</span> so they can log in again.</p>
+    <div class='flex gap-2 justify-end'>
+      <button onclick={() => restoreConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button
+        onclick={handleRestore}
+        disabled={isActionLoading}
+        class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60 cursor-pointer'
+      >
+        {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
+        Restore
+      </button>
     </div>
-  </div>
-{/if}
+  {/if}
+</Modal>
 
 <!-- Hard Delete Confirm -->
-{#if hardDeleteConfirmUser}
-  <div class='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm'>
-    <div class='w-full max-w-sm rounded-2xl border border-red-800/40 bg-slate-900 p-6 shadow-2xl'>
-      <h3 class='mb-2 text-lg font-bold text-slate-50'>⚠️ Permanently Delete User?</h3>
-      <p class='mb-4 text-sm text-slate-400'>This will permanently delete <span class='font-semibold text-slate-200'>{hardDeleteConfirmUser.firstName} {hardDeleteConfirmUser.lastName}</span> and cannot be undone.</p>
-      <p class='mb-4 text-xs text-slate-500'>This action removes: account credentials, user profile, and all active sessions.</p>
-      <div class='mb-4'>
-        <label for='hard-delete-confirm' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Type DELETE to confirm</label>
-        <input
-          id='hard-delete-confirm'
-          type='text'
-          bind:value={hardDeleteConfirmText}
-          placeholder='DELETE'
-          class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-red-400 focus:outline-none'
-        />
-      </div>
-      <div class='flex gap-2 justify-end'>
-        <button onclick={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
-        <button
-          onclick={handleHardDelete}
-          disabled={isActionLoading || hardDeleteConfirmText !== 'DELETE'}
-          class='flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60 cursor-pointer'
-        >
-          {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
-          Delete Permanently
-        </button>
-      </div>
+<Modal open={Boolean(hardDeleteConfirmUser)} onclose={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} ariaLabelledby="hard-delete-user-title">
+  <h3 id="hard-delete-user-title" class='mb-2 text-lg font-bold text-slate-50'>⚠️ Permanently Delete User?</h3>
+  {#if hardDeleteConfirmUser}
+    <p class='mb-4 text-sm text-slate-400'>This will permanently delete <span class='font-semibold text-slate-200'>{hardDeleteConfirmUser.firstName} {hardDeleteConfirmUser.lastName}</span> and cannot be undone.</p>
+    <p class='mb-4 text-xs text-slate-500'>This action removes: account credentials, user profile, and all active sessions.</p>
+    <div class='mb-4'>
+      <label for='hard-delete-confirm' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Type DELETE to confirm</label>
+      <input
+        id='hard-delete-confirm'
+        type='text'
+        bind:value={hardDeleteConfirmText}
+        placeholder='DELETE'
+        class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 transition focus:border-red-400 focus:outline-none'
+      />
     </div>
-  </div>
-{/if}
+    <div class='flex gap-2 justify-end'>
+      <button onclick={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button
+        onclick={handleHardDelete}
+        disabled={isActionLoading || hardDeleteConfirmText !== 'DELETE'}
+        class='flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60 cursor-pointer'
+      >
+        {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
+        Delete Permanently
+      </button>
+    </div>
+  {/if}
+</Modal>

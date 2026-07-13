@@ -9,6 +9,7 @@
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import { Calendar, Inbox, Vote } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
+  import { formatTimestamp } from '$lib/utils'
 
   let elections = $state<TElection[]>([])
   let isLoading = $state(true)
@@ -40,15 +41,6 @@
     finally {
       isLoading = false
     }
-  }
-
-  function formatTimestamp(unixSeconds: number | null): string {
-    if (!unixSeconds) return 'TBD'
-    const date = new Date(unixSeconds * 1000)
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(date)
   }
 
   onMount(load)

@@ -12,9 +12,9 @@
   }
 
   let { data } = $props()
-  let election = $derived(data.election)
-  let position = $derived(data.position)
-  let candidates = $derived<CandidateRow[]>(data.candidates)
+  const election = $derived(data.election)
+  const position = $derived(data.position)
+  const candidates = $derived<CandidateRow[]>(data.candidates)
 
   let isCreateOpen = $state(false)
   let isEditOpen = $state(false)
@@ -36,7 +36,7 @@
   }
 </script>
 
-<div class='min-h-[100dvh]' style='background: oklch(0.16 0.020 250)'>
+<div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     {#if election}
       <a

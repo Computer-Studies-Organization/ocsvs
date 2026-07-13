@@ -2,6 +2,7 @@
   import type { AdminStats } from '$lib/api/admin-stats'
   import { goto, invalidateAll } from '$app/navigation'
   import Countdown from '$lib/components/ui/countdown.svelte'
+  import { formatTimestamp } from '$lib/utils'
   import {
     Users,
     FileText,
@@ -16,13 +17,8 @@
   } from 'lucide-svelte'
 
   let { data } = $props()
-  let stats = $derived<AdminStats>(data.stats)
-  let error = $derived<string | undefined>(data.error)
-
-  function formatTimestamp(unixSeconds: number): string {
-    const d = new Date(unixSeconds * 1000)
-    return d.toLocaleString()
-  }
+  const stats = $derived<AdminStats>(data.stats)
+  const error = $derived<string | undefined>(data.error)
 
   function truncateId(id: string): string {
     return id.length > 12 ? id.slice(0, 12) + '…' : id

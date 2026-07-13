@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Upload, X, ImageIcon } from "lucide-svelte";
   import { addToast } from "$lib/stores/toast";
+  import { onDestroy } from "svelte";
 
   let {
     currentImageUrl = null,
@@ -60,6 +61,10 @@
       return;
     }
 
+    // Revoke old preview URL if exists
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     // Create preview
     previewUrl = URL.createObjectURL(file);
 
@@ -71,7 +76,10 @@
     } catch (e) {
       error = e instanceof Error ? e.message : "Upload failed";
       addToast('error', e instanceof Error ? e.message : "Upload failed");
-      previewUrl = null;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+      }
     } finally {
       isUploading = false;
     }
@@ -83,7 +91,10 @@
     try {
       await ondelete();
       addToast('success', 'Image deleted')
-      previewUrl = null;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : "Delete failed";
       addToast('error', e instanceof Error ? e.message : "Delete failed");
@@ -91,6 +102,12 @@
       isUploading = false;
     }
   }
+
+  onDestroy(() => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  });
 </script>
 
 <div class="space-y-2">
@@ -129,6 +146,7 @@
       }}
       role="button"
       tabindex="0"
+      aria-label="Upload candidate photo"
     >
       {#if isUploading}
         <div class="animate-spin">

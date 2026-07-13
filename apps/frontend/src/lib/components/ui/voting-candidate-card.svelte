@@ -15,6 +15,7 @@
 <button
   type="button"
   {onclick}
+  aria-pressed={selected}
   class="flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all cursor-pointer"
   style:background={selected ? 'oklch(0.30 0.08 250)' : 'oklch(0.22 0.025 250)'}
   style:border-color={selected ? 'oklch(0.55 0.15 250)' : 'oklch(0.30 0.025 250)'}

@@ -13,11 +13,11 @@
   }
 
   let { data } = $props()
-  let elections = $derived<TElection[]>(data.elections)
-  let resultsData = $derived<TVoteResultsResponse>(data.resultsData)
-  let isError = $derived(Boolean(data.resultsError))
+  const elections = $derived<TElection[]>(data.elections)
+  const resultsData = $derived<TVoteResultsResponse>(data.resultsData)
+  const isError = $derived(Boolean(data.resultsError))
 
-  const user = $derived($authStore.user)
+  const user = $derived(authStore.user)
 
   const visibleElections = $derived(
     elections.filter(e => e.status !== 'draft')
@@ -138,7 +138,7 @@
           </p>
         </div>
         <div class='rounded-xl border border-slate-800/80 bg-slate-900/70 px-4 py-3 shadow-md backdrop-blur'>
-          <p class='text-sm text-slate-200'>Welcome, <span class='font-semibold text-slate-50'>{user?.user?.username || 'Admin'}</span></p>
+          <p class='text-sm text-slate-200'>Welcome, <span class='font-semibold text-slate-50'>{user?.username || 'Admin'}</span></p>
           <p class='mt-1 text-xs text-slate-400'>View detailed vote counts and percentages for each candidate by position.</p>
         </div>
       </div>

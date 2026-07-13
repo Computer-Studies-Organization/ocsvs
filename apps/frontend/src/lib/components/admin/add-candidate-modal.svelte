@@ -2,7 +2,6 @@
   import { onMount } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { createCandidate } from '$lib/api/candidates'
-  import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast'
@@ -37,10 +36,20 @@
 
   // Fetch users on mount (modal is conditionally mounted by parent)
   onMount(() => {
-    fetchUsers({ limit: 100 })
-      .then(res => { users = res.data })
-      .catch(e => { usersError = extractErrorMessage(e, 'Failed to load users'); users = [] })
+    void loadUsers()
   })
+
+  async function loadUsers() {
+    const usersEntry = appCache.get('users', { limit: 100, includeDeleted: false })
+    const result = await usersEntry.fetch()
+
+    if (result) {
+      users = result
+    } else {
+      usersError = usersEntry.error ?? 'Failed to load users'
+      users = []
+    }
+  }
 
   function handleUserSelect(accountId: string) {
     const selected = resolveCandidateUserSelection(users, accountId)
@@ -70,7 +79,7 @@
         accountId: createAccountId,
         positionId: positionId,
         manifesto: createManifesto.trim(),
-      } as never)
+      })
       appCache.invalidate({ params: { electionId } })
       await invalidate('app:position')
       addToast('success', 'Candidate added')
