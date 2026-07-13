@@ -230,6 +230,15 @@ describe("users Routes", () => {
     expect(mockListForAdmin).toHaveBeenCalled();
   });
 
+  it("rejects an oversized pagination limit before querying users", async () => {
+    const res = await router.request("/users?page=1&limit=101", {
+      method: "GET",
+    });
+
+    expect(res.status).toBe(422);
+    expect(mockListForAdmin).not.toHaveBeenCalled();
+  });
+
   it("should request newest users first so fresh registrations appear on page one", async () => {
     mockListForAdmin.mockResolvedValue({
       data: [],
