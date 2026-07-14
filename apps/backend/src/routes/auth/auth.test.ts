@@ -64,25 +64,6 @@ vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
-// Mock the account repository
-const { mockAccountExists, mockCreate } = vi.hoisted(() => ({
-  mockAccountExists: vi.fn(),
-  mockCreate: vi.fn(),
-}));
-
-vi.mock("@/database/repositories/account.repository", () => ({
-  accountRepo: {
-    accountExists: mockAccountExists,
-    create: mockCreate,
-    usernameExists: vi.fn(),
-    updateAccount: vi.fn(),
-    updatePassword: vi.fn(),
-    getPasswordHash: vi.fn(),
-    softDelete: vi.fn(),
-    restore: vi.fn(),
-  },
-}));
-
 // Mock the user account queries
 const { mockFindByStudentId } = vi.hoisted(() => ({
   mockFindByStudentId: vi.fn(),
@@ -160,34 +141,6 @@ describe("auth Routes", () => {
     mockDeleteExpiredAttempts.mockResolvedValue(undefined);
   });
 
-  it("should register a new user", async () => {
-    mockAccountExists.mockResolvedValue(false);
-    mockCreate.mockResolvedValue(undefined);
-
-    const res = await router.request("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "John",
-        lastName: "Doe",
-        email: "john@example.com",
-        username: "johndoe",
-        password: "password123",
-        studentId: "C23-01-1234-CSA001",
-        course: "BSCS",
-        yearLevel: "1st Year",
-      }),
-    });
-
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
-    expect(body.message).toBe("User registered successfully");
-    expect(body.user.username).toBe("johndoe");
-    expect(body.user.role).toBe("user");
-    expect(mockAccountExists).toHaveBeenCalled();
-    expect(mockCreate).toHaveBeenCalled();
-  });
-
   it("should login a user", async () => {
     mockFindByStudentId.mockResolvedValue({
       id: "test-user-id",
@@ -245,85 +198,6 @@ describe("auth Routes", () => {
     expect(body.user.id).toBe("test-user-id");
     expect(body.user.username).toBe("testuser");
     expect(body.user.role).toBe("user");
-  });
-
-  // Error path tests
-
-  it("should reject duplicate registration", async () => {
-    mockAccountExists.mockResolvedValue(true);
-
-    const res = await router.request("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "John",
-        lastName: "Doe",
-        email: "john@example.com",
-        username: "johndoe",
-        password: "password123",
-        studentId: "C23-01-1234-CSA001",
-        course: "BSCS",
-        yearLevel: "1st Year",
-      }),
-    });
-
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as any;
-    expect(body.message).toBe("User already exists");
-    expect(mockAccountExists).toHaveBeenCalled();
-    expect(mockCreate).not.toHaveBeenCalled();
-  });
-
-  it("should return 409 when batch insert hits UNIQUE constraint (race condition)", async () => {
-    mockAccountExists.mockResolvedValue(false);
-    mockCreate.mockRejectedValue(new Error("UNIQUE constraint failed: accounts.username"));
-
-    const res = await router.request("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "John",
-        lastName: "Doe",
-        email: "john@example.com",
-        username: "johndoe",
-        password: "password123",
-        studentId: "C23-01-1234-CSA001",
-        course: "BSCS",
-        yearLevel: "1st Year",
-      }),
-    });
-
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as any;
-    expect(body.message).toBe("User already exists");
-    expect(mockAccountExists).toHaveBeenCalled();
-    expect(mockCreate).toHaveBeenCalled();
-  });
-
-  it("should return 409 when batch insert hits UNIQUE constraint on studentId", async () => {
-    mockAccountExists.mockResolvedValue(false);
-    mockCreate.mockRejectedValue(new Error("UNIQUE constraint failed: users.student_id"));
-
-    const res = await router.request("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "Jane",
-        lastName: "Doe",
-        email: "jane@example.com",
-        username: "janedoe",
-        password: "password123",
-        studentId: "C23-01-5678-CSA001",
-        course: "BSCS",
-        yearLevel: "1st Year",
-      }),
-    });
-
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as any;
-    expect(body.message).toBe("User already exists");
-    expect(mockAccountExists).toHaveBeenCalled();
-    expect(mockCreate).toHaveBeenCalled();
   });
 
   it("should reject login when user not found", async () => {

@@ -93,3 +93,23 @@ export async function hardDeleteUser(
     body: JSON.stringify({ confirm }),
   });
 }
+
+export async function createUser(data: {
+  firstName: string;
+  lastName: string;
+  studentId: string;
+  course: string;
+  yearLevel: string;
+  username?: string;
+  email?: string;
+  password: string;
+  role?: string;
+}): Promise<{
+  message: string;
+  user: { id: string; email: string | null; username: string; role: string; studentId: string };
+}> {
+  return apiFetch("/users", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

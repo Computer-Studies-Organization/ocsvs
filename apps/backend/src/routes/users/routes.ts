@@ -338,3 +338,55 @@ export const hardDeleteUserRoute = createRoute({
     ),
   },
 });
+
+export const createUserBodySchema = z
+  .object({
+    firstName: z.string().min(2),
+    lastName: z.string().min(2),
+    email: z.string().email().optional().or(z.literal("")).nullable(),
+    username: z.string().min(3).max(20).optional().or(z.literal("")).nullable(),
+    password: z.string().min(8),
+    studentId: z
+      .string()
+      .regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
+    course: z.enum(IMPORT_COURSES),
+    yearLevel: z.enum(IMPORT_YEAR_LEVELS),
+    role: z.enum(["user", "admin", "super_admin"]).optional().default("user"),
+  })
+  .openapi("CreateUserBody");
+
+export const createUserResponseSchema = z
+  .object({
+    message: z.string(),
+    user: z.object({
+      id: z.string(),
+      email: z.string().nullable(),
+      username: z.string(),
+      role: z.enum(["user", "admin", "super_admin"]),
+      studentId: z.string(),
+    }),
+  })
+  .openapi("CreateUserResponse");
+
+export const createUserRoute = createRoute({
+  tags: ["Users"],
+  method: "post",
+  path: "/users",
+  security: [{ sessionAuth: [] }],
+  request: {
+    body: jsonContent(createUserBodySchema, "Single user creation details"),
+  },
+  responses: {
+    [httpStatusCodes.CREATED]: jsonContent(createUserResponseSchema, "User created successfully"),
+    [httpStatusCodes.BAD_REQUEST]: jsonContent(
+      z.object({ message: z.string() }),
+      "Invalid request",
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(z.object({ message: z.string() }), "Unauthorized"),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      z.object({ message: z.string() }),
+      "User already exists",
+    ),
+  },
+});

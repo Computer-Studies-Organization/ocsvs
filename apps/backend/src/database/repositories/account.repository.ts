@@ -1,6 +1,7 @@
+import type { AuditLogEntry } from "./audit-log.repository";
 import type { Database, DbClient } from "./database.type";
 import { and, eq, or, sql } from "drizzle-orm";
-import { accounts, sessions, users } from "@/database/schema";
+import { accounts, auditLog, sessions, users } from "@/database/schema";
 
 export const accountRepo = {
   // Check if account exists by username or email (used by auth register)
@@ -32,7 +33,7 @@ export const accountRepo = {
     return existing != null;
   },
 
-  // Create account + user (used by auth register)
+  // Create account + user (used by auth register / admin user creation)
   // Kept on Database because db.batch cannot be nested/run inside a transaction handle (DbClient / Transaction).
   async create(
     db: Database,
@@ -46,26 +47,41 @@ export const accountRepo = {
       lastName: string;
       course: string;
       yearLevel: string;
+      role?: "user" | "admin" | "super_admin";
     },
+    auditEntry?: AuditLogEntry,
   ): Promise<void> {
-    await db.batch([
-      db.insert(accounts).values({
-        id: data.accountId,
-        username: data.username,
-        email: data.email,
-        password_hash: data.passwordHash,
-        role: "user",
-      }),
-      db.insert(users).values({
-        id: crypto.randomUUID(),
-        accountId: data.accountId,
-        studentId: data.studentId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        course: data.course,
-        yearLevel: data.yearLevel,
-      }),
-    ]);
+    const accountInsert = db.insert(accounts).values({
+      id: data.accountId,
+      username: data.username,
+      email: data.email,
+      password_hash: data.passwordHash,
+      role: data.role || "user",
+    });
+    const userInsert = db.insert(users).values({
+      id: crypto.randomUUID(),
+      accountId: data.accountId,
+      studentId: data.studentId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      course: data.course,
+      yearLevel: data.yearLevel,
+    });
+
+    if (auditEntry) {
+      await db.batch([
+        accountInsert,
+        userInsert,
+        db.insert(auditLog).values({
+          id: crypto.randomUUID(),
+          createdAt: Math.floor(Date.now() / 1000),
+          ...auditEntry,
+        }),
+      ]);
+      return;
+    }
+
+    await db.batch([accountInsert, userInsert]);
   },
 
   // Update account fields

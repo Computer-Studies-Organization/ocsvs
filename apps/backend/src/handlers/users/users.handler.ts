@@ -1,5 +1,6 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
+  createUserRoute,
   deleteUserRoute,
   getUserRoute,
   hardDeleteUserRoute,
@@ -59,7 +60,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
   const actor = {
     id: c.var.authUser.id,
     username: c.var.authUser.username,
-    role: c.var.authUser.role as any,
+    role: c.var.authUser.role,
   };
 
   try {
@@ -90,7 +91,7 @@ export const deleteUser: AppRouteHandler<typeof deleteUserRoute> = async (c) => 
   const actor = {
     id: c.var.authUser.id,
     username: c.var.authUser.username,
-    role: c.var.authUser.role as any,
+    role: c.var.authUser.role,
   };
 
   try {
@@ -113,7 +114,7 @@ export const restoreUser: AppRouteHandler<typeof restoreUserRoute> = async (c) =
   const actor = {
     id: c.var.authUser.id,
     username: c.var.authUser.username,
-    role: c.var.authUser.role as any,
+    role: c.var.authUser.role,
   };
 
   try {
@@ -136,7 +137,7 @@ export const importUsers: AppRouteHandler<typeof importUsersRoute> = async (c) =
   const actor = {
     id: c.var.authUser.id,
     username: c.var.authUser.username,
-    role: c.var.authUser.role as any,
+    role: c.var.authUser.role,
   };
 
   try {
@@ -176,7 +177,7 @@ export const hardDeleteUser: AppRouteHandler<typeof hardDeleteUserRoute> = async
   const actor = {
     id: c.var.authUser.id,
     username: c.var.authUser.username,
-    role: c.var.authUser.role as any,
+    role: c.var.authUser.role,
   };
 
   try {
@@ -184,6 +185,72 @@ export const hardDeleteUser: AppRouteHandler<typeof hardDeleteUserRoute> = async
     return c.json({ message: "User permanently deleted" }, httpStatusCodes.OK);
   } catch (error) {
     if (error instanceof UserLifecycleError) {
+      return c.json({ message: error.message }, error.statusCode as any);
+    }
+    throw error;
+  }
+};
+
+export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+
+  const creatorRole = c.var.authUser.role;
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
+
+  const { firstName, lastName, email, username, password, studentId, course, yearLevel, role } =
+    c.req.valid("json");
+
+  // Assertion: Only super admins can create admin/super_admin accounts.
+  if (role !== "user" && creatorRole !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+
+  const { db } = createDb(c);
+
+  try {
+    const regResult = await userLifecycleCoordinator.register(
+      db,
+      {
+        firstName,
+        lastName,
+        email,
+        username,
+        password,
+        studentId,
+        course,
+        yearLevel,
+        role,
+      },
+      {
+        actorAccountIdSnapshot: actorAccountId,
+        actorUsernameSnapshot: actorUsername,
+      },
+    );
+
+    return c.json(
+      {
+        message: ERROR_MESSAGES.USER_CREATED_SUCCESSFULLY,
+        user: {
+          id: regResult.accountId,
+          email,
+          username: regResult.username,
+          role,
+          studentId,
+        },
+      },
+      httpStatusCodes.CREATED,
+    );
+  } catch (error) {
+    if (error instanceof UserLifecycleError) {
+      if (error.code === "USER_ALREADY_EXISTS") {
+        return c.json({ message: ERROR_MESSAGES.USER_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
+      }
+      if (error.code === "PROFANITY_DETECTED") {
+        return c.json({ message: error.message }, httpStatusCodes.BAD_REQUEST);
+      }
       return c.json({ message: error.message }, error.statusCode as any);
     }
     throw error;

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { accounts, sessions } from "@/database/schema";
+import { accounts, auditLog, sessions, users } from "@/database/schema";
 
 // Distinct chains per query type so each statement handed to db.batch is
 // individually identifiable (delete chain vs. update chain).
@@ -12,6 +12,9 @@ const updateChain: any = {
   set: vi.fn(() => updateChain),
   where: vi.fn(() => updateChain),
 };
+const accountInsertChain: any = { values: vi.fn(() => accountInsertChain) };
+const userInsertChain: any = { values: vi.fn(() => userInsertChain) };
+const auditInsertChain: any = { values: vi.fn(() => auditInsertChain) };
 
 const mockBatch = vi.fn((_statements: unknown[]) => Promise.resolve());
 
@@ -26,6 +29,54 @@ vi.mock("@/config/db", () => ({ createDb: () => ({ db: mockDb }) }));
 import { accountRepo } from "./account.repository";
 
 beforeEach(() => vi.clearAllMocks());
+
+describe("accountRepo.create", () => {
+  it("batches account, user, and audit inserts together when audit metadata is provided", async () => {
+    mockDb.insert
+      .mockReturnValueOnce(accountInsertChain)
+      .mockReturnValueOnce(userInsertChain)
+      .mockReturnValueOnce(auditInsertChain);
+
+    await accountRepo.create(
+      mockDb as any,
+      {
+        accountId: "account-id",
+        username: "voter",
+        email: "voter@example.com",
+        passwordHash: "password-hash",
+        studentId: "student-id",
+        firstName: "Voter",
+        lastName: "Example",
+        course: "BSCS",
+        yearLevel: "1st Year",
+      },
+      {
+        action: "user.create",
+        targetType: "user",
+        targetId: "account-id",
+        actorAccountIdSnapshot: "admin-id",
+        actorUsernameSnapshot: "admin",
+        description: "Created user account: voter (student-id)",
+      },
+    );
+
+    expect(mockBatch).toHaveBeenCalledTimes(1);
+    expect(mockBatch).toHaveBeenCalledWith([accountInsertChain, userInsertChain, auditInsertChain]);
+    expect(mockDb.insert).toHaveBeenNthCalledWith(1, accounts);
+    expect(mockDb.insert).toHaveBeenNthCalledWith(2, users);
+    expect(mockDb.insert).toHaveBeenNthCalledWith(3, auditLog);
+    expect(auditInsertChain.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "user.create",
+        targetType: "user",
+        targetId: "account-id",
+        actorAccountIdSnapshot: "admin-id",
+        actorUsernameSnapshot: "admin",
+        description: "Created user account: voter (student-id)",
+      }),
+    );
+  });
+});
 
 describe("accountRepo.changePasswordAndInvalidateSessions", () => {
   it("calls db.batch with both the delete-sessions and update-accounts statements", async () => {

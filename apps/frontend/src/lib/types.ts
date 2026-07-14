@@ -47,16 +47,6 @@ export interface TUsersData {
   lastLogin: number | null;
 }
 
-export type TRegisterUser = Omit<TUser, "accountId"> & {
-  username: string;
-  password: string;
-};
-
-export type TRegisterUserDraft = Omit<TRegisterUser, "yearLevel" | "course"> & {
-  yearLevel: TYearLevel | "";
-  course: TCourse | "";
-};
-
 export interface TLoginUser {
   studentNumber: string;
   password: string;

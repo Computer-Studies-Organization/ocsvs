@@ -70,6 +70,7 @@ export const ERROR_MESSAGES = {
   POSITION_DELETED_SUCCESSFULLY: "Position deleted successfully",
   POSITION_UPDATED_SUCCESSFULLY: "Position updated successfully",
   RESULTS_FETCHED_SUCCESSFULLY: "Results fetched successfully",
+  USER_CREATED_SUCCESSFULLY: "User created successfully",
   USER_REGISTERED_SUCCESSFULLY: "User registered successfully",
   USER_LOGGED_IN_SUCCESSFULLY: "User logged in successfully",
   LOGGED_OUT_SUCCESSFULLY: "Logged out successfully",

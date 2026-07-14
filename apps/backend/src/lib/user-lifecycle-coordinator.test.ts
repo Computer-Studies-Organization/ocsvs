@@ -248,6 +248,41 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockAccountCreate).toHaveBeenCalled();
     });
 
+    it("includes the required user.create audit entry in account creation", async () => {
+      mockAccountExists.mockResolvedValueOnce(false);
+      mockDbGet.mockResolvedValueOnce(null);
+      mockHashPassword.mockResolvedValueOnce("hashed-password");
+
+      const result = await coordinator.register(
+        mockDb,
+        {
+          firstName: "John",
+          lastName: "Doe",
+          studentId: "student-123",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          username: "johndoe",
+        },
+        {
+          actorAccountIdSnapshot: "admin-id",
+          actorUsernameSnapshot: "admin",
+        },
+      );
+
+      expect(mockAccountCreate).toHaveBeenCalledWith(
+        mockDb,
+        expect.objectContaining({ accountId: result.accountId, username: "johndoe" }),
+        {
+          action: "user.create",
+          targetType: "user",
+          targetId: result.accountId,
+          actorAccountIdSnapshot: "admin-id",
+          actorUsernameSnapshot: "admin",
+          description: "Created user account: johndoe (student-123)",
+        },
+      );
+    });
+
     it("throws USER_ALREADY_EXISTS if username/email already exists", async () => {
       mockAccountExists.mockResolvedValueOnce(true);
 
@@ -259,6 +294,28 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
           course: "BSCS",
           yearLevel: "1st Year",
           username: "johndoe",
+        }),
+      ).rejects.toThrowError(
+        expect.objectContaining({ code: "USER_ALREADY_EXISTS", statusCode: 409 }),
+      );
+    });
+
+    it("maps a concurrent generated-username collision to USER_ALREADY_EXISTS", async () => {
+      mockDbAll.mockResolvedValueOnce([]);
+      mockAccountExists.mockResolvedValueOnce(false);
+      mockDbGet.mockResolvedValueOnce(null);
+      mockHashPassword.mockResolvedValueOnce("hashed-password");
+      mockAccountCreate.mockRejectedValueOnce(
+        new Error("UNIQUE constraint failed: accounts.username"),
+      );
+
+      await expect(
+        coordinator.register(mockDb, {
+          firstName: "John",
+          lastName: "Doe",
+          studentId: "student-123",
+          course: "BSCS",
+          yearLevel: "1st Year",
         }),
       ).rejects.toThrowError(
         expect.objectContaining({ code: "USER_ALREADY_EXISTS", statusCode: 409 }),

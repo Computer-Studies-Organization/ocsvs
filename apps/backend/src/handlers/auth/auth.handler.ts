@@ -1,5 +1,5 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
-import type { loginRoute, logoutRoute, meRoute, registerRoute } from "@/routes/auth/routes";
+import type { loginRoute, logoutRoute, meRoute } from "@/routes/auth/routes";
 import { createDb } from "@/config/db";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { getClientIp } from "@/middleware/rate-limit";
@@ -12,50 +12,6 @@ function maskStudentId(id: string): string {
   if (id.length <= 4) return "****";
   return "*".repeat(id.length - 4) + id.slice(-4);
 }
-
-export const register: AppRouteHandler<typeof registerRoute> = async (c) => {
-  const { firstName, lastName, email, username, password, studentId, course, yearLevel } =
-    c.req.valid("json");
-  const { db } = createDb(c);
-
-  try {
-    const result = await userLifecycleCoordinator.register(db, {
-      firstName,
-      lastName,
-      email,
-      username,
-      password,
-      studentId,
-      course,
-      yearLevel,
-    });
-
-    return c.json(
-      {
-        message: ERROR_MESSAGES.USER_REGISTERED_SUCCESSFULLY,
-        user: {
-          id: result.accountId,
-          email,
-          username,
-          role: "user",
-          studentId,
-        },
-      },
-      httpStatusCodes.OK,
-    );
-  } catch (error) {
-    if (error instanceof UserLifecycleError) {
-      if (error.code === "USER_ALREADY_EXISTS") {
-        return c.json({ message: ERROR_MESSAGES.USER_ALREADY_EXISTS }, httpStatusCodes.CONFLICT);
-      }
-      if (error.code === "PROFANITY_DETECTED") {
-        return c.json({ message: error.message }, httpStatusCodes.BAD_REQUEST);
-      }
-      return c.json({ message: error.message }, error.statusCode as any);
-    }
-    throw error;
-  }
-};
 
 export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
   const { studentNumber, password } = c.req.valid("json");

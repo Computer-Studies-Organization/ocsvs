@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import type { AppBindings, AuthUser } from "@/lib/types/app-types";
 import { createMiddleware } from "hono/factory";
 import { createDb } from "@/config/db";
+import { ROLES } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { getSessionAccount, getSessionIdFromCookie } from "@/lib/session";
 
@@ -24,12 +25,17 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
     return c.json({ message: "Session expired or invalid" }, 401);
   }
 
+  const roleResult = ROLES.safeParse(result.account.role);
+  if (!roleResult.success) {
+    return c.json({ message: "Session expired or invalid" }, 401);
+  }
+
   // Store auth user in request context using a simple key
   const user: AuthUser = {
     id: result.account.id,
     email: result.account.email,
     username: result.account.username,
-    role: result.account.role,
+    role: roleResult.data,
   };
 
   c.set("authUser", user);

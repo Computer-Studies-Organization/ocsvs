@@ -12,7 +12,7 @@ export function getClientIp(c: Context): string {
   return c.req.header("CF-Connecting-IP") || c.req.header("X-Real-IP") || "unknown";
 }
 
-export function createIpRateLimiter(bindingName: "LOGIN_IP_LIMITER" | "REGISTER_IP_LIMITER") {
+export function createIpRateLimiter(bindingName: "LOGIN_IP_LIMITER") {
   return createMiddleware<AppBindings>(async (c, next) => {
     const clientIp = getClientIp(c);
     const outcome = await c.env[bindingName].limit({ key: clientIp });

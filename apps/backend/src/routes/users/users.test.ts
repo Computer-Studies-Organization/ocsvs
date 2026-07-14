@@ -23,7 +23,8 @@ vi.mock("@/middleware/auth", () => ({
 }));
 
 const { mockDb, mockDbAll, mockDbValues } = vi.hoisted(() => {
-  const mockDbAll = vi.fn();
+  const mockDbAll = vi.fn().mockResolvedValue([]);
+  const mockDbGet = vi.fn().mockResolvedValue(null);
   const mockDbWhere = vi.fn();
   const mockDbFrom = vi.fn();
   const mockDbSelect = vi.fn();
@@ -34,8 +35,9 @@ const { mockDb, mockDbAll, mockDbValues } = vi.hoisted(() => {
   mockDbFrom.mockImplementation(() => ({
     where: mockDbWhere,
     all: mockDbAll,
+    get: mockDbGet,
   }));
-  mockDbWhere.mockImplementation(() => ({ all: mockDbAll }));
+  mockDbWhere.mockImplementation(() => ({ all: mockDbAll, get: mockDbGet }));
   mockDbInsert.mockImplementation(() => ({ values: mockDbValues }));
 
   return {
@@ -94,6 +96,8 @@ const {
   mockCountActiveAdminsAndSuperAdmins,
   mockHardDelete,
   mockIsCandidate,
+  mockAccountExists,
+  mockCreate,
 } = vi.hoisted(() => ({
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
@@ -103,6 +107,8 @@ const {
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
   mockHardDelete: vi.fn(),
   mockIsCandidate: vi.fn(),
+  mockAccountExists: vi.fn(),
+  mockCreate: vi.fn(),
 }));
 
 const { mockAuditLogInsert } = vi.hoisted(() => ({
@@ -125,9 +131,9 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
 
 vi.mock("@/database/repositories/account.repository", () => ({
   accountRepo: {
-    accountExists: vi.fn(),
+    accountExists: mockAccountExists,
     usernameExists: mockUsernameExists,
-    create: vi.fn(),
+    create: mockCreate,
     updateAccount: mockUpdateAccount,
     updatePassword: vi.fn(),
     getPasswordHash: vi.fn(),
@@ -766,6 +772,194 @@ describe("users Routes", () => {
       expect(res.status).toBe(400);
       const body = (await res.json()) as any;
       expect(body.message).toBe(ERROR_MESSAGES.USER_IS_CANDIDATE);
+    });
+  });
+
+  describe("POST /users - createUser", () => {
+    it("should allow admin to create a voter account", async () => {
+      mockAuthUser.role = "admin";
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockResolvedValue(undefined);
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.USER_CREATED_SUCCESSFULLY);
+      expect(body.user.username).toBe("johndoe");
+      expect(body.user.role).toBe("user");
+      expect(mockAccountExists).toHaveBeenCalled();
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          username: "johndoe",
+          studentId: "C23-01-1234-CSA001",
+        }),
+        expect.objectContaining({
+          action: "user.create",
+          targetType: "user",
+          targetId: expect.any(String),
+          actorAccountIdSnapshot: "test-user-id",
+          actorUsernameSnapshot: "testuser",
+          description: "Created user account: johndoe (C23-01-1234-CSA001)",
+        }),
+      );
+      expect(mockAuditLogInsert).not.toHaveBeenCalled();
+    });
+
+    it("should reject regular admin trying to create an admin account", async () => {
+      mockAuthUser.role = "admin";
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "admin",
+        }),
+      });
+
+      expect(res.status).toBe(403);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("should allow super_admin to create an admin account", async () => {
+      mockAuthUser.role = "super_admin";
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockResolvedValue(undefined);
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "admin",
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as any;
+      expect(body.user.role).toBe("admin");
+      expect(mockCreate).toHaveBeenCalled();
+      expect(mockAuditLogInsert).not.toHaveBeenCalled();
+    });
+
+    it("should reject duplicate registration", async () => {
+      mockAuthUser.role = "admin";
+      mockAccountExists.mockResolvedValue(true);
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(409);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("should return 409 when batch insert hits UNIQUE constraint on studentId", async () => {
+      mockAuthUser.role = "admin";
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockRejectedValue(new Error("UNIQUE constraint failed: users.student_id"));
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane@example.com",
+          username: "janedoe",
+          password: "password123",
+          studentId: "C23-01-5678-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User already exists");
+      expect(mockCreate).toHaveBeenCalled();
+    });
+
+    it("should return 409 when batch insert hits UNIQUE constraint on username", async () => {
+      mockAuthUser.role = "admin";
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockRejectedValue(new Error("UNIQUE constraint failed: accounts.username"));
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane@example.com",
+          username: "janedoe",
+          password: "password123",
+          studentId: "C23-01-5678-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.USER_ALREADY_EXISTS);
+      expect(mockCreate).toHaveBeenCalled();
     });
   });
 });

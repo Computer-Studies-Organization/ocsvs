@@ -1,12 +1,13 @@
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
 import type { Environment } from "@/middleware/env";
+import type { UserRole } from "@/lib/user-lifecycle-coordinator";
 
 export interface AuthUser {
   id: string;
   email: string | null;
   username: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface AppBindings {

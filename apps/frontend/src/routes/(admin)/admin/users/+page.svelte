@@ -1,8 +1,8 @@
 <script lang='ts'>
-  import type { TUsersData } from '$lib/types'
+  import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
-  import { deleteUser, hardDeleteUser, restoreUser, updateUser } from '$lib/api/users'
+  import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth'
   import { appCache } from '$lib/cache'
   import {
@@ -10,6 +10,7 @@
     ArrowUpDown,
     Edit,
     Eye,
+    EyeOff,
     Loader,
     RotateCcw,
     Search,
@@ -42,6 +43,17 @@
     course: 'Course',
   }
   type EditForm = Record<EditField, string>
+  type AddUserForm = {
+    firstName: string
+    lastName: string
+    studentId: string
+    course: TCourse | ''
+    yearLevel: TYearLevel | ''
+    username: string
+    email: string
+    password: string
+    role: UserRole
+  }
 
   let { data } = $props()
   const users = $derived<TUsersData[]>(data.users)
@@ -67,6 +79,122 @@
   let isActionLoading = $state(false)
   let actionMsg = $state('')
   let editTimeoutId: any
+
+  // Add User State
+  let showAddModal = $state(false)
+  let addForm = $state<AddUserForm>({
+    firstName: '',
+    lastName: '',
+    studentId: '',
+    course: '',
+    yearLevel: '',
+    username: '',
+    email: '',
+    password: '',
+    role: UserRole.USER,
+  })
+  let isAddSaving = $state(false)
+  let addMsg = $state('')
+  let addFormVisiblePassword = $state(false)
+  let addSuccessDetails = $state<{ username: string; password: string } | null>(null)
+
+  function generatePassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$'
+    const maxUnbiasedByte = 256 - (256 % chars.length)
+    let pass = ''
+    while (pass.length < 10) {
+      const randomBytes = new Uint8Array(10)
+      crypto.getRandomValues(randomBytes)
+      for (const byte of randomBytes) {
+        if (byte < maxUnbiasedByte) {
+          pass += chars.charAt(byte % chars.length)
+        }
+        if (pass.length === 10) {
+          break
+        }
+      }
+    }
+    addForm.password = pass
+    addFormVisiblePassword = true
+  }
+
+  async function handleAddSave(e?: SubmitEvent) {
+    if (e) e.preventDefault()
+
+    const studentIdRegex = /^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/
+    if (!studentIdRegex.test(addForm.studentId)) {
+      addMsg = 'Invalid Student ID format (should be CXX-XX-XXXX-XXX123)'
+      return
+    }
+    if (!addForm.firstName.trim() || !addForm.lastName.trim()) {
+      addMsg = 'First name and Last name are required'
+      return
+    }
+    if (!addForm.password || addForm.password.length < 8) {
+      addMsg = 'Password must be at least 8 characters'
+      return
+    }
+    if (!addForm.course) {
+      addMsg = 'Course is required'
+      return
+    }
+    if (!addForm.yearLevel) {
+      addMsg = 'Year level is required'
+      return
+    }
+
+    isAddSaving = true
+    addMsg = ''
+    try {
+      const payload: any = {
+        firstName: addForm.firstName.trim(),
+        lastName: addForm.lastName.trim(),
+        studentId: addForm.studentId.trim(),
+        course: addForm.course,
+        yearLevel: addForm.yearLevel,
+        password: addForm.password,
+        role: addForm.role,
+      }
+      if (addForm.username.trim()) {
+        payload.username = addForm.username.trim()
+      }
+      if (addForm.email.trim()) {
+        payload.email = addForm.email.trim()
+      }
+
+      const res = await createUser(payload)
+      addToast('success', 'User created successfully')
+      appCache.invalidate({ resource: 'users' })
+      await invalidate('app:users')
+
+      addSuccessDetails = { username: res.user.username, password: addForm.password }
+    }
+    catch (e: unknown) {
+      addMsg = extractErrorMessage(e, 'Failed to create user')
+      addToast('error', addMsg)
+    }
+    finally {
+      isAddSaving = false
+    }
+  }
+
+  function closeAddModal() {
+    showAddModal = false
+    addForm = {
+      firstName: '',
+      lastName: '',
+      studentId: '',
+      course: '',
+      yearLevel: '',
+      username: '',
+      email: '',
+      password: '',
+      role: UserRole.USER,
+    }
+    addMsg = ''
+    addSuccessDetails = null
+    addFormVisiblePassword = false
+  }
 
   // Update local includeDeleted when SvelteKit page data updates (URL history sync)
   $effect(() => {
@@ -254,6 +382,14 @@
         </p>
         <h1 class='text-2xl font-black text-slate-50 sm:text-3xl'>User Management</h1>
         <p class='mt-1 text-xs text-slate-500'>Manage registered voters and administrators</p>
+      </div>
+      <div>
+        <button
+          onclick={() => showAddModal = true}
+          class='flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
+        >
+          Add User
+        </button>
       </div>
     </header>
 
@@ -517,3 +653,198 @@
     </div>
   {/if}
 </Modal>
+
+<!-- Add User Modal -->
+<Modal open={showAddModal} onclose={closeAddModal} ariaLabelledby="add-user-title">
+  <div class='mb-4 flex items-center justify-between'>
+    <h3 id="add-user-title" class='text-lg font-bold text-slate-50'>Add New User</h3>
+  </div>
+  {#if addSuccessDetails}
+    <div class='space-y-4'>
+      <div class='p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 text-sm font-semibold'>
+        User created successfully! Please copy the credentials below.
+      </div>
+      <div class='space-y-2 text-sm'>
+        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+          <span class='text-slate-400'>Username</span>
+          <span class='font-mono font-semibold text-slate-50 select-all'>{addSuccessDetails.username}</span>
+        </div>
+        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+          <span class='text-slate-400'>Password</span>
+          <span class='font-mono font-semibold text-slate-50 select-all'>{addSuccessDetails.password}</span>
+        </div>
+      </div>
+      <div class='flex justify-end pt-2'>
+        <button onclick={closeAddModal} class='rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 cursor-pointer'>
+          Done
+        </button>
+      </div>
+    </div>
+  {:else}
+    <form onsubmit={handleAddSave} class='space-y-3.5'>
+      <div class='grid grid-cols-2 gap-3.5'>
+        <div>
+          <label for='add-studentId' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Student ID</label>
+          <input
+            id='add-studentId'
+            type='text'
+            bind:value={addForm.studentId}
+            placeholder='CXX-XX-XXXX-XXX123'
+            required
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+          />
+        </div>
+        <div>
+          <label for='add-role' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Role</label>
+          {#if authStore.user?.role === 'super_admin'}
+            <select
+              id='add-role'
+              bind:value={addForm.role}
+              required
+              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none cursor-pointer'
+            >
+              <option value={UserRole.USER}>Voter (User)</option>
+              <option value={UserRole.ADMIN}>Admin</option>
+              <option value={UserRole.SUPER_ADMIN}>Super Admin</option>
+            </select>
+          {:else}
+            <input
+              id='add-role-display'
+              type='text'
+              value='Voter (User)'
+              disabled
+              class='w-full rounded-xl border-2 border-slate-800 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-400 focus:outline-none opacity-60'
+            />
+          {/if}
+        </div>
+      </div>
+
+      <div class='grid grid-cols-2 gap-3.5'>
+        <div>
+          <label for='add-firstName' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>First Name</label>
+          <input
+            id='add-firstName'
+            type='text'
+            bind:value={addForm.firstName}
+            required
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+          />
+        </div>
+        <div>
+          <label for='add-lastName' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Last Name</label>
+          <input
+            id='add-lastName'
+            type='text'
+            bind:value={addForm.lastName}
+            required
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+          />
+        </div>
+      </div>
+
+      <div class='grid grid-cols-2 gap-3.5'>
+        <div>
+          <label for='add-course' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Course</label>
+          <select
+            id='add-course'
+            bind:value={addForm.course}
+            required
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none cursor-pointer'
+          >
+            <option value=''>Select Course</option>
+            {#each COURSE_VALUES as c (c)}
+              <option value={c}>{c}</option>
+            {/each}
+          </select>
+        </div>
+        <div>
+          <label for='add-yearLevel' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Year Level</label>
+          <select
+            id='add-yearLevel'
+            bind:value={addForm.yearLevel}
+            required
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none cursor-pointer'
+          >
+            <option value=''>Select Year</option>
+            {#each YEAR_LEVEL_VALUES as y (y)}
+              <option value={y}>{y}</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for='add-username' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Username <span class='text-[10px] font-normal text-slate-500'>(Optional - auto-generated if blank)</span></label>
+        <input
+          id='add-username'
+          type='text'
+          bind:value={addForm.username}
+          placeholder='username'
+          class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+        />
+      </div>
+
+      <div>
+        <label for='add-email' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Email <span class='text-[10px] font-normal text-slate-500'>(Optional)</span></label>
+        <input
+          id='add-email'
+          type='email'
+          bind:value={addForm.email}
+          placeholder='email@example.com'
+          class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+        />
+      </div>
+
+      <div>
+        <label for='add-password' class='mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400'>Password</label>
+        <div class='flex gap-2'>
+          <div class='relative flex-1'>
+            <input
+              id='add-password'
+              type={addFormVisiblePassword ? 'text' : 'password'}
+              bind:value={addForm.password}
+              placeholder='Min 8 chars'
+              required
+              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none pr-10'
+            />
+            <button
+              type='button'
+              onclick={() => addFormVisiblePassword = !addFormVisiblePassword}
+              class='absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-350 cursor-pointer'
+            >
+              {#if addFormVisiblePassword}
+                <EyeOff size={16} />
+              {:else}
+                <Eye size={16} />
+              {/if}
+            </button>
+          </div>
+          <button
+            type='button'
+            onclick={generatePassword}
+            class='rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 cursor-pointer'
+          >
+            Generate
+          </button>
+        </div>
+      </div>
+
+      {#if addMsg}
+        <p class='text-sm text-red-400'>{addMsg}</p>
+      {/if}
+
+      <div class='flex justify-end gap-2 pt-2'>
+        <button type='button' onclick={closeAddModal} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+        <button
+          type='submit'
+          disabled={isAddSaving}
+          class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
+        >
+          {#if isAddSaving}<Loader class='animate-spin' size={14} />{/if}
+          Create
+        </button>
+      </div>
+    </form>
+  {/if}
+</Modal>
+

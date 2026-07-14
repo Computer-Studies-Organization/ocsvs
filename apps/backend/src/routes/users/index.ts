@@ -4,6 +4,7 @@ import { createRouter } from "@/lib/create-app";
 import { requireAdmin, requireAuth } from "@/middleware/auth";
 import { getUserAuditRoute } from "./audit.routes";
 import {
+  createUserRoute,
   deleteUserRoute,
   getUserRoute,
   hardDeleteUserRoute,
@@ -19,6 +20,7 @@ router.use("/users", requireAdmin);
 router.use("/users/*", requireAdmin);
 router.openapi(listUsersRoute, handlers.listUsers);
 router.openapi(getUserRoute, handlers.getUser);
+router.openapi(createUserRoute, handlers.createUser);
 router.openapi(importUsersRoute, handlers.importUsers);
 router.openapi(updateUserRoute, handlers.updateUser);
 router.openapi(deleteUserRoute, handlers.deleteUser);

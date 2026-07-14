@@ -37,9 +37,18 @@ export interface RegisterUserInput {
   studentId: string;
   course: string;
   yearLevel: string;
-  username: string;
+  username?: string | null;
   email?: string | null;
   password?: string; // Optional (e.g. if generated automatically)
+  role?: UserRole;
+}
+
+/**
+ * Immutable administrator details captured before a single-user creation.
+ */
+export interface RegisterAuditContext {
+  actorAccountIdSnapshot: string;
+  actorUsernameSnapshot: string;
 }
 
 /**
@@ -156,6 +165,7 @@ export interface IUserLifecycleCoordinator {
   register(
     db: Database,
     input: RegisterUserInput,
+    auditContext?: RegisterAuditContext,
   ): Promise<{ accountId: string; username: string }>;
 
   bulkImport(db: DbClient, records: ImportUserRecord[], actor: ActorInfo): Promise<ImportResult>;
@@ -197,12 +207,33 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
   async register(
     db: Database,
     input: RegisterUserInput,
+    auditContext?: RegisterAuditContext,
   ): Promise<{ accountId: string; username: string }> {
+    // Resolve username and handle generation if not provided
+    let username = input.username;
+    if (!username || !username.trim()) {
+      const baseUsername = getBaseUsername(input.firstName, input.lastName, input.studentId);
+      const existingAccounts = await db
+        .select({ username: accounts.username })
+        .from(accounts)
+        .where(like(accounts.username, `${baseUsername}%`))
+        .all();
+      const existingSet = new Set(existingAccounts.map((a) => a.username));
+      username = baseUsername;
+      let counter = 1;
+      while (existingSet.has(username)) {
+        username = `${baseUsername}.${counter}`;
+        counter++;
+      }
+      // This lookup cannot make allocation atomic. The accounts username unique index and
+      // unique-constraint handling around accountRepo.create below safely return 409 on a collision.
+    }
+
     // 1. Profanity check
     const fields = [
       { text: input.firstName, name: "firstName" },
       { text: input.lastName, name: "lastName" },
-      { text: input.username, name: "username" },
+      { text: username, name: "username" },
     ];
     for (const f of fields) {
       const res = validateProfanity(f.text, f.name);
@@ -212,7 +243,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     }
 
     // 2. Uniqueness checks
-    const existing = await accountRepo.accountExists(db, input.username, input.email);
+    const existing = await accountRepo.accountExists(db, username, input.email);
     if (existing) {
       throw new UserLifecycleError("USER_ALREADY_EXISTS", 409);
     }
@@ -233,17 +264,28 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     const accountId = crypto.randomUUID();
 
     try {
-      await accountRepo.create(db, {
-        accountId,
-        username: input.username,
-        email: input.email && input.email.trim() ? input.email : null,
-        passwordHash,
-        studentId: input.studentId,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        course: input.course,
-        yearLevel: input.yearLevel,
-      });
+      await accountRepo.create(
+        db,
+        {
+          accountId,
+          username,
+          email: input.email && input.email.trim() ? input.email : null,
+          passwordHash,
+          studentId: input.studentId,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          course: input.course,
+          yearLevel: input.yearLevel,
+          role: input.role,
+        },
+        auditContext && {
+          action: "user.create",
+          targetType: "user",
+          targetId: accountId,
+          ...auditContext,
+          description: `Created user account: ${username} (${input.studentId})`,
+        },
+      );
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new UserLifecycleError("USER_ALREADY_EXISTS", 409);
@@ -251,7 +293,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
       throw error;
     }
 
-    return { accountId, username: input.username };
+    return { accountId, username };
   }
 
   async bulkImport(
