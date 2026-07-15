@@ -1,9 +1,11 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
   import { login } from '$lib/api/auth'
+  import { PUBLIC_TURNSTILE_SITEKEY } from '$env/static/public'
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
   import { authStore } from '$lib/stores/auth.svelte'
+  import { onMount } from 'svelte'
   import {
     ArrowRight,
     CheckCircle,
@@ -16,6 +18,9 @@
   let isLoading = $state(false)
   let message = $state('')
   let showPassword = $state(false)
+  let turnstileToken = $state('')
+  let turnstileWidgetId = $state<string | null>(null)
+  let container = $state<HTMLElement | null>(null)
 
   // Login form state
   const loginData = $state({
@@ -24,7 +29,63 @@
   })
 
   // Computed/Derived properties using standard $derived rune
-  const isLoginValid = $derived(loginData.studentNumber.trim().length > 0 && loginData.password.trim().length > 0)
+  const isLoginValid = $derived(
+    loginData.studentNumber.trim().length > 0 && 
+    loginData.password.trim().length > 0 && 
+    turnstileToken.trim().length > 0
+  )
+
+  onMount(() => {
+    let checkTurnstile: ReturnType<typeof setInterval> | null = null;
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds
+
+    const initTurnstile = () => {
+      if ((window as any).turnstile && container) {
+        if (checkTurnstile) {
+          clearInterval(checkTurnstile);
+        }
+        turnstileWidgetId = (window as any).turnstile.render(container, {
+          sitekey: PUBLIC_TURNSTILE_SITEKEY,
+          callback: (token: string) => {
+            turnstileToken = token;
+          },
+          'error-callback': () => {
+            turnstileToken = '';
+          },
+          'expired-callback': () => {
+            turnstileToken = '';
+          }
+        });
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately (handles SPA navigation back to page or fast load)
+    if (!initTurnstile()) {
+      checkTurnstile = setInterval(() => {
+        attempts++;
+        if (initTurnstile()) {
+          // Handled inside initTurnstile
+        } else if (attempts >= maxAttempts) {
+          if (checkTurnstile) {
+            clearInterval(checkTurnstile);
+          }
+          message = 'Security check failed to load. Please disable ad blockers or refresh the page.';
+        }
+      }, 100);
+    }
+
+    return () => {
+      if (checkTurnstile) {
+        clearInterval(checkTurnstile);
+      }
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.remove(turnstileWidgetId);
+      }
+    };
+  });
 
   // Handlers
   async function handleLogin(e: SubmitEvent) {
@@ -39,6 +100,7 @@
       const userData = await login({
         studentNumber: loginData.studentNumber,
         password: loginData.password,
+        turnstileToken,
       })
       authStore.set({ user: userData, loading: false })
       if (userData.user.role === 'admin' || userData.user.role === 'super_admin') {
@@ -50,12 +112,20 @@
     }
     catch (err: any) {
       message = err.message || 'Login failed'
+      if (turnstileWidgetId && (window as any).turnstile) {
+        (window as any).turnstile.reset(turnstileWidgetId);
+        turnstileToken = '';
+      }
     }
     finally {
       isLoading = false
     }
   }
 </script>
+
+<svelte:head>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</svelte:head>
 
 <div class='min-h-[100dvh] w-full flex flex-col lg:flex-row bg-slate-950 text-slate-100'>
   <!-- Left - Form section -->
@@ -141,6 +211,10 @@
               {/if}
             </button>
           </div>
+        </div>
+
+        <div class="flex justify-center py-2">
+          <div bind:this={container}></div>
         </div>
 
         <button

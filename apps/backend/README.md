@@ -228,13 +228,14 @@ npx drizzle-kit studio
 
 ## Environment Variables
 
-| Variable              | Description                             | Default       | Required        |
-| --------------------- | --------------------------------------- | ------------- | --------------- |
-| `NODE_ENV`            | Environment mode                        | `development` | No              |
-| `PORT`                | Server port                             | `3000`        | No              |
-| `LOG_LEVEL`           | Logging level                           | `info`        | No              |
-| `DATABASE_URL`        | Turso database URL or local SQLite file | -             | Yes             |
-| `DATABASE_AUTH_TOKEN` | Turso authentication token              | -             | Yes (for Turso) |
+| Variable               | Description                             | Default       | Required            |
+| ---------------------- | --------------------------------------- | ------------- | ------------------- |
+| `NODE_ENV`             | Environment mode                        | `development` | No                  |
+| `PORT`                 | Server port                             | `3000`        | No                  |
+| `LOG_LEVEL`            | Logging level                           | `info`        | No                  |
+| `DATABASE_URL`         | Turso database URL or local SQLite file | -             | Yes                 |
+| `DATABASE_AUTH_TOKEN`  | Turso authentication token              | -             | Yes (for Turso)     |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key         | -             | Yes (in production) |
 
 ## Architecture
 

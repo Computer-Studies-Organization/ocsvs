@@ -61,6 +61,10 @@ const EnvSchema = z.object({
     (val) => val === "true" || val === true,
     z.boolean().default(false),
   ),
+  TURNSTILE_SECRET_KEY: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().optional(),
+  ),
 });
 
 /**

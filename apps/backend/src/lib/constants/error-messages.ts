@@ -55,6 +55,8 @@ export const ERROR_MESSAGES = {
   PASSWORD_TOO_SHORT: "Password must be at least 8 characters",
   RATE_LIMITED_IP: "Too many requests. Please try again later.",
   RATE_LIMITED_ACCOUNT: "Too many failed login attempts. Please try again later.",
+  SECURITY_VERIFICATION_FAILED: "Security verification failed. Please try again.",
+  VERIFICATION_SERVICE_UNAVAILABLE: "Verification service temporarily unavailable",
 
   // Success messages
   CANDIDATE_CREATED_SUCCESSFULLY: "Candidate created successfully",

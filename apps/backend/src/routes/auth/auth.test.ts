@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock createRouter to include a logger middleware
 const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
@@ -134,11 +134,21 @@ vi.mock("@/middleware/rate-limit", () => ({
 const { default: router } = await import("./auth.index");
 
 describe("auth Routes", () => {
+  const originalFetch = globalThis.fetch;
   beforeEach(() => {
     vi.clearAllMocks();
     // Defaults: no prior failed attempts, so existing login tests pass through the lockout check.
     mockGetRecentAttempts.mockResolvedValue([]);
     mockDeleteExpiredAttempts.mockResolvedValue(undefined);
+
+    // Mock fetch for Turnstile
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   it("should login a user", async () => {
@@ -162,6 +172,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -209,6 +220,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -235,6 +247,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -261,6 +274,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "wrongpassword",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -286,6 +300,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -308,6 +323,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -337,6 +353,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "wrongpassword",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -365,6 +382,7 @@ describe("auth Routes", () => {
       body: JSON.stringify({
         studentNumber: "C23-01-1234-CSA001",
         password: "password123",
+        turnstileToken: "mock-token",
       }),
     });
 
@@ -383,5 +401,71 @@ describe("auth Routes", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("Logged out successfully");
     expect(mockDeleteSession).not.toHaveBeenCalled();
+  });
+
+  it("should reject login when Turnstile validation fails", async () => {
+    // Mock fetch to return success: false
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: false }),
+    } as Response);
+
+    const res = await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+        turnstileToken: "invalid-token",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Security verification failed. Please try again.");
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
+  });
+
+  it("should fail login when Turnstile service throws an error", async () => {
+    // Mock fetch to throw error
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+
+    const res = await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+        turnstileToken: "mock-token",
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Verification service temporarily unavailable");
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
+  });
+
+  it("should fail closed in production when TURNSTILE_SECRET_KEY is missing", async () => {
+    const res = await router.request(
+      "/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: "C23-01-1234-CSA001",
+          password: "password123",
+          turnstileToken: "mock-token",
+        }),
+      },
+      {
+        NODE_ENV: "production",
+        // TURNSTILE_SECRET_KEY is undefined
+      },
+    );
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as any;
+    expect(body.message).toBe("Verification service temporarily unavailable");
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
   });
 });

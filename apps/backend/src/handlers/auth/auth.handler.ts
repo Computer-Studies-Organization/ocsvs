@@ -14,11 +14,51 @@ function maskStudentId(id: string): string {
 }
 
 export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
-  const { studentNumber, password } = c.req.valid("json");
+  const { studentNumber, password, turnstileToken } = c.req.valid("json");
   const { db } = createDb(c);
   const clientIp = getClientIp(c);
 
   c.var.logger.info({ studentNumber: maskStudentId(studentNumber) }, "Login attempt");
+
+  let secretKey = c.env?.TURNSTILE_SECRET_KEY;
+  if (!secretKey) {
+    if (c.env?.NODE_ENV === "production") {
+      c.var.logger.error("TURNSTILE_SECRET_KEY is not configured in production");
+      return c.json(
+        { message: ERROR_MESSAGES.VERIFICATION_SERVICE_UNAVAILABLE },
+        httpStatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+    secretKey = "1x00000000000000000000000000000000AA";
+  }
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: secretKey,
+        response: turnstileToken,
+        remoteip: clientIp,
+      }),
+    });
+    const result = (await response.json()) as { success: boolean };
+    if (!result.success) {
+      c.var.logger.warn(
+        { ip: clientIp, studentNumber: maskStudentId(studentNumber) },
+        "Turnstile verification failed",
+      );
+      return c.json(
+        { message: ERROR_MESSAGES.SECURITY_VERIFICATION_FAILED },
+        httpStatusCodes.BAD_REQUEST,
+      );
+    }
+  } catch (err) {
+    c.var.logger.error(err, "Turnstile service verification error");
+    return c.json(
+      { message: ERROR_MESSAGES.VERIFICATION_SERVICE_UNAVAILABLE },
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
 
   try {
     const payload = await userLifecycleCoordinator.authenticate(
