@@ -3,11 +3,11 @@
   import { goto } from '$app/navigation'
   import { invalidate } from '$app/navigation'
   import { changePassword, updateMyProfile } from '$lib/api/profile'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import { UserRole } from '$lib/types'
   import { ArrowLeft, Eye, EyeOff, KeyRound, Loader, Save } from 'lucide-svelte'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { updateProfileSchema, changePasswordSchema } from '$lib/validation/profile'
 

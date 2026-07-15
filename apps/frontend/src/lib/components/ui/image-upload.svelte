@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Upload, X, ImageIcon } from "lucide-svelte";
-  import { addToast } from "$lib/stores/toast";
+  import { addToast } from "$lib/stores/toast.svelte";
   import { onDestroy } from "svelte";
 
   let {

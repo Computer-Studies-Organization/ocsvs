@@ -1,7 +1,7 @@
 <script lang='ts'>
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import { logout } from '$lib/api/auth'
   import { LogOut, Settings, UserCheck } from 'lucide-svelte'
   import { UserRole } from '$lib/types'

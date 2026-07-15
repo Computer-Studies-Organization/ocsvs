@@ -1,10 +1,10 @@
 <script lang='ts'>
   import type { TElection, TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import { ArrowLeft, BarChart3, Trophy, Download } from 'lucide-svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
 
   interface CandidateWithPct extends TVoteCount { percentage: number }
   interface PositionResult extends Omit<TVoteResults, 'candidates'> {

@@ -3,7 +3,7 @@
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser } from '$lib/api/users'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
   import {
     Archive,
@@ -17,7 +17,7 @@
     Trash2,
     X,
   } from 'lucide-svelte'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
 

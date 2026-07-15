@@ -1,7 +1,7 @@
 <!-- apps/frontend/src/lib/components/ui/toast-container.svelte -->
 <script lang='ts'>
-  import { toasts, dismissToast } from '$lib/stores/toast';
-  import type { ToastType } from '$lib/stores/toast';
+  import { toasts, dismissToast } from '$lib/stores/toast.svelte';
+  import type { ToastType } from '$lib/stores/toast.svelte';
   import { X, CheckCircle, AlertCircle, Info } from 'lucide-svelte';
 
   const icons: Record<ToastType, typeof CheckCircle> = {

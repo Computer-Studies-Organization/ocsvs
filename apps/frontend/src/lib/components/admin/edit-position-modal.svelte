@@ -3,7 +3,7 @@
   import { untrack } from 'svelte'
   import { updatePosition } from '$lib/api/positions'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { updatePositionSchema } from '$lib/validation/position'
   import Modal from '$lib/components/ui/modal.svelte'

@@ -1,9 +1,9 @@
 import type { PageLoad } from "./$types";
 import { fetchAdminStats } from "$lib/api/admin-stats";
 
-export const load: PageLoad = async () => {
+export const load: PageLoad = async ({ fetch }) => {
   try {
-    const stats = await fetchAdminStats();
+    const stats = await fetchAdminStats({ fetch });
     return { stats };
   } catch {
     return {

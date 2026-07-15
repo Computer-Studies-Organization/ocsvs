@@ -3,7 +3,7 @@
   import { login } from '$lib/api/auth'
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import {
     ArrowRight,
     CheckCircle,

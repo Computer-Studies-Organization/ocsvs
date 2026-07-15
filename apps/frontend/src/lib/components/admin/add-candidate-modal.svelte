@@ -4,7 +4,7 @@
   import { createCandidate } from '$lib/api/candidates'
   import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { createCandidateSchema } from '$lib/validation/candidate'
   import Modal from '$lib/components/ui/modal.svelte'

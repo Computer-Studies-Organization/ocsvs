@@ -10,14 +10,20 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export interface ApiFetchOptions extends RequestInit {
+  fetch?: typeof fetch;
+}
+
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const { fetch: customFetch, ...fetchOptions } = options;
   const url = `${PUBLIC_API_BASE_URL}${path}`;
-  const response = await fetch(url, {
-    ...options,
+  const fetchFn = customFetch || fetch;
+  const response = await fetchFn(url, {
+    ...fetchOptions,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...fetchOptions.headers,
     },
   });
 

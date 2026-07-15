@@ -5,7 +5,7 @@
   import { ArrowLeft, Loader, Save, Trash2 } from 'lucide-svelte'
   import { updateCandidate, deleteCandidate, uploadCandidateImage, deleteCandidateImage } from '$lib/api/candidates'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
   import { validate } from '$lib/validation/helpers'

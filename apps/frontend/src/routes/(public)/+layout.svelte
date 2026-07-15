@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation'
   import Spinner from '$lib/components/ui/spinner.svelte'
   import { getPublicRouteRedirectPath } from '$lib/routeGuards'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
 
   const { children } = $props()
 

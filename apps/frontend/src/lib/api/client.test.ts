@@ -125,3 +125,16 @@ test("apiFetch merges caller-provided headers on top of defaults", async () => {
   expect(headers?.["Content-Type"]).toBe("application/json");
   expect(headers?.["X-Custom"]).toBe("yes");
 });
+
+test("apiFetch uses custom fetch function when provided in options", async () => {
+  let customFetched = false;
+  const customFetch = (async (_input: RequestInfo | URL, _init?: RequestInit) => {
+    customFetched = true;
+    return jsonResponse(200, { custom: true });
+  }) as typeof fetch;
+
+  const result = await apiFetch<{ custom: boolean }>("/custom", { fetch: customFetch });
+
+  expect(customFetched).toBe(true);
+  expect(result).toEqual({ custom: true });
+});

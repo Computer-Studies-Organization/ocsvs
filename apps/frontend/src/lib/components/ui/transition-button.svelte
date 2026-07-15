@@ -3,7 +3,7 @@
   import { transitionElection } from '$lib/api/elections'
   import { canTransition } from '$lib/election-lifecycle-client'
   import Modal from './modal.svelte'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
 
   let { election, onsuccess = () => {} }: {
     election: TElection

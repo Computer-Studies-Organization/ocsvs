@@ -1,6 +1,6 @@
 <script lang="ts">
   import { parseRosterPdf } from "$lib/utils/pdf-parser";
-  import { addToast } from "$lib/stores/toast";
+  import { addToast } from "$lib/stores/toast.svelte";
   import { importUsers } from "$lib/api/users";
   import { 
     ArrowLeft, 

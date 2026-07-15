@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, type ApiFetchOptions } from "./client";
 import type { AuditLogEntry } from "./audit-log";
 
 export interface ActiveElectionStats {
@@ -18,6 +18,6 @@ export interface AdminStats {
   recentLogs: AuditLogEntry[];
 }
 
-export async function fetchAdminStats(): Promise<AdminStats> {
-  return apiFetch<AdminStats>("/admin/stats");
+export async function fetchAdminStats(options?: ApiFetchOptions): Promise<AdminStats> {
+  return apiFetch<AdminStats>("/admin/stats", options);
 }

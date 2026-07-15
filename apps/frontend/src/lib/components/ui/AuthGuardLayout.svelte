@@ -2,7 +2,7 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
   import Spinner from '$lib/components/ui/spinner.svelte'
-  import { authStore } from '$lib/stores/auth'
+  import { authStore } from '$lib/stores/auth.svelte'
   import Header from '$lib/components/ui/Header.svelte'
 
   let {

@@ -3,7 +3,7 @@
   import { invalidate } from '$app/navigation'
   import { createElection } from '$lib/api/elections'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { addToast } from '$lib/stores/toast'
+  import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { createElectionSchema } from '$lib/validation/election'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
