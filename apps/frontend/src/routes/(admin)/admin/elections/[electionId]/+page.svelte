@@ -1,17 +1,19 @@
 <script lang='ts'>
-  import { ArrowLeft, ListOrdered, Plus } from 'lucide-svelte'
-  import { invalidate } from '$app/navigation'
+  import { ArrowLeft, Edit, ListOrdered, Plus } from 'lucide-svelte'
+  import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import type { TElection, TPosition } from '$lib/types'
   import { appCache } from '$lib/cache'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
+  import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
 
   let { data } = $props()
   const election = $derived(data.election)
   const positions = $derived(data.positions)
   let isCreateOpen = $state(false)
+  let editingPosition = $state<TPosition | null>(null)
 
   function openCreate() {
     isCreateOpen = true
@@ -19,6 +21,19 @@
 
   function closeCreate() {
     isCreateOpen = false
+  }
+
+  function openEdit(p: TPosition) {
+    editingPosition = p
+  }
+
+  function closeEdit() {
+    editingPosition = null
+  }
+
+  async function handleEditSuccess() {
+    closeEdit()
+    await invalidate('app:election')
   }
 
   async function handleTransitionSuccess() {
@@ -96,17 +111,35 @@
         <ul class='space-y-2'>
           {#each positions as p (p.id)}
             <li>
-              <a
-                href={`/admin/elections/${election.id}/positions/${p.id}`}
-                class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer'
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                onclick={() => goto(`/admin/elections/${election.id}/positions/${p.id}`)}
+                class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer hover:border-slate-700/80 hover:scale-[1.005]'
                 style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
               >
                 <div>
                   <p class='font-bold' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
                   <p class='text-xs' style='color: oklch(0.60 0.015 250)'>Order: {p.displayOrder}</p>
                 </div>
-                <span class='text-xs font-bold' style='color: oklch(0.55 0.15 250)'>Open →</span>
-              </a>
+                <div class='flex items-center gap-3'>
+                  {#if election.status === 'draft'}
+                    <button
+                      type='button'
+                      onclick={(e) => {
+                        e.stopPropagation()
+                        openEdit(p)
+                      }}
+                      class='rounded-lg p-1.5 transition-colors cursor-pointer hover:bg-slate-800'
+                      style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
+                      title='Edit position'
+                    >
+                      <Edit size={16} />
+                    </button>
+                  {/if}
+                  <span class='text-xs font-bold' style='color: oklch(0.55 0.15 250)'>Open →</span>
+                </div>
+              </div>
             </li>
           {/each}
         </ul>
@@ -120,5 +153,14 @@
   onclose={closeCreate}
   electionId={election.id}
   onsuccess={closeCreate}
+/>
+{/if}
+
+{#if editingPosition}
+<EditPositionModal
+  onclose={closeEdit}
+  electionId={election.id}
+  position={editingPosition}
+  onsuccess={handleEditSuccess}
 />
 {/if}
