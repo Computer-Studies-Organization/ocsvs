@@ -92,12 +92,6 @@
             >
               Audit Log
             </a>
-            <a
-              href='/voting'
-              class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-slate-200"
-            >
-              Voter View
-            </a>
           {:else}
             <a
               href='/voting'
@@ -124,7 +118,7 @@
           {#if adminMode}
             <a
               href='/voting'
-              class='flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+              class='hidden sm:flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
             >
               Exit Admin
             </a>
@@ -219,11 +213,12 @@
           >
             Audit Log
           </a>
+          <div class="h-px bg-slate-800 my-1"></div>
           <a
             href='/voting'
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-slate-200"
+            class='flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
           >
-            Voter View
+            Exit Admin
           </a>
         {:else}
           <a
