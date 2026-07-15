@@ -1,14 +1,17 @@
 import type { TElection, TElectionStatus, TResults, TVotingState } from "$lib/types";
-import { apiFetch } from "./client";
+import { apiFetch, type ApiFetchOptions } from "./client";
 
-export async function listElections(status?: TElectionStatus): Promise<TElection[]> {
+export async function listElections(
+  status?: TElectionStatus,
+  options?: ApiFetchOptions,
+): Promise<TElection[]> {
   const qs = status ? `?status=${status}` : "";
-  return apiFetch<TElection[]>(`/elections${qs}`);
+  return apiFetch<TElection[]>(`/elections${qs}`, options);
 }
 
-export async function getCurrentElection(): Promise<TElection | null> {
+export async function getCurrentElection(options?: ApiFetchOptions): Promise<TElection | null> {
   try {
-    return await apiFetch<TElection>("/elections/current");
+    return await apiFetch<TElection>("/elections/current", options);
   } catch (err) {
     if (
       err &&
@@ -22,8 +25,8 @@ export async function getCurrentElection(): Promise<TElection | null> {
   }
 }
 
-export async function getElection(id: string): Promise<TElection> {
-  return apiFetch<TElection>(`/elections/${id}`);
+export async function getElection(id: string, options?: ApiFetchOptions): Promise<TElection> {
+  return apiFetch<TElection>(`/elections/${id}`, options);
 }
 
 export async function createElection(body: {
@@ -52,10 +55,13 @@ export async function transitionElection(
   });
 }
 
-export async function listResults(electionId: string): Promise<TResults> {
-  return apiFetch<TResults>(`/elections/${electionId}/results`);
+export async function listResults(
+  electionId: string,
+  options?: ApiFetchOptions,
+): Promise<TResults> {
+  return apiFetch<TResults>(`/elections/${electionId}/results`, options);
 }
 
-export async function getVotingState(): Promise<TVotingState> {
-  return apiFetch<TVotingState>("/elections/state");
+export async function getVotingState(options?: ApiFetchOptions): Promise<TVotingState> {
+  return apiFetch<TVotingState>("/elections/state", options);
 }

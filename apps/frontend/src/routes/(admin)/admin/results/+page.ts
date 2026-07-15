@@ -4,10 +4,10 @@ import { listResults } from "$lib/api/elections";
 import { extractErrorMessage } from "$lib/mutation-feedback-utils";
 import type { TVoteResultsResponse } from "$lib/types";
 
-export const load: PageLoad = async ({ url }) => {
+export const load: PageLoad = async ({ url, fetch }) => {
   const [elections, state] = await Promise.all([
-    appCache.get("elections", {}).fetch(),
-    appCache.get("votingState", {}).fetch(),
+    appCache.get("elections", {}).fetch(false, { fetch }),
+    appCache.get("votingState", {}).fetch(false, { fetch }),
   ]);
 
   const electionList = elections ?? [];
@@ -41,7 +41,7 @@ export const load: PageLoad = async ({ url }) => {
   let resultsError = "";
   if (selectedElectionId) {
     try {
-      const results = await listResults(selectedElectionId);
+      const results = await listResults(selectedElectionId, { fetch });
       resultsData = {
         results: results.map((r) => ({
           positionId: r.positionId,

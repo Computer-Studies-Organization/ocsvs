@@ -1,5 +1,5 @@
 import type { TCandidate } from "$lib/types";
-import { apiFetch } from "./client";
+import { apiFetch, type ApiFetchOptions } from "./client";
 
 export interface AllCandidatesOpts {
   electionId: string;
@@ -7,7 +7,10 @@ export interface AllCandidatesOpts {
   includeInactive?: boolean;
 }
 
-export async function allCandidates(opts: AllCandidatesOpts): Promise<{
+export async function allCandidates(
+  opts: AllCandidatesOpts,
+  options?: ApiFetchOptions,
+): Promise<{
   data: TCandidate[];
   meta: { total: number; page: number; limit: number; totalPages: number };
 }> {
@@ -31,6 +34,7 @@ export async function allCandidates(opts: AllCandidatesOpts): Promise<{
     baseParams.set("page", String(page));
     const response = await apiFetch<{ data: TCandidate[]; meta: { totalPages: number } }>(
       `/candidates?${baseParams.toString()}`,
+      options,
     );
     allData = [...allData, ...response.data];
     hasMore = page < response.meta.totalPages;
@@ -43,8 +47,8 @@ export async function allCandidates(opts: AllCandidatesOpts): Promise<{
   };
 }
 
-export async function getCandidate(id: string): Promise<TCandidate> {
-  return apiFetch(`/candidates/${id}`);
+export async function getCandidate(id: string, options?: ApiFetchOptions): Promise<TCandidate> {
+  return apiFetch(`/candidates/${id}`, options);
 }
 
 export async function createCandidate(

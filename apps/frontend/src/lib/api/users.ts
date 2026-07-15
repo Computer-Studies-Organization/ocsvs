@@ -1,5 +1,5 @@
 import type { TUsersData } from "$lib/types";
-import { apiFetch } from "./client";
+import { apiFetch, type ApiFetchOptions } from "./client";
 
 export interface UsersResponse {
   data: TUsersData[];
@@ -7,7 +7,7 @@ export interface UsersResponse {
 }
 
 export async function fetchUsers(
-  options: {
+  query: {
     page?: number;
     limit?: number;
     search?: string;
@@ -15,21 +15,22 @@ export async function fetchUsers(
     course?: string;
     includeDeleted?: boolean;
   } = {},
+  options?: ApiFetchOptions,
 ): Promise<UsersResponse> {
   const params = new URLSearchParams({
-    page: String(options.page ?? 1),
-    limit: String(options.limit ?? 100),
+    page: String(query.page ?? 1),
+    limit: String(query.limit ?? 100),
   });
-  if (options.search) params.append("search", options.search);
-  if (options.yearLevel) params.append("yearLevel", options.yearLevel);
-  if (options.course) params.append("course", options.course);
-  if (options.includeDeleted !== undefined)
-    params.append("includeDeleted", String(options.includeDeleted));
-  return apiFetch(`/users?${params.toString()}`);
+  if (query.search) params.append("search", query.search);
+  if (query.yearLevel) params.append("yearLevel", query.yearLevel);
+  if (query.course) params.append("course", query.course);
+  if (query.includeDeleted !== undefined)
+    params.append("includeDeleted", String(query.includeDeleted));
+  return apiFetch(`/users?${params.toString()}`, options);
 }
 
-export async function fetchUser(userId: string): Promise<TUsersData> {
-  return apiFetch(`/users/${userId}`);
+export async function fetchUser(userId: string, options?: ApiFetchOptions): Promise<TUsersData> {
+  return apiFetch(`/users/${userId}`, options);
 }
 
 export async function updateUser(

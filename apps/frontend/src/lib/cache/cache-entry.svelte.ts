@@ -21,7 +21,7 @@ export class CacheEntry<T> {
   error = $state<string | null>(null);
   lastFetched = $state<number>(0);
 
-  private fetcher: () => Promise<T>;
+  private fetcher: (options?: { fetch?: typeof fetch }) => Promise<T>;
   private inflight: Promise<T | null> | null = null;
   // Bumped on every invalidate() (and every new fetch). .then/.catch handlers
   // capture the value at fetch-start and discard their result if invalidate()
@@ -29,11 +29,11 @@ export class CacheEntry<T> {
   // a cache the caller has explicitly cleared.
   private epoch = 0;
 
-  constructor(fetcher: () => Promise<T>) {
+  constructor(fetcher: (options?: { fetch?: typeof fetch }) => Promise<T>) {
     this.fetcher = fetcher;
   }
 
-  async fetch(force = false): Promise<T | null> {
+  async fetch(force = false, options?: { fetch?: typeof fetch }): Promise<T | null> {
     if (!force && this.data !== null) return this.data;
 
     if (this.inflight) return this.inflight;
@@ -42,7 +42,7 @@ export class CacheEntry<T> {
     this.loading = true;
     this.error = null;
 
-    this.inflight = this.fetcher()
+    this.inflight = this.fetcher(options)
       .then((result) => {
         if (myEpoch !== this.epoch) return null;
         this.data = result;

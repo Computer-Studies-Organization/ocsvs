@@ -162,3 +162,15 @@ test("CacheEntry error path leaves inflight cleared so a later fetch can run", a
   expect(ok.error).toBeNull();
   expect(ok.data).toBe(7);
 });
+
+test("CacheEntry.fetch forwards custom options to the fetcher", async () => {
+  let passedOpts: any = null;
+  const entry = new CacheEntry<number>(async (opts) => {
+    passedOpts = opts;
+    return 42;
+  });
+
+  const dummyFetch = () => Promise.resolve(new Response());
+  await entry.fetch(false, { fetch: dummyFetch as any });
+  expect(passedOpts).toEqual({ fetch: dummyFetch });
+});

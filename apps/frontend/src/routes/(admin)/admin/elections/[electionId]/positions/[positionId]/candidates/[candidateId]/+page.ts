@@ -4,11 +4,11 @@ import { getCandidate } from "$lib/api/candidates";
 import { fetchUser } from "$lib/api/users";
 import { appCache } from "$lib/cache";
 
-export const load: PageLoad = async ({ params, depends }) => {
+export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:candidate");
   const { electionId, positionId, candidateId } = params;
 
-  const cand = (await getCandidate(candidateId)) as unknown as {
+  const cand = (await getCandidate(candidateId, { fetch })) as unknown as {
     id: string;
     fullName: string;
     accountId: string;
@@ -19,9 +19,9 @@ export const load: PageLoad = async ({ params, depends }) => {
   };
 
   const [election, positions, user] = await Promise.all([
-    appCache.get("election", { id: electionId }).fetch(),
-    appCache.get("positions", { electionId }).fetch(),
-    fetchUser(cand.accountId).catch(() => null),
+    appCache.get("election", { id: electionId }).fetch(false, { fetch }),
+    appCache.get("positions", { electionId }).fetch(false, { fetch }),
+    fetchUser(cand.accountId, { fetch }).catch(() => null),
   ]);
 
   if (!election) error(404, "Election not found");

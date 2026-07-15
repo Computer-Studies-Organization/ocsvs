@@ -1,9 +1,11 @@
 import type { PageLoad } from "./$types";
 import { appCache } from "$lib/cache";
 
-export const load: PageLoad = async ({ url, depends }) => {
+export const load: PageLoad = async ({ url, fetch, depends }) => {
   depends("app:users");
   const includeDeleted = url.searchParams.get("archived") === "true";
-  const users = await appCache.get("users", { limit: 100, includeDeleted: true }).fetch();
+  const users = await appCache
+    .get("users", { limit: 100, includeDeleted: true })
+    .fetch(false, { fetch });
   return { users: users ?? [], includeDeleted };
 };

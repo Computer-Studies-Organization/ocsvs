@@ -70,15 +70,16 @@ const fetchers: {
   [K in ResourceName]: (
     api: ApiClientAdapter,
     params: ResourceParams<K>,
+    options?: { fetch?: typeof fetch },
   ) => Promise<ResourceData<K>>;
 } = {
-  elections: (api, params) => api.listElections(params.status),
-  election: (api, params) => api.getElection(params.id),
-  votingState: (api) => api.getVotingState(),
-  positions: (api, params) => api.listPositions(params.electionId),
-  candidates: (api, params) => api.allCandidates(params).then((res) => res.data),
-  results: (api, params) => api.listResults(params.electionId),
-  users: (api, params) => api.fetchUsers(params).then((res) => res.data),
+  elections: (api, params, opts) => api.listElections(params.status, opts),
+  election: (api, params, opts) => api.getElection(params.id, opts),
+  votingState: (api, params, opts) => api.getVotingState(opts),
+  positions: (api, params, opts) => api.listPositions(params.electionId, opts),
+  candidates: (api, params, opts) => api.allCandidates(params, opts).then((res) => res.data),
+  results: (api, params, opts) => api.listResults(params.electionId, opts),
+  users: (api, params, opts) => api.fetchUsers(params, opts).then((res) => res.data),
 };
 
 export class AppCache {
@@ -94,7 +95,8 @@ export class AppCache {
     const key = `${resource}:${paramKey}`;
     let reg = this.registry.get(key);
     if (!reg) {
-      const fetcher = () => fetchers[resource](this.api, params);
+      const fetcher = (opts?: { fetch?: typeof fetch }) =>
+        fetchers[resource](this.api, params, opts);
       const entry = new CacheEntry(fetcher);
       reg = { resource, params, entry };
       this.registry.set(key, reg);

@@ -1,4 +1,5 @@
 <script lang='ts'>
+  import { untrack } from 'svelte'
   import { submitElectionVotes } from '$lib/api/votes'
   import { invalidate } from '$app/navigation'
   import { appCache } from '$lib/cache'
@@ -44,7 +45,7 @@
   // selections when the open election hasn't changed (e.g. auto-refresh).
   $effect(() => {
     const next = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
-    pageState = preserveVotingState(next, pageState)
+    pageState = preserveVotingState(next, untrack(() => pageState))
   })
 
   let lastAutoFetch = 0

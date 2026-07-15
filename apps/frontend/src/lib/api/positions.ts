@@ -1,8 +1,11 @@
 import type { TPosition } from "$lib/types";
-import { apiFetch } from "./client";
+import { apiFetch, type ApiFetchOptions } from "./client";
 
-export async function listPositions(electionId: string): Promise<TPosition[]> {
-  return apiFetch<TPosition[]>(`/elections/${electionId}/positions`);
+export async function listPositions(
+  electionId: string,
+  options?: ApiFetchOptions,
+): Promise<TPosition[]> {
+  return apiFetch<TPosition[]>(`/elections/${electionId}/positions`, options);
 }
 
 export async function createPosition(
