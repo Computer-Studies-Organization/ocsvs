@@ -2,7 +2,7 @@
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
-  import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser } from '$lib/api/users'
+  import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
   import {
@@ -15,6 +15,7 @@
     RotateCcw,
     Search,
     Trash2,
+    Unlock,
     X,
   } from 'lucide-svelte'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -74,6 +75,7 @@
   let editMsg = $state('')
   let archiveConfirmUser = $state<TUsersData | null>(null)
   let restoreConfirmUser = $state<TUsersData | null>(null)
+  let unlockConfirmUser = $state<TUsersData | null>(null)
   let hardDeleteConfirmUser = $state<TUsersData | null>(null)
   let hardDeleteConfirmText = $state('')
   let isActionLoading = $state(false)
@@ -346,6 +348,28 @@
     }
   }
 
+  async function handleUnlock() {
+    if (!unlockConfirmUser)
+      return
+    isActionLoading = true
+    actionMsg = ''
+    try {
+      // No cache invalidation needed: unlock only clears login_attempts rows and does not
+      // mutate any field in TUsersData. If a lock-status field is ever added to the user
+      // list API response, add appCache.invalidate({ resource: 'users' }) + invalidate('app:users') here.
+      await unlockUser(unlockConfirmUser.id)
+      unlockConfirmUser = null
+      addToast('success', 'User account unlocked successfully')
+    }
+    catch (e: unknown) {
+      actionMsg = extractErrorMessage(e, 'Failed to unlock account')
+      addToast('error', actionMsg)
+    }
+    finally {
+      isActionLoading = false
+    }
+  }
+
   async function handleHardDelete() {
     if (!hardDeleteConfirmUser || hardDeleteConfirmText !== 'DELETE')
       return
@@ -460,6 +484,7 @@
                     {:else}
                       <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
                       <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
+                      <button onclick={() => unlockConfirmUser = u} title='Unlock Account' class='rounded-lg bg-teal-600 p-1.5 text-white transition hover:bg-teal-500 cursor-pointer'><Unlock size={14} /></button>
                       {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
                         <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
                       {/if}
@@ -619,6 +644,25 @@
       >
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Restore
+      </button>
+    </div>
+  {/if}
+</Modal>
+
+<!-- Unlock Confirm -->
+<Modal open={Boolean(unlockConfirmUser)} onclose={() => unlockConfirmUser = null} ariaLabelledby="unlock-user-title">
+  <h3 id="unlock-user-title" class='mb-2 text-lg font-bold text-slate-50'>Unlock User Account?</h3>
+  {#if unlockConfirmUser}
+    <p class='mb-4 text-sm text-slate-400'>Unlock the account for <span class='font-semibold text-slate-200'>{unlockConfirmUser.firstName} {unlockConfirmUser.lastName}</span> to reset their password lockout login attempts.</p>
+    <div class='flex gap-2 justify-end'>
+      <button onclick={() => unlockConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button
+        onclick={handleUnlock}
+        disabled={isActionLoading}
+        class='flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-500 disabled:opacity-60 cursor-pointer'
+      >
+        {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
+        Unlock Account
       </button>
     </div>
   {/if}

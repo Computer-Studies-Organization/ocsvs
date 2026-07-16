@@ -8,6 +8,7 @@ import type {
   listUsersRoute,
   restoreUserRoute,
   updateUserRoute,
+  unlockUserRoute,
 } from "@/routes/users/routes";
 import { createDb } from "@/config/db";
 import { userAccountQueries } from "@/database/queries/user-account.queries";
@@ -44,7 +45,7 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
   const user = await userAccountQueries.findById(db, userId);
 
   if (!user) {
-    return c.json({ message: "User not found" }, httpStatusCodes.NOT_FOUND);
+    return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
   return c.json(user, httpStatusCodes.OK);
@@ -251,6 +252,29 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
       if (error.code === "PROFANITY_DETECTED") {
         return c.json({ message: error.message }, httpStatusCodes.BAD_REQUEST);
       }
+      return c.json({ message: error.message }, error.statusCode as any);
+    }
+    throw error;
+  }
+};
+
+export const unlockUser: AppRouteHandler<typeof unlockUserRoute> = async (c) => {
+  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+  const { db } = createDb(c);
+  const { userId } = c.req.valid("param");
+  const actor = {
+    id: c.var.authUser.id,
+    username: c.var.authUser.username,
+    role: c.var.authUser.role,
+  };
+
+  try {
+    await userLifecycleCoordinator.unlock(db, userId, actor);
+    return c.json({ message: "User unlocked successfully" }, httpStatusCodes.OK);
+  } catch (error) {
+    if (error instanceof UserLifecycleError) {
       return c.json({ message: error.message }, error.statusCode as any);
     }
     throw error;

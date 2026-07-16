@@ -390,3 +390,31 @@ export const createUserRoute = createRoute({
     ),
   },
 });
+
+export const unlockUserRoute = createRoute({
+  tags: ["Users"],
+  method: "post",
+  path: "/users/{userId}/unlock",
+  security: [{ sessionAuth: [] }],
+  request: {
+    params: z.object({
+      userId: z.string(),
+    }),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "User unlocked successfully",
+    ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "User not found",
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(z.object({ message: z.string() }), "Unauthorized"),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
+  },
+});

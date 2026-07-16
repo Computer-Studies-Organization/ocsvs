@@ -71,18 +71,20 @@ vi.mock("@/database/repositories/users.repository", () => ({
 }));
 
 // Mock the user account queries (joined queries)
-const { mockListForAdmin, mockFindById, mockGetAccountDeleteStatus } = vi.hoisted(() => ({
-  mockListForAdmin: vi.fn(),
-  mockFindById: vi.fn(),
-  mockGetAccountDeleteStatus: vi.fn(),
-}));
+const { mockListForAdmin, mockFindById, mockGetAccountDeleteStatus, mockFindByStudentId } =
+  vi.hoisted(() => ({
+    mockListForAdmin: vi.fn(),
+    mockFindById: vi.fn(),
+    mockGetAccountDeleteStatus: vi.fn(),
+    mockFindByStudentId: vi.fn(),
+  }));
 
 vi.mock("@/database/queries/user-account.queries", () => ({
   userAccountQueries: {
     listForAdmin: mockListForAdmin,
     findById: mockFindById,
     getAccountDeleteStatus: mockGetAccountDeleteStatus,
-    findByStudentId: vi.fn(),
+    findByStudentId: mockFindByStudentId,
     getProfile: vi.fn(),
   },
 }));
@@ -111,8 +113,18 @@ const {
   mockCreate: vi.fn(),
 }));
 
-const { mockAuditLogInsert } = vi.hoisted(() => ({
+const { mockAuditLogInsert, mockClearAttempts } = vi.hoisted(() => ({
   mockAuditLogInsert: vi.fn(),
+  mockClearAttempts: vi.fn(),
+}));
+
+vi.mock("@/database/repositories/login-attempt.repository", () => ({
+  loginAttemptRepo: {
+    clearAttempts: mockClearAttempts,
+    deleteExpiredAttempts: vi.fn(),
+    getRecentAttempts: vi.fn(),
+    recordAttempt: vi.fn(),
+  },
 }));
 
 vi.mock("@/database/repositories/audit-log.repository", () => ({
@@ -960,6 +972,60 @@ describe("users Routes", () => {
       const body = (await res.json()) as any;
       expect(body.message).toBe(ERROR_MESSAGES.USER_ALREADY_EXISTS);
       expect(mockCreate).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /users/:userId/unlock", () => {
+    it("should reject non-admin requests", async () => {
+      mockAuthUser.role = "user";
+      const res = await router.request("/users/some-user-id/unlock", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.FORBIDDEN);
+    });
+
+    it("should return 404 if user not found", async () => {
+      mockAuthUser.role = "admin";
+      mockFindById.mockResolvedValue(null);
+
+      const res = await router.request("/users/some-user-id/unlock", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User not found");
+    });
+
+    it("should successfully unlock account and record audit log if actor is admin", async () => {
+      mockAuthUser.role = "admin";
+      mockFindById.mockResolvedValue({
+        id: "some-user-id",
+        studentId: "student-123",
+        role: "user",
+      });
+      mockClearAttempts.mockResolvedValue(undefined);
+      mockAuditLogInsert.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/some-user-id/unlock", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User unlocked successfully");
+      expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "student-123");
+      expect(mockAuditLogInsert).toHaveBeenCalledWith(
+        mockDb,
+        expect.objectContaining({
+          action: "user.unlock",
+          targetType: "user",
+          targetId: "some-user-id",
+        }),
+      );
     });
   });
 });

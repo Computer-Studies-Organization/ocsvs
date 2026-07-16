@@ -114,3 +114,7 @@ export async function createUser(data: {
     body: JSON.stringify(data),
   });
 }
+
+export async function unlockUser(userId: string): Promise<{ message: string }> {
+  return apiFetch(`/users/${userId}/unlock`, { method: "POST" });
+}

@@ -44,6 +44,7 @@ export const AUDIT_ACTIONS = z.enum([
   "user.soft_delete",
   "user.restore",
   "user.hard_delete",
+  "user.unlock",
 ]);
 export type AuditAction = z.infer<typeof AUDIT_ACTIONS>;
 

@@ -342,17 +342,43 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
 
   describe("unlock", () => {
     it("successfully clears failures if actor is admin", async () => {
-      await coordinator.unlock(mockDb, "student-123", {
+      mockFindById.mockResolvedValueOnce({
+        id: "user-id-123",
+        studentId: "student-123",
+        username: "student-123",
+      });
+      await coordinator.unlock(mockDb, "user-id-123", {
         id: "admin-id",
         username: "admin",
         role: "admin",
       });
       expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "student-123");
+      expect(mockAuditLoggerInsert).toHaveBeenCalledWith(
+        mockDb,
+        expect.objectContaining({
+          action: "user.unlock",
+          targetType: "user",
+          targetId: "user-id-123",
+          actorAccountIdSnapshot: "admin-id",
+          actorUsernameSnapshot: "admin",
+        }),
+      );
+    });
+
+    it("throws USER_NOT_FOUND if user does not exist", async () => {
+      mockFindById.mockResolvedValueOnce(null);
+      await expect(
+        coordinator.unlock(mockDb, "user-id-123", {
+          id: "admin-id",
+          username: "admin",
+          role: "admin",
+        }),
+      ).rejects.toThrowError(expect.objectContaining({ code: "USER_NOT_FOUND", statusCode: 404 }));
     });
 
     it("throws FORBIDDEN if actor is not admin", async () => {
       await expect(
-        coordinator.unlock(mockDb, "student-123", {
+        coordinator.unlock(mockDb, "user-id-123", {
           id: "user-id",
           username: "user",
           role: "user",

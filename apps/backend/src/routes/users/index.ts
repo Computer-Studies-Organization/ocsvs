@@ -12,6 +12,7 @@ import {
   listUsersRoute,
   restoreUserRoute,
   updateUserRoute,
+  unlockUserRoute,
 } from "./routes";
 
 const router = createRouter();
@@ -26,6 +27,7 @@ router.openapi(updateUserRoute, handlers.updateUser);
 router.openapi(deleteUserRoute, handlers.deleteUser);
 router.openapi(restoreUserRoute, handlers.restoreUser);
 router.openapi(hardDeleteUserRoute, handlers.hardDeleteUser);
+router.openapi(unlockUserRoute, handlers.unlockUser);
 
 // ── Audit routes ──────────────────────────────────────────────────────────
 // Admin guard is enforced by the `requireAdmin` middleware above and

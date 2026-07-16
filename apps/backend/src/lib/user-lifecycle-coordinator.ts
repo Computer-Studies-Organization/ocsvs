@@ -187,7 +187,7 @@ export interface IUserLifecycleCoordinator {
 
   logout(db: DbClient, sessionId: string): Promise<void>;
 
-  unlock(db: DbClient, studentNumber: string, actor: ActorInfo): Promise<void>;
+  unlock(db: DbClient, userId: string, actor: ActorInfo): Promise<void>;
 }
 
 export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
@@ -758,11 +758,25 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     await deleteSession(db as any, sessionId);
   }
 
-  async unlock(db: DbClient, studentNumber: string, actor: ActorInfo): Promise<void> {
+  async unlock(db: DbClient, userId: string, actor: ActorInfo): Promise<void> {
     if (actor.role !== "admin" && actor.role !== "super_admin") {
       throw new UserLifecycleError("FORBIDDEN", 403);
     }
-    await loginAttemptRepo.clearAttempts(db, studentNumber);
+    const user = await userAccountQueries.findById(db, userId);
+    if (!user) {
+      throw new UserLifecycleError("USER_NOT_FOUND", 404);
+    }
+    const tx = db as any;
+    await loginAttemptRepo.clearAttempts(tx, user.studentId);
+
+    await auditLogRepo.insert(tx, {
+      action: "user.unlock",
+      targetType: "user",
+      targetId: user.id,
+      actorAccountIdSnapshot: actor.id,
+      actorUsernameSnapshot: actor.username,
+      description: `Unlocked account for student: ${user.studentId}`,
+    });
   }
 }
 
