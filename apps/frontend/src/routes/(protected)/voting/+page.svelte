@@ -10,6 +10,7 @@
   } from '$lib/voting-page-state'
   import {
     allPositionsVoted,
+    getSelectedCount,
     getSelectedVotes,
     goNext,
     goPrevious,
@@ -255,7 +256,7 @@
       currentPositionIndex={pageState.voting.currentPositionIndex}
       isSubmitting={isSubmitting}
       isReview={isReview}
-      selectedVotesCount={Object.values(pageState.voting.selectedVotes).filter(id => id !== null).length}
+      selectedVotesCount={getSelectedCount(pageState.voting)}
       totalPositions={totalPositions}
       onprevious={previous}
       onnext={next}

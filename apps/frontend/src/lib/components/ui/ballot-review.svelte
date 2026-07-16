@@ -102,7 +102,7 @@
     <AlertCircle size={18} class="text-amber-400 flex-shrink-0 mt-0.5" />
     <div class="flex flex-col">
       <span class="font-bold text-amber-400 uppercase font-mono tracking-wider mb-0.5">merge warning</span>
-      <span>Ballot deployment is absolute and irreversible. Clicking "git push ballot" will permanently sign and seal your votes. Please compile and check all stashes.</span>
+      <span>Ballot deployment is absolute and irreversible. Clicking "Submit Ballot" will permanently sign and seal your votes. Please compile and check all stashes.</span>
     </div>
   </div>
 </div>
