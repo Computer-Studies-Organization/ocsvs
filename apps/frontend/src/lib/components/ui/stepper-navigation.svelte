@@ -83,7 +83,7 @@
       {#if isSubmitting}
         Deploying…
       {:else}
-        <GitMerge size={16} class="mr-0.5" /> git push ballot
+        <GitMerge size={16} class="mr-0.5" /> Submit Ballot
       {/if}
     </button>
   {/if}

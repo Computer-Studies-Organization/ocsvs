@@ -10,13 +10,23 @@
     selected?: boolean
     onclick: () => void
   } = $props()
+
+  let isExpanded = $state(false)
 </script>
 
-<button
-  type="button"
+<div
+  role="button"
+  tabindex="0"
   {onclick}
+  onkeydown={(e) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onclick();
+    }
+  }}
   aria-pressed={selected}
-  class="group relative flex w-full flex-col gap-3 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-lg'}"
+  class="group relative flex w-full flex-col gap-3 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-lg'} focus:outline-none focus:ring-2 focus:ring-blue-500/50"
 >
   <div class="flex w-full items-center justify-between gap-3">
     <div class="flex items-center gap-3">
@@ -57,8 +67,22 @@
 
   <!-- Platform Manifesto -->
   <div class="mt-1 w-full border-t border-white/5 pt-3">
-    <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-1">platform manifesto</p>
-    <p class="text-slate-300 text-xs font-normal leading-relaxed line-clamp-3">
+    <div class="flex items-center justify-between mb-1">
+      <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500">platform manifesto</p>
+      {#if candidate.manifesto && candidate.manifesto.length > 120}
+        <button
+          type="button"
+          class="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
+          onclick={(e) => {
+            e.stopPropagation();
+            isExpanded = !isExpanded;
+          }}
+        >
+          {isExpanded ? 'Read Less' : 'Read More'}
+        </button>
+      {/if}
+    </div>
+    <p class="text-slate-300 text-xs font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
       {candidate.manifesto || 'No platform manifesto stashed for this candidate.'}
     </p>
   </div>
@@ -67,4 +91,4 @@
   <span class="self-end font-mono text-[8px] text-slate-600 group-hover:text-slate-500 transition-colors uppercase tracking-wider mt-1">
     feat/{candidate.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}
   </span>
-</button>
+</div>

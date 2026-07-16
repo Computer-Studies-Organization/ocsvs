@@ -24,6 +24,9 @@
   const progressPercent = $derived(
     totalPositions > 0 ? Math.round((selectedCount / totalPositions) * 100) : 0
   )
+  const filledPercent = $derived(
+    totalPositions > 0 ? (selectedCount / totalPositions) * 100 : 0
+  )
 
   const activePositionName = $derived(
     isReview ? 'Review Ballot' : positions[currentPositionIndex]?.name || ''
@@ -70,11 +73,12 @@
 <div class="relative hidden w-full flex-col rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md md:flex mb-8">
   <div class="relative flex items-center justify-between px-4">
     <!-- Connecting Git Pipeline Track Line -->
-    <div class="absolute left-10 right-10 top-[22px] h-0.5 -translate-y-1/2 bg-slate-800"></div>
-    <div
-      class="absolute left-10 top-[22px] h-0.5 -translate-y-1/2 bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 transition-all duration-500 ease-out"
-      style:width="calc({progressPercent}% - 20px)"
-    ></div>
+    <div class="absolute left-10 right-10 top-[22px] h-0.5 -translate-y-1/2 bg-slate-800">
+      <div
+        class="h-full bg-gradient-to-r from-blue-500 via-sky-400 to-emerald-400 transition-all duration-500 ease-out"
+        style:width="{filledPercent}%"
+      ></div>
+    </div>
 
     <!-- Timeline Nodes -->
     {#each positions as pos, idx (pos.id)}
@@ -157,7 +161,7 @@
           Review
         </span>
         <span class="mt-0.5 line-clamp-1 font-mono text-[9px] text-slate-500">
-          {allVoted ? 'merge: ready' : `${totalPositions - selectedCount} conflict(s)`}
+          {allVoted ? 'merge: ready' : `${totalPositions - selectedCount} remaining selection(s)`}
         </span>
       </div>
     </button>
