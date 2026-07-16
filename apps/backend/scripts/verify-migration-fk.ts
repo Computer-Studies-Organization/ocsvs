@@ -126,7 +126,7 @@ async function main() {
     await client.execute(`CREATE TABLE child  (id TEXT PRIMARY KEY)`);
 
     // M1: empty child
-    const m1 = await tryStep(
+    const _m1 = await tryStep(
       "M1: ALTER child ADD parent_id TEXT NOT NULL REFERENCES parent(id) — empty table",
       () => client.execute(`ALTER TABLE child ADD parent_id TEXT NOT NULL REFERENCES parent(id)`),
     );

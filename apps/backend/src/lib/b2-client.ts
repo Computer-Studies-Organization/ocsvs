@@ -234,11 +234,6 @@ export function resolveCandidateImageUrl(
   return imageUrl;
 }
 
-export interface UploadResult {
-  url: string;
-  key: string;
-}
-
 export interface DownloadedImage {
   data: ArrayBuffer;
   contentType: string;
