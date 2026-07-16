@@ -11,10 +11,6 @@
     selectedVotes: Record<string, string | null>
     ongoToPosition: (idx: number) => void
   } = $props()
-
-  const allVoted = $derived(
-    positions.every((p) => selectedVotes[p.id] !== null)
-  )
 </script>
 
 <div class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-2xl backdrop-blur-md">
