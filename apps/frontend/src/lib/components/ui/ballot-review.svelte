@@ -20,18 +20,18 @@
     </div>
     <div class="flex flex-col">
       <h2 class="text-xl font-bold text-slate-100">Review Ballot</h2>
-      <p class="text-xs text-slate-400 mt-0.5">Please review your local stashes carefully before performing the final push. Once pushed, it cannot be reverted.</p>
+      <p class="text-xs text-slate-400 mt-0.5">Please review your selections carefully before submitting your ballot. Once submitted, it cannot be reverted.</p>
     </div>
   </div>
   
-  <!-- Grid layout of position stashes -->
+  <!-- Grid layout of position selections -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     {#each positions as pos, idx (pos.id)}
       {@const selectedCandidateId = selectedVotes[pos.id]}
       {@const selectedCandidate = pos.candidates.find(c => c.id === selectedCandidateId)}
       
       <div
-        class="flex flex-col justify-between h-36 rounded-xl border p-4 transition-all duration-200 {selectedCandidateId !== null ? 'border-slate-800 bg-slate-950/30' : 'border-rose-900/50 bg-rose-950/10 shadow-[0_0_8px_rgba(244,63,94,0.05)]'}"
+        class="flex flex-col justify-between min-h-36 rounded-xl border p-4 transition-all duration-200 {selectedCandidateId !== null ? 'border-slate-800 bg-slate-950/30' : 'border-rose-900/50 bg-rose-950/10 shadow-[0_0_8px_rgba(244,63,94,0.05)]'}"
       >
         <!-- Header -->
         <div class="flex flex-col">
@@ -61,8 +61,8 @@
                 <span class="text-sm font-semibold text-slate-200 truncate">
                   {selectedCandidate.fullName}
                 </span>
-                <span class="text-[10px] text-slate-400 truncate mt-0.5 max-w-full">
-                  {selectedCandidate.manifesto || 'No manifesto platform stashed.'}
+                <span class="text-xs text-slate-400 truncate mt-0.5 max-w-full">
+                  {selectedCandidate.manifesto || 'No manifesto platform selected.'}
                 </span>
               </div>
             </div>
@@ -70,7 +70,7 @@
             <!-- Empty Choice Content -->
             <div class="flex items-center gap-2 mt-4 text-rose-400">
               <AlertCircle size={16} />
-              <span class="text-xs font-semibold uppercase font-mono tracking-wider">unstashed position</span>
+              <span class="text-xs font-semibold uppercase font-mono tracking-wider">no candidate selected</span>
             </div>
           {/if}
         </div>
@@ -101,8 +101,8 @@
   <div class="mt-6 border border-amber-500/20 bg-amber-500/5 text-amber-300 rounded-xl p-4 flex gap-3 text-xs leading-normal items-start">
     <AlertCircle size={18} class="text-amber-400 flex-shrink-0 mt-0.5" />
     <div class="flex flex-col">
-      <span class="font-bold text-amber-400 uppercase font-mono tracking-wider mb-0.5">merge warning</span>
-      <span>Ballot deployment is absolute and irreversible. Clicking "Submit Ballot" will permanently sign and seal your votes. Please compile and check all stashes.</span>
+      <span class="font-bold text-amber-400 uppercase font-mono tracking-wider mb-0.5">submission warning</span>
+      <span>Ballot submission is absolute and irreversible. Clicking "Submit Ballot" will permanently sign and seal your votes. Please review and check all selections.</span>
     </div>
   </div>
 </div>
