@@ -29,6 +29,7 @@
   import VotingCandidateCard from '$lib/components/ui/voting-candidate-card.svelte'
   import BallotReview from '$lib/components/ui/ballot-review.svelte'
   import StepperNavigation from '$lib/components/ui/stepper-navigation.svelte'
+  import StepperProgress from '$lib/components/ui/stepper-progress.svelte'
 
   let { data } = $props()
   const apiState = $derived<TVotingState | null>(data.votingState)
@@ -219,12 +220,19 @@
       {/if}
     </div>
 
+    <StepperProgress
+      positions={pageState.positions}
+      currentPositionIndex={pageState.voting.currentPositionIndex}
+      selectedVotes={pageState.voting.selectedVotes}
+      ongoToPosition={goToPosition}
+    />
+
     {#if !isReview}
       {#if currentPosition}
-        <div class='mt-8 rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl'>
+        <div class='mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md'>
           <h2 class='text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
           <p class='mt-1 text-sm text-slate-400'>Select one candidate.</p>
-          <div class='mt-6 space-y-3'>
+          <div class='mt-6 grid grid-cols-1 gap-4 md:grid-cols-2'>
             {#each currentPosition.candidates as c (c.id)}
               <VotingCandidateCard
                 candidate={c}
@@ -253,6 +261,8 @@
       onnext={next}
       onsubmit={submit}
       canSubmit={allPositionsVoted(pageState.voting, pageState.positions)}
+      isCurrentSelected={currentPosition ? pageState.voting.selectedVotes[currentPosition.id] !== null : false}
     />
+    <div class="h-24 md:hidden"></div>
   </div>
 {/if}

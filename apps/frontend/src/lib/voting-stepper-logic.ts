@@ -9,7 +9,7 @@ export interface TStepperPosition {
   id: string;
   name: string;
   displayOrder: number;
-  candidates: Array<{ id: string; fullName: string; imageUrl: string | null }>;
+  candidates: Array<{ id: string; fullName: string; imageUrl: string | null; manifesto: string }>;
 }
 
 export function createVotingState(positions: TStepperPosition[]): TStepperVotingState {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TStepperPosition } from '$lib/voting-stepper-logic'
-  import { Info, User } from 'lucide-svelte'
+  import { User, AlertCircle, Edit2, Terminal, HelpCircle } from 'lucide-svelte'
 
   let {
     positions,
@@ -11,45 +11,102 @@
     selectedVotes: Record<string, string | null>
     ongoToPosition: (idx: number) => void
   } = $props()
+
+  const allVoted = $derived(
+    positions.every((p) => selectedVotes[p.id] !== null)
+  )
 </script>
 
-<div class="mt-8 rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
-  <h2 class="text-xl font-bold text-slate-100 mb-2">Review Your Ballot</h2>
-  <p class="text-sm text-slate-400 mb-6">Please review your selections carefully. Once submitted, your ballot cannot be changed or resubmitted.</p>
+<div class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-2xl backdrop-blur-md">
+  <div class="mb-6 flex items-start gap-3">
+    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+      <Terminal size={20} />
+    </div>
+    <div class="flex flex-col">
+      <h2 class="text-xl font-bold text-slate-100">Review Ballot</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Please review your local stashes carefully before performing the final push. Once pushed, it cannot be reverted.</p>
+    </div>
+  </div>
   
-  <div class="divide-y divide-white/5 space-y-4">
+  <!-- Grid layout of position stashes -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     {#each positions as pos, idx (pos.id)}
       {@const selectedCandidateId = selectedVotes[pos.id]}
       {@const selectedCandidate = pos.candidates.find(c => c.id === selectedCandidateId)}
-      <div class="pt-4 first:pt-0 flex items-center justify-between gap-4">
-        <div>
-          <h3 class="font-semibold text-slate-200">{pos.name}</h3>
+      
+      <div
+        class="flex flex-col justify-between h-36 rounded-xl border p-4 transition-all duration-200 {selectedCandidateId !== null ? 'border-slate-800 bg-slate-950/30' : 'border-rose-900/50 bg-rose-950/10 shadow-[0_0_8px_rgba(244,63,94,0.05)]'}"
+      >
+        <!-- Header -->
+        <div class="flex flex-col">
+          <span
+            class="font-mono text-[9px] uppercase tracking-wider"
+            class:text-slate-500={selectedCandidateId !== null}
+            class:text-rose-400={selectedCandidateId === null}
+          >
+            {pos.name}
+          </span>
+          
           {#if selectedCandidate}
-            <div class="flex items-center gap-2 mt-1">
+            <!-- Selected Candidate Card Content -->
+            <div class="flex items-center gap-2.5 mt-3">
               {#if selectedCandidate.imageUrl}
-                <img src={selectedCandidate.imageUrl} alt={selectedCandidate.fullName} class="h-6 w-6 rounded-full object-cover" />
+                <img
+                  src={selectedCandidate.imageUrl}
+                  alt={selectedCandidate.fullName}
+                  class="h-8 w-8 rounded-full object-cover border border-slate-800"
+                />
               {:else}
-                <div class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800">
-                  <User size={12} class="text-slate-400" />
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 border border-slate-800 text-slate-400">
+                  <User size={14} />
                 </div>
               {/if}
-              <span class="text-slate-300 font-medium text-sm">{selectedCandidate.fullName}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-sm font-semibold text-slate-200 truncate">
+                  {selectedCandidate.fullName}
+                </span>
+                <span class="text-[10px] text-slate-400 truncate mt-0.5 max-w-full">
+                  {selectedCandidate.manifesto || 'No manifesto platform stashed.'}
+                </span>
+              </div>
             </div>
           {:else}
-            <p class="text-red-400 text-sm mt-1 font-semibold flex items-center gap-1">
-              <Info size={14} /> No candidate selected
-            </p>
+            <!-- Empty Choice Content -->
+            <div class="flex items-center gap-2 mt-4 text-rose-400">
+              <AlertCircle size={16} />
+              <span class="text-xs font-semibold uppercase font-mono tracking-wider">unstashed position</span>
+            </div>
           {/if}
         </div>
+        
+        <!-- Action Trigger -->
         <button
           type="button"
           onclick={() => ongoToPosition(idx)}
-          aria-label={`Change selection for ${pos.name}`}
-          class="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer"
+          aria-label="Change selection for {pos.name}"
+          class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider cursor-pointer mt-2"
+          class:text-blue-400={selectedCandidateId !== null}
+          class:hover:text-blue-300={selectedCandidateId !== null}
+          
+          class:text-rose-400={selectedCandidateId === null}
+          class:hover:text-rose-300={selectedCandidateId === null}
         >
-          Change
+          {#if selectedCandidateId !== null}
+            <Edit2 size={10} /> Edit_selection
+          {:else}
+            <HelpCircle size={10} /> Choose_candidate
+          {/if}
         </button>
       </div>
     {/each}
+  </div>
+
+  <!-- Irreversibility Caution Callout -->
+  <div class="mt-6 border border-amber-500/20 bg-amber-500/5 text-amber-300 rounded-xl p-4 flex gap-3 text-xs leading-normal items-start">
+    <AlertCircle size={18} class="text-amber-400 flex-shrink-0 mt-0.5" />
+    <div class="flex flex-col">
+      <span class="font-bold text-amber-400 uppercase font-mono tracking-wider mb-0.5">merge warning</span>
+      <span>Ballot deployment is absolute and irreversible. Clicking "git push ballot" will permanently sign and seal your votes. Please compile and check all stashes.</span>
+    </div>
   </div>
 </div>

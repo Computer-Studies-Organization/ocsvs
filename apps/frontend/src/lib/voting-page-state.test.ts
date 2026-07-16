@@ -464,13 +464,13 @@ test("preserveVotingState preserves voting progress when positions are reordered
     id: "p1",
     name: "President",
     displayOrder: 1,
-    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null }],
+    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null, manifesto: "" }],
   };
   const p2 = {
     id: "p2",
     name: "Vice",
     displayOrder: 2,
-    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null }],
+    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null, manifesto: "" }],
   };
 
   const current: TVotingPageState = {
@@ -506,7 +506,7 @@ test("preserveVotingState discards voting progress when candidates within a posi
     id: "p1",
     name: "President",
     displayOrder: 1,
-    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null }],
+    candidates: [{ id: "c1", fullName: "Alice", imageUrl: null, manifesto: "" }],
   };
   const current: TVotingPageState = {
     kind: "stepper",
@@ -523,7 +523,7 @@ test("preserveVotingState discards voting progress when candidates within a posi
     name: "President",
     displayOrder: 1,
     // c1 deactivated/removed, c2 added instead
-    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null }],
+    candidates: [{ id: "c2", fullName: "Bob", imageUrl: null, manifesto: "" }],
   };
   const next: TVotingPageState = {
     kind: "stepper",
