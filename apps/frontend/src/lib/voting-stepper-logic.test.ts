@@ -20,8 +20,8 @@ const positions: TStepperPosition[] = [
     name: "President",
     displayOrder: 0,
     candidates: [
-      { id: "c1", fullName: "Alice", imageUrl: null },
-      { id: "c2", fullName: "Bob", imageUrl: null },
+      { id: "c1", fullName: "Alice", imageUrl: null, manifesto: "" },
+      { id: "c2", fullName: "Bob", imageUrl: null, manifesto: "" },
     ],
   },
   {
@@ -29,15 +29,15 @@ const positions: TStepperPosition[] = [
     name: "Vice President",
     displayOrder: 1,
     candidates: [
-      { id: "c3", fullName: "Charlie", imageUrl: null },
-      { id: "c4", fullName: "Dave", imageUrl: null },
+      { id: "c3", fullName: "Charlie", imageUrl: null, manifesto: "" },
+      { id: "c4", fullName: "Dave", imageUrl: null, manifesto: "" },
     ],
   },
   {
     id: "pos-3",
     name: "Secretary",
     displayOrder: 2,
-    candidates: [{ id: "c5", fullName: "Eve", imageUrl: null }],
+    candidates: [{ id: "c5", fullName: "Eve", imageUrl: null, manifesto: "" }],
   },
 ];
 
