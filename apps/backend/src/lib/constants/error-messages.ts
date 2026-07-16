@@ -46,6 +46,7 @@ export const ERROR_MESSAGES = {
   INVALID_REQUEST: "Invalid request",
   INVALID_CREDENTIALS: "Invalid credentials",
   INVALID_CANDIDATE: "Invalid candidate",
+  INCOMPLETE_BALLOT: "You must select a candidate for every position",
   INVALID_TRANSITION_BODY: "opensAt and closesAt are required and closesAt must be after opensAt",
   CANDIDATE_INACTIVE: "Candidate is not active",
   NO_IMAGE_PROVIDED: "No image file provided",

@@ -217,6 +217,36 @@ describe("DrizzleBallotCaster", () => {
     }
   });
 
+  it("should fail with INCOMPLETE_BALLOT when one or more positions are left unvoted", async () => {
+    mockFindByAccountId.mockResolvedValue({ id: userId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([
+      { id: positionId, electionId },
+      { id: "pos-2", electionId },
+    ]);
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("INCOMPLETE_BALLOT");
+      expect(result.error.message).toBe(ERROR_MESSAGES.INCOMPLETE_BALLOT);
+    }
+  });
+
   it("should successfully cast votes when all conditions are satisfied", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId });
     mockFindElectionById.mockResolvedValue({

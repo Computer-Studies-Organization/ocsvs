@@ -55,6 +55,11 @@ export type BallotCastingError =
       code: "DUPLICATE_POSITION_VOTE";
       message: typeof ERROR_MESSAGES.DUPLICATE_POSITION_VOTE;
       status: typeof httpStatusCodes.UNPROCESSABLE_ENTITY;
+    }
+  | {
+      code: "INCOMPLETE_BALLOT";
+      message: typeof ERROR_MESSAGES.INCOMPLETE_BALLOT;
+      status: typeof httpStatusCodes.BAD_REQUEST;
     };
 
 export interface VoteRecord {
@@ -211,6 +216,17 @@ export class DrizzleBallotCaster implements BallotCastingModule {
               },
             };
           }
+        }
+
+        if (positionIds.size !== validPositionIds.size) {
+          return {
+            success: false,
+            error: {
+              code: "INCOMPLETE_BALLOT",
+              message: ERROR_MESSAGES.INCOMPLETE_BALLOT,
+              status: httpStatusCodes.BAD_REQUEST,
+            },
+          };
         }
       }
 
