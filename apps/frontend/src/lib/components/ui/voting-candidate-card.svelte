@@ -83,7 +83,7 @@
       {/if}
     </div>
     <p class="text-slate-300 text-xs font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
-      {candidate.manifesto || 'No platform manifesto stashed for this candidate.'}
+      {candidate.manifesto || 'No platform manifesto provided for this candidate.'}
     </p>
   </div>
 

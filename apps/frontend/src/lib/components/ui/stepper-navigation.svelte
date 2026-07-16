@@ -38,7 +38,7 @@
     type="button"
     onclick={onprevious}
     disabled={currentPositionIndex === 0 || isSubmitting}
-    class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2 font-mono text-xs uppercase tracking-wider text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+    class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2 font-mono text-xs uppercase tracking-wider text-slate-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
   >
     <ArrowLeft size={16} /> Prev_Step
   </button>
@@ -46,7 +46,7 @@
   {#if !isReview}
     <!-- Status readout -->
     <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500 max-md:hidden">
-      stashed: <span class="text-blue-400 font-bold">{selectedVotesCount}</span> / {totalPositions}
+      selected: <span class="text-blue-400 font-bold">{selectedVotesCount}</span> / {totalPositions}
     </p>
 
     <!-- Next button -->
@@ -72,7 +72,7 @@
       type="button"
       onclick={onsubmit}
       disabled={!canSubmit || isSubmitting}
-      class="flex items-center gap-2 rounded-xl px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-white transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+      class="flex items-center gap-2 rounded-xl px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-white transition-all duration-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed cursor-pointer"
       class:bg-emerald-600={canSubmit}
       class:hover:bg-emerald-500={canSubmit}
       class:shadow-[0_0_15px_rgba(16,185,129,0.4)]={canSubmit && !isSubmitting}
@@ -81,7 +81,7 @@
       class:border-slate-850={!canSubmit}
     >
       {#if isSubmitting}
-        Deploying…
+        Submitting…
       {:else}
         <GitMerge size={16} class="mr-0.5" /> Submit Ballot
       {/if}

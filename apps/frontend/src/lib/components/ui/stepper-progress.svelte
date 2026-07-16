@@ -32,12 +32,12 @@
     isReview ? 'Review Ballot' : positions[currentPositionIndex]?.name || ''
   )
 
-  // Git commit-like messages for each step
+  // Selection messages for each step
   function getCommitMessage(pos: TStepperPosition): string {
     const selectedId = selectedVotes[pos.id]
-    if (!selectedId) return 'unstashed changes'
+    if (!selectedId) return 'no selection'
     const candidate = pos.candidates.find((c) => c.id === selectedId)
-    return `commit: ${candidate ? candidate.fullName : 'voted'}`
+    return `selected: ${candidate ? candidate.fullName : 'selected'}`
   }
 </script>
 
@@ -54,10 +54,10 @@
     </div>
     <div class="flex flex-col items-end">
       <span class="font-mono text-xs font-bold text-blue-400">
-        {progressPercent}% compiled
+        {progressPercent}% completed
       </span>
       <span class="text-[10px] text-slate-500">
-        {selectedCount}/{totalPositions} stashed
+        {selectedCount}/{totalPositions} selected
       </span>
     </div>
   </div>
@@ -70,8 +70,8 @@
 </div>
 
 <!-- Desktop Git Commit Pipeline Stepper -->
-<div class="relative hidden w-full flex-col rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md md:flex mb-8">
-  <div class="relative flex items-center justify-between px-4">
+<div class="relative hidden w-full flex-col rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md md:flex mb-8 overflow-x-auto">
+  <div class="relative flex items-center justify-between px-4 min-w-full">
     <!-- Connecting Git Pipeline Track Line -->
     <div class="absolute left-10 right-10 top-[22px] h-0.5 -translate-y-1/2 bg-slate-800">
       <div
@@ -88,7 +88,7 @@
       <button
         type="button"
         onclick={() => ongoToPosition(idx)}
-        class="group relative z-10 flex flex-col items-center focus:outline-none cursor-pointer"
+        class="group relative z-10 flex flex-col items-center focus:outline-none cursor-pointer w-32 flex-shrink-0"
         aria-label="Go to {pos.name} selection"
       >
         <!-- Circle indicator -->
@@ -131,7 +131,7 @@
     <button
       type="button"
       onclick={() => ongoToPosition(totalPositions)}
-      class="group relative z-10 flex flex-col items-center focus:outline-none cursor-pointer"
+      class="group relative z-10 flex flex-col items-center focus:outline-none cursor-pointer w-32 flex-shrink-0"
       aria-label="Go to Review step"
     >
       <div
