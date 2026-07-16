@@ -104,8 +104,10 @@ test("apiFetch sends credentials: 'include' and Content-Type: application/json",
   await apiFetch("/ping", { method: "POST", body: "{}" });
 
   expect(lastRequest?.init?.credentials).toBe("include");
-  const headers = lastRequest?.init?.headers as Record<string, string>;
-  expect(headers?.["Content-Type"]).toBe("application/json");
+  const headers = lastRequest?.init?.headers as any;
+  const contentType =
+    headers instanceof Headers ? headers.get("Content-Type") : headers?.["Content-Type"];
+  expect(contentType).toBe("application/json");
 });
 
 test("apiFetch builds URL from PUBLIC_API_BASE_URL + path", async () => {
@@ -121,9 +123,24 @@ test("apiFetch merges caller-provided headers on top of defaults", async () => {
 
   await apiFetch("/ping", { headers: { "X-Custom": "yes" } });
 
-  const headers = lastRequest?.init?.headers as Record<string, string>;
-  expect(headers?.["Content-Type"]).toBe("application/json");
-  expect(headers?.["X-Custom"]).toBe("yes");
+  const headers = lastRequest?.init?.headers as any;
+  const contentType =
+    headers instanceof Headers ? headers.get("Content-Type") : headers?.["Content-Type"];
+  const xCustom = headers instanceof Headers ? headers.get("X-Custom") : headers?.["X-Custom"];
+  expect(contentType).toBe("application/json");
+  expect(xCustom).toBe("yes");
+});
+
+test("apiFetch does not set default Content-Type when body is FormData", async () => {
+  stubFetch(async () => jsonResponse(200, { ok: true }));
+
+  const formData = new FormData();
+  await apiFetch("/ping", { method: "POST", body: formData });
+
+  const headers = lastRequest?.init?.headers as any;
+  const contentType =
+    headers instanceof Headers ? headers.get("Content-Type") : headers?.["Content-Type"];
+  expect(contentType).toBeNull();
 });
 
 test("apiFetch uses custom fetch function when provided in options", async () => {

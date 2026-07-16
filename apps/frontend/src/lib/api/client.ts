@@ -18,13 +18,15 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const { fetch: customFetch, ...fetchOptions } = options;
   const url = `${PUBLIC_API_BASE_URL}${path}`;
   const fetchFn = customFetch || fetch;
+  const headers = new Headers(fetchOptions.headers);
+  if (!(fetchOptions.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetchFn(url, {
     ...fetchOptions,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...fetchOptions.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
