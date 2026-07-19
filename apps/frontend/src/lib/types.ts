@@ -35,7 +35,7 @@ export interface TUsersData {
   studentId: string;
   firstName: string;
   lastName: string;
-  fullName: string;
+  fullName?: string;
   username: string;
   email: string | null;
   yearLevel: string;

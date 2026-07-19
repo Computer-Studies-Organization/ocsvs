@@ -4,6 +4,11 @@ export function resolveCandidateUserSelection(users: TUsersData[], accountId: st
   return users.find((user) => user.accountId === accountId) ?? null;
 }
 
-export function getCandidateUserLabel(user: Pick<TUsersData, "fullName" | "studentId">) {
-  return `${user.fullName} (${user.studentId})`;
+export function getCandidateUserLabel(
+  user: Pick<TUsersData, "studentId"> &
+    Partial<Pick<TUsersData, "fullName" | "firstName" | "lastName">>,
+) {
+  const name =
+    user.fullName || `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unknown";
+  return `${name} (${user.studentId})`;
 }
