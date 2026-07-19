@@ -29,22 +29,33 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
         httpStatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
-    secretKey = "1x00000000000000000000000000000000AA";
+    secretKey = "1x0000000000000000000000000000000AA";
   }
   try {
+    const bodyParams = new URLSearchParams({
+      secret: secretKey,
+      response: turnstileToken,
+    });
+    const isLocalhostIp =
+      !clientIp ||
+      clientIp === "unknown" ||
+      clientIp === "::1" ||
+      clientIp === "localhost" ||
+      clientIp.startsWith("127.");
+
+    if (!isLocalhostIp) {
+      bodyParams.append("remoteip", clientIp);
+    }
+
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        secret: secretKey,
-        response: turnstileToken,
-        remoteip: clientIp,
-      }),
+      body: bodyParams,
     });
-    const result = (await response.json()) as { success: boolean };
+    const result = (await response.json()) as { success: boolean; "error-codes"?: string[] };
     if (!result.success) {
       c.var.logger.warn(
-        { ip: clientIp, studentNumber: maskStudentId(studentNumber) },
+        { ip: clientIp, studentNumber: maskStudentId(studentNumber), turnstileResult: result },
         "Turnstile verification failed",
       );
       return c.json(
