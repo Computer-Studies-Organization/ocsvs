@@ -46,26 +46,41 @@ expand(config());
  * - PORT: Coerced to number, defaults to 3000
  * - LOG_LEVEL: Must be valid pino log level, defaults to 'info'
  */
-const EnvSchema = z.object({
-  NODE_ENV: z.string().default("development"),
-  PORT: z.coerce.number().default(3000),
-  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
-  TURSO_DATABASE_URL: z.string().min(1),
-  TURSO_AUTH_TOKEN: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
-  B2_APPLICATION_KEY_ID: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.string().optional(),
-  ),
-  B2_APPLICATION_KEY: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
-  B2_PUBLIC_ACCESS: z.preprocess(
-    (val) => val === "true" || val === true,
-    z.boolean().default(false),
-  ),
-  TURNSTILE_SECRET_KEY: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.string().optional(),
-  ),
-});
+const EnvSchema = z
+  .object({
+    NODE_ENV: z.string().default("development"),
+    PORT: z.coerce.number().default(3000),
+    LOG_LEVEL: z
+      .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+      .default("info"),
+    TURSO_DATABASE_URL: z.string().min(1),
+    TURSO_AUTH_TOKEN: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+    B2_APPLICATION_KEY_ID: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.string().optional(),
+    ),
+    B2_APPLICATION_KEY: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.string().optional(),
+    ),
+    B2_PUBLIC_ACCESS: z.preprocess(
+      (val) => val === "true" || val === true,
+      z.boolean().default(false),
+    ),
+    TURNSTILE_SECRET_KEY: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.string().optional(),
+    ),
+  })
+  .superRefine((data, ctx) => {
+    if (data.NODE_ENV === "production" && !data.TURNSTILE_SECRET_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "TURNSTILE_SECRET_KEY is required in production",
+        path: ["TURNSTILE_SECRET_KEY"],
+      });
+    }
+  });
 
 /**
  * TypeScript type representing the validated environment configuration.
@@ -77,7 +92,8 @@ export function parseEnv(data: any) {
   const { data: env, error } = EnvSchema.safeParse(data);
 
   if (error) {
-    throw new Error(JSON.stringify(error));
+    const issues = error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
+    throw new Error(`Invalid environment config - ${issues}`);
   }
 
   return env;

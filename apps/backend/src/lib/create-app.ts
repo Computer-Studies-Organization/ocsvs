@@ -6,10 +6,12 @@ import notFound from "@/middleware/utils/not-found";
 import onError from "@/middleware/utils/on-error";
 import serveEmojiFavicon from "@/middleware/utils/serve-emoji-favicon";
 import defaultHook from "@/openapi/default-hook";
+import { envValidator } from "@/middleware/env-validator";
 
 export default function createApp() {
   const app = createRouter()
     .use(logger())
+    .use(envValidator())
     .use(
       cors({
         origin: ["http://localhost:3001"],
