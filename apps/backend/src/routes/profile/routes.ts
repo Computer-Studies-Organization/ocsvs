@@ -5,7 +5,7 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
 const UpdateProfileSchema = z.object({
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
-  username: z.string().min(3).max(20).optional(),
+  username: z.string().min(3).max(50).optional(),
   email: z.string().email().optional().or(z.literal("")),
 });
 

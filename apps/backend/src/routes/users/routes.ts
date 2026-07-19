@@ -344,7 +344,7 @@ export const createUserBodySchema = z
     firstName: z.string().min(2),
     lastName: z.string().min(2),
     email: z.string().email().optional().or(z.literal("")).nullable(),
-    username: z.string().min(3).max(20).optional().or(z.literal("")).nullable(),
+    username: z.string().min(3).max(50).optional().or(z.literal("")).nullable(),
     password: z.string().min(8),
     studentId: z
       .string()
