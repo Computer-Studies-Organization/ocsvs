@@ -213,5 +213,34 @@ describe("ElectionLifecycleCoordinator", () => {
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "ANOTHER_ELECTION_IS_OPEN", status: 409 }));
     });
+
+    it("successfully transitions closed -> draft and clears timestamps", async () => {
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "closed",
+        opensAt: 1700000000,
+        closesAt: 1700003600,
+      });
+      mockCountPositions.mockResolvedValueOnce(3);
+      mockUpdateStatus.mockResolvedValueOnce(true);
+
+      const result = await ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+        to: "draft",
+        actor: { id: "admin-id", username: "admin" },
+      });
+
+      expect(result.newStatus).toBe("draft");
+      expect(result.messageKey).toBe("ELECTION_REOPENED_SUCCESSFULLY");
+      expect(mockUpdateStatus).toHaveBeenCalledWith(
+        mockDb,
+        "e1",
+        expect.objectContaining({
+          existingStatus: "closed",
+          status: "draft",
+          opensAt: null,
+          closesAt: null,
+        }),
+      );
+    });
   });
 });

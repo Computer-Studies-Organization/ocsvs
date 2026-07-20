@@ -87,14 +87,20 @@ export const ElectionLifecycleCoordinator = {
       // 4. Resolve timestamps
       const now = Math.floor(Date.now() / 1000);
       const resolvedOpensAt =
-        params.opensAt !== undefined ? params.opensAt : (existing.opensAt ?? null);
+        toStatus === "draft"
+          ? null
+          : params.opensAt !== undefined
+            ? params.opensAt
+            : (existing.opensAt ?? null);
 
       const resolvedClosesAt =
-        params.closesAt !== undefined
-          ? params.closesAt
-          : toStatus === "closed"
-            ? now
-            : (existing.closesAt ?? null);
+        toStatus === "draft"
+          ? null
+          : params.closesAt !== undefined
+            ? params.closesAt
+            : toStatus === "closed"
+              ? now
+              : (existing.closesAt ?? null);
 
       // 5. Assert transition (using resolved dates). Validation must run AFTER
       // timestamp resolution so it sees the dates that will actually be persisted,
