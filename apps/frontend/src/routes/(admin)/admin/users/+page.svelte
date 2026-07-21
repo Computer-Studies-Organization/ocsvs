@@ -477,32 +477,56 @@
                   <div class='flex gap-1.5'>
                     <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
                     {#if u.deletedAt}
-                      <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
-                      {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
-                        <button
-                          disabled={authStore.user?.id === u.accountId}
-                          onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
-                          title={authStore.user?.id === u.accountId ? 'You cannot delete your own account' : 'Delete Permanently'}
-                          class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                        ><Trash2 size={14} /></button>
-                      {/if}
-                    {:else}
-                      <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
                       <button
-                        disabled={authStore.user?.id === u.accountId}
+                        disabled={authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')}
+                        onclick={() => restoreConfirmUser = u}
+                        title={authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin') 
+                          ? 'Only super admins can restore admin accounts' 
+                          : 'Restore'}
+                        class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                      ><RotateCcw size={14} /></button>
+                      <button
+                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
+                        onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
+                        title={authStore.user?.id === u.accountId 
+                          ? 'You cannot delete your own account' 
+                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
+                          ? 'Only super admins can delete admin accounts' 
+                          : 'Delete Permanently'}
+                        class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                      ><Trash2 size={14} /></button>
+                    {:else}
+                      <button
+                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
+                        onclick={() => openEdit(u)}
+                        title={authStore.user?.id === u.accountId 
+                          ? 'You cannot edit your own account here' 
+                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
+                          ? 'Only super admins can edit admin accounts' 
+                          : 'Edit'}
+                        class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                      ><Edit size={14} /></button>
+                      <button
+                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
                         onclick={() => archiveConfirmUser = u}
-                        title={authStore.user?.id === u.accountId ? 'You cannot archive your own account' : 'Archive'}
+                        title={authStore.user?.id === u.accountId 
+                          ? 'You cannot archive your own account' 
+                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
+                          ? 'Only super admins can archive admin accounts' 
+                          : 'Archive'}
                         class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
                       ><Archive size={14} /></button>
                       <button onclick={() => unlockConfirmUser = u} title='Unlock Account' class='rounded-lg bg-teal-600 p-1.5 text-white transition hover:bg-teal-500 cursor-pointer'><Unlock size={14} /></button>
-                      {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
-                        <button
-                          disabled={authStore.user?.id === u.accountId}
-                          onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
-                          title={authStore.user?.id === u.accountId ? 'You cannot delete your own account' : 'Delete Permanently'}
-                          class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                        ><Trash2 size={14} /></button>
-                      {/if}
+                      <button
+                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
+                        onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
+                        title={authStore.user?.id === u.accountId 
+                          ? 'You cannot delete your own account' 
+                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
+                          ? 'Only super admins can delete admin accounts' 
+                          : 'Delete Permanently'}
+                        class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                      ><Trash2 size={14} /></button>
                     {/if}
                   </div>
                 </td>
