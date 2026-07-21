@@ -39,12 +39,7 @@
   })
 </script>
 
-<div class='relative min-h-[100dvh] w-full overflow-hidden bg-slate-900 text-slate-100'>
-  <!-- Ambient glow -->
-  <div class='pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-blue-600/10 blur-[100px]'></div>
-  <div class='pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-rose-600/10 blur-[100px]'></div>
-
-  <div class='relative z-10 mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
+<div class='mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
     <!-- Header -->
     <header class='relative flex flex-col gap-4 border-b border-slate-800/70 pb-4 sm:flex-row sm:items-start sm:justify-between'>
       <div class='space-y-2'>
@@ -185,5 +180,4 @@
         </div>
       {/if}
     </main>
-  </div>
 </div>
