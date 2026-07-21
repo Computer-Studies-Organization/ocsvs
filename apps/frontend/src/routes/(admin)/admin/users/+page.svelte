@@ -479,14 +479,29 @@
                     {#if u.deletedAt}
                       <button onclick={() => restoreConfirmUser = u} title='Restore' class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 cursor-pointer'><RotateCcw size={14} /></button>
                       {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
-                        <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
+                        <button
+                          disabled={authStore.user?.id === u.accountId}
+                          onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
+                          title={authStore.user?.id === u.accountId ? 'You cannot delete your own account' : 'Delete Permanently'}
+                          class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                        ><Trash2 size={14} /></button>
                       {/if}
                     {:else}
                       <button onclick={() => openEdit(u)} title='Edit' class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 cursor-pointer'><Edit size={14} /></button>
-                      <button onclick={() => archiveConfirmUser = u} title='Archive' class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 cursor-pointer'><Archive size={14} /></button>
+                      <button
+                        disabled={authStore.user?.id === u.accountId}
+                        onclick={() => archiveConfirmUser = u}
+                        title={authStore.user?.id === u.accountId ? 'You cannot archive your own account' : 'Archive'}
+                        class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                      ><Archive size={14} /></button>
                       <button onclick={() => unlockConfirmUser = u} title='Unlock Account' class='rounded-lg bg-teal-600 p-1.5 text-white transition hover:bg-teal-500 cursor-pointer'><Unlock size={14} /></button>
                       {#if authStore.user?.role === 'super_admin' || (u.role !== 'admin' && u.role !== 'super_admin')}
-                        <button onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }} title='Delete Permanently' class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 cursor-pointer'><Trash2 size={14} /></button>
+                        <button
+                          disabled={authStore.user?.id === u.accountId}
+                          onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
+                          title={authStore.user?.id === u.accountId ? 'You cannot delete your own account' : 'Delete Permanently'}
+                          class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+                        ><Trash2 size={14} /></button>
                       {/if}
                     {/if}
                   </div>
