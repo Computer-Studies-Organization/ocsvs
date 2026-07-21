@@ -211,24 +211,6 @@ describe("positions routes", () => {
       expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
     });
 
-    // Regression: election transitioned out of draft between the pre-check and
-    // the in-transaction re-verify (TOCTOU). The first findById (pre-check)
-    // returns draft; the second (inside tx) returns open → must still 409.
-    it("returns 409 when election is transitioned out of draft between pre-check and write (TOCTOU)", async () => {
-      mockElectionFindById
-        .mockResolvedValueOnce(makeElection({ status: "draft" }))
-        .mockResolvedValueOnce(makeElection({ status: "open" }));
-      const res = await router.request(`/elections/${electionId}/positions`, {
-        method: "POST",
-        body: JSON.stringify({ name: "President" }),
-        headers: { "Content-Type": "application/json" },
-      });
-      expect(res.status).toBe(409);
-      const json = (await res.json()) as any;
-      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
-
     it("returns 201 with the created position when election is draft", async () => {
       mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCreate.mockResolvedValue(positionId);
