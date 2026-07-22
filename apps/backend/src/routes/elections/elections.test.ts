@@ -391,6 +391,32 @@ describe("elections routes", () => {
       );
     });
 
+    it("returns 200 for valid closed->draft transition and nulls timestamps", async () => {
+      mockFindById.mockResolvedValue(
+        makeElection({ status: "closed", opensAt: 1738000000, closesAt: 1738604800 }),
+      );
+      mockCountPositions.mockResolvedValue(2);
+      mockUpdateStatus.mockResolvedValue(true);
+      const res = await router.request(`/elections/${electionId}/transitions`, {
+        method: "POST",
+        body: JSON.stringify({ to: "draft" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_REOPENED_SUCCESSFULLY);
+      expect(mockUpdateStatus).toHaveBeenCalledWith(
+        mockDb,
+        electionId,
+        expect.objectContaining({
+          existingStatus: "closed",
+          status: "draft",
+          opensAt: null,
+          closesAt: null,
+        }),
+      );
+    });
+
     it("returns 409 when updateStatus returns false (concurrent race)", async () => {
       mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountPositions.mockResolvedValue(2);

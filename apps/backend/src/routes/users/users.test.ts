@@ -540,6 +540,54 @@ describe("users Routes", () => {
       expect(res.status).toBe(200);
       expect(mockRestore).toHaveBeenCalledWith(mockDb, "other-account-id");
     });
+
+    it("should invalidate active sessions when soft-deleting a voter account", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "voter-account-id",
+        deletedAt: null,
+        role: "user",
+      });
+      mockCountActiveAdmins.mockResolvedValue(2);
+      mockSoftDelete.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/voter-user-id", {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User archived successfully");
+      expect(mockSoftDelete).toHaveBeenCalledWith(mockDb, "voter-account-id");
+      expect(mockDb.delete).toHaveBeenCalled();
+    });
+
+    it("should allow admin to restore an archived voter account enabling login capabilities", async () => {
+      mockAuthUser.role = "admin";
+      mockGetAccountDeleteStatus.mockResolvedValue({
+        accountId: "voter-account-id",
+        deletedAt: 1700000000,
+        role: "user",
+      });
+      mockRestore.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/voter-user-id/restore", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe("User restored successfully");
+      expect(mockRestore).toHaveBeenCalledWith(mockDb, "voter-account-id");
+      expect(mockAuditLogInsert).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: "user.restore",
+          targetType: "user",
+          targetId: "voter-user-id",
+        }),
+      );
+    });
   });
 
   describe("POST /users/import", () => {
