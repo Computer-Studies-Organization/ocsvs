@@ -1,4 +1,5 @@
 <script lang='ts'>
+  import { untrack } from 'svelte'
   import type { ChangePasswordData, ProfileData, UpdateProfileData } from '$lib/types'
   import { goto } from '$app/navigation'
   import { invalidate } from '$app/navigation'
@@ -15,19 +16,12 @@
   const profile = $derived(data.profile)
 
   // Profile form
-  let firstName = $state('')
-  let lastName = $state('')
-  let username = $state('')
-  let email = $state('')
+  let firstName = $state(untrack(() => data.profile.firstName))
+  let lastName = $state(untrack(() => data.profile.lastName))
+  let username = $state(untrack(() => data.profile.username))
+  let email = $state(untrack(() => data.profile.email ?? ''))
   let isSavingProfile = $state(false)
   let profileErrors = $state<Record<string, string>>({})
-
-  $effect(() => {
-    firstName = profile.firstName
-    lastName = profile.lastName
-    username = profile.username
-    email = profile.email ?? ''
-  })
 
   // Password form
   let currentPassword = $state('')

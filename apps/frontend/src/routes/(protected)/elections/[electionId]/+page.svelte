@@ -59,13 +59,13 @@
       </div>
 
       <div class='flex sm:self-start'>
-        <button
-          onclick={() => goto('/elections')}
-          class='inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer'
+        <a
+          href='/elections'
+          class='inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700'
         >
           <ArrowLeft size={16} />
           Back to list
-        </button>
+        </a>
       </div>
     </header>
 
@@ -88,12 +88,12 @@
             <p class='mt-2 text-slate-400'>
               Results for active elections are only visible after you have cast your vote to ensure election fairness.
             </p>
-            <button
-              onclick={() => goto('/voting')}
-              class='mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 shadow-lg shadow-blue-500/25 cursor-pointer'
+            <a
+              href='/voting'
+              class='mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 shadow-lg shadow-blue-500/25'
             >
               Go to Voting
-            </button>
+            </a>
           </div>
         </div>
       {:else if results.length === 0}

@@ -58,7 +58,7 @@
 
   let { data } = $props()
   const users = $derived<TUsersData[]>(data.users)
-  let includeDeleted = $state(untrack(() => data.includeDeleted))
+  const includeDeleted = $derived(data.includeDeleted)
 
   // State
   let search = $state('')
@@ -198,22 +198,17 @@
     addFormVisiblePassword = false
   }
 
-  // Update local includeDeleted when SvelteKit page data updates (URL history sync)
-  $effect(() => {
-    includeDeleted = data.includeDeleted
-  })
-
-  // Update URL when includeDeleted changes
-  $effect(() => {
+  function toggleArchived(val: boolean) {
+    pageIndex = 0
     const url = new URL(window.location.href)
-    if (includeDeleted) {
+    if (val) {
       url.searchParams.set('archived', 'true')
     } else {
       url.searchParams.delete('archived')
     }
     if (url.toString() === window.location.href) return
     goto(url.toString(), { replaceState: true, noScroll: true })
-  })
+  }
 
   // Derived filtered + sorted + paginated list
   const filtered = $derived.by(() => {
@@ -238,12 +233,6 @@
 
   const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)))
   const paginated = $derived(filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize))
-
-  $effect(() => {
-    void includeDeleted
-    void search
-    pageIndex = 0
-  })
 
   onDestroy(() => {
     if (editTimeoutId) {
@@ -430,7 +419,7 @@
         />
       </div>
       <label class='flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800'>
-        <input type='checkbox' bind:checked={includeDeleted} class='h-4 w-4 accent-amber-400' />
+        <input type='checkbox' checked={includeDeleted} onchange={(e) => toggleArchived(e.currentTarget.checked)} class='h-4 w-4 accent-amber-400' />
         Show archived
       </label>
     </div>

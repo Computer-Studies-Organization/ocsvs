@@ -16,7 +16,7 @@
  * cache after the caller has explicitly cleared it.
  */
 export class CacheEntry<T> {
-  data = $state<T | null>(null);
+  data = $state.raw<T | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
   lastFetched = $state<number>(0);

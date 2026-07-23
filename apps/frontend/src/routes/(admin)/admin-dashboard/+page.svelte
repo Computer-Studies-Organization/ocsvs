@@ -174,13 +174,13 @@
               <Vote size={36} class='mx-auto text-slate-700 mb-2' />
               <p class='text-sm text-slate-400 font-semibold'>No Active Voting Session</p>
               <p class='text-xs text-slate-500 mt-1'>Activate or create an election from the elections management page.</p>
-              <button
-                onclick={() => goto('/admin/elections')}
-                class='mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 px-4 py-2 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer'
+              <a
+                href='/admin/elections'
+                class='mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 px-4 py-2 text-xs font-bold text-slate-200 border border-slate-700 transition'
               >
                 Go to Elections
                 <ArrowRight size={12} />
-              </button>
+              </a>
             </div>
           {/if}
         </div>
@@ -190,9 +190,9 @@
           <h2 class='text-lg font-bold text-slate-50 mb-4'>Quick Actions</h2>
           <div class='grid grid-cols-1 gap-4 sm:grid-cols-2'>
             <!-- Create Election -->
-            <button
-              onclick={() => goto('/admin/elections')}
-              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            <a
+              href='/admin/elections'
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01]'
             >
               <div class='rounded-lg bg-amber-500/10 p-2.5 text-amber-400 border border-amber-500/10'>
                 <PlusCircle size={18} />
@@ -201,12 +201,12 @@
                 <h3 class='text-sm font-bold text-slate-100'>Manage Elections</h3>
                 <p class='mt-1 text-xs text-slate-500'>Create elections, adjust schedule, or add details.</p>
               </div>
-            </button>
+            </a>
 
             <!-- Manage Voters -->
-            <button
-              onclick={() => goto('/admin/users')}
-              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            <a
+              href='/admin/users'
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01]'
             >
               <div class='rounded-lg bg-blue-500/10 p-2.5 text-blue-400 border border-blue-500/10'>
                 <Users size={18} />
@@ -215,12 +215,12 @@
                 <h3 class='text-sm font-bold text-slate-100'>Manage Voters</h3>
                 <p class='mt-1 text-xs text-slate-500'>Browse voter directory, edit metadata or archive/restore users.</p>
               </div>
-            </button>
+            </a>
 
             <!-- View Audit Logs -->
-            <button
-              onclick={() => goto('/admin/audit-log')}
-              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            <a
+              href='/admin/audit-log'
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01]'
             >
               <div class='rounded-lg bg-slate-750 p-2.5 text-slate-300 border border-slate-700/80'>
                 <History size={18} />
@@ -229,12 +229,12 @@
                 <h3 class='text-sm font-bold text-slate-100'>Audit History</h3>
                 <p class='mt-1 text-xs text-slate-500'>Monitor actions taken by admins across the system.</p>
               </div>
-            </button>
+            </a>
 
             <!-- View Results -->
-            <button
-              onclick={() => goto('/admin/results')}
-              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01] cursor-pointer'
+            <a
+              href='/admin/results'
+              class='flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left transition hover:bg-slate-950 hover:border-slate-750 hover:scale-[1.01]'
             >
               <div class='rounded-lg bg-purple-500/10 p-2.5 text-purple-400 border border-purple-500/10'>
                 <Activity size={18} />
@@ -243,7 +243,7 @@
                 <h3 class='text-sm font-bold text-slate-100'>Election Results</h3>
                 <p class='mt-1 text-xs text-slate-500'>View real-time live counts and final closed results.</p>
               </div>
-            </button>
+            </a>
           </div>
         </div>
       </div>

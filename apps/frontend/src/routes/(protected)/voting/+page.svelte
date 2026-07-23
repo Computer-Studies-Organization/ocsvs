@@ -45,9 +45,9 @@
 
   // Re-derive page state from API data, but preserve the user's in-progress
   // selections when the open election hasn't changed (e.g. auto-refresh).
-  $effect(() => {
+  $effect.pre(() => {
     const next = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
-    pageState = preserveVotingState(next, untrack(() => pageState))
+    pageState = preserveVotingState(next, pageState)
   })
 
   let lastAutoFetch = 0
@@ -120,7 +120,7 @@
       <SkeletonCard />
       <SkeletonCard />
       <div class='mt-6 space-y-3'>
-        {#each Array(3) as _}
+        {#each Array(3) as _, i (i)}
           <div class='flex items-center gap-3 rounded-xl border border-white/10 p-4'>
             <div class='h-10 w-10 animate-pulse rounded-full bg-slate-800'></div>
             <div class='h-4 flex-1 animate-pulse rounded bg-slate-800'></div>
