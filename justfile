@@ -37,9 +37,13 @@ lint:
 lint-fix:
     pnpm -r lint:fix
 
-# Run all tests
+# Run all tests (unit + integration)
 test:
     pnpm test
+
+# Run E2E tests via Playwright
+test-e2e:
+    pnpm test:e2e
 
 # Build all workspaces
 build:

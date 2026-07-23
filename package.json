@@ -10,6 +10,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm --filter @cso-voting/backend exec oxlint . && pnpm --filter @cso-voting/backend exec oxfmt --check . && pnpm --filter @cso-voting/frontend lint",
     "test": "pnpm --filter @cso-voting/backend exec vitest run && pnpm --filter @cso-voting/frontend test",
+    "test:e2e": "pnpm --filter @cso-voting/e2e test",
     "clean": "pnpm -r clean",
     "dev:frontend": "pnpm --filter @cso-voting/frontend dev",
     "dev:backend": "pnpm --filter @cso-voting/backend dev",

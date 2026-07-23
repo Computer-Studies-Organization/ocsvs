@@ -29,5 +29,11 @@ credentials.csv
 *.db
 *.sqlite
 
+# Playwright
+.auth/
+playwright-report/
+test-results/
+
+
 
 
