@@ -16,7 +16,8 @@ import {
 } from "./routes";
 
 const router = createRouter();
-router.use("*", requireAuth);
+router.use("/users", requireAuth);
+router.use("/users/*", requireAuth);
 router.use("/users", requireAdmin);
 router.use("/users/*", requireAdmin);
 router.openapi(listUsersRoute, handlers.listUsers);

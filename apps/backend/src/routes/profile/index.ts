@@ -4,7 +4,7 @@ import { requireAuth } from "@/middleware/auth";
 import * as routes from "./routes";
 
 const router = createRouter();
-router.use("*", requireAuth);
+router.use("/me/*", requireAuth);
 router.openapi(routes.getMyProfileRoute, handlers.getMyProfile);
 router.openapi(routes.updateMyProfileRoute, handlers.updateMyProfile);
 router.openapi(routes.changePasswordRoute, handlers.changePassword);

@@ -20,7 +20,7 @@ import * as routes from "./routes";
  * in `routes/elections/index.ts:50`).
  */
 const router = createRouter();
-router.use("*", requireAuth);
+router.use("/audit-log", requireAuth);
 
 router.openapi(routes.listAuditLogRoute, handlers.listAuditLog);
 

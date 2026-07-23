@@ -17,8 +17,9 @@ import {
 
 const router = createRouter();
 
-// Apply authentication middleware to all routes
-router.use("*", requireAuth);
+// Apply authentication middleware to candidate routes
+router.use("/candidates", requireAuth);
+router.use("/candidates/*", requireAuth);
 
 // Register routes with handlers
 router.openapi(createCandidateRoute, handlers.createCandidate);
