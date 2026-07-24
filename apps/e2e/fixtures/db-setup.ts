@@ -64,6 +64,19 @@ export const TEST_USERS = {
     yearLevel: '1st Year',
     role: 'user',
   },
+  votedVoter: {
+    accountId: 'e2e-voted-voter-account-id',
+    userId: 'e2e-voted-voter-user-id',
+    username: 'e2e_voted_voter',
+    email: 'e2e_voted_voter@cso.dev',
+    password: 'Voter123!',
+    studentId: 'C25-01-99999-BSC002',
+    firstName: 'E2EVotedVoter',
+    lastName: 'User',
+    course: 'BSCS',
+    yearLevel: '1st Year',
+    role: 'user',
+  },
 };
 
 export async function seedTestUsers() {
@@ -75,7 +88,7 @@ export async function seedTestUsers() {
 
   const now = Math.floor(Date.now() / 1000);
 
-  for (const userKey of ['admin', 'voter'] as const) {
+  for (const userKey of ['admin', 'voter', 'votedVoter'] as const) {
     const u = TEST_USERS[userKey];
     const existing = await client.execute({
       sql: 'SELECT id FROM accounts WHERE username = ? OR id = ?',
@@ -109,3 +122,109 @@ export async function seedTestUsers() {
     }
   }
 }
+
+export async function seedActiveElection() {
+  const dbUrl = process.env.TURSO_DATABASE_URL || 'file:local.db';
+  const client = createClient({
+    url: dbUrl,
+    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
+  });
+
+  const now = Math.floor(Date.now() / 1000);
+  const electionId = 'e2e-open-election-id';
+  const posPresId = 'e2e-pos-president';
+  const posVpId = 'e2e-pos-vice-president';
+  const candPres1Id = 'e2e-cand-pres-1';
+  const candPres2Id = 'e2e-cand-pres-2';
+  const candVp1Id = 'e2e-cand-vp-1';
+
+  // Ensure user fixture accounts exist first
+  await seedTestUsers();
+
+  const existing = await client.execute({
+    sql: 'SELECT id FROM elections WHERE id = ?',
+    args: [electionId],
+  });
+
+  if (existing.rows.length === 0) {
+    await client.batch([
+      {
+        sql: `INSERT INTO elections (id, name, description, status, opens_at, closes_at, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          electionId,
+          'E2E Active Student Council Election',
+          'Active election created for Playwright E2E UI testing',
+          'open',
+          now - 3600,
+          now + 86400,
+          now,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO positions (id, election_id, name, display_order, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [posPresId, electionId, 'President', 1, now, now],
+      },
+      {
+        sql: `INSERT INTO positions (id, election_id, name, display_order, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [posVpId, electionId, 'Vice President', 2, now, now],
+      },
+      {
+        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        args: [
+          candPres1Id,
+          'Alice President',
+          TEST_USERS.admin.accountId,
+          posPresId,
+          'Better campus facilities and student welfare',
+          now,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        args: [
+          candPres2Id,
+          'Bob President',
+          TEST_USERS.voter.accountId,
+          posPresId,
+          'Technology-driven campus initiatives',
+          now,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        args: [
+          candVp1Id,
+          'Charlie VP',
+          TEST_USERS.admin.accountId,
+          posVpId,
+          'Unity, transparency, and action',
+          now,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO votes (id, user_id, candidate_id, position_id, election_id, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          'e2e-vote-votedvoter-pres',
+          TEST_USERS.votedVoter.userId,
+          candPres1Id,
+          posPresId,
+          electionId,
+          now,
+          now,
+        ],
+      },
+    ]);
+  }
+}
+

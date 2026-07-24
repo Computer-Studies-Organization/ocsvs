@@ -1,13 +1,14 @@
 import { test as setup, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { seedTestUsers, TEST_USERS } from './fixtures/db-setup';
+import { seedTestUsers, seedActiveElection, TEST_USERS } from './fixtures/db-setup';
 
 const authDir = path.join(__dirname, '.auth');
 
 setup('global setup and authentication', async ({ page }) => {
   // Ensure DB seed runs
   await seedTestUsers();
+  await seedActiveElection();
 
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir, { recursive: true });
