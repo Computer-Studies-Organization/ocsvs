@@ -17,12 +17,11 @@
 <div
   role="button"
   tabindex="0"
-  {onclick}
+  onclick={() => onclick()}
   onkeydown={(e) => {
-    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onclick();
+      e.preventDefault()
+      onclick()
     }
   }}
   aria-pressed={selected}

@@ -47,7 +47,8 @@
   // selections when the open election hasn't changed (e.g. auto-refresh).
   $effect.pre(() => {
     const next = deriveVotingPageState({ apiState, positions, candidates, loadError, isAdmin })
-    pageState = preserveVotingState(next, pageState)
+    const current = untrack(() => pageState)
+    pageState = preserveVotingState(next, current)
   })
 
   let lastAutoFetch = 0

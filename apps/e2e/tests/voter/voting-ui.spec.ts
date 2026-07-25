@@ -1,13 +1,13 @@
-import { test, expect } from '@playwright/test';
-import { TEST_USERS, resetVoterVotes } from '../../fixtures/db-setup';
-import { LoginPage } from '../../fixtures/page-objects/LoginPage';
-import { VotingPage } from '../../fixtures/page-objects/VotingPage';
+import { test, expect } from "@playwright/test";
+import { TEST_USERS, resetVoterVotes } from "../../fixtures/db-setup";
+import { LoginPage } from "../../fixtures/page-objects/LoginPage";
+import { VotingPage } from "../../fixtures/page-objects/VotingPage";
 
-test.describe('Voter Journey Browser UI', () => {
+test.describe("Voter Journey Browser UI", () => {
   test.beforeEach(async () => {
     await resetVoterVotes();
   });
-  test('voter logs in, selects candidates, and submits ballot successfully', async ({ page }) => {
+  test("voter logs in, selects candidates, and submits ballot successfully", async ({ page }) => {
     const loginPage = new LoginPage(page);
     const votingPage = new VotingPage(page);
 
@@ -40,7 +40,7 @@ test.describe('Voter Journey Browser UI', () => {
     await votingPage.expectAlreadyVotedMessage();
   });
 
-  test('prevents double voting on revisit to /voting', async ({ page }) => {
+  test("prevents double voting on revisit to /voting", async ({ page }) => {
     const loginPage = new LoginPage(page);
     const votingPage = new VotingPage(page);
 

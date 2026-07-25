@@ -105,6 +105,36 @@ export function deriveVotingPageState(input: TVotingPageInput): TVotingPageState
  * If the page state transitions to a non-stepper kind (e.g. election closed) or
  * if the candidate/position set changes structurally, the selections are discarded.
  */
+function arePositionsStructurallyEqual(a: TStepperPosition[], b: TStepperPosition[]): boolean {
+  if (a.length !== b.length) return false;
+  const mapA = new Map(
+    a.map((p) => [
+      p.id,
+      p.candidates
+        .map((c) => c.id)
+        .sort()
+        .join(","),
+    ]),
+  );
+  const mapB = new Map(
+    b.map((p) => [
+      p.id,
+      p.candidates
+        .map((c) => c.id)
+        .sort()
+        .join(","),
+    ]),
+  );
+  if (mapA.size !== mapB.size) return false;
+  for (const [posId, candStrA] of mapA) {
+    const candStrB = mapB.get(posId);
+    if (candStrB === undefined || candStrA !== candStrB) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function preserveVotingState(
   next: TVotingPageState,
   current: TVotingPageState,
@@ -112,34 +142,20 @@ export function preserveVotingState(
   if (
     next.kind === "stepper" &&
     current.kind === "stepper" &&
-    next.election.id === current.election.id
+    next.election.id === current.election.id &&
+    arePositionsStructurallyEqual(current.positions, next.positions)
   ) {
-    // Drop preserved selections when the position or candidate list has changed structurally
-    // (positions/candidates added or removed). Pure reordering is allowed: display order
-    // is server-controlled and `currentPositionIndex` is intentionally treated
-    // as a server-side mapping.
-    const currentSig = current.positions
-      .map(
-        (p) =>
-          `${p.id}:${p.candidates
-            .map((c) => c.id)
-            .sort()
-            .join(",")}`,
-      )
-      .sort()
-      .join("|");
-    const nextSig = next.positions
-      .map(
-        (p) =>
-          `${p.id}:${p.candidates
-            .map((c) => c.id)
-            .sort()
-            .join(",")}`,
-      )
-      .sort()
-      .join("|");
-    if (currentSig !== nextSig) return next;
-    return { ...next, voting: current.voting };
+    const currentPositionIndex = Math.min(
+      current.voting.currentPositionIndex,
+      next.positions.length,
+    );
+    return {
+      ...next,
+      voting: {
+        selectedVotes: { ...current.voting.selectedVotes },
+        currentPositionIndex,
+      },
+    };
   }
   return next;
 }
