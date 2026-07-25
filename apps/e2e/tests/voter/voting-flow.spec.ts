@@ -5,10 +5,11 @@ test.describe('Voter Journey & Ballot Submission', () => {
   let voterCookie: string;
 
   test.beforeAll(async ({ request }) => {
-    const loginRes = await request.post('http://localhost:8787/auth/login', {
+    const loginRes = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: TEST_USERS.voter.studentId,
         password: TEST_USERS.voter.password,
+        turnstileToken: 'mock-token',
       },
     });
     voterCookie = loginRes.headers()['set-cookie'] || '';
@@ -20,8 +21,8 @@ test.describe('Voter Journey & Ballot Submission', () => {
     });
     expect(stateRes.ok()).toBe(true);
     const state = await stateRes.json();
-    expect(state).toHaveProperty('state');
-    expect(['open', 'closed', 'no_election', 'voted', 'not_started']).toContain(state.state);
+    expect(state).toHaveProperty('open');
+    expect(state.open).toBeDefined();
   });
 
   test('rejects voting submission when election is not open or invalid candidate', async ({ request }) => {

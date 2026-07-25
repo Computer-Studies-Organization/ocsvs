@@ -1,6 +1,10 @@
 import { createClient } from '@libsql/client';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../../backend/.env') });
 
@@ -95,8 +99,8 @@ export async function seedTestUsers() {
       args: [u.username, u.accountId],
     });
 
+    const passwordHash = await hashPassword(u.password);
     if (existing.rows.length === 0) {
-      const passwordHash = await hashPassword(u.password);
       await client.batch([
         {
           sql: `INSERT INTO accounts (id, username, email, password_hash, role, created_at, updated_at, last_login)
@@ -119,6 +123,11 @@ export async function seedTestUsers() {
           ],
         },
       ]);
+    } else {
+      await client.execute({
+        sql: `UPDATE accounts SET deleted_at = NULL, password_hash = ?, updated_at = ? WHERE id = ?`,
+        args: [passwordHash, now, u.accountId],
+      });
     }
   }
 }
@@ -142,8 +151,8 @@ export async function seedActiveElection() {
   await seedTestUsers();
 
   const existing = await client.execute({
-    sql: 'SELECT id FROM elections WHERE id = ?',
-    args: [electionId],
+    sql: 'SELECT id FROM elections WHERE id = ? OR status = ?',
+    args: [electionId, 'open'],
   });
 
   if (existing.rows.length === 0) {
@@ -226,5 +235,46 @@ export async function seedActiveElection() {
       },
     ]);
   }
+
+  // Ensure votedVoter has a vote in whichever election is currently open
+  const openElection = await client.execute({
+    sql: "SELECT id FROM elections WHERE status = 'open' LIMIT 1",
+  });
+  if (openElection.rows.length > 0) {
+    const activeElectionId = String(openElection.rows[0].id);
+    const posRes = await client.execute({
+      sql: 'SELECT id FROM positions WHERE election_id = ? LIMIT 1',
+      args: [activeElectionId],
+    });
+    if (posRes.rows.length > 0) {
+      const posId = String(posRes.rows[0].id);
+      const candRes = await client.execute({
+        sql: 'SELECT id FROM candidates WHERE position_id = ? LIMIT 1',
+        args: [posId],
+      });
+      if (candRes.rows.length > 0) {
+        const candId = String(candRes.rows[0].id);
+        await client.execute({
+          sql: 'INSERT OR IGNORE INTO votes (id, user_id, candidate_id, position_id, election_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          args: ['e2e-votedvoter-vote-dyn', TEST_USERS.votedVoter.userId, candId, posId, activeElectionId, now, now],
+        });
+      }
+    }
+  }
+
+  // Ensure fresh voter has no votes left over from previous test runs
+  await resetVoterVotes();
+}
+
+export async function resetVoterVotes() {
+  const dbUrl = process.env.TURSO_DATABASE_URL || 'file:local.db';
+  const client = createClient({
+    url: dbUrl,
+    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
+  });
+  await client.execute({
+    sql: 'DELETE FROM votes WHERE user_id = ?',
+    args: [TEST_USERS.voter.userId],
+  });
 }
 

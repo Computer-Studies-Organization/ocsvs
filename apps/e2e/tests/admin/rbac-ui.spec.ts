@@ -15,7 +15,7 @@ test.describe('Role-Based Access Control (RBAC) Navigation UI', () => {
     await loginPage.login(TEST_USERS.voter.studentId, TEST_USERS.voter.password);
 
     await page.goto('/admin/elections');
-    // Voter account should be blocked/redirected away from admin paths
-    await expect(page).not.toHaveURL(/\/admin\/elections/);
+    // Voter account should be redirected away from admin paths to /voting
+    await expect(page).toHaveURL(/\/voting/, { timeout: 15000 });
   });
 });

@@ -12,9 +12,9 @@ export class AdminElectionsPage {
   }
 
   async fillElectionForm(name: string, description: string) {
-    await this.page.fill('input[name="name"], input[placeholder*="title"], input[placeholder*="Name"], input#name', name);
+    await this.page.fill('input#createElectionName, input[name="name"], input[placeholder*="title"], input[placeholder*="Name"], input#name', name);
     if (description) {
-      await this.page.fill('textarea[name="description"], textarea#description', description);
+      await this.page.fill('textarea#createElectionDescription, textarea[name="description"], textarea#description', description);
     }
   }
 

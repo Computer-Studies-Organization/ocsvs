@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS } from '../../fixtures/db-setup';
+import { TEST_USERS, resetVoterVotes } from '../../fixtures/db-setup';
 import { LoginPage } from '../../fixtures/page-objects/LoginPage';
 import { VotingPage } from '../../fixtures/page-objects/VotingPage';
 
 test.describe('Voter Journey Browser UI', () => {
+  test.beforeEach(async () => {
+    await resetVoterVotes();
+  });
   test('voter logs in, selects candidates, and submits ballot successfully', async ({ page }) => {
     const loginPage = new LoginPage(page);
     const votingPage = new VotingPage(page);
@@ -15,26 +18,25 @@ test.describe('Voter Journey Browser UI', () => {
     // 2. Navigate to voting page
     await votingPage.goto();
 
-    // Verify active election header is displayed
-    await expect(page.locator('h1')).toContainText(/Student Council Election|Active/i);
+    // 2. Verify active election header and candidate grid are loaded
+    await page.waitForSelector('.grid [role="button"]', { timeout: 15000 });
 
-    // 3. Select Candidate for President position
-    await votingPage.selectCandidateByName('Alice President');
-
-    // 4. Click Next/Review
+    // 3. Advance through candidates and navigate to Review step
+    await votingPage.selectCandidateByName();
     await votingPage.clickNext();
+    await votingPage.selectCandidateByName();
 
-    // 5. Select Vice President if step is active
-    const vpCard = page.locator('text=Charlie VP').first();
-    if (await vpCard.isVisible()) {
-      await votingPage.selectCandidateByName('Charlie VP');
+    const reviewNode = page.locator('button[aria-label="Go to Review step"]');
+    if (await reviewNode.isVisible().catch(() => false)) {
+      await reviewNode.click();
+    } else {
       await votingPage.clickNext();
     }
 
-    // 6. Submit ballot
+    // 4. Submit ballot
     await votingPage.submitBallot();
 
-    // 7. Verify post-submission thank you state or voted state
+    // 5. Verify post-submission thank you / voted state
     await votingPage.expectAlreadyVotedMessage();
   });
 

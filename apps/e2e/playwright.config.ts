@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? [['github'], ['html']] : [['list'], ['html']],
   use: {
     baseURL: 'http://localhost:3001',
@@ -20,6 +20,8 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
+      testMatch: '**/*.spec.ts',
+      testIgnore: /global-setup\.ts/,
     },
     ...(process.env.FULL_MATRIX === 'true'
       ? [
@@ -27,11 +29,15 @@ export default defineConfig({
             name: 'firefox',
             use: { ...devices['Desktop Firefox'] },
             dependencies: ['setup'],
+            testMatch: '**/*.spec.ts',
+            testIgnore: /global-setup\.ts/,
           },
           {
             name: 'webkit',
             use: { ...devices['Desktop Safari'] },
             dependencies: ['setup'],
+            testMatch: '**/*.spec.ts',
+            testIgnore: /global-setup\.ts/,
           },
         ]
       : []),

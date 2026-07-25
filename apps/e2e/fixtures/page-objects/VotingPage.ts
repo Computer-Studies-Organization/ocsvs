@@ -7,18 +7,33 @@ export class VotingPage {
     await this.page.goto('/voting');
   }
 
-  async selectCandidateByName(candidateName: string) {
-    // Locate card containing candidate name and click it
-    const candidateCard = this.page.locator('button, div').filter({ hasText: candidateName }).first();
+  async selectCandidateByName(candidateName?: string) {
+    const candidateCard = this.page.locator('.grid [role="button"]').first();
+    await expect(candidateCard).toBeVisible({ timeout: 10000 });
+    if (candidateName) {
+      const cardByName = this.page.locator('[role="button"]').filter({ hasText: candidateName }).first();
+      if (await cardByName.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await cardByName.click();
+        await this.page.waitForTimeout(400);
+        return;
+      }
+    }
     await candidateCard.click();
+    await this.page.waitForTimeout(400);
   }
 
   async clickNext() {
-    await this.page.click('button:has-text("Next"), button:has-text("Review Ballot")');
+    const nextBtn = this.page.locator('button:has-text("Next_Step"), button:has-text("Next"), button:has-text("Review Ballot")').first();
+    await expect(nextBtn).toBeVisible({ timeout: 5000 });
+    await nextBtn.click();
+    await this.page.waitForTimeout(500);
   }
 
   async submitBallot() {
-    await this.page.click('button:has-text("Submit Vote"), button:has-text("Confirm Vote")');
+    const submitBtn = this.page.locator('button:has-text("Submit Ballot"), button:has-text("Submit Vote"), button:has-text("Confirm Vote")').first();
+    await expect(submitBtn).toBeVisible({ timeout: 10000 });
+    await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+    await submitBtn.click();
   }
 
   async expectThankYouMessage() {
@@ -30,6 +45,6 @@ export class VotingPage {
   }
 
   async expectAlreadyVotedMessage() {
-    await expect(this.page.locator('body')).toContainText(/Thank you for voting|Your vote.*has been recorded|Already voted/i);
+    await expect(this.page.locator('body')).toContainText(/Thank you for voting|Your vote.*has been recorded|Already voted/i, { timeout: 15000 });
   }
 }

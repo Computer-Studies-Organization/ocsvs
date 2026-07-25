@@ -11,10 +11,11 @@ test.describe('Authentication - Login Page', () => {
   });
 
   test('backend login API validates incorrect credentials', async ({ request }) => {
-    const response = await request.post('http://localhost:8787/auth/login', {
+    const response = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: 'C99-99-99999-INVALID',
         password: 'WrongPassword123!',
+        turnstileToken: 'mock-token',
       },
     });
 
@@ -23,10 +24,11 @@ test.describe('Authentication - Login Page', () => {
   });
 
   test('backend login API authenticates valid voter credentials', async ({ request }) => {
-    const response = await request.post('http://localhost:8787/auth/login', {
+    const response = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: TEST_USERS.voter.studentId,
         password: TEST_USERS.voter.password,
+        turnstileToken: 'mock-token',
       },
     });
 
@@ -37,10 +39,11 @@ test.describe('Authentication - Login Page', () => {
   });
 
   test('backend login API authenticates valid admin credentials', async ({ request }) => {
-    const response = await request.post('http://localhost:8787/auth/login', {
+    const response = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: TEST_USERS.admin.studentId,
         password: TEST_USERS.admin.password,
+        turnstileToken: 'mock-token',
       },
     });
 

@@ -6,10 +6,11 @@ test.describe('Admin Election Management & Audit Trail', () => {
   let createdElectionId: string;
 
   test.beforeAll(async ({ request }) => {
-    const loginRes = await request.post('http://localhost:8787/auth/login', {
+    const loginRes = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: TEST_USERS.admin.studentId,
         password: TEST_USERS.admin.password,
+        turnstileToken: 'mock-token',
       },
     });
     adminCookie = loginRes.headers()['set-cookie'] || '';
@@ -25,11 +26,11 @@ test.describe('Admin Election Management & Audit Trail', () => {
   });
 
   test('admin can create election draft and verify audit log entry', async ({ request }) => {
-    const title = `E2E Test Election ${Date.now()}`;
+    const name = `E2E Test Election ${Date.now()}`;
     const createRes = await request.post('http://localhost:8787/elections', {
       headers: { Cookie: adminCookie },
       data: {
-        title,
+        name,
         description: 'Created by automated E2E test suite',
       },
     });
@@ -37,7 +38,7 @@ test.describe('Admin Election Management & Audit Trail', () => {
     expect(createRes.ok()).toBe(true);
     const election = await createRes.json();
     expect(election.id).toBeDefined();
-    expect(election.title).toBe(title);
+    expect(election.name).toBe(name);
     createdElectionId = election.id;
 
     // Verify Audit Log entry recorded
@@ -53,10 +54,11 @@ test.describe('Admin Election Management & Audit Trail', () => {
   });
 
   test('non-admin user is rejected from admin mutation endpoints', async ({ request }) => {
-    const voterLogin = await request.post('http://localhost:8787/auth/login', {
+    const voterLogin = await request.post('http://localhost:8787/login', {
       data: {
         studentNumber: TEST_USERS.voter.studentId,
         password: TEST_USERS.voter.password,
+        turnstileToken: 'mock-token',
       },
     });
     const voterCookie = voterLogin.headers()['set-cookie'] || '';
@@ -64,7 +66,7 @@ test.describe('Admin Election Management & Audit Trail', () => {
     const forbiddenRes = await request.post('http://localhost:8787/elections', {
       headers: { Cookie: voterCookie },
       data: {
-        title: 'Unauthorized Election',
+        name: 'Unauthorized Election',
       },
     });
 
