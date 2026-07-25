@@ -245,9 +245,14 @@ export class CandidateLifecycleCoordinator {
         if (logger) {
           logger.error("Failed to clean up newly uploaded B2 image after DB failure", {
             error: deleteError,
+            orphanedB2Key: url,
           });
         } else {
-          console.warn("Failed to clean up newly uploaded B2 image after DB failure:", deleteError);
+          console.warn(
+            "Failed to clean up newly uploaded B2 image after DB failure:",
+            url,
+            deleteError,
+          );
         }
       }
       throw dbError;

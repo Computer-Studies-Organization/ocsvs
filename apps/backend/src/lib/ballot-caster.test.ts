@@ -186,6 +186,43 @@ describe("DrizzleBallotCaster", () => {
     }
   });
 
+  it("should fail with INVALID_CANDIDATE when candidate belongs to a different election (cross-election injection)", async () => {
+    // A candidate from Election B is submitted into a ballot for Election A.
+    // The candidate exists, is active, and its positionId matches the submitted positionId —
+    // so step 6 (positional mismatch check) passes. The cross-election injection is caught
+    // at step 7, when the Election B positionId is absent from Election A's position list.
+    const electionBPositionId = "pos-from-election-b";
+    const electionAPositionId = "pos-from-election-a";
+
+    mockFindByAccountId.mockResolvedValue({ id: userId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId, // Election A
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    // Candidate exists and is active; its positionId is from Election B
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId: electionBPositionId }]]),
+    );
+    // Election A only has its own position — not the Election B position
+    mockListByElection.mockResolvedValue([{ id: electionAPositionId, electionId }]);
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId, // Election A
+      selections: [{ candidateId, positionId: electionBPositionId }],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      // Step 7: Election B's positionId not found in Election A → INVALID_CANDIDATE
+      expect(result.error.code).toBe("INVALID_CANDIDATE");
+      expect(result.error.message).toBe(ERROR_MESSAGES.INVALID_CANDIDATE);
+    }
+  });
+
   it("should fail with DUPLICATE_POSITION_VOTE when voting twice for same position", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId });
     mockFindElectionById.mockResolvedValue({
