@@ -19,18 +19,24 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
+  const user = c.var.authUser;
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+
+  // Draft elections are not visible to non-admins (404 matches the UI behaviour
+  // of hiding drafts from the voter listing, and avoids leaking candidate names).
+  if (election.status === "draft" && !isAdmin) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+
   // If election is open, only admins or users who have voted can access results
-  if (election.status === "open") {
-    const user = c.var.authUser;
-    if (user && user.role !== "admin" && user.role !== "super_admin") {
-      const studentUser = await userRepo.findByAccountId(db, user.id);
-      if (!studentUser) {
-        return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-      }
-      const votes = await voteRepo.findByUserAndElection(db, studentUser.id, id);
-      if (votes.length === 0) {
-        return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-      }
+  if (election.status === "open" && !isAdmin) {
+    const studentUser = await userRepo.findByAccountId(db, user!.id);
+    if (!studentUser) {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+    }
+    const votes = await voteRepo.findByUserAndElection(db, studentUser.id, id);
+    if (votes.length === 0) {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
     }
   }
 
