@@ -395,6 +395,7 @@ export class InMemoryImageStorage implements ImageStorage {
 }
 
 let localImageStorageInstance: InMemoryImageStorage | null = null;
+let b2ImageStorageInstance: B2ImageStorage | null = null;
 
 export function getImageStorage(env: {
   NODE_ENV?: string;
@@ -418,16 +419,20 @@ export function getImageStorage(env: {
     }
     return localImageStorageInstance;
   }
-  return new B2ImageStorage({
-    applicationKeyId: env.B2_APPLICATION_KEY_ID!,
-    applicationKey: env.B2_APPLICATION_KEY!,
-    bucketName: env.B2_BUCKET_NAME!,
-    publicBaseUrl: env.B2_PUBLIC_BASE_URL!,
-  });
+  if (!b2ImageStorageInstance) {
+    b2ImageStorageInstance = new B2ImageStorage({
+      applicationKeyId: env.B2_APPLICATION_KEY_ID!,
+      applicationKey: env.B2_APPLICATION_KEY!,
+      bucketName: env.B2_BUCKET_NAME!,
+      publicBaseUrl: env.B2_PUBLIC_BASE_URL!,
+    });
+  }
+  return b2ImageStorageInstance;
 }
 
 // ponytail: test-only singleton reset. Add when cross-test state isolation needed.
 // Exported so tests can assert fresh InMemoryImageStorage state between cases.
 export function _resetImageStorageForTest(): void {
   localImageStorageInstance = null;
+  b2ImageStorageInstance = null;
 }
