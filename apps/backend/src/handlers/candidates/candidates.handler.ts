@@ -20,13 +20,13 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 
-  const { fullName, accountId, positionId, manifesto } = c.req.valid("json");
+  const { fullName, accountId, positionId, partyId, manifesto } = c.req.valid("json");
   const { db } = createDb(c);
 
   try {
     const candidate = await candidateLifecycleCoordinator.create(
       db,
-      { fullName, accountId, positionId, manifesto },
+      { fullName, accountId, positionId, partyId, manifesto },
       { id: actorAccountId, username: actorUsername },
     );
 

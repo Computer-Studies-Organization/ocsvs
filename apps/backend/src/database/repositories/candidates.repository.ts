@@ -26,12 +26,13 @@ export const candidateRepo = {
   // Ballot: minimal fields, active-only
   async listForBallot(
     db: DbClient,
-  ): Promise<{ id: string; fullName: string; positionId: string }[]> {
+  ): Promise<{ id: string; fullName: string; positionId: string; partyId: string | null }[]> {
     return await db
       .select({
         id: candidates.id,
         fullName: candidates.fullName,
         positionId: candidates.positionId,
+        partyId: candidates.partyId,
       })
       .from(candidates)
       .where(eq(candidates.isActive, 1))
@@ -64,6 +65,7 @@ export const candidateRepo = {
           fullName: candidates.fullName,
           accountId: candidates.accountId,
           positionId: candidates.positionId,
+          partyId: candidates.partyId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
           imageUrl: candidates.imageUrl,
@@ -117,6 +119,7 @@ export const candidateRepo = {
           fullName: candidates.fullName,
           accountId: candidates.accountId,
           positionId: candidates.positionId,
+          partyId: candidates.partyId,
           manifesto: candidates.manifesto,
           isActive: candidates.isActive,
           imageUrl: candidates.imageUrl,
@@ -175,6 +178,7 @@ export const candidateRepo = {
       fullName: string;
       accountId: string;
       positionId: string;
+      partyId?: string | null;
       manifesto: string;
     },
   ): Promise<string> {
@@ -187,6 +191,7 @@ export const candidateRepo = {
         fullName: data.fullName,
         accountId: data.accountId,
         positionId: data.positionId,
+        partyId: data.partyId ?? null,
         manifesto: data.manifesto,
         isActive: 1,
         createdAt: now,
@@ -202,6 +207,7 @@ export const candidateRepo = {
     id: string,
     data: Partial<{
       fullName?: string;
+      partyId?: string | null;
       manifesto?: string;
       isActive?: number;
     }>,
