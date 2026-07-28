@@ -122,6 +122,11 @@ export const CandidateSchema = z.object({
     description: "Position (FK into positions.id) the candidate is running for",
     example: "pos_101jkl",
   }),
+  partyId: z.string().nullable().optional().openapi({
+    description:
+      "Party List (FK into party_lists.id) the candidate belongs to (null if Independent)",
+    example: "party_101abc",
+  }),
   manifesto: z.string().openapi({
     description: "Candidate manifesto or platform",
     example: "I promise to improve student services...",
@@ -262,6 +267,72 @@ export const PositionSchema = z.object({
     example: 0,
   }),
 });
+
+export const PartyListSchema = z.object({
+  createdAt: z.number().int().openapi({
+    description: "Creation timestamp",
+    example: 1738000000,
+  }),
+  updatedAt: z.number().int().openapi({
+    description: "Last update timestamp",
+    example: 1738000000,
+  }),
+  id: z.string().openapi({
+    description: "Party List ID",
+    example: "party_101abc",
+  }),
+  electionId: z.string().openapi({
+    description: "Election ID this party list belongs to",
+    example: "elec_202mno",
+  }),
+  name: z.string().openapi({
+    description: "Party list name",
+    example: "Innovators Party",
+  }),
+  code: z.string().openapi({
+    description: "Party list code / acronym",
+    example: "INNOVATORS",
+  }),
+  color: z.string().nullable().openapi({
+    description: "Party list badge color (hex string, e.g. #3B82F6)",
+    example: "#3B82F6",
+  }),
+});
+export const SelectPartyListSchema = PartyListSchema;
+
+export const CreatePartyListBodySchema = z
+  .object({
+    name: z.string().min(1).max(200).openapi({
+      description: "Party list name",
+      example: "Innovators Party",
+    }),
+    code: z.string().min(1).max(50).openapi({
+      description: "Party list code / acronym",
+      example: "INNOVATORS",
+    }),
+    color: z.string().max(20).optional().nullable().openapi({
+      description: "Party list hex color",
+      example: "#3B82F6",
+    }),
+  })
+  .openapi("CreatePartyListBody");
+
+export const UpdatePartyListBodySchema = z
+  .object({
+    name: z.string().min(1).max(200).optional().openapi({
+      description: "Party list name",
+      example: "Innovators Party",
+    }),
+    code: z.string().min(1).max(50).optional().openapi({
+      description: "Party list code / acronym",
+      example: "INNOVATORS",
+    }),
+    color: z.string().max(20).optional().nullable().openapi({
+      description: "Party list hex color",
+      example: "#3B82F6",
+    }),
+  })
+  .openapi("UpdatePartyListBody");
 
 export const CreateElectionBodySchema = z
   .object({

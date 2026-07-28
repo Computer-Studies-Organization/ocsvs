@@ -100,6 +100,29 @@ export const positions = sqliteTable(
   ],
 );
 
+export const partyLists = sqliteTable(
+  "party_lists",
+  {
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    id: text("id").primaryKey(),
+    electionId: text("election_id")
+      .notNull()
+      .references(() => elections.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    color: text("color"),
+  },
+  (table) => [
+    uniqueIndex("idx_party_lists_election_name").on(table.electionId, table.name),
+    uniqueIndex("idx_party_lists_election_code").on(table.electionId, table.code),
+  ],
+);
+
 // NOTE: libSQL/Turso defaults to `PRAGMA foreign_keys = ON`, so the FK
 // constraints declared here ARE enforced at runtime. The `onDelete: 'restrict'`
 // on `candidates.position_id`, `votes.position_id`, and `votes.election_id`
@@ -124,6 +147,13 @@ export const candidates = sqliteTable("candidates", {
   positionId: text("position_id")
     .notNull()
     .references(() => positions.id, { onDelete: "restrict" }),
+  // NOTE: onDelete: "set null" is declared here but is silently dropped by
+  // Drizzle when generating the ALTER TABLE ADD COLUMN migration (bug #5619:
+  // https://github.com/drizzle-team/drizzle-orm/issues/5619). The DB-level FK
+  // therefore acts as NO ACTION (RESTRICT). partyListRepo.delete() compensates
+  // by manually nullifying this column before deleting the party row.
+  partyId: text("party_id").references(() => partyLists.id, { onDelete: "set null" }),
+
   manifesto: text("manifesto").notNull(),
   isActive: integer("is_active").notNull().default(1),
   imageUrl: text("image_url"),
@@ -222,6 +252,7 @@ export const SelectAccountSchema = createSelectSchema(accounts);
 export const SelectSessionSchema = createSelectSchema(sessions);
 export const SelectElectionSchema = createSelectSchema(elections);
 export const SelectPositionSchema = createSelectSchema(positions);
+export const SelectPartyListSchema = createSelectSchema(partyLists);
 export const SelectCandidateSchema = createSelectSchema(candidates);
 export const SelectVoteSchema = createSelectSchema(votes);
 export const SelectBallotSnapshotSchema = createSelectSchema(ballotSnapshots);

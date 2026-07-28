@@ -38,6 +38,9 @@ export const AUDIT_ACTIONS = z.enum([
   "candidate.create",
   "candidate.update",
   "candidate.deactivate",
+  "party.create",
+  "party.update",
+  "party.delete",
   "user.update",
   "user.create",
   "user.bulk_import",
@@ -48,5 +51,5 @@ export const AUDIT_ACTIONS = z.enum([
 ]);
 export type AuditAction = z.infer<typeof AUDIT_ACTIONS>;
 
-export const TARGET_TYPES = z.enum(["election", "position", "candidate", "user"]);
+export const TARGET_TYPES = z.enum(["election", "position", "candidate", "party", "user"]);
 export type TargetType = z.infer<typeof TARGET_TYPES>;
