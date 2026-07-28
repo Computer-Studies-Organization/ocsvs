@@ -2,7 +2,14 @@ import { z } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
 import { AUDIT_ACTIONS } from "@/lib/constants/audit-actions";
 import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./openapi-schemas";
-import { DbSelectUserSchema, auditLog, elections, loginAttempts, positions } from "./schema";
+import {
+  DbSelectUserSchema,
+  auditLog,
+  elections,
+  loginAttempts,
+  partyLists,
+  positions,
+} from "./schema";
 
 describe("user schema exports", () => {
   it("uses distinct names for database and API user schemas", () => {
@@ -39,9 +46,10 @@ describe("user schema exports", () => {
 });
 
 describe("election management schema", () => {
-  it("exports the new elections and positions tables", () => {
+  it("exports the new elections, positions, and partyLists tables", () => {
     expect(elections).toBeDefined();
     expect(positions).toBeDefined();
+    expect(partyLists).toBeDefined();
   });
 });
 
@@ -102,7 +110,7 @@ describe("audit_log schema", () => {
 
   it("accepts every AUDIT_ACTIONS value through the OpenAPI `action` field", () => {
     const actionValues = AUDIT_ACTIONS.options;
-    expect(actionValues).toHaveLength(16);
+    expect(actionValues).toHaveLength(19);
 
     const sampleRow = {
       id: "f0e1d2c3-b4a5-4687-8901-23456789abcd",
