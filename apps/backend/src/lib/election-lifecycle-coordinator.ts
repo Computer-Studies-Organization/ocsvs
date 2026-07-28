@@ -1,5 +1,6 @@
 import type { DbClient } from "@/database/repositories/database.type";
 import type { TElectionStatus } from "@/database/schema";
+import type { ElectionRow } from "@/database/repositories/election.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
@@ -12,6 +13,10 @@ export interface CreateElectionInput {
   opensAt?: number | null;
   closesAt?: number | null;
 }
+
+export type UpdateElectionInput = Partial<
+  Pick<ElectionRow, "name" | "description" | "opensAt" | "closesAt">
+>;
 
 export interface TransitionParams {
   to: TElectionStatus;
@@ -52,6 +57,43 @@ export const ElectionLifecycleCoordinator = {
         actorUsernameSnapshot: actor.username,
       });
       return id;
+    });
+  },
+
+  /**
+   * Updates metadata for a Draft Election and writes the audit log atomically.
+   */
+  async updateMetadata(
+    db: DbClient,
+    electionId: string,
+    input: UpdateElectionInput,
+    actor: { id: string; username: string },
+  ): Promise<ElectionRow> {
+    return await db.transaction(async (tx) => {
+      const existing = await electionRepo.findById(tx, electionId);
+      if (!existing) {
+        throw new TransitionError("ELECTION_NOT_FOUND", 404);
+      }
+      if (existing.status !== "draft") {
+        throw new TransitionError("ELECTION_NOT_IN_DRAFT", 409);
+      }
+
+      await electionRepo.updateMetadata(tx, electionId, input);
+
+      const updated = await electionRepo.findById(tx, electionId);
+      if (!updated) {
+        throw new Error("Election row missing immediately after update");
+      }
+
+      await auditLogRepo.insert(tx, {
+        action: "election.update",
+        targetType: "election",
+        targetId: electionId,
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+      });
+
+      return updated;
     });
   },
 

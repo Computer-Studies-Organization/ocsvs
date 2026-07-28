@@ -11,7 +11,6 @@ import type {
 import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { electionRepo } from "@/database/repositories/election.repository";
-import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { TransitionError } from "@/lib/election-lifecycle";
@@ -83,27 +82,22 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
-  const existing = await electionRepo.findById(db, id);
-  if (!existing) {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-  if (existing.status !== "draft") {
-    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT }, httpStatusCodes.CONFLICT);
-  }
-  await electionRepo.updateMetadata(db, id, body);
-  const updated = await electionRepo.findById(db, id);
-  if (!updated) {
-    throw new Error("Election row missing immediately after update");
-  }
-  await auditLogRepo.insert(db, {
-    action: "election.update",
-    targetType: "election",
-    targetId: id,
-    actorAccountIdSnapshot: actorAccountId,
-    actorUsernameSnapshot: actorUsername,
-  });
 
-  return c.json(updated, httpStatusCodes.OK);
+  try {
+    const updated = await ElectionLifecycleCoordinator.updateMetadata(db, id, body, {
+      id: actorAccountId,
+      username: actorUsername,
+    });
+    return c.json(updated, httpStatusCodes.OK);
+  } catch (err) {
+    if (err instanceof TransitionError) {
+      if (err.status === httpStatusCodes.NOT_FOUND) {
+        return c.json({ message: err.message }, httpStatusCodes.NOT_FOUND);
+      }
+      return c.json({ message: err.message }, httpStatusCodes.CONFLICT);
+    }
+    throw err;
+  }
 };
 
 export const transitionElectionHandler: AppRouteHandler<typeof transitionElectionRoute> = async (

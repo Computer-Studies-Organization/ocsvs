@@ -14,7 +14,8 @@ export type TransitionErrorCode =
   | "INVALID_TRANSITION_BODY"
   | "ELECTION_NOT_FOUND"
   | "ANOTHER_ELECTION_IS_OPEN"
-  | "ELECTION_TRANSITION_CONFLICT";
+  | "ELECTION_TRANSITION_CONFLICT"
+  | "ELECTION_NOT_IN_DRAFT";
 
 export class TransitionError extends Error {
   readonly code: TransitionErrorCode;

@@ -5,6 +5,7 @@ const {
   mockFindById,
   mockCreate,
   mockUpdateStatus,
+  mockUpdateMetadata,
   mockFindOpen,
   mockCountPositions,
   mockAuditInsert,
@@ -12,6 +13,7 @@ const {
   mockFindById: vi.fn(),
   mockCreate: vi.fn(),
   mockUpdateStatus: vi.fn(),
+  mockUpdateMetadata: vi.fn(),
   mockFindOpen: vi.fn(),
   mockCountPositions: vi.fn(),
   mockAuditInsert: vi.fn(),
@@ -22,6 +24,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
     findById: mockFindById,
     create: mockCreate,
     updateStatus: mockUpdateStatus,
+    updateMetadata: mockUpdateMetadata,
     findOpen: mockFindOpen,
   },
 }));
@@ -64,6 +67,58 @@ describe("ElectionLifecycleCoordinator", () => {
         actorAccountIdSnapshot: "admin-id",
         actorUsernameSnapshot: "admin",
       });
+    });
+  });
+
+  describe("updateMetadata", () => {
+    it("updates metadata for a draft election and inserts an audit log entry", async () => {
+      const existing = { id: "e1", name: "Old Name", status: "draft" };
+      const updated = { id: "e1", name: "New Name", status: "draft" };
+      mockFindById.mockResolvedValueOnce(existing).mockResolvedValueOnce(updated);
+      mockUpdateMetadata.mockResolvedValueOnce(true);
+
+      const result = await ElectionLifecycleCoordinator.updateMetadata(
+        mockDb,
+        "e1",
+        { name: "New Name" },
+        { id: "admin-id", username: "admin" },
+      );
+
+      expect(result).toEqual(updated);
+      expect(mockUpdateMetadata).toHaveBeenCalledWith(mockDb, "e1", { name: "New Name" });
+      expect(mockAuditInsert).toHaveBeenCalledWith(mockDb, {
+        action: "election.update",
+        targetType: "election",
+        targetId: "e1",
+        actorAccountIdSnapshot: "admin-id",
+        actorUsernameSnapshot: "admin",
+      });
+    });
+
+    it("throws ELECTION_NOT_FOUND when election does not exist", async () => {
+      mockFindById.mockResolvedValueOnce(null);
+
+      await expect(
+        ElectionLifecycleCoordinator.updateMetadata(
+          mockDb,
+          "non-existent",
+          { name: "New Name" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_FOUND", status: 404 }));
+    });
+
+    it("throws ELECTION_NOT_IN_DRAFT when election is not in draft status", async () => {
+      mockFindById.mockResolvedValueOnce({ id: "e1", name: "Open Election", status: "open" });
+
+      await expect(
+        ElectionLifecycleCoordinator.updateMetadata(
+          mockDb,
+          "e1",
+          { name: "New Name" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
     });
   });
 
