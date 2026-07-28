@@ -12,6 +12,7 @@ import {
   isLastPosition,
   isReviewStep,
   selectCandidate,
+  selectPartySlate,
 } from "./voting-stepper-logic";
 
 const positions: TStepperPosition[] = [
@@ -167,4 +168,56 @@ test("getSelectedCount counts non-null votes", () => {
 test("getSelectedCount returns 0 when nothing selected", () => {
   const state = createVotingState(positions);
   expect(getSelectedCount(state)).toBe(0);
+});
+
+const partyPositions: TStepperPosition[] = [
+  {
+    id: "pos-1",
+    name: "President",
+    displayOrder: 0,
+    candidates: [
+      { id: "c1", fullName: "Alice", imageUrl: null, manifesto: "", partyId: "party-a" },
+      { id: "c2", fullName: "Bob", imageUrl: null, manifesto: "", partyId: "party-b" },
+    ],
+  },
+  {
+    id: "pos-2",
+    name: "Vice President",
+    displayOrder: 1,
+    candidates: [
+      { id: "c3", fullName: "Charlie", imageUrl: null, manifesto: "", partyId: "party-a" },
+      { id: "c4", fullName: "Dave", imageUrl: null, manifesto: "", partyId: "party-b" },
+    ],
+  },
+  {
+    id: "pos-3",
+    name: "Secretary",
+    displayOrder: 2,
+    candidates: [
+      // no party-a candidate — only party-b
+      { id: "c5", fullName: "Eve", imageUrl: null, manifesto: "", partyId: "party-b" },
+    ],
+  },
+];
+
+test("selectPartySlate fills all positions that have a matching party candidate", () => {
+  const state = createVotingState(partyPositions);
+  const next = selectPartySlate(state, partyPositions, "party-a");
+  expect(next.selectedVotes["pos-1"]).toBe("c1");
+  expect(next.selectedVotes["pos-2"]).toBe("c3");
+});
+
+test("selectPartySlate leaves positions with no matching party candidate unchanged", () => {
+  const state = createVotingState(partyPositions);
+  const next = selectPartySlate(state, partyPositions, "party-a");
+  // pos-3 has no party-a candidate, so it stays null
+  expect(next.selectedVotes["pos-3"]).toBeNull();
+});
+
+test("selectPartySlate overwrites an existing manual selection", () => {
+  let state = createVotingState(partyPositions);
+  state = selectCandidate(state, "pos-1", "c2"); // manually pick party-b candidate
+  const next = selectPartySlate(state, partyPositions, "party-a");
+  // party-a slate replaces the manual pick
+  expect(next.selectedVotes["pos-1"]).toBe("c1");
 });

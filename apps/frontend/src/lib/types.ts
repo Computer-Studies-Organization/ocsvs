@@ -58,10 +58,21 @@ export interface TCandidate {
   fullName: string;
   accountId: string;
   positionId: string;
+  partyId?: string | null;
   manifesto: string;
   isActive: number;
   imageUrl: string | null;
 }
+
+export type TPartyList = {
+  id: string;
+  electionId: string;
+  name: string;
+  code: string;
+  color: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
 
 export interface TVote {
   user_id: string;
