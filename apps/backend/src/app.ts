@@ -6,6 +6,7 @@ import auth from "@/routes/auth/auth.index";
 import candidates from "@/routes/candidates";
 import elections from "@/routes/elections";
 import index from "@/routes/index.route";
+import parties from "@/routes/parties";
 import profile from "@/routes/profile";
 import users from "@/routes/users";
 import votes from "@/routes/votes";
@@ -13,7 +14,18 @@ import adminStats from "@/routes/admin-stats";
 
 const app = createApp();
 
-const routes = [index, auth, profile, users, candidates, votes, auditLog, elections, adminStats];
+const routes = [
+  index,
+  auth,
+  profile,
+  users,
+  candidates,
+  votes,
+  auditLog,
+  elections,
+  parties,
+  adminStats,
+];
 
 configureOpenAPI(app as AppOpenAPI);
 

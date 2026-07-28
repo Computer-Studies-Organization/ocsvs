@@ -34,11 +34,13 @@ export interface CreateCandidateInput {
   fullName: string;
   accountId: string;
   positionId: string;
+  partyId?: string | null;
   manifesto: string;
 }
 
 export interface UpdateCandidateInput {
   fullName?: string;
+  partyId?: string | null;
   manifesto?: string;
 }
 
@@ -60,6 +62,7 @@ export class CandidateLifecycleCoordinator {
     fullName: string;
     accountId: string;
     positionId: string;
+    partyId?: string | null;
     manifesto: string;
   }> {
     return await db.transaction(async (tx) => {
@@ -103,6 +106,7 @@ export class CandidateLifecycleCoordinator {
         fullName: input.fullName,
         accountId: input.accountId,
         positionId: input.positionId,
+        partyId: input.partyId,
         manifesto: input.manifesto,
       });
 
@@ -120,6 +124,7 @@ export class CandidateLifecycleCoordinator {
         fullName: input.fullName,
         accountId: input.accountId,
         positionId: input.positionId,
+        partyId: input.partyId ?? null,
         manifesto: input.manifesto,
       };
     });

@@ -9,11 +9,13 @@ export const createCandidateSchema = z.object({
   fullName: z.string(),
   accountId: z.string(),
   positionId: z.string(),
+  partyId: z.string().nullable().optional(),
   manifesto: z.string(),
 });
 
 export const updateCandidateSchema = z.object({
   fullName: z.string().optional(),
+  partyId: z.string().nullable().optional(),
   manifesto: z.string().optional(),
   isActive: z.number().int().optional(),
 });
