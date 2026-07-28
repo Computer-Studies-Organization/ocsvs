@@ -11,7 +11,7 @@ import type {
   unlockUserRoute,
 } from "@/routes/users/routes";
 import { createDb } from "@/config/db";
-import { userAccountQueries } from "@/database/queries/user-account.queries";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { userLifecycleCoordinator, UserLifecycleError } from "@/lib/user-lifecycle-coordinator";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -20,7 +20,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   const { db } = createDb(c);
   const { page, limit, search, yearLevel, course, includeDeleted } = c.req.valid("query");
 
-  const result = await userAccountQueries.listForAdmin(db, {
+  const result = await voterAccountStore.listForAdmin(db, {
     page,
     limit,
     search,
@@ -42,7 +42,7 @@ export const getUser: AppRouteHandler<typeof getUserRoute> = async (c) => {
   const { db } = createDb(c);
   const { userId } = c.req.valid("param");
 
-  const user = await userAccountQueries.findById(db, userId);
+  const user = await voterAccountStore.findById(db, userId);
 
   if (!user) {
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
@@ -66,7 +66,7 @@ export const updateUser: AppRouteHandler<typeof updateUserRoute> = async (c) => 
 
   try {
     await userLifecycleCoordinator.update(db, userId, updateData, actor);
-    const updatedUser = await userAccountQueries.findById(db, userId);
+    const updatedUser = await voterAccountStore.findById(db, userId);
 
     return c.json(
       {

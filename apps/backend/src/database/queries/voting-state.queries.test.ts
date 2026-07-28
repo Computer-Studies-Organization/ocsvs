@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
-import { userRepo } from "@/database/repositories/users.repository";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { getVotingState } from "./voting-state.queries";
 
@@ -15,8 +15,8 @@ vi.mock("@/database/repositories/election.repository", () => ({
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: { getResults: vi.fn() },
 }));
-vi.mock("@/database/repositories/users.repository", () => ({
-  userRepo: { findByAccountId: vi.fn() },
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: { findByAccountId: vi.fn() },
 }));
 vi.mock("@/database/repositories/votes.repository", () => ({
   voteRepo: { findByUserAndElection: vi.fn() },
@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.mocked(electionRepo.findEarliestDraft).mockReset();
   vi.mocked(electionRepo.findLatestClosed).mockReset();
   vi.mocked(electionQueries.getResults).mockReset();
-  vi.mocked(userRepo.findByAccountId).mockReset();
+  vi.mocked(voterAccountStore.findByAccountId).mockReset();
   vi.mocked(voteRepo.findByUserAndElection).mockReset();
 });
 
@@ -50,7 +50,7 @@ describe("getVotingState", () => {
       lastClosed: null,
       myVotes: { electionId: null, votes: [] },
     });
-    expect(userRepo.findByAccountId).not.toHaveBeenCalled();
+    expect(voterAccountStore.findByAccountId).not.toHaveBeenCalled();
     expect(voteRepo.findByUserAndElection).not.toHaveBeenCalled();
   });
 
@@ -69,7 +69,7 @@ describe("getVotingState", () => {
     vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
     vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
     vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
-    vi.mocked(userRepo.findByAccountId).mockResolvedValue(mockUser);
+    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(mockUser);
     vi.mocked(voteRepo.findByUserAndElection).mockResolvedValue([]);
 
     const result = await getVotingState(db, accountId);
@@ -180,7 +180,7 @@ describe("getVotingState", () => {
     vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
     vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
     vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
-    vi.mocked(userRepo.findByAccountId).mockResolvedValue(mockUser);
+    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(mockUser);
     vi.mocked(voteRepo.findByUserAndElection).mockResolvedValue([
       { candidateId: "c1", positionId: "p1" },
     ] as any);
@@ -191,7 +191,7 @@ describe("getVotingState", () => {
       electionId: "e-open",
       votes: [{ candidateId: "c1", positionId: "p1" }],
     });
-    expect(userRepo.findByAccountId).toHaveBeenCalledWith(db, accountId);
+    expect(voterAccountStore.findByAccountId).toHaveBeenCalledWith(db, accountId);
     expect(voteRepo.findByUserAndElection).toHaveBeenCalledWith(db, "user-1", "e-open");
   });
 
@@ -203,7 +203,7 @@ describe("getVotingState", () => {
     const result = await getVotingState(db, accountId);
 
     expect(result.myVotes).toEqual({ electionId: null, votes: [] });
-    expect(userRepo.findByAccountId).not.toHaveBeenCalled();
+    expect(voterAccountStore.findByAccountId).not.toHaveBeenCalled();
   });
 
   it("returns empty myVotes when the account has no associated user", async () => {
@@ -221,7 +221,7 @@ describe("getVotingState", () => {
     vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
     vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
     vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
-    vi.mocked(userRepo.findByAccountId).mockResolvedValue(null);
+    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(null);
 
     const result = await getVotingState(db, accountId);
 

@@ -5,9 +5,7 @@ import type {
   updateMyProfileRoute,
 } from "@/routes/profile/routes";
 import { createDb } from "@/config/db";
-import { userAccountQueries } from "@/database/queries/user-account.queries";
-import { accountRepo } from "@/database/repositories/account.repository";
-import { userRepo } from "@/database/repositories/users.repository";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { isUniqueConstraintError } from "@/lib/errors";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -26,7 +24,7 @@ export const getMyProfile: AppRouteHandler<typeof getMyProfileRoute> = async (c)
   const { db } = createDb(c);
   const authUser = c.var.authUser;
 
-  const profile = await userAccountQueries.getProfile(db, authUser.id);
+  const profile = await voterAccountStore.getProfile(db, authUser.id);
 
   if (!profile) {
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.UNAUTHORIZED);
@@ -63,7 +61,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   // Get user record by account ID for users table update
-  const user = await userRepo.findByAccountId(db, authUser.id);
+  const user = await voterAccountStore.findByAccountId(db, authUser.id);
 
   if (!user) {
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.UNAUTHORIZED);
@@ -77,7 +75,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   try {
     await db.transaction(async (tx) => {
       if (updateData.username) {
-        const usernameTaken = await accountRepo.usernameExists(
+        const usernameTaken = await voterAccountStore.usernameExists(
           tx,
           updateData.username,
           authUser.id,
@@ -94,7 +92,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
       }
 
       if (Object.keys(accountFields).length > 0) {
-        await accountRepo.updateAccount(tx, authUser.id, accountFields);
+        await voterAccountStore.updateAccount(tx, authUser.id, accountFields);
       }
 
       // Update users table if profile fields present
@@ -103,7 +101,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
       if (updateData.lastName !== undefined) userFields.lastName = updateData.lastName;
 
       if (Object.keys(userFields).length > 0) {
-        await userRepo.updateUser(tx, user.id, userFields);
+        await voterAccountStore.updateUser(tx, user.id, userFields);
       }
     });
   } catch (error) {
@@ -117,7 +115,7 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
   }
 
   // Fetch updated profile
-  const updatedProfile = await userAccountQueries.getProfile(db, authUser.id);
+  const updatedProfile = await voterAccountStore.getProfile(db, authUser.id);
 
   return c.json(
     {
@@ -134,7 +132,7 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   const { currentPassword, newPassword } = c.req.valid("json");
 
   // Fetch current password hash
-  const account = await accountRepo.getPasswordHash(db, authUser.id);
+  const account = await voterAccountStore.getPasswordHash(db, authUser.id);
 
   if (!account) {
     return c.json({ message: ERROR_MESSAGES.USER_NOT_FOUND }, httpStatusCodes.UNAUTHORIZED);
@@ -155,7 +153,7 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   // closes the window where one write could succeed while the other fails.
   const newPasswordHash = await hashPassword(newPassword);
   try {
-    await accountRepo.changePasswordAndInvalidateSessions(db, authUser.id, newPasswordHash);
+    await voterAccountStore.changePasswordAndInvalidateSessions(db, authUser.id, newPasswordHash);
   } catch (error) {
     c.var.logger?.error(
       { error, accountId: authUser.id },

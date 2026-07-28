@@ -51,28 +51,18 @@ const {
   mockAuditLoggerInsert: vi.fn(),
 }));
 
-// Mock repositories and query files
-vi.mock("@/database/repositories/account.repository", () => ({
-  accountRepo: {
+// Mock voterAccountStore
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
     accountExists: mockAccountExists,
     create: mockAccountCreate,
     usernameExists: mockUsernameExists,
     updateAccount: mockUpdateAccount,
+    updateUser: mockUpdateUser,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     softDelete: mockAccountSoftDelete,
     restore: mockAccountRestore,
     hardDelete: mockAccountHardDelete,
-  },
-}));
-
-vi.mock("@/database/repositories/users.repository", () => ({
-  userRepo: {
-    updateUser: mockUpdateUser,
-  },
-}));
-
-vi.mock("@/database/queries/user-account.queries", () => ({
-  userAccountQueries: {
     findByStudentId: mockFindByStudentId,
     findById: mockFindById,
     getAccountDeleteStatus: mockGetAccountDeleteStatus,

@@ -31,15 +31,10 @@ const mockHardDelete = vi.fn();
 const mockInsert = vi.fn();
 const mockFindById = vi.fn();
 
-vi.mock("@/database/queries/user-account.queries", () => ({
-  userAccountQueries: {
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
     getAccountDeleteStatus: (...args: any[]) => mockGetAccountDeleteStatus(...args),
     findById: (...args: any[]) => mockFindById(...args),
-  },
-}));
-
-vi.mock("@/database/repositories/account.repository", () => ({
-  accountRepo: {
     hardDelete: (...args: any[]) => mockHardDelete(...args),
     countActiveAdminsAndSuperAdmins: (...args: any[]) =>
       mockCountActiveAdminsAndSuperAdmins(...args),

@@ -69,8 +69,8 @@ const { mockFindByStudentId } = vi.hoisted(() => ({
   mockFindByStudentId: vi.fn(),
 }));
 
-vi.mock("@/database/queries/user-account.queries", () => ({
-  userAccountQueries: {
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
     findByStudentId: mockFindByStudentId,
     listForAdmin: vi.fn(),
     findById: vi.fn(),

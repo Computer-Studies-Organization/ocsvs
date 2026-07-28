@@ -33,49 +33,34 @@ const {
   mockGetPasswordHash,
   mockUpdatePassword,
   mockChangePasswordAndInvalidateSessions,
+  mockFindByAccountId,
+  mockUpdateUser,
+  mockGetProfile,
 } = vi.hoisted(() => ({
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockGetPasswordHash: vi.fn(),
   mockUpdatePassword: vi.fn(),
   mockChangePasswordAndInvalidateSessions: vi.fn().mockResolvedValue(undefined),
+  mockFindByAccountId: vi.fn(),
+  mockUpdateUser: vi.fn(),
+  mockGetProfile: vi.fn(),
 }));
 
-vi.mock("@/database/repositories/account.repository", () => ({
-  accountRepo: {
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
     accountExists: vi.fn(),
     usernameExists: mockUsernameExists,
     create: vi.fn(),
     updateAccount: mockUpdateAccount,
+    updateUser: mockUpdateUser,
     updatePassword: mockUpdatePassword,
     changePasswordAndInvalidateSessions: mockChangePasswordAndInvalidateSessions,
     getPasswordHash: mockGetPasswordHash,
     softDelete: vi.fn(),
     restore: vi.fn(),
-  },
-}));
-
-// Mock the users repository
-const { mockFindByAccountId, mockUpdateUser } = vi.hoisted(() => ({
-  mockFindByAccountId: vi.fn(),
-  mockUpdateUser: vi.fn(),
-}));
-
-vi.mock("@/database/repositories/users.repository", () => ({
-  userRepo: {
     findByAccountId: mockFindByAccountId,
     getAccountId: vi.fn(),
-    updateUser: mockUpdateUser,
-  },
-}));
-
-// Mock the user account queries
-const { mockGetProfile } = vi.hoisted(() => ({
-  mockGetProfile: vi.fn(),
-}));
-
-vi.mock("@/database/queries/user-account.queries", () => ({
-  userAccountQueries: {
     getProfile: mockGetProfile,
     listForAdmin: vi.fn(),
     findById: vi.fn(),

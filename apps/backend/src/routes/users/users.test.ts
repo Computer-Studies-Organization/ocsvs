@@ -61,35 +61,11 @@ vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
-// Mock the users repository (single-table ops only)
-vi.mock("@/database/repositories/users.repository", () => ({
-  userRepo: {
-    getAccountId: vi.fn(),
-    findByAccountId: vi.fn(),
-    updateUser: vi.fn(),
-  },
-}));
-
-// Mock the user account queries (joined queries)
-const { mockListForAdmin, mockFindById, mockGetAccountDeleteStatus, mockFindByStudentId } =
-  vi.hoisted(() => ({
-    mockListForAdmin: vi.fn(),
-    mockFindById: vi.fn(),
-    mockGetAccountDeleteStatus: vi.fn(),
-    mockFindByStudentId: vi.fn(),
-  }));
-
-vi.mock("@/database/queries/user-account.queries", () => ({
-  userAccountQueries: {
-    listForAdmin: mockListForAdmin,
-    findById: mockFindById,
-    getAccountDeleteStatus: mockGetAccountDeleteStatus,
-    findByStudentId: mockFindByStudentId,
-    getProfile: vi.fn(),
-  },
-}));
-
 const {
+  mockListForAdmin,
+  mockFindById,
+  mockGetAccountDeleteStatus,
+  mockFindByStudentId,
   mockUsernameExists,
   mockUpdateAccount,
   mockSoftDelete,
@@ -100,7 +76,13 @@ const {
   mockIsCandidate,
   mockAccountExists,
   mockCreate,
+  mockAuditLogInsert,
+  mockClearAttempts,
 } = vi.hoisted(() => ({
+  mockListForAdmin: vi.fn(),
+  mockFindById: vi.fn(),
+  mockGetAccountDeleteStatus: vi.fn(),
+  mockFindByStudentId: vi.fn(),
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockSoftDelete: vi.fn(),
@@ -111,11 +93,33 @@ const {
   mockIsCandidate: vi.fn(),
   mockAccountExists: vi.fn(),
   mockCreate: vi.fn(),
-}));
-
-const { mockAuditLogInsert, mockClearAttempts } = vi.hoisted(() => ({
   mockAuditLogInsert: vi.fn(),
   mockClearAttempts: vi.fn(),
+}));
+
+// Mock voterAccountStore
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
+    getAccountId: vi.fn(),
+    findByAccountId: vi.fn(),
+    updateUser: vi.fn(),
+    listForAdmin: mockListForAdmin,
+    findById: mockFindById,
+    getAccountDeleteStatus: mockGetAccountDeleteStatus,
+    findByStudentId: mockFindByStudentId,
+    getProfile: vi.fn(),
+    accountExists: mockAccountExists,
+    usernameExists: mockUsernameExists,
+    create: mockCreate,
+    updateAccount: mockUpdateAccount,
+    updatePassword: vi.fn(),
+    getPasswordHash: vi.fn(),
+    softDelete: mockSoftDelete,
+    countActiveAdmins: mockCountActiveAdmins,
+    countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
+    restore: mockRestore,
+    hardDelete: mockHardDelete,
+  },
 }));
 
 vi.mock("@/database/repositories/login-attempt.repository", () => ({
@@ -138,22 +142,6 @@ vi.mock("@/database/repositories/audit-log.repository", () => ({
 vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     isCandidate: mockIsCandidate,
-  },
-}));
-
-vi.mock("@/database/repositories/account.repository", () => ({
-  accountRepo: {
-    accountExists: mockAccountExists,
-    usernameExists: mockUsernameExists,
-    create: mockCreate,
-    updateAccount: mockUpdateAccount,
-    updatePassword: vi.fn(),
-    getPasswordHash: vi.fn(),
-    softDelete: mockSoftDelete,
-    countActiveAdmins: mockCountActiveAdmins,
-    countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
-    restore: mockRestore,
-    hardDelete: mockHardDelete,
   },
 }));
 

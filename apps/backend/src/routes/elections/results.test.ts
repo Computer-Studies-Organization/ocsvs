@@ -81,8 +81,8 @@ vi.mock("@/database/repositories/election.repository", () => ({
   },
 }));
 
-vi.mock("@/database/repositories/users.repository", () => ({
-  userRepo: {
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: {
     findByAccountId: mockFindByAccountId,
   },
 }));

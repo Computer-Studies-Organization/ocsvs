@@ -2,7 +2,7 @@ import type { DbClient } from "../repositories/database.type";
 import type { ResultsPosition } from "@/database/queries/election.queries";
 import { electionRepo, type ElectionRow } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
-import { userRepo } from "@/database/repositories/users.repository";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
 
 export interface NextDraft {
@@ -99,7 +99,7 @@ async function getMyVotesForOpen(
   if (!openId) {
     return { electionId: null, votes: [] };
   }
-  const user = await userRepo.findByAccountId(db, accountId);
+  const user = await voterAccountStore.findByAccountId(db, accountId);
   if (!user) {
     return { electionId: openId, votes: [] };
   }

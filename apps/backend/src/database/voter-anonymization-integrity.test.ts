@@ -4,11 +4,10 @@ import { describe, expect, it, afterEach, afterAll } from "vitest";
 import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "@/database/schema";
-import { accountRepo } from "@/database/repositories/account.repository";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { userRepo } from "@/database/repositories/users.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { DrizzleBallotCaster } from "@/lib/ballot-caster";
@@ -88,7 +87,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
 
     // 2. Seed Admin, Super Admin, and an Election
     const adminAccountId = crypto.randomUUID();
-    await accountRepo.create(db, {
+    await voterAccountStore.create(db, {
       accountId: adminAccountId,
       username: "admin_user",
       email: "admin@cso.org",
@@ -121,7 +120,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     });
 
     const candidateAccountId = crypto.randomUUID();
-    await accountRepo.create(db, {
+    await voterAccountStore.create(db, {
       accountId: candidateAccountId,
       username: "candidate_alice",
       email: "alice@cso.org",
@@ -193,7 +192,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     expect(postVoteTurnout?.count).toBe(1);
 
     // Verify user has cast a vote in the votes table
-    const dbUser = await userRepo.findByAccountId(db, voterRegistration.accountId);
+    const dbUser = await voterAccountStore.findByAccountId(db, voterRegistration.accountId);
     expect(dbUser).toBeDefined();
     const userVotes = await voteRepo.findByUserAndElection(db, dbUser!.id, electionId);
     expect(userVotes).toHaveLength(1);
@@ -228,7 +227,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     expect(postDeleteTurnout?.count).toBe(1);
 
     // User should not exist anymore
-    const deletedUser = await userRepo.findByAccountId(db, voterRegistration.accountId);
+    const deletedUser = await voterAccountStore.findByAccountId(db, voterRegistration.accountId);
     expect(deletedUser).toBeNull();
 
     // Check the votes table directly
@@ -276,7 +275,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
 
     // 2. Seed Admin, Super Admin, and a Draft Election
     const adminAccountId = crypto.randomUUID();
-    await accountRepo.create(db, {
+    await voterAccountStore.create(db, {
       accountId: adminAccountId,
       username: "admin_user",
       email: "admin@cso.org",
@@ -324,7 +323,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     });
 
     // Verify they are listed as a candidate
-    const dbUser = await userRepo.findByAccountId(db, studentUser.accountId);
+    const dbUser = await voterAccountStore.findByAccountId(db, studentUser.accountId);
     expect(dbUser).toBeDefined();
 
     const isCandidate = await candidateRepo.isCandidate(db, studentUser.accountId);
@@ -348,7 +347,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     );
 
     // Verify the user still exists in the database
-    const checkUser = await userRepo.findByAccountId(db, studentUser.accountId);
+    const checkUser = await voterAccountStore.findByAccountId(db, studentUser.accountId);
     expect(checkUser).toBeDefined();
     expect(checkUser?.id).toBe(dbUser!.id);
   });
@@ -390,7 +389,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     // 2. Log in/create Admin actor
     const adminAccountId = crypto.randomUUID();
     const adminUsername = "admin_voter_deletion_audit";
-    await accountRepo.create(db, {
+    await voterAccountStore.create(db, {
       accountId: adminAccountId,
       username: adminUsername,
       email: "superadmin_audit@cso.org",

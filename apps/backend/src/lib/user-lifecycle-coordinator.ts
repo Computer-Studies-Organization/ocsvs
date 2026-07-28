@@ -1,9 +1,7 @@
 import type { Database, DbClient } from "@/database/repositories/database.type";
 import { accounts, sessions, users } from "@/database/schema";
 import { eq, inArray, like, or } from "drizzle-orm";
-import { accountRepo } from "@/database/repositories/account.repository";
-import { userRepo } from "@/database/repositories/users.repository";
-import { userAccountQueries } from "@/database/queries/user-account.queries";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { isUniqueConstraintError } from "@/lib/errors";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { deleteSession, createSession } from "@/lib/session";
@@ -243,7 +241,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     }
 
     // 2. Uniqueness checks
-    const existing = await accountRepo.accountExists(db, username, input.email);
+    const existing = await voterAccountStore.accountExists(db, username, input.email);
     if (existing) {
       throw new UserLifecycleError("USER_ALREADY_EXISTS", 409);
     }
@@ -264,7 +262,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     const accountId = crypto.randomUUID();
 
     try {
-      await accountRepo.create(
+      await voterAccountStore.create(
         db,
         {
           accountId,
@@ -468,7 +466,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     try {
       await db.transaction(async (tx) => {
         // 2. Fetch user inside transaction (prevents TOCTOU)
-        const user = await userAccountQueries.getAccountDeleteStatus(tx, userId);
+        const user = await voterAccountStore.getAccountDeleteStatus(tx, userId);
         if (!user) {
           throw new UserLifecycleError("USER_NOT_FOUND", 404);
         }
@@ -486,7 +484,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
             throw new UserLifecycleError("PROFANITY_DETECTED", 400, profRes.message);
           }
 
-          const exists = await accountRepo.usernameExists(tx, input.username, user.accountId);
+          const exists = await voterAccountStore.usernameExists(tx, input.username, user.accountId);
           if (exists) {
             throw new UserLifecycleError(
               "USER_ALREADY_EXISTS",
@@ -517,7 +515,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
           accountFields.email = input.email && input.email.trim() ? input.email : null;
         }
         if (Object.keys(accountFields).length > 0) {
-          await accountRepo.updateAccount(tx, user.accountId, accountFields);
+          await voterAccountStore.updateAccount(tx, user.accountId, accountFields);
         }
 
         const userFields: Record<string, any> = {};
@@ -526,7 +524,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
         if (input.course !== undefined) userFields.course = input.course;
         if (input.yearLevel !== undefined) userFields.yearLevel = input.yearLevel;
         if (Object.keys(userFields).length > 0) {
-          await userRepo.updateUser(tx, userId, userFields);
+          await voterAccountStore.updateUser(tx, userId, userFields);
         }
 
         // 6. Write audit log
@@ -561,7 +559,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
 
     await db.transaction(async (tx) => {
       // 2. Fetch user inside transaction (prevents TOCTOU)
-      const user = await userAccountQueries.getAccountDeleteStatus(tx, userId);
+      const user = await voterAccountStore.getAccountDeleteStatus(tx, userId);
       if (!user) {
         throw new UserLifecycleError("USER_NOT_FOUND", 404);
       }
@@ -582,14 +580,14 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
           throw new UserLifecycleError("FORBIDDEN", 403, ERROR_MESSAGES.CANNOT_DELETE_ADMIN);
         }
 
-        const adminCount = await accountRepo.countActiveAdminsAndSuperAdmins(tx);
+        const adminCount = await voterAccountStore.countActiveAdminsAndSuperAdmins(tx);
         if (adminCount <= 1) {
           throw new UserLifecycleError("CANNOT_DELETE_LAST_ADMIN", 400);
         }
       }
 
       // 5. Invalidate sessions and soft delete
-      await accountRepo.softDelete(tx, user.accountId);
+      await voterAccountStore.softDelete(tx, user.accountId);
       await tx.delete(sessions).where(eq(sessions.accountId, user.accountId)).run();
 
       // Audit log entry
@@ -611,7 +609,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
 
     await db.transaction(async (tx) => {
       // 2. Fetch user inside transaction (prevents TOCTOU)
-      const user = await userAccountQueries.getAccountDeleteStatus(tx, userId);
+      const user = await voterAccountStore.getAccountDeleteStatus(tx, userId);
       if (!user) {
         throw new UserLifecycleError("USER_NOT_FOUND", 404);
       }
@@ -627,7 +625,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
       }
 
       // 4. Restore
-      await accountRepo.restore(tx, user.accountId);
+      await voterAccountStore.restore(tx, user.accountId);
 
       await auditLogRepo.insert(tx, {
         action: "user.restore",
@@ -647,7 +645,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
 
     await db.transaction(async (tx) => {
       // 2. Fetch user inside transaction (prevents TOCTOU)
-      const user = await userAccountQueries.getAccountDeleteStatus(tx, userId);
+      const user = await voterAccountStore.getAccountDeleteStatus(tx, userId);
       if (!user) {
         throw new UserLifecycleError("USER_NOT_FOUND", 404);
       }
@@ -665,7 +663,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
         }
 
         if (user.deletedAt === null) {
-          const adminCount = await accountRepo.countActiveAdminsAndSuperAdmins(tx);
+          const adminCount = await voterAccountStore.countActiveAdminsAndSuperAdmins(tx);
           if (adminCount <= 1) {
             throw new UserLifecycleError("CANNOT_DELETE_LAST_ADMIN", 400);
           }
@@ -679,11 +677,11 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
       }
 
       // 6. Hard deletion
-      const details = await userAccountQueries.findById(tx, userId);
+      const details = await voterAccountStore.findById(tx, userId);
       const username = details?.username ?? "unknown";
       const studentId = details?.studentId ?? "unknown";
 
-      await accountRepo.hardDelete(tx, user.accountId);
+      await voterAccountStore.hardDelete(tx, user.accountId);
 
       // Audit log entry
       await auditLogRepo.insert(tx, {
@@ -724,7 +722,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     }
 
     // 2. Fetch voter profile
-    const result = await userAccountQueries.findByStudentId(db, studentNumber);
+    const result = await voterAccountStore.findByStudentId(db, studentNumber);
 
     if (!result || result.deletedAt !== null) {
       // Run slow verification to prevent timing checks
@@ -762,7 +760,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     if (actor.role !== "admin" && actor.role !== "super_admin") {
       throw new UserLifecycleError("FORBIDDEN", 403);
     }
-    const user = await userAccountQueries.findById(db, userId);
+    const user = await voterAccountStore.findById(db, userId);
     if (!user) {
       throw new UserLifecycleError("USER_NOT_FOUND", 404);
     }

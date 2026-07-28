@@ -1,6 +1,6 @@
 import type { Database } from "@/database/repositories/database.type";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import { userRepo } from "@/database/repositories/users.repository";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
@@ -93,7 +93,7 @@ export class DrizzleBallotCaster implements BallotCastingModule {
 
     try {
       // 1. Resolve student
-      const user = await userRepo.findByAccountId(db, input.accountId);
+      const user = await voterAccountStore.findByAccountId(db, input.accountId);
       if (!user) {
         return {
           success: false,
