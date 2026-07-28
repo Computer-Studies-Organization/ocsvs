@@ -15,9 +15,6 @@ import {
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 
@@ -75,9 +72,6 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
 };
 
 export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 

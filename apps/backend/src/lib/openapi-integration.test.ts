@@ -19,6 +19,9 @@ vi.mock("@/middleware/auth", () => ({
   requireAdmin: async (_c: any, next: any) => {
     await next();
   },
+  withAdmin: (handler: any) => async (c: any, next: any) => {
+    return handler(c, next);
+  },
 }));
 
 vi.mock("@/database/repositories/audit-log.repository", () => ({

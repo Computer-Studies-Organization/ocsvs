@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { AppBindings, AuthUser } from "@/lib/types/app-types";
+import type { AppBindings, AppRouteHandler, AuthUser } from "@/lib/types/app-types";
 import { createMiddleware } from "hono/factory";
 import { createDb } from "@/config/db";
 import { ROLES } from "@/database/schema";
@@ -51,3 +51,17 @@ export const requireAdmin = createMiddleware<AppBindings>(async (c, next) => {
 
   await next();
 });
+
+/**
+ * Higher-order function that wraps an OpenAPI route handler with an admin role check.
+ * Guarantees that the handler only executes if authUser role is 'admin' or 'super_admin'.
+ */
+export function withAdmin<T extends AppRouteHandler<any>>(handler: T): T {
+  return (async (c: Parameters<T>[0], next: Parameters<T>[1]) => {
+    const user = c.get("authUser");
+    if (user?.role !== "admin" && user?.role !== "super_admin") {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, 403);
+    }
+    return handler(c, next);
+  }) as unknown as T;
+}

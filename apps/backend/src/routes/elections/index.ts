@@ -16,7 +16,7 @@ import {
 import { getElectionResultsHandler } from "@/handlers/elections/results.handler";
 import { getVotingStateHandler } from "@/handlers/elections/voting-state.handler";
 import { createRouter } from "@/lib/create-app";
-import { requireAuth } from "@/middleware/auth";
+import { requireAuth, withAdmin } from "@/middleware/auth";
 import { getElectionAuditRoute, getPositionAuditRoute } from "./audit.routes";
 import {
   createPositionRoute,
@@ -48,20 +48,16 @@ router.openapi(getElectionRoute, getElectionHandler);
 router.openapi(getElectionResultsRoute, getElectionResultsHandler);
 router.openapi(listPositionsRoute, listPositionsHandler);
 
-// ── Mutation routes ───────────────────────────────────────────────────────
-// Admin checks live in the handlers (c.var.authUser?.role !== 'admin').
-// requireAdmin is NOT used here because router.use() is prefix-match in the
-// Cloudflare Workers runtime, which incorrectly blocks GET sub-routes.
-router.openapi(createElectionRoute, createElectionHandler);
-router.openapi(updateElectionRoute, updateElectionHandler);
-router.openapi(transitionElectionRoute, transitionElectionHandler);
-router.openapi(createPositionRoute, createPositionHandler);
-router.openapi(updatePositionRoute, updatePositionHandler);
-router.openapi(deletePositionRoute, deletePositionHandler);
+// ── Mutation routes (Admin-guarded via withAdmin seam) ───────────────────
+router.openapi(createElectionRoute, withAdmin(createElectionHandler));
+router.openapi(updateElectionRoute, withAdmin(updateElectionHandler));
+router.openapi(transitionElectionRoute, withAdmin(transitionElectionHandler));
+router.openapi(createPositionRoute, withAdmin(createPositionHandler));
+router.openapi(updatePositionRoute, withAdmin(updatePositionHandler));
+router.openapi(deletePositionRoute, withAdmin(deletePositionHandler));
 
-// ── Audit routes ──────────────────────────────────────────────────────────
-// Admin guard lives in the handler (see step-6 audit-log.handler.ts).
-router.openapi(getElectionAuditRoute, listElectionAudit);
-router.openapi(getPositionAuditRoute, listPositionAudit);
+// ── Audit routes (Admin-guarded via withAdmin seam) ──────────────────────
+router.openapi(getElectionAuditRoute, withAdmin(listElectionAudit));
+router.openapi(getPositionAuditRoute, withAdmin(listPositionAudit));
 
 export default router;

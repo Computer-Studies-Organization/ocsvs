@@ -18,6 +18,12 @@ vi.mock("@/middleware/auth", () => ({
     }
     await next();
   },
+  withAdmin: (handler: any) => async (c: any, next: any) => {
+    if (!AUTH_ENABLED || (TEST_USER.role !== "admin" && TEST_USER.role !== "super_admin")) {
+      return c.json({ message: "Forbidden" }, 403);
+    }
+    return handler(c, next);
+  },
 }));
 
 vi.mock("@/config/db", () => ({ createDb: vi.fn(() => ({ db: {} })) }));

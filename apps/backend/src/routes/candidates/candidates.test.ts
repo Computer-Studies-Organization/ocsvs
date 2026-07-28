@@ -14,6 +14,13 @@ vi.mock("@/middleware/auth", () => ({
     });
     await next();
   },
+  withAdmin: (handler: any) => async (c: any, next: any) => {
+    const user = c.get("authUser");
+    if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, 403);
+    }
+    return handler(c, next);
+  },
 }));
 
 // Mock the database

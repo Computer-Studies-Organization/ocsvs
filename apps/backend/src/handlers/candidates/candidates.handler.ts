@@ -17,9 +17,6 @@ import {
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 
@@ -94,9 +91,6 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
 };
 
 export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 
@@ -133,9 +127,6 @@ export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = asy
 };
 
 export const deleteCandidate: AppRouteHandler<typeof deleteCandidateRoute> = async (c) => {
-  if (c.var.authUser.role !== "admin" && c.var.authUser.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
 

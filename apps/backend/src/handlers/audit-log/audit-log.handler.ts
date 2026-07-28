@@ -10,7 +10,6 @@ import { createDb } from "@/config/db";
 import { AuditLogEntrySchema } from "@/database/openapi-schemas";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import type { TargetType } from "@/lib/constants/audit-actions";
-import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 /**
@@ -24,9 +23,6 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
  * `apps/backend/src/handlers/elections/elections.handler.ts`.
  */
 export const listAuditLog: AppRouteHandler<typeof listAuditLogRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const filters = c.req.valid("query");
   const { db } = createDb(c);
   const { items, nextCursor } = await auditLogRepo.list(db, filters);
@@ -50,8 +46,7 @@ export const listAuditLog: AppRouteHandler<typeof listAuditLogRoute> = async (c)
  * `listByTarget` is intentionally non-paginated; per-resource audit trails
  * are expected to be small (see the method's doc comment in the repository).
  *
- * Admin-only: the in-handler role guard mirrors the pattern in
- * `apps/backend/src/handlers/elections/elections.handler.ts`.
+ * Admin access is enforced via `withAdmin` at the route definition seam.
  *
  * The generic `R` parameter binds the factory output to a specific route
  * definition so `c.req.valid("param")` resolves the typed `{ id, positionId? }`
@@ -65,9 +60,6 @@ function makeListAuditLogByTarget<R extends RouteConfig>(
   _route: R,
 ): AppRouteHandler<R> {
   return (async (c: Context<AppBindings>) => {
-    if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
-      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-    }
     const params = c.req.param();
     const targetId = targetType === "position" ? params.positionId : params.id;
     const { db } = createDb(c);

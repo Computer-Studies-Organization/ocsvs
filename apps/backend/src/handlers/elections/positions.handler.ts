@@ -21,9 +21,6 @@ export const listPositionsHandler: AppRouteHandler<typeof listPositionsRoute> = 
 };
 
 export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
@@ -49,9 +46,6 @@ export const createPositionHandler: AppRouteHandler<typeof createPositionRoute> 
 };
 
 export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
@@ -77,9 +71,6 @@ export const updatePositionHandler: AppRouteHandler<typeof updatePositionRoute> 
 };
 
 export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> = async (c) => {
-  if (c.var.authUser?.role !== "admin" && c.var.authUser?.role !== "super_admin") {
-    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
-  }
   const actorAccountId = c.var.authUser.id;
   const actorUsername = c.var.authUser.username;
   const { db } = createDb(c);
