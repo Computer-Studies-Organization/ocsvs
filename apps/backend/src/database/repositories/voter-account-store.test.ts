@@ -102,3 +102,23 @@ describe("voterAccountStore.changePasswordAndInvalidateSessions", () => {
     expect(mockBatch).toHaveBeenCalledWith([deleteChain, updateChain]);
   });
 });
+
+describe("voterAccountStore.hardDelete", () => {
+  it("batches session, user, and account deletes together atomically", async () => {
+    await voterAccountStore.hardDelete(mockDb as any, "account-id");
+
+    expect(mockDb.delete).toHaveBeenCalledTimes(3);
+    expect(mockBatch).toHaveBeenCalledTimes(1);
+    expect(mockBatch).toHaveBeenCalledWith([deleteChain, deleteChain, deleteChain]);
+  });
+
+  it("deletes sessions, users, and accounts sequentially when batch is unavailable", async () => {
+    const nonBatchDb = {
+      delete: vi.fn(() => deleteChain),
+    };
+
+    await voterAccountStore.hardDelete(nonBatchDb as any, "account-id");
+
+    expect(nonBatchDb.delete).toHaveBeenCalledTimes(3);
+  });
+});

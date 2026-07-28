@@ -247,21 +247,19 @@ export const voterAccountStore = {
       .run();
   },
 
-  /** Hard delete account and user records */
+  /** Hard delete account and user records atomically */
   async hardDelete(db: DbClient, accountId: string): Promise<void> {
-    await db.delete(sessions).where(eq(sessions.accountId, accountId));
-    await db.delete(users).where(eq(users.accountId, accountId));
-    await db.delete(accounts).where(eq(accounts.id, accountId));
-  },
+    const deleteSessions = db.delete(sessions).where(eq(sessions.accountId, accountId));
+    const deleteUsers = db.delete(users).where(eq(users.accountId, accountId));
+    const deleteAccounts = db.delete(accounts).where(eq(accounts.id, accountId));
 
-  /** Count active (non-deleted) admin accounts */
-  async countActiveAdmins(db: DbClient): Promise<number> {
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(accounts)
-      .where(and(eq(accounts.role, "admin"), sql`${accounts.deletedAt} IS NULL`))
-      .get();
-    return result?.count ?? 0;
+    if ("batch" in db && typeof db.batch === "function") {
+      await db.batch([deleteSessions, deleteUsers, deleteAccounts]);
+    } else {
+      await deleteSessions;
+      await deleteUsers;
+      await deleteAccounts;
+    }
   },
 
   /** Count active admin and super_admin accounts */

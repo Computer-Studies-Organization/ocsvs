@@ -224,7 +224,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
         counter++;
       }
       // This lookup cannot make allocation atomic. The accounts username unique index and
-      // unique-constraint handling around accountRepo.create below safely return 409 on a collision.
+      // unique-constraint handling around voterAccountStore.create below safely return 409 on a collision.
     }
 
     // 1. Profanity check

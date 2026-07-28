@@ -70,7 +70,6 @@ const {
   mockUpdateAccount,
   mockSoftDelete,
   mockRestore,
-  mockCountActiveAdmins,
   mockCountActiveAdminsAndSuperAdmins,
   mockHardDelete,
   mockIsCandidate,
@@ -87,7 +86,6 @@ const {
   mockUpdateAccount: vi.fn(),
   mockSoftDelete: vi.fn(),
   mockRestore: vi.fn(),
-  mockCountActiveAdmins: vi.fn(),
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
   mockHardDelete: vi.fn(),
   mockIsCandidate: vi.fn(),
@@ -115,7 +113,6 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     updatePassword: vi.fn(),
     getPasswordHash: vi.fn(),
     softDelete: mockSoftDelete,
-    countActiveAdmins: mockCountActiveAdmins,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     restore: mockRestore,
     hardDelete: mockHardDelete,
@@ -294,7 +291,6 @@ describe("users Routes", () => {
         deletedAt: null,
         role: "user",
       });
-      mockCountActiveAdmins.mockResolvedValue(1);
       mockSoftDelete.mockResolvedValue(undefined);
 
       const res = await router.request("/users/some-user-id", {
@@ -536,7 +532,6 @@ describe("users Routes", () => {
         deletedAt: null,
         role: "user",
       });
-      mockCountActiveAdmins.mockResolvedValue(2);
       mockSoftDelete.mockResolvedValue(undefined);
 
       const res = await router.request("/users/voter-user-id", {

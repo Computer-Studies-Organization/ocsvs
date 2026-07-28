@@ -169,7 +169,7 @@ export const VoteSchema = z.object({
 
 // Type aliases for convenience - use these in route definitions
 /** Extended schema for admin-facing user endpoints (GET /users, GET /users/:id).
- * Mirrors the AdminView interface returned by userAccountQueries.findById / listForAdmin.
+ * Mirrors the AdminView interface returned by voterAccountStore.findById / listForAdmin.
  */
 export const AdminUserApiSchema = UserApiSchema.extend({
   username: z.string().openapi({
