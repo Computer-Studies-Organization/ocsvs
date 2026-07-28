@@ -1,19 +1,25 @@
 <script lang='ts'>
-  import { ArrowLeft, Edit, ListOrdered, Plus } from 'lucide-svelte'
+  import { ArrowLeft, Edit, Flag, ListOrdered, Plus } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
-  import type { TElection, TPosition } from '$lib/types'
+  import type { TElection, TPartyList, TPosition } from '$lib/types'
   import { appCache } from '$lib/cache'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
   import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
+  import AddPartyModal from '$lib/components/admin/add-party-modal.svelte'
+  import EditPartyModal from '$lib/components/admin/edit-party-modal.svelte'
 
   let { data } = $props()
   const election = $derived(data.election)
   const positions = $derived(data.positions)
+  const partyLists = $derived(data.partyLists)
   let isCreateOpen = $state(false)
   let editingPosition = $state<TPosition | null>(null)
+
+  let isPartyCreateOpen = $state(false)
+  let editingParty = $state<TPartyList | null>(null)
 
   function openCreate() {
     isCreateOpen = true
@@ -46,10 +52,10 @@
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 space-y-6'>
     <a
       href='/admin/elections'
-      class='inline-flex items-center gap-1.5 text-sm font-semibold mb-4 transition-colors hover:opacity-80'
+      class='inline-flex items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-80'
       style='color: oklch(0.70 0.015 250)'
     >
       <ArrowLeft size={16} />
@@ -58,7 +64,7 @@
 
     <!-- Header -->
     <header
-      class='rounded-2xl border p-5 shadow-lg mb-6 flex flex-wrap items-start justify-between gap-4'
+      class='rounded-2xl border p-5 shadow-lg flex flex-wrap items-start justify-between gap-4'
       style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
     >
       <div>
@@ -81,6 +87,63 @@
       </div>
     </header>
 
+    <!-- Party Lists Section -->
+    <section
+      class='rounded-2xl border p-5 shadow-lg'
+      style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
+    >
+      <div class='flex items-center justify-between mb-4'>
+        <div class='flex items-center gap-2'>
+          <Flag size={20} class='text-sky-400' />
+          <h2 class='text-lg font-black' style='color: oklch(0.95 0.008 250)'>Party Lists (Slates)</h2>
+        </div>
+        <button
+          type='button'
+          onclick={() => isPartyCreateOpen = true}
+          class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
+          style='background: oklch(0.45 0.15 250); color: oklch(0.98 0.005 250)'
+        >
+          <Plus size={16} stroke-width={2.5} />
+          Add Party List
+        </button>
+      </div>
+
+      {#if partyLists.length === 0}
+        <p class='text-xs italic' style='color: oklch(0.60 0.015 250)'>No party lists created yet. Candidates will default to Independent.</p>
+      {:else}
+        <div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+          {#each partyLists as party (party.id)}
+            <div
+              class='flex items-center justify-between p-3.5 rounded-xl border transition hover:border-slate-700/80'
+              style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
+            >
+              <div class='flex items-center gap-3'>
+                <span
+                  class='w-3.5 h-3.5 rounded-full shrink-0'
+                  style='background-color: {party.color || '#3B82F6'}'
+                ></span>
+                <div>
+                  <p class='font-bold text-sm text-slate-100'>{party.name}</p>
+                  <span class='text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-sky-400'>
+                    {party.code}
+                  </span>
+                </div>
+              </div>
+              <button
+                type='button'
+                onclick={() => editingParty = party}
+                class='p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200'
+                title='Edit Party'
+              >
+                <Edit size={16} />
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <!-- Positions Section -->
     {#if positions.length === 0}
       <EmptyState
         icon={ListOrdered}
@@ -90,7 +153,6 @@
         oncta={openCreate}
       />
     {:else}
-      <!-- Positions -->
       <section
         class='rounded-2xl border p-5 shadow-lg'
         style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
@@ -164,3 +226,21 @@
   onsuccess={handleEditSuccess}
 />
 {/if}
+
+{#if isPartyCreateOpen}
+<AddPartyModal
+  onclose={() => isPartyCreateOpen = false}
+  electionId={election.id}
+  onsuccess={() => isPartyCreateOpen = false}
+/>
+{/if}
+
+{#if editingParty}
+<EditPartyModal
+  onclose={() => editingParty = null}
+  electionId={election.id}
+  party={editingParty}
+  onsuccess={() => editingParty = null}
+/>
+{/if}
+

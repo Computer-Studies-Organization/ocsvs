@@ -17,15 +17,16 @@
     isFirstPosition,
     isReviewStep,
     selectCandidate,
+    selectPartySlate,
     withVoting,
   } from '$lib/voting-stepper-logic'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { formatTimestamp } from '$lib/utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { authStore } from '$lib/stores/auth.svelte'
-  import { UserRole, type TCandidate, type TPosition, type TVotingState } from '$lib/types'
+  import { UserRole, type TCandidate, type TPartyList, type TPosition, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
-  import { Calendar, CheckCircle, Info, Vote } from 'lucide-svelte'
+  import { Calendar, CheckCircle, Flag, Info, Vote, Zap } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
   import VotingCandidateCard from '$lib/components/ui/voting-candidate-card.svelte'
   import BallotReview from '$lib/components/ui/ballot-review.svelte'
@@ -36,6 +37,7 @@
   const apiState = $derived<TVotingState | null>(data.votingState)
   const positions = $derived<TPosition[] | null>(data.positions)
   const candidates = $derived<TCandidate[] | null>(data.candidates)
+  const partyLists = $derived<TPartyList[]>(data.partyLists || [])
   let loadError = $state<string | null>(null)
   let isSubmitting = $state(false)
 
@@ -90,6 +92,12 @@
   function selectAt(positionId: string, candidateId: string) {
     if (pageState.kind !== 'stepper') return
     pageState = withVoting(pageState, selectCandidate(pageState.voting, positionId, candidateId))
+  }
+
+  function applyPartySlate(party: TPartyList) {
+    if (pageState.kind !== 'stepper') return
+    pageState = withVoting(pageState, selectPartySlate(pageState.voting, pageState.positions, party.id))
+    addToast('info', `Fast-filled candidates for ${party.name} slate`)
   }
 
   function next() {
@@ -222,6 +230,29 @@
       {/if}
     </div>
 
+    {#if partyLists.length > 0}
+      <div class='mt-6 rounded-2xl border border-sky-500/20 bg-sky-950/20 p-4 backdrop-blur-md'>
+        <div class='flex items-center gap-2 mb-3'>
+          <Zap size={16} class='text-amber-400' />
+          <span class='text-xs font-bold uppercase tracking-wider text-slate-300'>Slate Fast-Fill</span>
+          <span class='text-xs text-slate-400'>(Pre-select candidates for a full party slate)</span>
+        </div>
+        <div class='flex flex-wrap items-center gap-2.5'>
+          {#each partyLists as party (party.id)}
+            <button
+              type='button'
+              onclick={() => applyPartySlate(party)}
+              class='flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-md'
+              style='background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}'
+            >
+              <Flag size={14} />
+              Fill {party.code} Slate
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <StepperProgress
       positions={pageState.positions}
       currentPositionIndex={pageState.voting.currentPositionIndex}
@@ -238,6 +269,7 @@
             {#each currentPosition.candidates as c (c.id)}
               <VotingCandidateCard
                 candidate={c}
+                partyLists={partyLists}
                 selected={pageState.voting.selectedVotes[currentPosition.id] === c.id}
                 onclick={() => selectAt(currentPosition.id, c.id)}
               />
