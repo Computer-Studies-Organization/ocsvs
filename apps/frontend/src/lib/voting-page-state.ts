@@ -64,6 +64,7 @@ export function buildStepperPositions(
           fullName: c.fullName,
           imageUrl: c.imageUrl,
           manifesto: c.manifesto,
+          partyId: c.partyId ?? null,
         })),
     }))
     .filter((p) => p.candidates.length > 0);

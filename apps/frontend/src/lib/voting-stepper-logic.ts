@@ -9,7 +9,13 @@ export interface TStepperPosition {
   id: string;
   name: string;
   displayOrder: number;
-  candidates: Array<{ id: string; fullName: string; imageUrl: string | null; manifesto: string }>;
+  candidates: Array<{
+    id: string;
+    fullName: string;
+    imageUrl: string | null;
+    manifesto: string;
+    partyId?: string | null;
+  }>;
 }
 
 export function createVotingState(positions: TStepperPosition[]): TStepperVotingState {
@@ -26,6 +32,21 @@ export function selectCandidate(
   candidateId: string,
 ): TStepperVotingState {
   return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: candidateId } };
+}
+
+export function selectPartySlate(
+  state: TStepperVotingState,
+  positions: TStepperPosition[],
+  partyId: string,
+): TStepperVotingState {
+  const nextSelected = { ...state.selectedVotes };
+  for (const pos of positions) {
+    const partyCandidate = pos.candidates.find((c) => c.partyId === partyId);
+    if (partyCandidate) {
+      nextSelected[pos.id] = partyCandidate.id;
+    }
+  }
+  return { ...state, selectedVotes: nextSelected };
 }
 
 export function goNext(state: TStepperVotingState, totalPositions: number): TStepperVotingState {

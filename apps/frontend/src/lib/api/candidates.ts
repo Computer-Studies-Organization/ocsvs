@@ -59,7 +59,7 @@ export async function createCandidate(
 
 export async function updateCandidate(
   id: string,
-  data: { fullName?: string; manifesto?: string; isActive?: number },
+  data: { fullName?: string; partyId?: string | null; manifesto?: string; isActive?: number },
 ): Promise<TCandidate> {
   const res = await apiFetch<{ message: string; candidate: TCandidate }>(`/candidates/${id}`, {
     method: "PUT",
