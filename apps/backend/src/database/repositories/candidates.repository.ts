@@ -58,27 +58,29 @@ export const candidateRepo = {
         : positionWhere
       : baseWhere;
 
+    const dataQuery = db
+      .select({
+        id: candidates.id,
+        fullName: candidates.fullName,
+        accountId: candidates.accountId,
+        positionId: candidates.positionId,
+        partyId: candidates.partyId,
+        manifesto: candidates.manifesto,
+        isActive: candidates.isActive,
+        imageUrl: candidates.imageUrl,
+        createdAt: candidates.createdAt,
+        updatedAt: candidates.updatedAt,
+      })
+      .from(candidates)
+      .orderBy(desc(candidates.createdAt), desc(candidates.id))
+      .limit(limit)
+      .offset(offset);
+
+    const countQuery = db.select({ count: count() }).from(candidates);
+
     const [data, totalRaw] = await Promise.all([
-      db
-        .select({
-          id: candidates.id,
-          fullName: candidates.fullName,
-          accountId: candidates.accountId,
-          positionId: candidates.positionId,
-          partyId: candidates.partyId,
-          manifesto: candidates.manifesto,
-          isActive: candidates.isActive,
-          imageUrl: candidates.imageUrl,
-          createdAt: candidates.createdAt,
-          updatedAt: candidates.updatedAt,
-        })
-        .from(candidates)
-        .where(whereClause)
-        .orderBy(desc(candidates.createdAt), desc(candidates.id))
-        .limit(limit)
-        .offset(offset)
-        .all(),
-      db.select({ count: count() }).from(candidates).where(whereClause).get(),
+      whereClause ? dataQuery.where(whereClause).all() : dataQuery.all(),
+      whereClause ? countQuery.where(whereClause).get() : countQuery.get(),
     ]);
 
     const total = (totalRaw as { count: number } | null)?.count ?? 0;

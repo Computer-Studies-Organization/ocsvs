@@ -5,13 +5,12 @@ import type {
   uploadImageRoute,
 } from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
-import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { getImageStorage, resolveCandidateImageUrl } from "@/lib/b2-client";
-import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import {
   candidateLifecycleCoordinator,
   CandidateLifecycleError,
 } from "@/lib/candidate-lifecycle-coordinator";
+import { getImageStorage } from "@/lib/b2-client";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) => {
@@ -21,6 +20,7 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
+  const urlCtx = { env: c.env, requestUrl: c.req.url };
 
   // Get file from form data
   let formData: FormData;
@@ -46,14 +46,8 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
       file,
       storage,
       { id: actorAccountId, username: actorUsername },
+      urlCtx,
       c.var.logger,
-    );
-
-    updatedCandidate.imageUrl = resolveCandidateImageUrl(
-      updatedCandidate.imageUrl,
-      updatedCandidate.id,
-      c.env,
-      c.req.url,
     );
 
     return c.json(
@@ -63,7 +57,7 @@ export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) =
       },
       httpStatusCodes.OK,
     );
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof CandidateLifecycleError) {
       return c.json({ message: error.message }, error.status as any);
     }
@@ -78,6 +72,7 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
+  const urlCtx = { env: c.env, requestUrl: c.req.url };
 
   try {
     const updatedCandidate = await candidateLifecycleCoordinator.deleteAvatar(
@@ -85,14 +80,8 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
       id,
       storage,
       { id: actorAccountId, username: actorUsername },
+      urlCtx,
       c.var.logger,
-    );
-
-    updatedCandidate.imageUrl = resolveCandidateImageUrl(
-      updatedCandidate.imageUrl,
-      updatedCandidate.id,
-      c.env,
-      c.req.url,
     );
 
     return c.json(
@@ -102,7 +91,7 @@ export const deleteImage: AppRouteHandler<typeof deleteImageRoute> = async (c) =
       },
       httpStatusCodes.OK,
     );
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof CandidateLifecycleError) {
       return c.json({ message: error.message }, error.status as any);
     }
@@ -115,20 +104,25 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
 
-  const candidate = await candidateRepo.getForAdminView(db, id);
-  if (!candidate || !candidate.imageUrl) {
-    return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
-  }
-
   try {
-    const { data, contentType } = await storage.download(candidate.imageUrl);
+    const { data, contentType } = await candidateLifecycleCoordinator.downloadAvatar(
+      db,
+      id,
+      storage,
+    );
     return c.body(data, httpStatusCodes.OK, {
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=31536000",
       "X-Content-Type-Options": "nosniff",
     });
-  } catch (error) {
-    console.error("Failed to download image:", error);
-    return c.json({ message: "Failed to download image" }, httpStatusCodes.INTERNAL_SERVER_ERROR);
+  } catch (error: unknown) {
+    if (error instanceof CandidateLifecycleError) {
+      return c.json({ message: error.message }, error.status as any);
+    }
+    c.var.logger?.error({ err: error, candidateId: id }, "Failed to download candidate image");
+    return c.json(
+      { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+    );
   }
 };

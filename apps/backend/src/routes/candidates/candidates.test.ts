@@ -3,6 +3,8 @@ import { accounts } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import router from "./index";
 
+let mockAuthRole = "admin";
+
 // Mock the auth middleware
 vi.mock("@/middleware/auth", () => ({
   requireAuth: async (c: any, next: any) => {
@@ -10,7 +12,7 @@ vi.mock("@/middleware/auth", () => ({
       id: "test-user-id",
       email: "test@example.com",
       username: "testuser",
-      role: "admin",
+      role: mockAuthRole,
     });
     await next();
   },
@@ -183,6 +185,15 @@ describe("candidate Routes (repository)", () => {
       };
       mockExistsActiveForAccountPosition.mockResolvedValue(false);
       mockCreate.mockResolvedValue("new-candidate-id");
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: "new-candidate-id",
+        ...input,
+        partyId: null,
+        isActive: 1,
+        imageUrl: null,
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
 
       // Mock account lookup: SELECT * FROM accounts WHERE id = ?
       mockDb.select.mockImplementationOnce(() => mockDb);
@@ -295,8 +306,8 @@ describe("candidate Routes (repository)", () => {
     });
   });
 
-  describe("gET /candidates/:id (getCandidate)", () => {
-    it("should return candidate by id", async () => {
+  describe("GET /candidates/:id (getCandidate)", () => {
+    it("should return candidate by id for admin including inactive option", async () => {
       const mockCandidate = {
         id: "cand-1",
         fullName: "Bob",
@@ -314,6 +325,35 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.id).toBe("cand-1");
+      expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
+        includeInactive: true,
+      });
+    });
+
+    it("should pass includeInactive: false for non-admin voter", async () => {
+      const mockCandidate = {
+        id: "cand-1",
+        fullName: "Bob",
+        accountId: "acc1",
+        positionId: "pos-101",
+        manifesto: "...",
+        isActive: 1,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      mockGetForAdminView.mockResolvedValue(mockCandidate);
+
+      mockAuthRole = "voter";
+      try {
+        const res = await router.request("/candidates/cand-1", { method: "GET" });
+
+        expect(res.status).toBe(200);
+        expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
+          includeInactive: false,
+        });
+      } finally {
+        mockAuthRole = "admin";
+      }
     });
 
     it("should return 404 if candidate not found", async () => {
@@ -619,6 +659,31 @@ describe("candidate Routes (repository)", () => {
       );
 
       expect(res.status).toBe(404);
+    });
+
+    it("should return 500 with internal server error message when download fails unexpectedly", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl:
+          "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-1/image.png",
+      });
+      mockDownloadImage.mockRejectedValueOnce(new Error("Storage connection lost"));
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        { method: "GET" },
+        {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "cso-voting-candidates",
+        },
+      );
+
+      expect(res.status).toBe(500);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
     });
   });
 });
