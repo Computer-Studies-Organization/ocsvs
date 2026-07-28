@@ -19,6 +19,7 @@ describe("audit-actions enum drift", () => {
     const files = [
       ...walk(path.join(process.cwd(), "src", "handlers")),
       ...walk(path.join(process.cwd(), "src", "lib")),
+      ...walk(path.join(process.cwd(), "src", "database")),
       ...walk(path.join(process.cwd(), "scripts")),
     ];
     const re =

@@ -1,13 +1,38 @@
 import type { DbClient } from "@/database/repositories/database.type";
 import type { ImageStorage } from "@/lib/b2-client";
-import { ImageValidationError } from "@/lib/b2-client";
 import { accounts } from "@/database/schema";
 import { eq } from "drizzle-orm";
-import { candidateRepo, type CandidateRow } from "@/database/repositories/candidates.repository";
+import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
-import { auditLogRepo } from "@/database/repositories/audit-log.repository";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
+import {
+  candidateStore,
+  formatUrl,
+  type CandidateWithResolvedUrl,
+  type UrlContext,
+} from "@/database/repositories/candidate-store";
+import { ImageValidationError } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+
+export interface CreateCandidateInput {
+  fullName: string;
+  accountId: string;
+  positionId: string;
+  partyId?: string | null;
+  manifesto: string;
+}
+
+export interface UpdateCandidateInput {
+  fullName?: string;
+  partyId?: string | null;
+  manifesto?: string;
+}
+
+export interface ActorInfo {
+  id: string;
+  username: string;
+}
 
 export type CandidateLifecycleErrorCode =
   | "CANDIDATE_NOT_FOUND"
@@ -30,24 +55,7 @@ export class CandidateLifecycleError extends Error {
   }
 }
 
-export interface CreateCandidateInput {
-  fullName: string;
-  accountId: string;
-  positionId: string;
-  partyId?: string | null;
-  manifesto: string;
-}
-
-export interface UpdateCandidateInput {
-  fullName?: string;
-  partyId?: string | null;
-  manifesto?: string;
-}
-
-export interface ActorInfo {
-  id: string;
-  username: string;
-}
+export type { CandidateWithResolvedUrl, UrlContext };
 
 export class CandidateLifecycleCoordinator {
   /**
@@ -57,15 +65,9 @@ export class CandidateLifecycleCoordinator {
     db: DbClient,
     input: CreateCandidateInput,
     actor: ActorInfo,
-  ): Promise<{
-    id: string;
-    fullName: string;
-    accountId: string;
-    positionId: string;
-    partyId?: string | null;
-    manifesto: string;
-  }> {
-    return await db.transaction(async (tx) => {
+    urlCtx?: UrlContext,
+  ): Promise<CandidateWithResolvedUrl> {
+    const rawCandidate = await db.transaction(async (tx) => {
       // 1. Verify target account exists
       const account = await tx
         .select({ id: accounts.id })
@@ -101,33 +103,41 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("CANDIDATE_ALREADY_EXISTS", 409);
       }
 
-      // 5. Create Candidate
-      const candidateId = await candidateRepo.create(tx, {
+      // 5. Insert the candidate
+      const createData: {
+        fullName: string;
+        accountId: string;
+        positionId: string;
+        partyId?: string | null;
+        manifesto: string;
+      } = {
         fullName: input.fullName,
         accountId: input.accountId,
         positionId: input.positionId,
-        partyId: input.partyId,
         manifesto: input.manifesto,
-      });
+      };
+      if (input.partyId !== undefined) {
+        createData.partyId = input.partyId;
+      }
+      const newId = await candidateRepo.create(tx, createData);
 
-      // 6. Write Audit Log
+      // 6. Insert audit log
       await auditLogRepo.insert(tx, {
         action: "candidate.create",
         targetType: "candidate",
-        targetId: candidateId,
+        targetId: newId,
         actorAccountIdSnapshot: actor.id,
         actorUsernameSnapshot: actor.username,
       });
 
-      return {
-        id: candidateId,
-        fullName: input.fullName,
-        accountId: input.accountId,
-        positionId: input.positionId,
-        partyId: input.partyId ?? null,
-        manifesto: input.manifesto,
-      };
+      const fetched = await candidateRepo.getForAdminView(tx, newId, { includeInactive: true });
+      if (!fetched) {
+        throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
+      }
+      return fetched;
     });
+
+    return formatUrl(rawCandidate, urlCtx)!;
   }
 
   /**
@@ -138,18 +148,21 @@ export class CandidateLifecycleCoordinator {
     id: string,
     input: UpdateCandidateInput,
     actor: ActorInfo,
-  ): Promise<CandidateRow> {
-    return await db.transaction(async (tx) => {
-      // 1. Verify candidate exists (active-only)
-      const existing = await candidateRepo.getForAdminView(tx, id);
-      if (!existing) {
+    urlCtx?: UrlContext,
+  ): Promise<CandidateWithResolvedUrl> {
+    const rawCandidate = await db.transaction(async (tx) => {
+      const candidate = await candidateRepo.getForAdminView(tx, id);
+      if (!candidate || candidate.isActive === 0) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
 
-      // 2. Perform DB update
-      await candidateRepo.update(tx, id, input);
+      const updateFields: { fullName?: string; partyId?: string | null; manifesto?: string } = {};
+      if (input.fullName !== undefined) updateFields.fullName = input.fullName;
+      if (input.partyId !== undefined) updateFields.partyId = input.partyId;
+      if (input.manifesto !== undefined) updateFields.manifesto = input.manifesto;
 
-      // 3. Write Audit Log
+      await candidateRepo.update(tx, id, updateFields);
+
       await auditLogRepo.insert(tx, {
         action: "candidate.update",
         targetType: "candidate",
@@ -158,30 +171,28 @@ export class CandidateLifecycleCoordinator {
         actorUsernameSnapshot: actor.username,
       });
 
-      // 4. Return updated candidate
-      const updated = await candidateRepo.getForAdminView(tx, id);
+      const updated = await candidateRepo.getForAdminView(tx, id, { includeInactive: true });
       if (!updated) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
       return updated;
     });
+
+    return formatUrl(rawCandidate, urlCtx)!;
   }
 
   /**
    * Soft deletes / deactivates a Candidate and logs the action atomically.
    */
-  async deactivate(db: DbClient, id: string, actor: ActorInfo): Promise<void> {
-    await db.transaction(async (tx) => {
-      // 1. Verify candidate exists
-      const existing = await candidateRepo.getForAdminView(tx, id);
-      if (!existing) {
+  async deactivate(db: DbClient, id: string, actor: ActorInfo): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      const candidate = await candidateRepo.getForAdminView(tx, id);
+      if (!candidate || candidate.isActive === 0) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
 
-      // 2. Perform soft delete
       await candidateRepo.softDelete(tx, id);
 
-      // 3. Write Audit Log
       await auditLogRepo.insert(tx, {
         action: "candidate.deactivate",
         targetType: "candidate",
@@ -189,6 +200,8 @@ export class CandidateLifecycleCoordinator {
         actorAccountIdSnapshot: actor.id,
         actorUsernameSnapshot: actor.username,
       });
+
+      return true;
     });
   }
 
@@ -201,38 +214,36 @@ export class CandidateLifecycleCoordinator {
     file: File,
     storage: ImageStorage,
     actor: ActorInfo,
+    urlCtx?: UrlContext,
     logger?: { error(msg: string, ...args: any[]): void; warn(msg: string, ...args: any[]): void },
-  ): Promise<CandidateRow> {
-    // 1. Fetch existing candidate to check if they exist and get current avatar
-    const candidate = await candidateRepo.getForAdminView(db, id);
-    if (!candidate) {
+  ): Promise<CandidateWithResolvedUrl> {
+    const candidate = await candidateStore.findById(db, id, { includeInactive: true });
+    if (!candidate || candidate.isActive === 0) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
 
-    // 2. Upload to storage
-    let url: string;
+    let uploadResult: { url: string; key: string };
     try {
-      const uploadResult = await storage.upload(id, file);
-      url = uploadResult.url;
-    } catch (error) {
-      if (error instanceof ImageValidationError) {
-        throw new CandidateLifecycleError("UNSUPPORTED_MEDIA_TYPE", 415, error.message);
+      uploadResult = await storage.upload(id, file);
+    } catch (uploadError) {
+      if (uploadError instanceof ImageValidationError) {
+        throw new CandidateLifecycleError("UNSUPPORTED_MEDIA_TYPE", 415, uploadError.message);
       }
-      throw error;
+      throw uploadError;
     }
 
-    // 3. Update database image URL and insert audit log in transaction
-    let transactionSuccess = false;
     let oldImageUrl: string | null = candidate.imageUrl;
+
     try {
       await db.transaction(async (tx) => {
         const activeCandidate = await candidateRepo.getForAdminView(tx, id);
-        if (!activeCandidate) {
+        if (!activeCandidate || activeCandidate.isActive === 0) {
           throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
         }
         oldImageUrl = activeCandidate.imageUrl;
 
-        await candidateRepo.updateImageUrl(tx, id, url);
+        await candidateRepo.updateImageUrl(tx, id, uploadResult.url);
+
         await auditLogRepo.insert(tx, {
           action: "candidate.update",
           targetType: "candidate",
@@ -241,75 +252,64 @@ export class CandidateLifecycleCoordinator {
           actorUsernameSnapshot: actor.username,
         });
       });
-      transactionSuccess = true;
     } catch (dbError) {
-      // Cleanup newly uploaded file to avoid orphaned storage items
+      // Compensating storage cleanup if DB transaction fails
       try {
-        await storage.delete(url);
+        await storage.delete(uploadResult.url);
       } catch (deleteError) {
         if (logger) {
-          logger.error("Failed to clean up newly uploaded B2 image after DB failure", {
+          logger.warn("Failed to clean up newly uploaded image after DB rollback", {
+            candidateId: id,
+            newUrl: uploadResult.url,
             error: deleteError,
-            orphanedB2Key: url,
           });
-        } else {
-          console.warn(
-            "Failed to clean up newly uploaded B2 image after DB failure:",
-            url,
-            deleteError,
-          );
         }
       }
       throw dbError;
     }
 
-    // 4. Delete old image (best-effort cleanup)
-    if (transactionSuccess && oldImageUrl) {
+    // Best-effort cleanup of old image post-commit
+    if (oldImageUrl && oldImageUrl !== uploadResult.url) {
       try {
         await storage.delete(oldImageUrl);
       } catch (deleteError) {
         if (logger) {
           logger.warn("Failed to delete old B2 image during uploadAvatar", { error: deleteError });
-        } else {
-          console.warn("Failed to delete old B2 image during uploadAvatar:", deleteError);
         }
       }
     }
 
-    // 5. Fetch and return updated candidate
-    const updated = await candidateRepo.getForAdminView(db, id);
+    const updated = await candidateStore.findById(db, id, { includeInactive: true }, urlCtx);
     if (!updated) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
     return updated;
   }
 
-  /**
-   * Deletes Candidate avatar, clears imageUrl in DB, cleans up avatar in storage, and logs the action.
-   */
   async deleteAvatar(
     db: DbClient,
     id: string,
     storage: ImageStorage,
     actor: ActorInfo,
+    urlCtx?: UrlContext,
     logger?: { error(msg: string, ...args: any[]): void; warn(msg: string, ...args: any[]): void },
-  ): Promise<CandidateRow> {
-    // 1. Fetch existing candidate
-    const candidate = await candidateRepo.getForAdminView(db, id);
+  ): Promise<CandidateWithResolvedUrl> {
+    const candidate = await candidateStore.findById(db, id, { includeInactive: true });
     if (!candidate) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
 
     let oldImageUrl: string | null = candidate.imageUrl;
-    // 2. Perform DB update inside transaction
+
     await db.transaction(async (tx) => {
       const activeCandidate = await candidateRepo.getForAdminView(tx, id);
-      if (!activeCandidate) {
+      if (!activeCandidate || activeCandidate.isActive === 0) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
       oldImageUrl = activeCandidate.imageUrl;
 
       await candidateRepo.updateImageUrl(tx, id, null);
+
       await auditLogRepo.insert(tx, {
         action: "candidate.update",
         targetType: "candidate",
@@ -319,25 +319,33 @@ export class CandidateLifecycleCoordinator {
       });
     });
 
-    // 3. Delete from storage (best-effort cleanup)
     if (oldImageUrl) {
       try {
         await storage.delete(oldImageUrl);
       } catch (deleteError) {
         if (logger) {
           logger.warn("Failed to delete B2 image during deleteAvatar", { error: deleteError });
-        } else {
-          console.warn("Failed to delete B2 image during deleteAvatar:", deleteError);
         }
       }
     }
 
-    // 4. Fetch and return updated candidate
-    const updated = await candidateRepo.getForAdminView(db, id);
+    const updated = await candidateStore.findById(db, id, { includeInactive: true }, urlCtx);
     if (!updated) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
     return updated;
+  }
+
+  async downloadAvatar(
+    db: DbClient,
+    id: string,
+    storage: ImageStorage,
+  ): Promise<{ data: ArrayBuffer; contentType: string }> {
+    const candidate = await candidateRepo.getForAdminView(db, id);
+    if (!candidate || !candidate.imageUrl) {
+      throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
+    }
+    return await storage.download(candidate.imageUrl);
   }
 }
 

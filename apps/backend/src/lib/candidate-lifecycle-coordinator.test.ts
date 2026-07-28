@@ -96,6 +96,18 @@ describe("CandidateLifecycleCoordinator", () => {
       mockElectionFindById.mockResolvedValueOnce({ id: "el-id", status: "draft" }); // election draft
       mockCandidateExistsActive.mockResolvedValueOnce(false); // candidate doesn't exist yet
       mockCandidateCreate.mockResolvedValueOnce("cand-uuid");
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-uuid",
+        fullName: "Juan Dela Cruz",
+        accountId: "acc-id",
+        positionId: "pos-id",
+        partyId: null,
+        manifesto: "No to corruption",
+        isActive: 1,
+        imageUrl: null,
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
 
       const result = await candidateLifecycleCoordinator.create(
         mockDb,
@@ -231,6 +243,22 @@ describe("CandidateLifecycleCoordinator", () => {
         candidateLifecycleCoordinator.update(
           mockDb,
           "non-existent",
+          { fullName: "New Name" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "CANDIDATE_NOT_FOUND", status: 404 }));
+    });
+
+    it("throws CANDIDATE_NOT_FOUND if re-fetching candidate after update returns null", async () => {
+      mockCandidateGetForAdminView
+        .mockResolvedValueOnce({ id: "cand-1", fullName: "Old Name" }) // check exist
+        .mockResolvedValueOnce(null); // reload returns null
+      mockCandidateUpdate.mockResolvedValueOnce(true);
+
+      await expect(
+        candidateLifecycleCoordinator.update(
+          mockDb,
+          "cand-1",
           { fullName: "New Name" },
           { id: "admin-id", username: "admin" },
         ),
