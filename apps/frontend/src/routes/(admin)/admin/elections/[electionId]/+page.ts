@@ -1,6 +1,7 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { appCache } from "$lib/cache";
+import { listPartyLists } from "$lib/api/parties";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:election");
@@ -14,5 +15,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     .get("positions", { electionId: params.electionId })
     .fetch(false, { fetch });
 
-  return { election, positions: positions ?? [] };
+  const partyLists = await listPartyLists(params.electionId, { fetch }).catch(() => []);
+
+  return { election, positions: positions ?? [], partyLists: partyLists ?? [] };
 };

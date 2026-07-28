@@ -3,15 +3,18 @@
 
   let {
     candidate,
+    partyLists = [],
     selected = false,
     onclick,
   }: {
-    candidate: { id: string; fullName: string; imageUrl: string | null; manifesto: string }
+    candidate: { id: string; fullName: string; imageUrl: string | null; manifesto: string; partyId?: string | null }
+    partyLists?: Array<{ id: string; name: string; code: string; color: string | null }>
     selected?: boolean
     onclick: () => void
   } = $props()
 
   let isExpanded = $state(false)
+  const party = $derived(candidate.partyId ? partyLists.find((p) => p.id === candidate.partyId) : null)
 </script>
 
 <div
@@ -41,9 +44,23 @@
         </div>
       {/if}
       <div class="flex flex-col">
-        <span class="font-semibold text-slate-100 text-base group-hover:text-white transition-colors">
-          {candidate.fullName}
-        </span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-semibold text-slate-100 text-base group-hover:text-white transition-colors">
+            {candidate.fullName}
+          </span>
+          {#if party}
+            <span
+              class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border shadow-sm"
+              style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+            >
+              {party.code}
+            </span>
+          {:else}
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-slate-700/80 bg-slate-800/60 text-slate-400">
+              INDEPENDENT
+            </span>
+          {/if}
+        </div>
       </div>
     </div>
     

@@ -10,7 +10,7 @@
   import Modal from '$lib/components/ui/modal.svelte'
   import { Loader } from 'lucide-svelte'
   import { appCache } from '$lib/cache'
-  import type { TUsersData } from '$lib/types'
+  import type { TPartyList, TUsersData } from '$lib/types'
 
   // NOTE: This component is always open when mounted.
   // The parent component controls showing/hiding by conditionally mounting/unmounting it.
@@ -18,11 +18,13 @@
     onclose,
     electionId,
     positionId,
+    partyLists = [],
     onsuccess,
   }: {
     onclose: () => void
     electionId: string
     positionId: string
+    partyLists?: TPartyList[]
     onsuccess: () => void
   } = $props()
 
@@ -30,6 +32,7 @@
   let usersError = $state('')
   let createAccountId = $state('')
   let createFullName = $state('')
+  let createPartyId = $state('')
   let createManifesto = $state('')
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
@@ -78,6 +81,7 @@
         fullName: createFullName.trim(),
         accountId: createAccountId,
         positionId: positionId,
+        partyId: createPartyId || null,
         manifesto: createManifesto.trim(),
       })
       appCache.invalidate({ params: { electionId } })
@@ -130,6 +134,24 @@
       {#if createErrors.user}
         <p class="text-xs mt-1" style="color: oklch(0.65 0.15 25)">{createErrors.user}</p>
       {/if}
+    </div>
+
+    <div class="space-y-2">
+      <label for="createPartyId" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+        Party List
+      </label>
+      <select
+        id="createPartyId"
+        bind:value={createPartyId}
+        disabled={createBusy}
+        class="w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none"
+        style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
+      >
+        <option value="">Independent (No Party)</option>
+        {#each partyLists as party (party.id)}
+          <option value={party.id}>{party.name} ({party.code})</option>
+        {/each}
+      </select>
     </div>
 
     <div class="space-y-2">
