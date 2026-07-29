@@ -13,6 +13,8 @@ const ErrorResponse = z.object({ message: z.string() });
 const IdParams = z.object({ id: z.string() });
 const PartyIdParams = z.object({ id: z.string(), partyId: z.string() });
 const MessageResponse = z.object({ message: z.string() });
+const PartyConflictDescription =
+  "Party list conflict: duplicate name or code, or election is not in draft";
 
 export const listPartyListsRoute = createRoute({
   method: "get",
@@ -47,10 +49,7 @@ export const createPartyListRoute = createRoute({
     ),
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_FOUND),
-    [httpStatusCodes.CONFLICT]: jsonContent(
-      ErrorResponse,
-      ERROR_MESSAGES.PARTY_LIST_ALREADY_EXISTS,
-    ),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, PartyConflictDescription),
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
       createErrorSchema(CreatePartyListBodySchema),
       "Validation failed",
@@ -74,10 +73,7 @@ export const updatePartyListRoute = createRoute({
     ),
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.PARTY_LIST_NOT_FOUND),
-    [httpStatusCodes.CONFLICT]: jsonContent(
-      ErrorResponse,
-      ERROR_MESSAGES.PARTY_LIST_ALREADY_EXISTS,
-    ),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, PartyConflictDescription),
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
       createErrorSchema(UpdatePartyListBodySchema),
       "Validation failed",
@@ -100,5 +96,6 @@ export const deletePartyListRoute = createRoute({
     ),
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.PARTY_LIST_NOT_FOUND),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT),
   },
 });

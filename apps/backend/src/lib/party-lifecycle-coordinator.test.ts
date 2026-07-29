@@ -51,7 +51,11 @@ describe("PartyLifecycleCoordinator", () => {
 
   describe("create", () => {
     it("successfully creates a party list and inserts audit log", async () => {
-      mockElectionFindById.mockResolvedValueOnce({ id: "e1", name: "CSO 2026" });
+      mockElectionFindById.mockResolvedValueOnce({
+        id: "e1",
+        name: "CSO 2026",
+        status: "draft",
+      });
       mockPartyCreate.mockResolvedValueOnce("pl1");
       mockPartyFindById.mockResolvedValueOnce({
         id: "pl1",
@@ -97,7 +101,11 @@ describe("PartyLifecycleCoordinator", () => {
     });
 
     it("throws PARTY_LIST_ALREADY_EXISTS on unique constraint failure", async () => {
-      mockElectionFindById.mockResolvedValueOnce({ id: "e1", name: "CSO 2026" });
+      mockElectionFindById.mockResolvedValueOnce({
+        id: "e1",
+        name: "CSO 2026",
+        status: "draft",
+      });
       const uniqueError = new Error("UNIQUE constraint failed: party_lists.code");
       mockPartyCreate.mockRejectedValueOnce(uniqueError);
 
@@ -111,6 +119,24 @@ describe("PartyLifecycleCoordinator", () => {
         expect.objectContaining({ code: "PARTY_LIST_ALREADY_EXISTS", status: 409 }),
       );
     });
+
+    it.each(["open", "closed", "archived"])(
+      "throws ELECTION_NOT_IN_DRAFT when election status is %s",
+      async (status) => {
+        mockElectionFindById.mockResolvedValueOnce({ id: "e1", name: "CSO 2026", status });
+
+        await expect(
+          partyLifecycleCoordinator.create(
+            mockDb,
+            { electionId: "e1", name: "Innovators", code: "INNOV" },
+            actor,
+          ),
+        ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+        expect(mockPartyCreate).not.toHaveBeenCalled();
+        expect(mockAuditInsert).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("update", () => {
@@ -120,6 +146,11 @@ describe("PartyLifecycleCoordinator", () => {
         electionId: "e1",
         name: "Innovators",
         code: "INNOV",
+      });
+      mockElectionFindById.mockResolvedValueOnce({
+        id: "e1",
+        name: "CSO 2026",
+        status: "draft",
       });
       mockPartyUpdate.mockResolvedValueOnce(true);
       mockPartyFindById.mockResolvedValueOnce({
@@ -162,6 +193,30 @@ describe("PartyLifecycleCoordinator", () => {
         ),
       ).rejects.toThrow(expect.objectContaining({ code: "PARTY_LIST_NOT_FOUND", status: 404 }));
     });
+
+    it.each(["open", "closed", "archived"])(
+      "throws ELECTION_NOT_IN_DRAFT when election status is %s",
+      async (status) => {
+        mockPartyFindById.mockResolvedValueOnce({
+          id: "pl1",
+          electionId: "e1",
+          name: "Innovators",
+          code: "INNOV",
+        });
+        mockElectionFindById.mockResolvedValueOnce({ id: "e1", name: "CSO 2026", status });
+
+        await expect(
+          partyLifecycleCoordinator.update(
+            mockDb,
+            { electionId: "e1", partyId: "pl1", name: "New Name" },
+            actor,
+          ),
+        ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+        expect(mockPartyUpdate).not.toHaveBeenCalled();
+        expect(mockAuditInsert).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("delete", () => {
@@ -171,6 +226,11 @@ describe("PartyLifecycleCoordinator", () => {
         electionId: "e1",
         name: "Innovators",
         code: "INNOV",
+      });
+      mockElectionFindById.mockResolvedValueOnce({
+        id: "e1",
+        name: "CSO 2026",
+        status: "draft",
       });
       mockPartyDelete.mockResolvedValueOnce(true);
 
@@ -194,5 +254,25 @@ describe("PartyLifecycleCoordinator", () => {
         partyLifecycleCoordinator.delete(mockDb, { electionId: "e1", partyId: "pl1" }, actor),
       ).rejects.toThrow(expect.objectContaining({ code: "PARTY_LIST_NOT_FOUND", status: 404 }));
     });
+
+    it.each(["open", "closed", "archived"])(
+      "throws ELECTION_NOT_IN_DRAFT when election status is %s",
+      async (status) => {
+        mockPartyFindById.mockResolvedValueOnce({
+          id: "pl1",
+          electionId: "e1",
+          name: "Innovators",
+          code: "INNOV",
+        });
+        mockElectionFindById.mockResolvedValueOnce({ id: "e1", name: "CSO 2026", status });
+
+        await expect(
+          partyLifecycleCoordinator.delete(mockDb, { electionId: "e1", partyId: "pl1" }, actor),
+        ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+        expect(mockPartyDelete).not.toHaveBeenCalled();
+        expect(mockAuditInsert).not.toHaveBeenCalled();
+      },
+    );
   });
 });

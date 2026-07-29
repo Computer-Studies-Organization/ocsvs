@@ -8,6 +8,7 @@ import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 export type PartyLifecycleErrorCode =
   | "ELECTION_NOT_FOUND"
+  | "ELECTION_NOT_IN_DRAFT"
   | "PARTY_LIST_NOT_FOUND"
   | "PARTY_LIST_ALREADY_EXISTS";
 
@@ -58,6 +59,9 @@ export const partyLifecycleCoordinator = {
       if (!election) {
         throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
       }
+      if (election.status !== "draft") {
+        throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+      }
 
       try {
         const partyId = await partyListRepo.create(tx, {
@@ -104,6 +108,14 @@ export const partyLifecycleCoordinator = {
         throw new PartyLifecycleError("PARTY_LIST_NOT_FOUND", 404);
       }
 
+      const election = await electionRepo.findById(tx, input.electionId);
+      if (!election) {
+        throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
+      }
+      if (election.status !== "draft") {
+        throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+      }
+
       try {
         await partyListRepo.update(tx, input.partyId, {
           name: input.name,
@@ -146,6 +158,14 @@ export const partyLifecycleCoordinator = {
       const existing = await partyListRepo.findById(tx, input.partyId);
       if (!existing || existing.electionId !== input.electionId) {
         throw new PartyLifecycleError("PARTY_LIST_NOT_FOUND", 404);
+      }
+
+      const election = await electionRepo.findById(tx, input.electionId);
+      if (!election) {
+        throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
+      }
+      if (election.status !== "draft") {
+        throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
       await partyListRepo.delete(tx, input.partyId);

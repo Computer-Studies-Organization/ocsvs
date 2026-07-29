@@ -75,6 +75,12 @@ export const createCandidateRoute = createRoute({
       }),
       ERROR_MESSAGES.CANDIDATE_ALREADY_EXISTS,
     ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.PARTY_LIST_NOT_FOUND,
+    ),
     [httpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       z.object({
         message: z.string(),
@@ -189,6 +195,12 @@ export const updateCandidateRoute = createRoute({
         message: z.string(),
       }),
       ERROR_MESSAGES.INVALID_REQUEST,
+    ),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT,
     ),
   },
 });

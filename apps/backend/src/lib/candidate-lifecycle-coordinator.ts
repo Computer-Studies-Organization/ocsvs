@@ -6,6 +6,7 @@ import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { partyListRepo } from "@/database/repositories/party-list.repository";
 import {
   candidateStore,
   formatUrl,
@@ -40,6 +41,7 @@ export type CandidateLifecycleErrorCode =
   | "CANDIDATE_ALREADY_EXISTS"
   | "POSITION_NOT_FOUND"
   | "ELECTION_NOT_FOUND"
+  | "PARTY_LIST_NOT_FOUND"
   | "ELECTION_NOT_IN_DRAFT"
   | "UNSUPPORTED_MEDIA_TYPE";
 
@@ -93,7 +95,15 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
-      // 4. Ensure no active candidate for the same account+position
+      // 4. Verify the party belongs to the position's election
+      if (input.partyId !== null && input.partyId !== undefined) {
+        const party = await partyListRepo.findById(tx, input.partyId);
+        if (!party || party.electionId !== position.electionId) {
+          throw new CandidateLifecycleError("PARTY_LIST_NOT_FOUND", 404);
+        }
+      }
+
+      // 5. Ensure no active candidate for the same account+position
       const exists = await candidateRepo.existsActiveForAccountPosition(
         tx,
         input.accountId,
@@ -103,7 +113,7 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("CANDIDATE_ALREADY_EXISTS", 409);
       }
 
-      // 5. Insert the candidate
+      // 6. Insert the candidate
       const createData: {
         fullName: string;
         accountId: string;
@@ -121,7 +131,7 @@ export class CandidateLifecycleCoordinator {
       }
       const newId = await candidateRepo.create(tx, createData);
 
-      // 6. Insert audit log
+      // 7. Insert audit log
       await auditLogRepo.insert(tx, {
         action: "candidate.create",
         targetType: "candidate",
@@ -154,6 +164,30 @@ export class CandidateLifecycleCoordinator {
       const candidate = await candidateRepo.getForAdminView(tx, id);
       if (!candidate || candidate.isActive === 0) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
+      }
+
+      if (input.partyId !== undefined) {
+        const position = await positionRepo.findById(tx, candidate.positionId);
+        if (!position) {
+          throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
+        }
+
+        if (input.partyId !== candidate.partyId) {
+          const election = await electionRepo.findById(tx, position.electionId);
+          if (!election) {
+            throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
+          }
+          if (election.status !== "draft") {
+            throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+          }
+        }
+
+        if (input.partyId !== null) {
+          const party = await partyListRepo.findById(tx, input.partyId);
+          if (!party || party.electionId !== position.electionId) {
+            throw new CandidateLifecycleError("PARTY_LIST_NOT_FOUND", 404);
+          }
+        }
       }
 
       const updateFields: { fullName?: string; partyId?: string | null; manifesto?: string } = {};

@@ -43,10 +43,7 @@ export const createPartyListHandler: AppRouteHandler<typeof createPartyListRoute
     return c.json(party, httpStatusCodes.CREATED);
   } catch (error) {
     if (error instanceof PartyLifecycleError) {
-      if (error.status === 404) {
-        return c.json({ message: error.message }, httpStatusCodes.NOT_FOUND);
-      }
-      return c.json({ message: error.message }, httpStatusCodes.CONFLICT);
+      return c.json({ message: error.message }, error.status as any);
     }
     throw error;
   }
@@ -73,10 +70,7 @@ export const updatePartyListHandler: AppRouteHandler<typeof updatePartyListRoute
     return c.json(updated, httpStatusCodes.OK);
   } catch (error) {
     if (error instanceof PartyLifecycleError) {
-      if (error.status === 404) {
-        return c.json({ message: error.message }, httpStatusCodes.NOT_FOUND);
-      }
-      return c.json({ message: error.message }, httpStatusCodes.CONFLICT);
+      return c.json({ message: error.message }, error.status as any);
     }
     throw error;
   }
@@ -99,7 +93,7 @@ export const deletePartyListHandler: AppRouteHandler<typeof deletePartyListRoute
     return c.json({ message: ERROR_MESSAGES.PARTY_LIST_DELETED_SUCCESSFULLY }, httpStatusCodes.OK);
   } catch (error) {
     if (error instanceof PartyLifecycleError) {
-      return c.json({ message: error.message }, httpStatusCodes.NOT_FOUND);
+      return c.json({ message: error.message }, error.status as any);
     }
     throw error;
   }
