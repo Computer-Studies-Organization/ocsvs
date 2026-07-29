@@ -12,6 +12,7 @@ const {
   mockCandidateGetForAdminView,
   mockPositionFindById,
   mockElectionFindById,
+  mockPartyFindById,
   mockAuditInsert,
   mockSelectGet,
 } = vi.hoisted(() => ({
@@ -24,6 +25,7 @@ const {
   mockCandidateGetForAdminView: vi.fn(),
   mockPositionFindById: vi.fn(),
   mockElectionFindById: vi.fn(),
+  mockPartyFindById: vi.fn(),
   mockAuditInsert: vi.fn(),
   mockSelectGet: vi.fn(),
 }));
@@ -49,6 +51,12 @@ vi.mock("@/database/repositories/position.repository", () => ({
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
     findById: mockElectionFindById,
+  },
+}));
+
+vi.mock("@/database/repositories/party-list.repository", () => ({
+  partyListRepo: {
+    findById: mockPartyFindById,
   },
 }));
 
@@ -209,6 +217,72 @@ describe("CandidateLifecycleCoordinator", () => {
         ),
       ).rejects.toThrow(expect.objectContaining({ code: "CANDIDATE_ALREADY_EXISTS", status: 409 }));
     });
+
+    it("creates a candidate with a party from the position's election", async () => {
+      mockSelectGet.mockResolvedValueOnce({ id: "acc-id" });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-id", electionId: "el-id" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-id", status: "draft" });
+      mockPartyFindById.mockResolvedValueOnce({ id: "party-id", electionId: "el-id" });
+      mockCandidateExistsActive.mockResolvedValueOnce(false);
+      mockCandidateCreate.mockResolvedValueOnce("cand-id");
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-id",
+        fullName: "Juan",
+        accountId: "acc-id",
+        positionId: "pos-id",
+        partyId: "party-id",
+        manifesto: "Manifesto",
+        isActive: 1,
+        imageUrl: null,
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
+
+      await candidateLifecycleCoordinator.create(
+        mockDb,
+        {
+          fullName: "Juan",
+          accountId: "acc-id",
+          positionId: "pos-id",
+          partyId: "party-id",
+          manifesto: "Manifesto",
+        },
+        { id: "admin-id", username: "admin" },
+      );
+
+      expect(mockPartyFindById).toHaveBeenCalledWith(mockTx, "party-id");
+      expect(mockCandidateCreate).toHaveBeenCalledWith(
+        mockTx,
+        expect.objectContaining({ partyId: "party-id" }),
+      );
+    });
+
+    it.each([
+      ["missing", null],
+      ["from another election", { id: "party-id", electionId: "other-election" }],
+    ])("throws PARTY_LIST_NOT_FOUND when the party is %s", async (_label, party) => {
+      mockSelectGet.mockResolvedValueOnce({ id: "acc-id" });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-id", electionId: "el-id" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-id", status: "draft" });
+      mockPartyFindById.mockResolvedValueOnce(party);
+
+      await expect(
+        candidateLifecycleCoordinator.create(
+          mockDb,
+          {
+            fullName: "Juan",
+            accountId: "acc-id",
+            positionId: "pos-id",
+            partyId: "party-id",
+            manifesto: "Manifesto",
+          },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "PARTY_LIST_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateCreate).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
   });
 
   describe("update", () => {
@@ -278,6 +352,85 @@ describe("CandidateLifecycleCoordinator", () => {
           { id: "admin-id", username: "admin" },
         ),
       ).rejects.toThrow("Audit failure");
+    });
+
+    it.each([
+      ["missing", null],
+      ["from another election", { id: "party-new", electionId: "other-election" }],
+    ])("throws PARTY_LIST_NOT_FOUND when the new party is %s", async (_label, party) => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        partyId: "party-old",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-1", status: "draft" });
+      mockPartyFindById.mockResolvedValueOnce(party);
+
+      await expect(
+        candidateLifecycleCoordinator.update(
+          mockDb,
+          "cand-1",
+          { partyId: "party-new" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "PARTY_LIST_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateUpdate).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("validates a supplied party even when it matches the stored party ID", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        partyId: "party-existing",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+      mockPartyFindById.mockResolvedValueOnce({
+        id: "party-existing",
+        electionId: "other-election",
+      });
+
+      await expect(
+        candidateLifecycleCoordinator.update(
+          mockDb,
+          "cand-1",
+          { partyId: "party-existing" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "PARTY_LIST_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateUpdate).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["assigning a party", "party-new"],
+      ["clearing a party", null],
+    ])("throws ELECTION_NOT_IN_DRAFT when %s after draft", async (_label, partyId) => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        partyId: "party-old",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-1", status: "open" });
+
+      await expect(
+        candidateLifecycleCoordinator.update(
+          mockDb,
+          "cand-1",
+          { partyId },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+      expect(mockCandidateUpdate).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
     });
   });
 

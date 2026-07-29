@@ -268,6 +268,11 @@ export const PositionSchema = z.object({
   }),
 });
 
+export const PartyColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/)
+  .nullable();
+
 export const PartyListSchema = z.object({
   createdAt: z.number().int().openapi({
     description: "Creation timestamp",
@@ -293,7 +298,7 @@ export const PartyListSchema = z.object({
     description: "Party list code / acronym",
     example: "INNOVATORS",
   }),
-  color: z.string().nullable().openapi({
+  color: PartyColorSchema.openapi({
     description: "Party list badge color (hex string, e.g. #3B82F6)",
     example: "#3B82F6",
   }),
@@ -310,7 +315,7 @@ export const CreatePartyListBodySchema = z
       description: "Party list code / acronym",
       example: "INNOVATORS",
     }),
-    color: z.string().max(20).optional().nullable().openapi({
+    color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
     }),
@@ -327,7 +332,7 @@ export const UpdatePartyListBodySchema = z
       description: "Party list code / acronym",
       example: "INNOVATORS",
     }),
-    color: z.string().max(20).optional().nullable().openapi({
+    color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
     }),
