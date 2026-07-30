@@ -67,6 +67,17 @@ vi.mock("@/database/repositories/election.repository", () => ({
   },
 }));
 
+vi.mock("@/database/repositories/party-list.repository", () => ({
+  partyListRepo: {
+    findById: vi.fn().mockImplementation(async (_db: any, id: string) => {
+      if (id === "party-999") {
+        return { id: "party-999", electionId: "el-123", name: "Party 999", code: "P999" };
+      }
+      return null;
+    }),
+  },
+}));
+
 // Hoisted mocks
 const {
   mockExistsActiveForAccountPosition,
@@ -101,6 +112,7 @@ const {
 vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     existsActiveForAccountPosition: mockExistsActiveForAccountPosition,
+    existsActiveForPartyPosition: vi.fn().mockResolvedValue(false),
     create: mockCreate,
     listForAdminTable: mockListForAdminTable,
     getForAdminView: mockGetForAdminView,
@@ -304,6 +316,44 @@ describe("candidate Routes (repository)", () => {
       const json = (await res.json()) as any;
       expect(json.data[0].isActive).toBe(0);
     });
+
+    it("should include inactive candidates when includeInactive=true for admin", async () => {
+      const mockCandidates = [
+        {
+          id: "1",
+          fullName: "Alice",
+          isActive: 0,
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+      ];
+      mockListForAdminTable.mockResolvedValue({
+        data: mockCandidates,
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      });
+
+      const res = await router.request("/candidates?page=1&limit=10&includeInactive=true", {
+        method: "GET",
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockListForAdminTable).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ includeInactive: true }),
+      );
+    });
+
+    it("should reject includeInactive=true with 403 for non-admin voter", async () => {
+      mockAuthRole = "voter";
+      try {
+        const res = await router.request("/candidates?page=1&limit=10&includeInactive=true", {
+          method: "GET",
+        });
+        expect(res.status).toBe(403);
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
   });
 
   describe("GET /candidates/:id (getCandidate)", () => {
@@ -410,6 +460,41 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY);
+    });
+
+    it("should update candidate partyId to party list ID or null", async () => {
+      let getCallCount = 0;
+      mockGetForAdminView.mockImplementation(async () => {
+        getCallCount++;
+        if (getCallCount === 1) {
+          return { id: "cand-1", isActive: 1, accountId: "acc1" };
+        }
+        return {
+          id: "cand-1",
+          fullName: "Bob",
+          accountId: "acc1",
+          positionId: "pos-101",
+          partyId: "party-999",
+          manifesto: "Updated",
+          isActive: 1,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+
+      const resAssign = await router.request("/candidates/cand-1", {
+        method: "PUT",
+        body: JSON.stringify({ partyId: "party-999" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(resAssign.status).toBe(200);
+
+      const resNull = await router.request("/candidates/cand-1", {
+        method: "PUT",
+        body: JSON.stringify({ partyId: null }),
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(resNull.status).toBe(200);
     });
 
     it("should return 404 if candidate not found on update", async () => {
@@ -649,6 +734,43 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toBe("image/png");
       expect(mockDownloadImage).toHaveBeenCalledWith("candidates/cand-1/image.png");
+      expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
+        includeInactive: true,
+      });
+    });
+
+    it("should pass includeInactive: false when non-admin voter requests candidate image", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({
+        id: candidateId,
+        imageUrl:
+          "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-1/image.png",
+      });
+      mockDownloadImage.mockResolvedValueOnce({
+        data: new ArrayBuffer(8),
+        contentType: "image/png",
+      });
+
+      mockAuthRole = "voter";
+      try {
+        const res = await router.request(
+          `/candidates/${candidateId}/image`,
+          { method: "GET" },
+          {
+            B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+            B2_APPLICATION_KEY_ID: "key-id",
+            B2_APPLICATION_KEY: "key",
+            B2_BUCKET_NAME: "cso-voting-candidates",
+          },
+        );
+
+        expect(res.status).toBe(200);
+        expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
+          includeInactive: false,
+        });
+      } finally {
+        mockAuthRole = "admin";
+      }
     });
 
     it("should return 404 if candidate has no image", async () => {

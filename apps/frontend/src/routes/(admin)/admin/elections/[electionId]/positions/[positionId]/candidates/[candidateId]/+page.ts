@@ -24,7 +24,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     appCache.get("election", { id: electionId }).fetch(false, { fetch }),
     appCache.get("positions", { electionId }).fetch(false, { fetch }),
     fetchUser(cand.accountId, { fetch }).catch(() => null),
-    listPartyLists(electionId, { fetch }).catch(() => []),
+    listPartyLists(electionId, { fetch }),
   ]);
 
   if (!election) error(404, "Election not found");
