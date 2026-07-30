@@ -317,6 +317,7 @@ export const CreatePartyListBodySchema = z
       .min(1)
       .max(50)
       .regex(/^[A-Za-z0-9_-]+$/, { message: "Use only letters, numbers, hyphens, and underscores" })
+      .transform((val) => val.toUpperCase())
       .openapi({
         description: "Party list code / acronym",
         example: "INNOVATORS",
@@ -339,6 +340,7 @@ export const UpdatePartyListBodySchema = z
       .min(1)
       .max(50)
       .regex(/^[A-Za-z0-9_-]+$/, { message: "Use only letters, numbers, hyphens, and underscores" })
+      .transform((val) => val.toUpperCase())
       .optional()
       .openapi({
         description: "Party list code / acronym",
