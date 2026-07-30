@@ -132,32 +132,40 @@ export const partyLists = sqliteTable(
 // Note that when users are hard deleted, votes.user_id is SET NULL, which
 // bypasses these unique index constraints in SQLite, allowing multiple anonymized
 // votes to coexist without collision.
-export const candidates = sqliteTable("candidates", {
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  id: text("id").primaryKey(),
-  fullName: text("full_name").notNull(),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id),
-  positionId: text("position_id")
-    .notNull()
-    .references(() => positions.id, { onDelete: "restrict" }),
-  // NOTE: onDelete: "set null" is declared here but is silently dropped by
-  // Drizzle when generating the ALTER TABLE ADD COLUMN migration (bug #5619:
-  // https://github.com/drizzle-team/drizzle-orm/issues/5619). The DB-level FK
-  // therefore acts as NO ACTION (RESTRICT). partyListRepo.delete() compensates
-  // by manually nullifying this column before deleting the party row.
-  partyId: text("party_id").references(() => partyLists.id, { onDelete: "set null" }),
+export const candidates = sqliteTable(
+  "candidates",
+  {
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    id: text("id").primaryKey(),
+    fullName: text("full_name").notNull(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    positionId: text("position_id")
+      .notNull()
+      .references(() => positions.id, { onDelete: "restrict" }),
+    // NOTE: onDelete: "set null" is declared here but is silently dropped by
+    // Drizzle when generating the ALTER TABLE ADD COLUMN migration (bug #5619:
+    // https://github.com/drizzle-team/drizzle-orm/issues/5619). The DB-level FK
+    // therefore acts as NO ACTION (RESTRICT). partyListRepo.delete() compensates
+    // by manually nullifying this column before deleting the party row.
+    partyId: text("party_id").references(() => partyLists.id, { onDelete: "set null" }),
 
-  manifesto: text("manifesto").notNull(),
-  isActive: integer("is_active").notNull().default(1),
-  imageUrl: text("image_url"),
-});
+    manifesto: text("manifesto").notNull(),
+    isActive: integer("is_active").notNull().default(1),
+    imageUrl: text("image_url"),
+  },
+  (table) => [
+    uniqueIndex("idx_candidates_active_party_position")
+      .on(table.positionId, table.partyId)
+      .where(sql`${table.isActive} = 1 AND ${table.partyId} IS NOT NULL`),
+  ],
+);
 
 export const votes = sqliteTable(
   "votes",

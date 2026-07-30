@@ -1,5 +1,5 @@
 import type { DbClient } from "./database.type";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { candidates, positions, votes } from "@/database/schema";
 
 export type CandidateRow = typeof candidates.$inferSelect;
@@ -260,6 +260,31 @@ export const candidateRepo = {
           eq(candidates.isActive, 1),
         ),
       )
+      .limit(1)
+      .get();
+    return res !== undefined;
+  },
+
+  // Check whether a party already has an active candidate for a position.
+  // excludeCandidateId keeps a candidate's unchanged party assignment valid on update.
+  async existsActiveForPartyPosition(
+    db: DbClient,
+    partyId: string,
+    positionId: string,
+    excludeCandidateId?: string,
+  ): Promise<boolean> {
+    const conditions = [
+      eq(candidates.partyId, partyId),
+      eq(candidates.positionId, positionId),
+      eq(candidates.isActive, 1),
+    ];
+    if (excludeCandidateId) {
+      conditions.push(ne(candidates.id, excludeCandidateId));
+    }
+    const res = await db
+      .select({ id: candidates.id })
+      .from(candidates)
+      .where(and(...conditions))
       .limit(1)
       .get();
     return res !== undefined;

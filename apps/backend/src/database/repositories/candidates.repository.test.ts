@@ -8,12 +8,13 @@ vi.mock("drizzle-orm", async (importOriginal) => {
     eq: vi.fn(actual.eq),
     and: vi.fn(actual.and),
     inArray: vi.fn(actual.inArray),
+    ne: vi.fn(actual.ne),
     desc: vi.fn(actual.desc),
     count: vi.fn(actual.count),
   };
 });
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { candidates } from "@/database/schema";
 import { candidateRepo } from "./candidates.repository";
 
@@ -332,6 +333,20 @@ describe("candidateRepo", () => {
       expect(eq).toHaveBeenCalledWith(candidates.accountId, "a2");
       expect(eq).toHaveBeenCalledWith(candidates.positionId, "p1");
       expect(eq).toHaveBeenCalledWith(candidates.isActive, 1);
+      expect(and).toHaveBeenCalled();
+    });
+
+    it("existsActiveForPartyPosition filters active candidates and excludes the candidate being updated", async () => {
+      dataQueryChain.get.mockResolvedValueOnce({ id: "c2" });
+
+      expect(
+        await candidateRepo.existsActiveForPartyPosition(mockDb as any, "party-1", "p1", "c1"),
+      ).toBe(true);
+
+      expect(eq).toHaveBeenCalledWith(candidates.partyId, "party-1");
+      expect(eq).toHaveBeenCalledWith(candidates.positionId, "p1");
+      expect(eq).toHaveBeenCalledWith(candidates.isActive, 1);
+      expect(ne).toHaveBeenCalledWith(candidates.id, "c1");
       expect(and).toHaveBeenCalled();
     });
 
