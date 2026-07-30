@@ -56,6 +56,7 @@ describe("candidate detail page", () => {
             updatedAt: 1,
           },
           user: null,
+          partyLists: [],
         },
       },
     });
@@ -89,6 +90,7 @@ describe("candidate detail page", () => {
           },
           position: null,
           user: null,
+          partyLists: [],
         },
       },
     });

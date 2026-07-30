@@ -150,6 +150,7 @@
       onclose={closeCreate}
       electionId={election.id}
       positionId={position.id}
+      partyLists={data.partyLists}
       onsuccess={closeCreate}
     />
   {/if}
