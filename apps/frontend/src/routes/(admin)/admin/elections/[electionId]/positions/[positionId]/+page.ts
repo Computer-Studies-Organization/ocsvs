@@ -13,7 +13,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     appCache
       .get("candidates", { electionId, positionId, includeInactive: true })
       .fetch(false, { fetch }),
-    listPartyLists(electionId, { fetch }).catch(() => []),
+    listPartyLists(electionId, { fetch }),
   ]);
 
   if (!election) error(404, "Election not found");
