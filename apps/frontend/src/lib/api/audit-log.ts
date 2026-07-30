@@ -1,10 +1,37 @@
 import { apiFetch } from "./client";
 
+export const AUDIT_ACTIONS = [
+  "election.create",
+  "election.update",
+  "election.transition",
+  "position.create",
+  "position.update",
+  "position.delete",
+  "candidate.create",
+  "candidate.update",
+  "candidate.deactivate",
+  "party.create",
+  "party.update",
+  "party.delete",
+  "user.update",
+  "user.create",
+  "user.bulk_import",
+  "user.soft_delete",
+  "user.restore",
+  "user.hard_delete",
+  "user.unlock",
+] as const;
+
+export const AUDIT_TARGET_TYPES = ["election", "position", "candidate", "party", "user"] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
+
 export interface AuditLogEntry {
   id: string;
   createdAt: number;
-  action: string;
-  targetType: "election" | "position" | "candidate" | "user";
+  action: AuditAction;
+  targetType: AuditTargetType;
   targetId: string;
   actorAccountIdSnapshot: string;
   actorUsernameSnapshot: string;
@@ -25,6 +52,17 @@ export interface AuditLogFilters {
 export interface AuditLogResponse {
   items: AuditLogEntry[];
   nextCursor: string | null;
+}
+
+export function getAuditTargetFallbackName(
+  entry: Pick<AuditLogEntry, "targetType" | "targetId" | "description">,
+): string {
+  if (entry.targetType !== "party" || !entry.description) {
+    return entry.targetId;
+  }
+
+  const partySnapshot = /party '(.+?)' \(([^)]+)\)/.exec(entry.description);
+  return partySnapshot ? `${partySnapshot[1]} (${partySnapshot[2]})` : entry.targetId;
 }
 
 export async function fetchAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogResponse> {

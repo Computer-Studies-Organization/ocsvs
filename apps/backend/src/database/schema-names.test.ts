@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
-import { AUDIT_ACTIONS } from "@/lib/constants/audit-actions";
+import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
 import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./openapi-schemas";
 import {
   DbSelectUserSchema,
@@ -125,6 +125,23 @@ describe("audit_log schema", () => {
     for (const action of actionValues) {
       const parsed = AuditLogEntrySchema.parse({ ...sampleRow, action });
       expect(parsed.action).toBe(action);
+    }
+  });
+
+  it("accepts every TARGET_TYPES value through the OpenAPI `targetType` field", () => {
+    const sampleRow = {
+      id: "f0e1d2c3-b4a5-4687-8901-23456789abcd",
+      createdAt: 1719400000,
+      action: "party.create",
+      targetId: "a1b2c3d4-e5f6-4789-8abc-1234567890ab",
+      actorAccountIdSnapshot: "acc_456def",
+      actorUsernameSnapshot: "admin.jane",
+      description: "Created party 'Innovators' (INNOV) in election 'CSO Election'",
+    };
+
+    for (const targetType of TARGET_TYPES.options) {
+      const parsed = AuditLogEntrySchema.parse({ ...sampleRow, targetType });
+      expect(parsed.targetType).toBe(targetType);
     }
   });
 

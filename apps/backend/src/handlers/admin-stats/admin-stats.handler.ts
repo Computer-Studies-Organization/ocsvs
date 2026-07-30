@@ -4,6 +4,7 @@ import { createDb } from "@/config/db";
 import { accounts, elections, ballotSnapshots, auditLog } from "@/database/schema";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import type { AuditAction, TargetType } from "@/lib/constants/audit-actions";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (c) => {
@@ -69,7 +70,8 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
       activeElection,
       recentLogs: logs.map((l) => ({
         ...l,
-        targetType: l.targetType as "election" | "position" | "candidate" | "user",
+        action: l.action as AuditAction,
+        targetType: l.targetType as TargetType,
       })),
     },
     httpStatusCodes.OK,

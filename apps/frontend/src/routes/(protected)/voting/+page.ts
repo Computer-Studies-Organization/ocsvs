@@ -15,7 +15,7 @@ export const load: PageLoad = async ({ fetch, depends }) => {
     const [cands, pos, parties] = await Promise.all([
       appCache.get("candidates", { electionId: state.open.id }).fetch(false, { fetch }),
       appCache.get("positions", { electionId: state.open.id }).fetch(false, { fetch }),
-      listPartyLists(state.open.id, { fetch }).catch(() => []),
+      listPartyLists(state.open.id, { fetch }),
     ]);
     candidates = cands;
     positions = pos;

@@ -19,7 +19,6 @@
     accountId: string
     positionId: string
     manifesto: string
-    isActive: number
     imageUrl: string | null
   }
 
@@ -39,7 +38,6 @@
   let imageError = $state('')
 
   let editManifesto = $state(untrack(() => candidate.manifesto ?? ''))
-  let editIsActive = $state(untrack(() => candidate.isActive === 1))
   let editErrors = $state<Record<string, string>>({})
 
   async function handleSave(e: SubmitEvent) {
@@ -47,7 +45,6 @@
     if (!candidateId) return
     const result = validate(updateCandidateSchema, {
       manifesto: editManifesto,
-      isActive: editIsActive ? 1 : 0,
     })
     if (!result.ok) {
       editErrors = result.errors
@@ -58,7 +55,6 @@
     try {
       await updateCandidate(candidateId, {
         manifesto: editManifesto,
-        isActive: editIsActive ? 1 : 0,
       })
       appCache.invalidate({ params: { electionId } })
       await invalidate('app:candidate')
@@ -214,17 +210,6 @@
             <p class='text-xs mt-1' style='color: oklch(0.65 0.15 25)'>{editErrors.manifesto}</p>
           {/if}
         </div>
-
-        <label class='flex items-center gap-3 cursor-pointer'>
-          <input
-            type='checkbox'
-            bind:checked={editIsActive}
-            disabled={isSaving}
-            class='h-5 w-5 cursor-pointer'
-          />
-          <span class='text-sm font-semibold' style='color: oklch(0.95 0.008 250)'>Active</span>
-        </label>
-
 
         <div class='flex flex-wrap gap-3 pt-2'>
           <button

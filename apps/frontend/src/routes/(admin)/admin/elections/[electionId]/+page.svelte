@@ -97,15 +97,17 @@
           <Flag size={20} class='text-sky-400' />
           <h2 class='text-lg font-black' style='color: oklch(0.95 0.008 250)'>Party Lists (Slates)</h2>
         </div>
-        <button
-          type='button'
-          onclick={() => isPartyCreateOpen = true}
-          class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
-          style='background: oklch(0.45 0.15 250); color: oklch(0.98 0.005 250)'
-        >
-          <Plus size={16} stroke-width={2.5} />
-          Add Party List
-        </button>
+        {#if election.status === 'draft'}
+          <button
+            type='button'
+            onclick={() => isPartyCreateOpen = true}
+            class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
+            style='background: oklch(0.45 0.15 250); color: oklch(0.98 0.005 250)'
+          >
+            <Plus size={16} stroke-width={2.5} />
+            Add Party List
+          </button>
+        {/if}
       </div>
 
       {#if partyLists.length === 0}
@@ -129,14 +131,16 @@
                   </span>
                 </div>
               </div>
-              <button
-                type='button'
-                onclick={() => editingParty = party}
-                class='p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200'
-                title='Edit Party'
-              >
-                <Edit size={16} />
-              </button>
+              {#if election.status === 'draft'}
+                <button
+                  type='button'
+                  onclick={() => editingParty = party}
+                  class='p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200'
+                  title='Edit Party'
+                >
+                  <Edit size={16} />
+                </button>
+              {/if}
             </div>
           {/each}
         </div>
@@ -227,7 +231,7 @@
 />
 {/if}
 
-{#if isPartyCreateOpen}
+{#if isPartyCreateOpen && election.status === 'draft'}
 <AddPartyModal
   onclose={() => isPartyCreateOpen = false}
   electionId={election.id}
@@ -235,7 +239,7 @@
 />
 {/if}
 
-{#if editingParty}
+{#if editingParty && election.status === 'draft'}
 <EditPartyModal
   onclose={() => editingParty = null}
   electionId={election.id}
@@ -243,4 +247,3 @@
   onsuccess={() => editingParty = null}
 />
 {/if}
-

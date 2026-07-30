@@ -13,12 +13,13 @@ export const createCandidateSchema = z.object({
   manifesto: z.string(),
 });
 
-export const updateCandidateSchema = z.object({
-  fullName: z.string().optional(),
-  partyId: z.string().nullable().optional(),
-  manifesto: z.string().optional(),
-  isActive: z.number().int().optional(),
-});
+export const updateCandidateSchema = z
+  .object({
+    fullName: z.string().optional(),
+    partyId: z.string().nullable().optional(),
+    manifesto: z.string().optional(),
+  })
+  .strict();
 
 const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

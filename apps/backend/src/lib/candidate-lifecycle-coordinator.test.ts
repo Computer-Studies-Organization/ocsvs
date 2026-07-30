@@ -436,7 +436,13 @@ describe("CandidateLifecycleCoordinator", () => {
 
   describe("deactivate", () => {
     it("successfully deactivates a candidate and writes audit log", async () => {
-      mockCandidateGetForAdminView.mockResolvedValueOnce({ id: "cand-1", isActive: 1 });
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "elec-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "elec-1", status: "draft" });
       mockCandidateSoftDelete.mockResolvedValueOnce(true);
 
       await candidateLifecycleCoordinator.deactivate(mockDb, "cand-1", {
@@ -463,6 +469,68 @@ describe("CandidateLifecycleCoordinator", () => {
           username: "admin",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CANDIDATE_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateSoftDelete).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("throws POSITION_NOT_FOUND when position does not exist", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-missing",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce(null);
+
+      await expect(
+        candidateLifecycleCoordinator.deactivate(mockDb, "cand-1", {
+          id: "admin-id",
+          username: "admin",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "POSITION_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateSoftDelete).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("throws ELECTION_NOT_FOUND when election does not exist", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "elec-missing" });
+      mockElectionFindById.mockResolvedValueOnce(null);
+
+      await expect(
+        candidateLifecycleCoordinator.deactivate(mockDb, "cand-1", {
+          id: "admin-id",
+          username: "admin",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_FOUND", status: 404 }));
+
+      expect(mockCandidateSoftDelete).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("throws ELECTION_NOT_IN_DRAFT when election is not in draft status", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        isActive: 1,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "elec-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "elec-1", status: "open" });
+
+      await expect(
+        candidateLifecycleCoordinator.deactivate(mockDb, "cand-1", {
+          id: "admin-id",
+          username: "admin",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+      expect(mockCandidateSoftDelete).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
     });
   });
 

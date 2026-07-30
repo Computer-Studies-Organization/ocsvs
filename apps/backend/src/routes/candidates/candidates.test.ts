@@ -368,6 +368,17 @@ describe("candidate Routes (repository)", () => {
   });
 
   describe("pATCH /candidates/:id (updateCandidate)", () => {
+    it("rejects isActive because deactivation is handled by DELETE", async () => {
+      const res = await router.request("/candidates/cand-1", {
+        method: "PUT",
+        body: JSON.stringify({ isActive: 0 }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(422);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
     it("should update candidate successfully", async () => {
       let getCallCount = 0;
       mockGetForAdminView.mockImplementation(async () => {

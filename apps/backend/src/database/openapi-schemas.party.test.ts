@@ -20,3 +20,27 @@ describe.each([
     },
   );
 });
+
+describe.each([
+  ["create", CreatePartyListBodySchema, { name: "Innovators" }],
+  ["update", UpdatePartyListBodySchema, {}],
+])("%s party-list code validation", (_operation, schema, baseInput) => {
+  it.each(["INNOV", "party-123", "party_456", "A1_B2-C3"])(
+    "accepts acronym-safe code %s",
+    (code) => {
+      expect(schema.safeParse({ ...baseInput, code }).success).toBe(true);
+    },
+  );
+
+  it.each(["INNOV ATORS", "PARTY(1)", "PARTY'S", "PARTY!", "@PARTY"])(
+    "rejects unsafe party code %s with proper message",
+    (code) => {
+      const result = schema.safeParse({ ...baseInput, code });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const codeError = result.error.issues.find((issue) => issue.path.includes("code"));
+        expect(codeError?.message).toBe("Use only letters, numbers, hyphens, and underscores");
+      }
+    },
+  );
+});
