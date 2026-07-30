@@ -10,7 +10,7 @@
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
   import { validate } from '$lib/validation/helpers'
   import { updateCandidateSchema } from '$lib/validation/candidate'
-  import type { TElection, TPosition, TUsersData } from '$lib/types'
+  import type { TElection, TPartyList, TPosition, TUsersData } from '$lib/types'
   import { appCache } from '$lib/cache'
 
   type CandidateRecord = {
@@ -18,6 +18,7 @@
     fullName: string
     accountId: string
     positionId: string
+    partyId?: string | null
     manifesto: string
     isActive: number
     imageUrl: string | null
@@ -28,6 +29,7 @@
   const election = $derived<TElection>(data.election)
   const position = $derived<TPosition | null>(data.position)
   const user = $derived<TUsersData | null>(data.user)
+  const partyLists = $derived<TPartyList[]>(data.partyLists ?? [])
 
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
@@ -40,6 +42,7 @@
   let imageError = $state('')
 
   let editManifesto = $state(untrack(() => candidate.manifesto ?? ''))
+  let editPartyId = $state(untrack(() => candidate.partyId ?? ''))
   let editErrors = $state<Record<string, string>>({})
 
   async function handleSave(e: SubmitEvent) {
@@ -57,6 +60,7 @@
     try {
       await updateCandidate(candidateId, {
         manifesto: editManifesto,
+        partyId: editPartyId || null,
       })
       appCache.invalidate({ params: { electionId } })
       await invalidate('app:candidate')
@@ -198,6 +202,24 @@
         </div>
 
         <div class='space-y-2'>
+          <label for='editPartyId' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
+            Party List
+          </label>
+          <select
+            id='editPartyId'
+            bind:value={editPartyId}
+            disabled={isSaving}
+            class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
+            style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+          >
+            <option value=''>Independent (No Party)</option>
+            {#each partyLists as party (party.id)}
+              <option value={party.id}>{party.name} ({party.code})</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class='space-y-2'>
           <label for='editManifesto' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
             Manifesto
           </label>
@@ -249,6 +271,15 @@
       </p>
       {#if candidate.imageUrl}
         <img src={candidate.imageUrl} alt={`Avatar for ${candidate.fullName}`} class='max-h-64 rounded-xl object-cover' />
+      {/if}
+      {#if candidate.partyId}
+        {@const currentParty = partyLists.find((p) => p.id === candidate.partyId)}
+        {#if currentParty}
+          <div class='space-y-1'>
+            <h2 class='text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>Party List</h2>
+            <p class='font-semibold' style='color: oklch(0.95 0.008 250)'>{currentParty.name} ({currentParty.code})</p>
+          </div>
+        {/if}
       {/if}
       <div class='space-y-2'>
         <h2 class='text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>Manifesto</h2>

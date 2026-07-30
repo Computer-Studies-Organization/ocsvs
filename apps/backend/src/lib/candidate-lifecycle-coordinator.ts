@@ -393,8 +393,9 @@ export class CandidateLifecycleCoordinator {
     db: DbClient,
     id: string,
     storage: ImageStorage,
+    opts: { includeInactive?: boolean } = {},
   ): Promise<{ data: ArrayBuffer; contentType: string }> {
-    const candidate = await candidateRepo.getForAdminView(db, id);
+    const candidate = await candidateRepo.getForAdminView(db, id, opts);
     if (!candidate || !candidate.imageUrl) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }

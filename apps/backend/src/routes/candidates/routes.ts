@@ -26,6 +26,7 @@ const PaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 export const ListCandidatesQuerySchema = PaginationSchema.extend({
+  includeInactive: booleanQuery.default("false"),
   includeDeleted: booleanQuery.default("false"),
   positionId: z.string().optional(),
 });

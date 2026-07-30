@@ -104,11 +104,14 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
 
+  const isAdmin = c.var.authUser?.role === "admin" || c.var.authUser?.role === "super_admin";
+
   try {
     const { data, contentType } = await candidateLifecycleCoordinator.downloadAvatar(
       db,
       id,
       storage,
+      { includeInactive: isAdmin },
     );
     return c.body(data, httpStatusCodes.OK, {
       "Content-Type": contentType,
