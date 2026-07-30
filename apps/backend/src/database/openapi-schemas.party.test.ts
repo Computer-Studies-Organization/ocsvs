@@ -32,6 +32,11 @@ describe.each([
     },
   );
 
+  it("normalizes party code to uppercase on parse", () => {
+    const result = schema.parse({ ...baseInput, code: "innovators" });
+    expect(result.code).toBe("INNOVATORS");
+  });
+
   it.each(["INNOV ATORS", "PARTY(1)", "PARTY'S", "PARTY!", "@PARTY"])(
     "rejects unsafe party code %s with proper message",
     (code) => {

@@ -119,7 +119,10 @@ export const partyLists = sqliteTable(
   },
   (table) => [
     uniqueIndex("idx_party_lists_election_name").on(table.electionId, table.name),
-    uniqueIndex("idx_party_lists_election_code").on(table.electionId, table.code),
+    uniqueIndex("idx_party_lists_election_code").on(
+      table.electionId,
+      sql`${table.code} COLLATE NOCASE`,
+    ),
   ],
 );
 
