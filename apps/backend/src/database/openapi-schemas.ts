@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
 
 // OpenAPI-compatible schemas for documentation
 // These schemas mirror the database structure but use @hono/zod-openapi's z
@@ -311,10 +312,15 @@ export const CreatePartyListBodySchema = z
       description: "Party list name",
       example: "Innovators Party",
     }),
-    code: z.string().min(1).max(50).openapi({
-      description: "Party list code / acronym",
-      example: "INNOVATORS",
-    }),
+    code: z
+      .string()
+      .min(1)
+      .max(50)
+      .regex(/^[A-Za-z0-9_-]+$/, { message: "Use only letters, numbers, hyphens, and underscores" })
+      .openapi({
+        description: "Party list code / acronym",
+        example: "INNOVATORS",
+      }),
     color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
@@ -328,10 +334,16 @@ export const UpdatePartyListBodySchema = z
       description: "Party list name",
       example: "Innovators Party",
     }),
-    code: z.string().min(1).max(50).optional().openapi({
-      description: "Party list code / acronym",
-      example: "INNOVATORS",
-    }),
+    code: z
+      .string()
+      .min(1)
+      .max(50)
+      .regex(/^[A-Za-z0-9_-]+$/, { message: "Use only letters, numbers, hyphens, and underscores" })
+      .optional()
+      .openapi({
+        description: "Party list code / acronym",
+        example: "INNOVATORS",
+      }),
     color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
@@ -542,12 +554,12 @@ export const AuditLogEntrySchema = z
       description: "Unix-seconds timestamp the entry was recorded",
       example: 1719400000,
     }),
-    action: z.string().openapi({
+    action: z.enum(AUDIT_ACTIONS.options).openapi({
       description:
-        "Dotted `<resource>.<verb>` action key. Values are constrained to the AUDIT_ACTIONS enum in @/lib/constants/audit-actions (e.g. 'election.transition').",
+        "Dotted `<resource>.<verb>` action key from the canonical audit action vocabulary",
       example: "election.transition",
     }),
-    targetType: z.enum(["election", "position", "candidate", "user"]).openapi({
+    targetType: z.enum(TARGET_TYPES.options).openapi({
       description: "Kind of resource the action was performed against",
       example: "election",
     }),

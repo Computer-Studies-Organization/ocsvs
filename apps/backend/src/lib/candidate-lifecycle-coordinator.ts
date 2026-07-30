@@ -225,6 +225,20 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
 
+      const position = await positionRepo.findById(tx, candidate.positionId);
+      if (!position) {
+        throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
+      }
+
+      const election = await electionRepo.findById(tx, position.electionId);
+      if (!election) {
+        throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
+      }
+
+      if (election.status !== "draft") {
+        throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+      }
+
       await candidateRepo.softDelete(tx, id);
 
       await auditLogRepo.insert(tx, {

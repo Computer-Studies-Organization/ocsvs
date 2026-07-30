@@ -12,32 +12,18 @@
     X,
   } from "lucide-svelte";
   import {
+    AUDIT_ACTIONS,
+    AUDIT_TARGET_TYPES,
     type AuditLogEntry,
     type AuditLogFilters,
     fetchAuditLog,
+    getAuditTargetFallbackName,
   } from "$lib/api/audit-log";
   import { fetchUser } from "$lib/api/users";
   import { formatTimestamp } from "$lib/utils";
   import { appCache } from "$lib/cache";
   import { getCandidate } from "$lib/api/candidates";
   import SkeletonTable from "$lib/components/ui/skeleton-table.svelte";
-
-  const AUDIT_ACTIONS = [
-    "election.create",
-    "election.update",
-    "election.transition",
-    "position.create",
-    "position.update",
-    "position.delete",
-    "candidate.create",
-    "candidate.update",
-    "candidate.deactivate",
-    "user.update",
-    "user.soft_delete",
-    "user.restore",
-  ];
-
-  const TARGET_TYPES = ["election", "position", "candidate", "user"];
 
   // Filter state (synced with URL search params)
   let actionFilter = $state(page.url.searchParams.get("action") ?? "");
@@ -183,6 +169,10 @@
         // electionId context. Until the audit log returns that (or a
         // /positions/:id endpoint exists), display the raw id.
         name = entry.targetId;
+      } else if (entry.targetType === "party") {
+        // Party rows may have been deleted, so use the immutable audit
+        // description snapshot instead of relying on a live party lookup.
+        name = getAuditTargetFallbackName(entry);
       }
       resolvedNames[key] = name || entry.targetId;
     } catch {
@@ -294,7 +284,7 @@
             class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
           >
             <option value="">All types</option>
-            {#each TARGET_TYPES as type (type)}
+            {#each AUDIT_TARGET_TYPES as type (type)}
               <option value={type}>{type}</option>
             {/each}
           </select>

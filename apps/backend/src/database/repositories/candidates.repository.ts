@@ -203,7 +203,7 @@ export const candidateRepo = {
     return id;
   },
 
-  // Update candidate (preserves isActive unless explicitly updated)
+  // Update candidate metadata. Status changes use softDelete().
   async update(
     db: DbClient,
     id: string,
@@ -211,7 +211,6 @@ export const candidateRepo = {
       fullName?: string;
       partyId?: string | null;
       manifesto?: string;
-      isActive?: number;
     }>,
   ): Promise<boolean> {
     const updateSet: Record<string, any> = {

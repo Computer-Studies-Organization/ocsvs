@@ -2,6 +2,7 @@
   import { invalidate } from '$app/navigation'
   import { createPartyList } from '$lib/api/parties'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { validatePartyCode } from '$lib/validation/party-code'
   import { addToast } from '$lib/stores/toast.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import { Loader } from 'lucide-svelte'
@@ -26,12 +27,19 @@
     e.preventDefault()
     if (!createName.trim() || !createCode.trim()) return
 
+    const codeVal = createCode.trim().toUpperCase()
+    const codeError = validatePartyCode(codeVal)
+    if (codeError) {
+      createError = codeError
+      return
+    }
+
     createError = ''
     createBusy = true
     try {
       await createPartyList(electionId, {
         name: createName.trim(),
-        code: createCode.trim().toUpperCase(),
+        code: codeVal,
         color: createColor.trim() || null,
       })
       await invalidate('app:election')

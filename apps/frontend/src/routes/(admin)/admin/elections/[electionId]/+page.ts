@@ -15,7 +15,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     .get("positions", { electionId: params.electionId })
     .fetch(false, { fetch });
 
-  const partyLists = await listPartyLists(params.electionId, { fetch }).catch(() => []);
+  const partyLists = await listPartyLists(params.electionId, { fetch });
 
-  return { election, positions: positions ?? [], partyLists: partyLists ?? [] };
+  return { election, positions: positions ?? [], partyLists };
 };

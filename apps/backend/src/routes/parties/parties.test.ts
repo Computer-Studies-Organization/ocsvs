@@ -79,6 +79,31 @@ describe("party-list routes", () => {
     expect(mockAuditInsert).not.toHaveBeenCalled();
   });
 
+  it("returns 422 when creating a party list with an invalid code", async () => {
+    const response = await router.request("/elections/election-1/parties", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Innovators",
+        code: "INVALID CODE",
+      }),
+    });
+
+    expect(response.status).toBe(422);
+  });
+
+  it("returns 422 when updating a party list with an invalid code", async () => {
+    const response = await router.request("/elections/election-1/parties/party-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: "PARTY(1)",
+      }),
+    });
+
+    expect(response.status).toBe(422);
+  });
+
   it.each([
     ["create", createPartyListRoute],
     ["update", updatePartyListRoute],

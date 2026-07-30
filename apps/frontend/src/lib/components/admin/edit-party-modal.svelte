@@ -3,6 +3,7 @@
   import { untrack } from 'svelte'
   import { deletePartyList, updatePartyList } from '$lib/api/parties'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { validatePartyCode } from '$lib/validation/party-code'
   import { addToast } from '$lib/stores/toast.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import { Loader, Trash2 } from 'lucide-svelte'
@@ -30,12 +31,19 @@
     e.preventDefault()
     if (!editName.trim() || !editCode.trim()) return
 
+    const codeVal = editCode.trim().toUpperCase()
+    const codeError = validatePartyCode(codeVal)
+    if (codeError) {
+      errorMsg = codeError
+      return
+    }
+
     errorMsg = ''
     busy = true
     try {
       await updatePartyList(electionId, party.id, {
         name: editName.trim(),
-        code: editCode.trim().toUpperCase(),
+        code: codeVal,
         color: editColor.trim() || null,
       })
       await invalidate('app:election')
