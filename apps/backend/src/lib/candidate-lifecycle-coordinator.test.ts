@@ -5,6 +5,7 @@ import { ImageValidationError } from "@/lib/b2-client";
 const {
   mockCandidateFindActiveByIds,
   mockCandidateExistsActive,
+  mockCandidateExistsActiveForPartyPosition,
   mockCandidateCreate,
   mockCandidateUpdate,
   mockCandidateUpdateImageUrl,
@@ -18,6 +19,7 @@ const {
 } = vi.hoisted(() => ({
   mockCandidateFindActiveByIds: vi.fn(),
   mockCandidateExistsActive: vi.fn(),
+  mockCandidateExistsActiveForPartyPosition: vi.fn(),
   mockCandidateCreate: vi.fn(),
   mockCandidateUpdate: vi.fn(),
   mockCandidateUpdateImageUrl: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     findActiveByIds: mockCandidateFindActiveByIds,
     existsActiveForAccountPosition: mockCandidateExistsActive,
+    existsActiveForPartyPosition: mockCandidateExistsActiveForPartyPosition,
     create: mockCandidateCreate,
     update: mockCandidateUpdate,
     updateImageUrl: mockCandidateUpdateImageUrl,
@@ -95,6 +98,9 @@ const mockStorage: any = {
 describe("CandidateLifecycleCoordinator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCandidateExistsActiveForPartyPosition.mockResolvedValue(false);
+    mockPositionFindById.mockResolvedValue({ id: "pos-1", electionId: "el-1" });
+    mockElectionFindById.mockResolvedValue({ id: "el-1", status: "draft" });
   });
 
   describe("create", () => {
@@ -142,6 +148,7 @@ describe("CandidateLifecycleCoordinator", () => {
         actorAccountIdSnapshot: "admin-id",
         actorUsernameSnapshot: "admin",
       });
+      expect(mockCandidateExistsActiveForPartyPosition).not.toHaveBeenCalled();
     });
 
     it("throws ACCOUNT_NOT_FOUND when account does not exist", async () => {
@@ -255,6 +262,78 @@ describe("CandidateLifecycleCoordinator", () => {
         mockTx,
         expect.objectContaining({ partyId: "party-id" }),
       );
+      expect(mockCandidateExistsActiveForPartyPosition).toHaveBeenCalledWith(
+        mockTx,
+        "party-id",
+        "pos-id",
+      );
+    });
+
+    it("rejects a second active candidate for the same party and position", async () => {
+      mockSelectGet.mockResolvedValueOnce({ id: "acc-id" });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-id", electionId: "el-id" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-id", status: "draft" });
+      mockPartyFindById.mockResolvedValueOnce({ id: "party-id", electionId: "el-id" });
+      mockCandidateExistsActive.mockResolvedValueOnce(false);
+      mockCandidateExistsActiveForPartyPosition.mockResolvedValueOnce(true);
+
+      await expect(
+        candidateLifecycleCoordinator.create(
+          mockDb,
+          {
+            fullName: "Juan",
+            accountId: "acc-id",
+            positionId: "pos-id",
+            partyId: "party-id",
+            manifesto: "Manifesto",
+          },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION",
+          status: 409,
+        }),
+      );
+
+      expect(mockCandidateCreate).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("allows reusing a party and position after the prior candidate is inactive", async () => {
+      mockSelectGet.mockResolvedValueOnce({ id: "acc-id" });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-id", electionId: "el-id" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-id", status: "draft" });
+      mockPartyFindById.mockResolvedValueOnce({ id: "party-id", electionId: "el-id" });
+      mockCandidateExistsActive.mockResolvedValueOnce(false);
+      mockCandidateExistsActiveForPartyPosition.mockResolvedValueOnce(false);
+      mockCandidateCreate.mockResolvedValueOnce("cand-id");
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-id",
+        fullName: "Juan",
+        accountId: "acc-id",
+        positionId: "pos-id",
+        partyId: "party-id",
+        manifesto: "Manifesto",
+        isActive: 1,
+        imageUrl: null,
+        createdAt: 1000,
+        updatedAt: 1000,
+      });
+
+      await expect(
+        candidateLifecycleCoordinator.create(
+          mockDb,
+          {
+            fullName: "Juan",
+            accountId: "acc-id",
+            positionId: "pos-id",
+            partyId: "party-id",
+            manifesto: "Manifesto",
+          },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).resolves.toMatchObject({ id: "cand-id" });
     });
 
     it.each([
@@ -282,6 +361,39 @@ describe("CandidateLifecycleCoordinator", () => {
 
       expect(mockCandidateCreate).not.toHaveBeenCalled();
       expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects assigning a candidate to a party already represented for its position", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        partyId: null,
+        isActive: 1,
+      });
+      mockPartyFindById.mockResolvedValueOnce({ id: "party-id", electionId: "el-1" });
+      mockCandidateExistsActiveForPartyPosition.mockResolvedValueOnce(true);
+
+      await expect(
+        candidateLifecycleCoordinator.update(
+          mockDb,
+          "cand-1",
+          { partyId: "party-id" },
+          { id: "admin-id", username: "admin" },
+        ),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION",
+          status: 409,
+        }),
+      );
+
+      expect(mockCandidateExistsActiveForPartyPosition).toHaveBeenCalledWith(
+        mockTx,
+        "party-id",
+        "pos-1",
+        "cand-1",
+      );
+      expect(mockCandidateUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -380,6 +492,29 @@ describe("CandidateLifecycleCoordinator", () => {
       expect(mockCandidateUpdate).not.toHaveBeenCalled();
       expect(mockAuditInsert).not.toHaveBeenCalled();
     });
+
+    it.each([{ fullName: "New Name" }, { manifesto: "New manifesto" }])(
+      "throws ELECTION_NOT_IN_DRAFT when updating voter-facing metadata after draft",
+      async (input) => {
+        mockCandidateGetForAdminView.mockResolvedValueOnce({
+          id: "cand-1",
+          positionId: "pos-1",
+          partyId: null,
+          isActive: 1,
+        });
+        mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+        mockElectionFindById.mockResolvedValueOnce({ id: "el-1", status: "open" });
+
+        await expect(
+          candidateLifecycleCoordinator.update(mockDb, "cand-1", input, {
+            id: "admin-id",
+            username: "admin",
+          }),
+        ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+        expect(mockCandidateUpdate).not.toHaveBeenCalled();
+      },
+    );
 
     it("validates a supplied party even when it matches the stored party ID", async () => {
       mockCandidateGetForAdminView.mockResolvedValueOnce({
@@ -598,7 +733,11 @@ describe("CandidateLifecycleCoordinator", () => {
     });
 
     it("throws UNSUPPORTED_MEDIA_TYPE when image validation fails", async () => {
-      mockCandidateGetForAdminView.mockResolvedValueOnce({ id: "cand-1", imageUrl: null });
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        imageUrl: null,
+      });
       mockStorage.upload.mockRejectedValueOnce(new ImageValidationError("Invalid file type"));
 
       const file = new File([new ArrayBuffer(100)], "image.png", { type: "image/png" });
@@ -613,7 +752,7 @@ describe("CandidateLifecycleCoordinator", () => {
 
     it("throws CANDIDATE_NOT_FOUND if candidate gets deleted between step 1 and the transaction", async () => {
       mockCandidateGetForAdminView
-        .mockResolvedValueOnce({ id: "cand-1", imageUrl: null }) // step 1 check
+        .mockResolvedValueOnce({ id: "cand-1", positionId: "pos-1", imageUrl: null }) // step 1 check
         .mockResolvedValueOnce(null); // step 3 transaction check
       mockStorage.upload.mockResolvedValueOnce({ url: "https://new.url" });
 
@@ -625,6 +764,26 @@ describe("CandidateLifecycleCoordinator", () => {
           username: "admin",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CANDIDATE_NOT_FOUND", status: 404 }));
+    });
+
+    it("rejects uploads after the election leaves draft before writing to storage", async () => {
+      mockCandidateGetForAdminView.mockResolvedValueOnce({
+        id: "cand-1",
+        positionId: "pos-1",
+        imageUrl: null,
+      });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-1", status: "open" });
+      const file = new File([new ArrayBuffer(100)], "image.png", { type: "image/png" });
+
+      await expect(
+        candidateLifecycleCoordinator.uploadAvatar(mockDb, "cand-1", file, mockStorage, {
+          id: "admin-id",
+          username: "admin",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+      expect(mockStorage.upload).not.toHaveBeenCalled();
     });
   });
 
@@ -681,6 +840,24 @@ describe("CandidateLifecycleCoordinator", () => {
       );
 
       expect(result.imageUrl).toBeNull();
+      expect(mockStorage.delete).not.toHaveBeenCalled();
+    });
+
+    it("rejects image deletion after the election leaves draft", async () => {
+      mockCandidateGetForAdminView
+        .mockResolvedValueOnce({ id: "cand-1", imageUrl: "https://old.url" })
+        .mockResolvedValueOnce({ id: "cand-1", positionId: "pos-1", imageUrl: "https://old.url" });
+      mockPositionFindById.mockResolvedValueOnce({ id: "pos-1", electionId: "el-1" });
+      mockElectionFindById.mockResolvedValueOnce({ id: "el-1", status: "open" });
+
+      await expect(
+        candidateLifecycleCoordinator.deleteAvatar(mockDb, "cand-1", mockStorage, {
+          id: "admin-id",
+          username: "admin",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+
+      expect(mockCandidateUpdateImageUrl).not.toHaveBeenCalled();
       expect(mockStorage.delete).not.toHaveBeenCalled();
     });
   });

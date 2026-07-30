@@ -39,6 +39,7 @@ export type CandidateLifecycleErrorCode =
   | "CANDIDATE_NOT_FOUND"
   | "ACCOUNT_NOT_FOUND"
   | "CANDIDATE_ALREADY_EXISTS"
+  | "PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION"
   | "POSITION_NOT_FOUND"
   | "ELECTION_NOT_FOUND"
   | "PARTY_LIST_NOT_FOUND"
@@ -60,6 +61,23 @@ export class CandidateLifecycleError extends Error {
 export type { CandidateWithResolvedUrl, UrlContext };
 
 export class CandidateLifecycleCoordinator {
+  private async getDraftPosition(db: DbClient, positionId: string) {
+    const position = await positionRepo.findById(db, positionId);
+    if (!position) {
+      throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
+    }
+
+    const election = await electionRepo.findById(db, position.electionId);
+    if (!election) {
+      throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
+    }
+    if (election.status !== "draft") {
+      throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+    }
+
+    return position;
+  }
+
   /**
    * Creates a Candidate and logs the action atomically.
    */
@@ -80,20 +98,8 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("ACCOUNT_NOT_FOUND", 400);
       }
 
-      // 2. Verify target position exists
-      const position = await positionRepo.findById(tx, input.positionId);
-      if (!position) {
-        throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
-      }
-
-      // 3. Verify target election exists and is in draft
-      const election = await electionRepo.findById(tx, position.electionId);
-      if (!election) {
-        throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
-      }
-      if (election.status !== "draft") {
-        throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
-      }
+      // 2. Verify target position exists and belongs to a draft election.
+      const position = await this.getDraftPosition(tx, input.positionId);
 
       // 4. Verify the party belongs to the position's election
       if (input.partyId !== null && input.partyId !== undefined) {
@@ -111,6 +117,17 @@ export class CandidateLifecycleCoordinator {
       );
       if (exists) {
         throw new CandidateLifecycleError("CANDIDATE_ALREADY_EXISTS", 409);
+      }
+
+      if (input.partyId !== null && input.partyId !== undefined) {
+        const partyAlreadyRepresented = await candidateRepo.existsActiveForPartyPosition(
+          tx,
+          input.partyId,
+          input.positionId,
+        );
+        if (partyAlreadyRepresented) {
+          throw new CandidateLifecycleError("PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION", 409);
+        }
       }
 
       // 6. Insert the candidate
@@ -166,26 +183,23 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
 
+      const position = await this.getDraftPosition(tx, candidate.positionId);
+
       if (input.partyId !== undefined) {
-        const position = await positionRepo.findById(tx, candidate.positionId);
-        if (!position) {
-          throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
-        }
-
-        if (input.partyId !== candidate.partyId) {
-          const election = await electionRepo.findById(tx, position.electionId);
-          if (!election) {
-            throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
-          }
-          if (election.status !== "draft") {
-            throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
-          }
-        }
-
         if (input.partyId !== null) {
           const party = await partyListRepo.findById(tx, input.partyId);
           if (!party || party.electionId !== position.electionId) {
             throw new CandidateLifecycleError("PARTY_LIST_NOT_FOUND", 404);
+          }
+
+          const partyAlreadyRepresented = await candidateRepo.existsActiveForPartyPosition(
+            tx,
+            input.partyId,
+            candidate.positionId,
+            id,
+          );
+          if (partyAlreadyRepresented) {
+            throw new CandidateLifecycleError("PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION", 409);
           }
         }
       }
@@ -225,19 +239,7 @@ export class CandidateLifecycleCoordinator {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
 
-      const position = await positionRepo.findById(tx, candidate.positionId);
-      if (!position) {
-        throw new CandidateLifecycleError("POSITION_NOT_FOUND", 404);
-      }
-
-      const election = await electionRepo.findById(tx, position.electionId);
-      if (!election) {
-        throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
-      }
-
-      if (election.status !== "draft") {
-        throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
-      }
+      await this.getDraftPosition(tx, candidate.positionId);
 
       await candidateRepo.softDelete(tx, id);
 
@@ -269,6 +271,7 @@ export class CandidateLifecycleCoordinator {
     if (!candidate || candidate.isActive === 0) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
+    await this.getDraftPosition(db, candidate.positionId);
 
     let uploadResult: { url: string; key: string };
     try {
@@ -288,6 +291,7 @@ export class CandidateLifecycleCoordinator {
         if (!activeCandidate || activeCandidate.isActive === 0) {
           throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
         }
+        await this.getDraftPosition(tx, activeCandidate.positionId);
         oldImageUrl = activeCandidate.imageUrl;
 
         await candidateRepo.updateImageUrl(tx, id, uploadResult.url);
@@ -354,6 +358,7 @@ export class CandidateLifecycleCoordinator {
       if (!activeCandidate || activeCandidate.isActive === 0) {
         throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
       }
+      await this.getDraftPosition(tx, activeCandidate.positionId);
       oldImageUrl = activeCandidate.imageUrl;
 
       await candidateRepo.updateImageUrl(tx, id, null);

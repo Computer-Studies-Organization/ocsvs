@@ -19,6 +19,7 @@
     accountId: string
     positionId: string
     manifesto: string
+    isActive: number
     imageUrl: string | null
   }
 
@@ -31,6 +32,7 @@
   const electionId = $derived(page.params.electionId)
   const positionId = $derived(page.params.positionId)
   const candidateId = $derived(page.params.candidateId)
+  const canModify = $derived(election?.status === 'draft' && candidate?.isActive === 1)
 
   let isSaving = $state(false)
   let isDeleteOpen = $state(false)
@@ -42,7 +44,7 @@
 
   async function handleSave(e: SubmitEvent) {
     e.preventDefault()
-    if (!candidateId) return
+    if (!candidateId || !canModify) return
     const result = validate(updateCandidateSchema, {
       manifesto: editManifesto,
     })
@@ -69,6 +71,7 @@
   }
 
   function openDelete() {
+    if (!canModify) return
     isDeleteOpen = true
   }
 
@@ -78,7 +81,7 @@
   }
 
   async function handleDelete() {
-    if (!candidateId) return
+    if (!candidateId || !canModify) return
     isDeleting = true
     try {
       await deleteCandidate(candidateId)
@@ -96,7 +99,7 @@
   }
 
   async function handleImageUpload(file: File) {
-    if (!candidateId) return
+    if (!candidateId || !canModify) return
     imageError = ''
     try {
       await uploadCandidateImage(candidateId, file)
@@ -109,7 +112,7 @@
   }
 
   async function handleImageDelete() {
-    if (!candidateId) return
+    if (!candidateId || !canModify) return
     imageError = ''
     try {
       await deleteCandidateImage(candidateId)
@@ -162,7 +165,8 @@
         </a>
       </header>
 
-  {#key candidateId}
+  {#if canModify}
+    {#key candidateId}
       <form
         onsubmit={handleSave}
         class='rounded-2xl border p-5 shadow-lg space-y-5'
@@ -234,12 +238,30 @@
           </button>
         </div>
       </form>
-      {/key}
+    {/key}
+  {:else}
+    <section
+      class='rounded-2xl border p-5 shadow-lg space-y-5'
+      style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
+    >
+      <p class='text-sm' style='color: oklch(0.70 0.015 250)'>
+        Candidate details are locked once the election leaves draft.
+      </p>
+      {#if candidate.imageUrl}
+        <img src={candidate.imageUrl} alt={`Avatar for ${candidate.fullName}`} class='max-h-64 rounded-xl object-cover' />
+      {/if}
+      <div class='space-y-2'>
+        <h2 class='text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>Manifesto</h2>
+        <p class='whitespace-pre-wrap' style='color: oklch(0.95 0.008 250)'>{candidate.manifesto}</p>
+      </div>
+    </section>
+  {/if}
     {/if}
   </div>
 </div>
 
 <!-- Delete confirmation -->
+{#if canModify}
 <Modal open={isDeleteOpen} onclose={closeDelete}>
   <h2 class='text-xl font-black mb-2' style='color: oklch(0.95 0.008 250)'>Delete candidate?</h2>
   <p class='text-sm mb-4' style='color: oklch(0.70 0.015 250)'>
@@ -269,3 +291,4 @@
     </button>
   </div>
 </Modal>
+{/if}

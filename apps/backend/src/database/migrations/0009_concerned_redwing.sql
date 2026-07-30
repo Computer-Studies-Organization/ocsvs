@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_candidates_active_party_position` ON `candidates` (`position_id`,`party_id`) WHERE "candidates"."is_active" = 1 AND "candidates"."party_id" IS NOT NULL;

@@ -42,13 +42,7 @@ export const createCandidateRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        candidate: z.object({
-          id: z.string(),
-          fullName: z.string(),
-          accountId: z.string(),
-          positionId: z.string(),
-          manifesto: z.string(),
-        }),
+        candidate: SelectCandidateSchema,
       }),
       ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY,
     ),
@@ -102,7 +96,7 @@ export const listCandidatesRoute = createRoute({
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       z.object({
-        data: z.array(SelectCandidateSchema as any),
+        data: z.array(SelectCandidateSchema),
         meta: z.object({
           total: z.number().int(),
           page: z.number().int(),
@@ -138,7 +132,7 @@ export const getCandidateRoute = createRoute({
     }),
   },
   responses: {
-    [httpStatusCodes.OK]: jsonContent(SelectCandidateSchema as any, "Candidate details"),
+    [httpStatusCodes.OK]: jsonContent(SelectCandidateSchema, "Candidate details"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),
@@ -169,7 +163,7 @@ export const updateCandidateRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        candidate: SelectCandidateSchema as any,
+        candidate: SelectCandidateSchema,
       }),
       ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
     ),
@@ -241,6 +235,12 @@ export const deleteCandidateRoute = createRoute({
       }),
       ERROR_MESSAGES.FORBIDDEN,
     ),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT,
+    ),
   },
 });
 
@@ -258,7 +258,7 @@ export const uploadImageRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        candidate: SelectCandidateSchema as any,
+        candidate: SelectCandidateSchema,
       }),
       ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
     ),
@@ -284,13 +284,19 @@ export const uploadImageRoute = createRoute({
       z.object({
         message: z.string(),
       }),
-      "No image file provided",
+      ERROR_MESSAGES.NO_IMAGE_PROVIDED,
     ),
     [httpStatusCodes.UNSUPPORTED_MEDIA_TYPE]: jsonContent(
       z.object({
         message: z.string(),
       }),
-      "Invalid file type or size",
+      ERROR_MESSAGES.UNSUPPORTED_MEDIA_TYPE,
+    ),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT,
     ),
   },
 });
@@ -309,7 +315,7 @@ export const deleteImageRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        candidate: SelectCandidateSchema as any,
+        candidate: SelectCandidateSchema,
       }),
       ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
     ),
@@ -330,6 +336,12 @@ export const deleteImageRoute = createRoute({
         message: z.string(),
       }),
       ERROR_MESSAGES.FORBIDDEN,
+    ),
+    [httpStatusCodes.CONFLICT]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT,
     ),
   },
 });

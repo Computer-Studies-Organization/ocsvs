@@ -63,4 +63,38 @@ describe("candidate detail page", () => {
     expect(body).not.toContain('type="checkbox"');
     expect(body).not.toContain(">Active</span>");
   });
+
+  it("hides mutation controls when the election is not in draft", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          candidate: {
+            id: "candidate-1",
+            fullName: "Alex Candidate",
+            accountId: "account-1",
+            positionId: "position-1",
+            manifesto: "Manifesto",
+            isActive: 1,
+            imageUrl: null,
+          },
+          election: {
+            id: "election-1",
+            name: "CSO Election",
+            description: null,
+            status: "open",
+            opensAt: null,
+            closesAt: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          position: null,
+          user: null,
+        },
+      },
+    });
+
+    expect(body).toContain("Candidate details are locked once the election leaves draft.");
+    expect(body).not.toContain("Save changes");
+    expect(body).not.toContain("Delete candidate?");
+  });
 });
