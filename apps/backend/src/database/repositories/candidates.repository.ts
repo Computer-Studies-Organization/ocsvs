@@ -42,21 +42,32 @@ export const candidateRepo = {
   // Admin table: full candidate records, paginated, opt inactive include
   async listForAdminTable(
     db: DbClient,
-    opts: { page?: number; limit?: number; includeInactive?: boolean; positionId?: string } = {},
+    opts: {
+      page?: number;
+      limit?: number;
+      includeInactive?: boolean;
+      positionId?: string;
+      electionId?: string;
+    } = {},
   ): Promise<AdminListResult> {
     const page = opts.page ?? 1;
     const limit = opts.limit ?? 10;
     const includeInactive = opts.includeInactive ?? false;
     const positionId = opts.positionId;
+    const electionId = opts.electionId;
     const offset = (page - 1) * limit;
 
-    const baseWhere = includeInactive ? undefined : eq(candidates.isActive, 1);
-    const positionWhere = positionId ? eq(candidates.positionId, positionId) : undefined;
-    const whereClause = positionWhere
-      ? baseWhere
-        ? and(baseWhere, positionWhere)
-        : positionWhere
-      : baseWhere;
+    const conditions = [];
+    if (!includeInactive) {
+      conditions.push(eq(candidates.isActive, 1));
+    }
+    if (positionId) {
+      conditions.push(eq(candidates.positionId, positionId));
+    }
+    if (electionId) {
+      conditions.push(eq(positions.electionId, electionId));
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const dataQuery = db
       .select({
@@ -71,15 +82,30 @@ export const candidateRepo = {
         createdAt: candidates.createdAt,
         updatedAt: candidates.updatedAt,
       })
-      .from(candidates)
-      .orderBy(desc(candidates.createdAt), desc(candidates.id))
-      .limit(limit)
-      .offset(offset);
+      .from(candidates);
+
+    if (electionId) {
+      dataQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
+    }
 
     const countQuery = db.select({ count: count() }).from(candidates);
+    if (electionId) {
+      countQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
+    }
 
     const [data, totalRaw] = await Promise.all([
-      whereClause ? dataQuery.where(whereClause).all() : dataQuery.all(),
+      whereClause
+        ? dataQuery
+            .where(whereClause)
+            .orderBy(desc(candidates.createdAt), desc(candidates.id))
+            .limit(limit)
+            .offset(offset)
+            .all()
+        : dataQuery
+            .orderBy(desc(candidates.createdAt), desc(candidates.id))
+            .limit(limit)
+            .offset(offset)
+            .all(),
       whereClause ? countQuery.where(whereClause).get() : countQuery.get(),
     ]);
 

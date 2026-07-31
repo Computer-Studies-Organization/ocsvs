@@ -47,7 +47,8 @@ export const createCandidate: AppRouteHandler<typeof createCandidateRoute> = asy
 };
 
 export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async (c) => {
-  const { page, limit, includeInactive, includeDeleted, positionId } = c.req.valid("query");
+  const { page, limit, includeInactive, includeDeleted, positionId, electionId } =
+    c.req.valid("query");
   const shouldIncludeInactive = includeInactive || includeDeleted;
 
   if (
@@ -68,6 +69,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
       limit,
       includeInactive: shouldIncludeInactive,
       positionId,
+      electionId,
     },
     urlCtx,
   );

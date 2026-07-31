@@ -70,7 +70,13 @@ export const candidateStore = {
 
   async listForAdminTable(
     db: DbClient,
-    opts: { page?: number; limit?: number; includeInactive?: boolean; positionId?: string } = {},
+    opts: {
+      page?: number;
+      limit?: number;
+      includeInactive?: boolean;
+      positionId?: string;
+      electionId?: string;
+    } = {},
     urlCtx?: UrlContext,
   ): Promise<AdminListResult> {
     const result = await candidateRepo.listForAdminTable(db, opts);

@@ -207,10 +207,18 @@ test("selectPartySlate fills all positions that have a matching party candidate"
   expect(next.selectedVotes["pos-2"]).toBe("c3");
 });
 
-test("selectPartySlate leaves positions with no matching party candidate unchanged", () => {
+test("selectPartySlate sets positions with no matching party candidate to null", () => {
   const state = createVotingState(partyPositions);
   const next = selectPartySlate(state, partyPositions, "party-a");
   // pos-3 has no party-a candidate, so it stays null
+  expect(next.selectedVotes["pos-3"]).toBeNull();
+});
+
+test("selectPartySlate clears an existing candidate choice if party has no candidate for that position", () => {
+  let state = createVotingState(partyPositions);
+  state = selectCandidate(state, "pos-3", "c5"); // pick party-b candidate for pos-3
+  const next = selectPartySlate(state, partyPositions, "party-a");
+  // party-a has no candidate for pos-3, so pos-3 is cleared to null
   expect(next.selectedVotes["pos-3"]).toBeNull();
 });
 
