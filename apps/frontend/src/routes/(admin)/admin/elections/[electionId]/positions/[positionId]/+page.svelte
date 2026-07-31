@@ -96,15 +96,17 @@
             <Users size={18} />
             Candidates
           </h2>
-          <button
-            type='button'
-            onclick={openCreate}
-            class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
-            style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
-          >
-            <Plus size={16} stroke-width={2.5} />
-            Add candidate
-          </button>
+          {#if election?.status === 'draft'}
+            <button
+              type='button'
+              onclick={openCreate}
+              class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
+              style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+            >
+              <Plus size={16} stroke-width={2.5} />
+              Add candidate
+            </button>
+          {/if}
         </div>
 
         {#if candidates.length === 0}
@@ -112,8 +114,8 @@
             icon={Users}
             title='No candidates yet'
             description='Add candidates for this position.'
-            cta='Add candidate'
-            oncta={openCreate}
+            cta={election?.status === 'draft' ? 'Add candidate' : undefined}
+            oncta={election?.status === 'draft' ? openCreate : undefined}
           />
         {:else}
           <ul class='space-y-2'>
@@ -145,7 +147,7 @@
 </div>
 
 {#if election && position}
-  {#if isCreateOpen}
+  {#if isCreateOpen && election.status === 'draft'}
     <AddCandidateModal
       onclose={closeCreate}
       electionId={election.id}
@@ -155,7 +157,7 @@
     />
   {/if}
 
-{#if isEditOpen}
+  {#if isEditOpen && election.status === 'draft'}
     <EditPositionModal
       onclose={closeEdit}
       electionId={election.id}
