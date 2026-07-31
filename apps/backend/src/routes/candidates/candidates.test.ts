@@ -733,6 +733,7 @@ describe("candidate Routes (repository)", () => {
 
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toBe("image/png");
+      expect(res.headers.get("cache-control")).toBe("private, no-store");
       expect(mockDownloadImage).toHaveBeenCalledWith("candidates/cand-1/image.png");
       expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
         includeInactive: true,

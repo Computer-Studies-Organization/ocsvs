@@ -115,7 +115,7 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
     );
     return c.body(data, httpStatusCodes.OK, {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=31536000",
+      "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     });
   } catch (error: unknown) {
