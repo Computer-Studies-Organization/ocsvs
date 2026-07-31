@@ -30,6 +30,9 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
   if (!election) error(404, "Election not found");
 
   const position = positions?.find((p) => p.id === positionId) ?? null;
+  if (!position || cand.positionId !== positionId) {
+    error(404, "Candidate not found in this position");
+  }
 
   return { candidate: cand, election, position, user, partyLists };
 };

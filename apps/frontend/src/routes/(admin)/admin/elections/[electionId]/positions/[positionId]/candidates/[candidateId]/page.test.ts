@@ -88,7 +88,14 @@ describe("candidate detail page", () => {
             createdAt: 1,
             updatedAt: 1,
           },
-          position: null,
+          position: {
+            id: "position-1",
+            electionId: "election-1",
+            name: "President",
+            displayOrder: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
           user: null,
           partyLists: [],
         },
@@ -178,7 +185,14 @@ describe("candidate detail page", () => {
             createdAt: 1,
             updatedAt: 1,
           },
-          position: null,
+          position: {
+            id: "position-1",
+            electionId: "election-1",
+            name: "President",
+            displayOrder: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
           user: null,
           partyLists: [
             {

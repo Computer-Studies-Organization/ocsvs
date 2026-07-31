@@ -118,7 +118,10 @@ export const partyLists = sqliteTable(
     color: text("color"),
   },
   (table) => [
-    uniqueIndex("idx_party_lists_election_name").on(table.electionId, table.name),
+    uniqueIndex("idx_party_lists_election_name").on(
+      table.electionId,
+      sql`${table.name} COLLATE NOCASE`,
+    ),
     uniqueIndex("idx_party_lists_election_code").on(
       table.electionId,
       sql`${table.code} COLLATE NOCASE`,

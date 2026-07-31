@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { getTableConfig } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
 import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./openapi-schemas";
@@ -50,6 +51,13 @@ describe("election management schema", () => {
     expect(elections).toBeDefined();
     expect(positions).toBeDefined();
     expect(partyLists).toBeDefined();
+  });
+
+  it("configures case-insensitive unique indexes for both party list name and code", () => {
+    const { indexes } = getTableConfig(partyLists);
+    const indexNames = indexes.map((idx) => idx.config.name);
+    expect(indexNames).toContain("idx_party_lists_election_name");
+    expect(indexNames).toContain("idx_party_lists_election_code");
   });
 });
 
