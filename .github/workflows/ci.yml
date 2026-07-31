@@ -78,7 +78,8 @@ jobs:
       - name: Run E2E Tests
         run: |
           curl -sSfL https://get.tur.so/install.sh | bash
-          ~/.turso/turso dev --db-file ${{ github.workspace }}/apps/backend/local.db --port 8080 &
+          export PATH="$HOME/.turso:$PATH"
+          turso dev --db-file ${{ github.workspace }}/apps/backend/local.db --port 8080 &
           sleep 2
           pnpm --filter @cso-voting/backend db:migrate
           pnpm test:e2e
