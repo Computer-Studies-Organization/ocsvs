@@ -42,9 +42,7 @@ export function selectPartySlate(
   const nextSelected = { ...state.selectedVotes };
   for (const pos of positions) {
     const partyCandidate = pos.candidates.find((c) => c.partyId === partyId);
-    if (partyCandidate) {
-      nextSelected[pos.id] = partyCandidate.id;
-    }
+    nextSelected[pos.id] = partyCandidate?.id ?? null;
   }
   return { ...state, selectedVotes: nextSelected };
 }

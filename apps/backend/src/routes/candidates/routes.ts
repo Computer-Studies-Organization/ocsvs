@@ -29,6 +29,7 @@ export const ListCandidatesQuerySchema = PaginationSchema.extend({
   includeInactive: booleanQuery.default("false"),
   includeDeleted: booleanQuery.default("false"),
   positionId: z.string().optional(),
+  electionId: z.string().optional(),
 });
 
 export const createCandidateRoute = createRoute({

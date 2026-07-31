@@ -26,6 +26,7 @@ function createMockChain() {
     limit: vi.fn(() => chain),
     offset: vi.fn(() => chain),
     leftJoin: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
     groupBy: vi.fn(() => chain),
     all: vi.fn(() => []),
     get: vi.fn(() => undefined),
@@ -60,6 +61,7 @@ describe("candidateRepo", () => {
     dataQueryChain.limit.mockReturnValue(dataQueryChain);
     dataQueryChain.offset.mockReturnValue(dataQueryChain);
     dataQueryChain.leftJoin.mockReturnValue(dataQueryChain);
+    dataQueryChain.innerJoin.mockReturnValue(dataQueryChain);
     dataQueryChain.groupBy.mockReturnValue(dataQueryChain);
     dataQueryChain.all.mockReturnValue([]);
     dataQueryChain.get.mockReturnValue(undefined);
@@ -68,6 +70,7 @@ describe("candidateRepo", () => {
     dataQueryChain.set.mockReturnValue(dataQueryChain);
 
     countQueryChain.from.mockReturnValue(countQueryChain);
+    countQueryChain.innerJoin.mockReturnValue(countQueryChain);
     countQueryChain.where.mockReturnValue(countQueryChain);
     countQueryChain.get.mockReturnValue({ count: 0 });
   });

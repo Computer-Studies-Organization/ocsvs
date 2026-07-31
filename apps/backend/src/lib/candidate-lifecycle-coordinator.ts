@@ -15,6 +15,7 @@ import {
 } from "@/database/repositories/candidate-store";
 import { ImageValidationError } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isUniqueConstraintError } from "@/lib/errors";
 
 export interface CreateCandidateInput {
   fullName: string;
@@ -146,7 +147,18 @@ export class CandidateLifecycleCoordinator {
       if (input.partyId !== undefined) {
         createData.partyId = input.partyId;
       }
-      const newId = await candidateRepo.create(tx, createData);
+      let newId: string;
+      try {
+        newId = await candidateRepo.create(tx, createData);
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          if (input.partyId !== null && input.partyId !== undefined) {
+            throw new CandidateLifecycleError("PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION", 409);
+          }
+          throw new CandidateLifecycleError("CANDIDATE_ALREADY_EXISTS", 409);
+        }
+        throw error;
+      }
 
       // 7. Insert audit log
       await auditLogRepo.insert(tx, {
@@ -209,7 +221,14 @@ export class CandidateLifecycleCoordinator {
       if (input.partyId !== undefined) updateFields.partyId = input.partyId;
       if (input.manifesto !== undefined) updateFields.manifesto = input.manifesto;
 
-      await candidateRepo.update(tx, id, updateFields);
+      try {
+        await candidateRepo.update(tx, id, updateFields);
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          throw new CandidateLifecycleError("PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION", 409);
+        }
+        throw error;
+      }
 
       await auditLogRepo.insert(tx, {
         action: "candidate.update",
