@@ -72,20 +72,16 @@ jobs:
           sed -i "s|^TURSO_DATABASE_URL=.*|TURSO_DATABASE_URL=http://127.0.0.1:8080|" apps/backend/.env
           sed -i "s|^TURSO_AUTH_TOKEN=.*|TURSO_AUTH_TOKEN=local_dummy_token|" apps/backend/.env
 
-      - name: Install Turso CLI & Start local server
-        run: |
-          curl -sSfL https://get.tur.so/install.sh | bash
-          nohup ~/.turso/turso dev --db-file ${{ github.workspace }}/apps/backend/local.db --port 8080 > /tmp/turso.log 2>&1 &
-          sleep 2
-
       - name: Build frontend assets for Wrangler
         run: pnpm --filter @cso-voting/frontend build
 
-      - name: Apply E2E database migrations
-        run: pnpm --filter @cso-voting/backend db:migrate
-
       - name: Run E2E Tests
-        run: pnpm test:e2e
+        run: |
+          curl -sSfL https://get.tur.so/install.sh | bash
+          ~/.turso/turso dev --db-file ${{ github.workspace }}/apps/backend/local.db --port 8080 &
+          sleep 2
+          pnpm --filter @cso-voting/backend db:migrate
+          pnpm test:e2e
         env:
           FULL_MATRIX: ${{ github.ref == 'refs/heads/main' }}
 
