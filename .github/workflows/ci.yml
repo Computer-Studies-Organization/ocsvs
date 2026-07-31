@@ -69,6 +69,13 @@ jobs:
         run: |
           cp apps/frontend/.env.example apps/frontend/.env
           cp apps/backend/.env.example apps/backend/.env
+          sed -i "s|^TURSO_DATABASE_URL=.*|TURSO_DATABASE_URL=file:${GITHUB_WORKSPACE}/apps/backend/local.db|" apps/backend/.env
+
+      - name: Build frontend assets for Wrangler
+        run: pnpm --filter @cso-voting/frontend build
+
+      - name: Apply E2E database migrations
+        run: pnpm --filter @cso-voting/backend db:migrate
 
       - name: Run E2E Tests
         run: pnpm test:e2e
