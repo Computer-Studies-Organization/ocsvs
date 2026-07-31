@@ -70,6 +70,7 @@ jobs:
           cp apps/frontend/.env.example apps/frontend/.env
           cp apps/backend/.env.example apps/backend/.env
           sed -i "s|^TURSO_DATABASE_URL=.*|TURSO_DATABASE_URL=file:${GITHUB_WORKSPACE}/apps/backend/local.db|" apps/backend/.env
+          sed -i "s|^TURSO_AUTH_TOKEN=.*|TURSO_AUTH_TOKEN=local_dummy_token|" apps/backend/.env
 
       - name: Build frontend assets for Wrangler
         run: pnpm --filter @cso-voting/frontend build
