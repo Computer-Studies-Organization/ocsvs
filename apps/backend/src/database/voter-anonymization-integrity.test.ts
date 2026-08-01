@@ -174,7 +174,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       accountId: voterRegistration.accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(castResult.success).toBe(true);
 
@@ -555,7 +555,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       accountId: voterReg.accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(voteRes.success).toBe(true);
 
@@ -599,7 +599,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       accountId: reimportedVoter.accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(recastRes.success).toBe(false);

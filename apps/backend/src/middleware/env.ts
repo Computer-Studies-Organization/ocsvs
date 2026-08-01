@@ -100,7 +100,7 @@ const EnvSchema = z
     if (data.HMAC_SECRET && !isValidSecret(data.HMAC_SECRET)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "HMAC_SECRET must be at least 32 bytes (or 32 character plain text)",
+        message: "HMAC_SECRET must be valid base64 and decode to at least 32 bytes",
         path: ["HMAC_SECRET"],
       });
     }
@@ -110,7 +110,7 @@ const EnvSchema = z
         if (!isValidSecret(secret)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `PREVIOUS_HMAC_SECRETS[${i}] must be at least 32 bytes (or 32 character plain text)`,
+            message: `PREVIOUS_HMAC_SECRETS[${i}] must be valid base64 and decode to at least 32 bytes`,
             path: ["PREVIOUS_HMAC_SECRETS", i],
           });
         }
@@ -118,17 +118,35 @@ const EnvSchema = z
     }
   });
 
-export function isValidSecret(secret: string): boolean {
-  if (!secret) return false;
+export function decodeHmacSecret(secret: string): Uint8Array {
+  if (!secret || !/^[A-Za-z0-9+/]*={0,2}$/.test(secret) || secret.length % 4 !== 0) {
+    throw new Error("hmacSecret must be valid base64");
+  }
+
+  let decoded: string;
+
   try {
-    if (/^[A-Za-z0-9+/]+={0,2}$/.test(secret) && secret.length % 4 === 0) {
-      const decoded = atob(secret);
-      if (decoded.length >= 32) {
-        return true;
-      }
-    }
-  } catch {}
-  return new TextEncoder().encode(secret).length >= 32;
+    decoded = atob(secret);
+  } catch {
+    throw new Error("hmacSecret must be valid base64");
+  }
+
+  const keyBytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+
+  if (keyBytes.length < 32) {
+    throw new Error("hmacSecret must decode to at least 32 bytes");
+  }
+
+  return keyBytes;
+}
+
+export function isValidSecret(secret: string): boolean {
+  try {
+    decodeHmacSecret(secret);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

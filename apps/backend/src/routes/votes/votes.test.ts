@@ -231,7 +231,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
       expect(res.status).toBe(401);
@@ -301,7 +301,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -312,7 +312,7 @@ describe("votes Routes (repository)", () => {
       expect(mockCast).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          hmacSecret: "mock-hmac-secret-key-at-least-32-chars-long",
+          hmacSecret: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         }),
       );
     });
@@ -354,7 +354,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -388,7 +388,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -419,7 +419,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -450,7 +450,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -481,7 +481,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 
@@ -512,7 +512,7 @@ describe("votes Routes (repository)", () => {
           headers: { "Content-Type": "application/json" },
         },
         {
-          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+          HMAC_SECRET: "bW9jay1obWFjLXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZw==",
         },
       );
 

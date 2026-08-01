@@ -82,7 +82,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -98,7 +98,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -114,7 +114,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -135,7 +135,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -157,7 +157,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -181,7 +181,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -207,7 +207,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -243,7 +243,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId, // Election A
       selections: [{ candidateId, positionId: electionBPositionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(result.success).toBe(false);
@@ -277,7 +277,7 @@ describe("DrizzleBallotCaster", () => {
         { candidateId, positionId },
         { candidateId: "cand-2", positionId },
       ],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -307,7 +307,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(result.success).toBe(false);
@@ -338,7 +338,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(result.success).toBe(true);
@@ -369,9 +369,9 @@ describe("DrizzleBallotCaster", () => {
         electionId,
         selections: [{ candidateId, positionId }],
       } as any),
-    ).rejects.toThrow("hmacSecret must be at least 32 bytes (or 32 character plain text)");
+    ).rejects.toThrow("hmacSecret must be valid base64");
 
-    // Too short hmacSecret
+    // Invalid base64 hmacSecret
     await expect(
       ballotCaster.cast(mockDb, {
         accountId,
@@ -379,7 +379,17 @@ describe("DrizzleBallotCaster", () => {
         selections: [{ candidateId, positionId }],
         hmacSecret: "short-key",
       }),
-    ).rejects.toThrow("hmacSecret must be at least 32 bytes (or 32 character plain text)");
+    ).rejects.toThrow("hmacSecret must be valid base64");
+
+    // Too short base64 hmacSecret
+    await expect(
+      ballotCaster.cast(mockDb, {
+        accountId,
+        electionId,
+        selections: [{ candidateId, positionId }],
+        hmacSecret: btoa("short-key"),
+      }),
+    ).rejects.toThrow("hmacSecret must decode to at least 32 bytes");
   });
 
   it("should fail with VOTE_ALREADY_CAST if a legacy (SHA-256) participation record exists", async () => {
@@ -408,7 +418,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(result.success).toBe(false);
@@ -420,8 +430,8 @@ describe("DrizzleBallotCaster", () => {
 
   it("should block voting if matching record is found under rotated secret (rotation/key change)", async () => {
     const studentId = "2024-0001";
-    const oldSecret = "old-secret-key-32-characters-minimum";
-    const newSecret = "new-secret-key-32-characters-minimum";
+    const oldSecret = "b2xkLXNlY3JldC1rZXktMzItY2hhcmFjdGVycy1taW5pbXVt";
+    const newSecret = "bmV3LXNlY3JldC1rZXktMzItY2hhcmFjdGVycy1taW5pbXVt";
 
     const oldHash = await computeVoterHash(electionId, studentId, oldSecret);
 
@@ -483,7 +493,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
-      hmacSecret: "test-secret-key-32-characters-minimum",
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
     });
 
     expect(result.success).toBe(true);
@@ -491,8 +501,8 @@ describe("DrizzleBallotCaster", () => {
 });
 
 describe("computeVoterHash", () => {
-  const testSecret = "test-secret-key-32-characters-minimum";
-  const diffSecret = "different-secret-key-32-chars-long";
+  const testSecret = "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==";
+  const diffSecret = "ZGlmZmVyZW50LXNlY3JldC1rZXktMzItY2hhcnMtbG9uZw==";
 
   it("should compute deterministic HMAC-SHA256 hash for valid studentId", async () => {
     const hash1 = await computeVoterHash("election-1", "2024-0001", testSecret);
@@ -524,15 +534,15 @@ describe("computeVoterHash", () => {
 
   it("should throw an error if hmacSecret is missing, empty, or less than 32 characters/bytes", async () => {
     await expect(computeVoterHash("election-1", "2024-0001", "")).rejects.toThrow(
-      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+      "hmacSecret must be valid base64",
     );
-    await expect(computeVoterHash("election-1", "2024-0001", "short-secret")).rejects.toThrow(
-      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+    await expect(computeVoterHash("election-1", "2024-0001", "!!!")).rejects.toThrow(
+      "hmacSecret must be valid base64",
     );
     // Base64 secret that decodes to less than 32 bytes -> should fail
     const shortBase64 = btoa("short-secret-17b");
     await expect(computeVoterHash("election-1", "2024-0001", shortBase64)).rejects.toThrow(
-      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+      "hmacSecret must decode to at least 32 bytes",
     );
   });
 

@@ -228,14 +228,34 @@ npx drizzle-kit studio
 
 ## Environment Variables
 
-| Variable               | Description                             | Default       | Required            |
-| ---------------------- | --------------------------------------- | ------------- | ------------------- |
-| `NODE_ENV`             | Environment mode                        | `development` | No                  |
-| `PORT`                 | Server port                             | `3000`        | No                  |
-| `LOG_LEVEL`            | Logging level                           | `info`        | No                  |
-| `DATABASE_URL`         | Turso database URL or local SQLite file | -             | Yes                 |
-| `DATABASE_AUTH_TOKEN`  | Turso authentication token              | -             | Yes (for Turso)     |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key         | -             | Yes (in production) |
+| Variable                | Description                                                   | Default       | Required            |
+| ----------------------- | ------------------------------------------------------------- | ------------- | ------------------- |
+| `NODE_ENV`              | Environment mode                                              | `development` | No                  |
+| `PORT`                  | Server port                                                   | `3000`        | No                  |
+| `LOG_LEVEL`             | Logging level                                                 | `info`        | No                  |
+| `DATABASE_URL`          | Turso database URL or local SQLite file                       | -             | Yes                 |
+| `DATABASE_AUTH_TOKEN`   | Turso authentication token                                    | -             | Yes (for Turso)     |
+| `TURNSTILE_SECRET_KEY`  | Cloudflare Turnstile secret key                               | -             | Yes (in production) |
+| `HMAC_SECRET`           | Base64 HMAC key that decodes to at least 32 bytes             | -             | Yes (in production) |
+| `PREVIOUS_HMAC_SECRETS` | Comma-separated base64 HMAC keys retained during key rotation | -             | No                  |
+
+### HMAC secret migration and rotation
+
+`HMAC_SECRET` and every entry in `PREVIOUS_HMAC_SECRETS` must be standard base64 and decode to at least 32 bytes. Generate a new key with:
+
+```bash
+openssl rand -base64 32
+```
+
+Earlier releases treated the configured `HMAC_SECRET` as literal UTF-8 text. Before deploying the base64-decoding release, encode the exact bytes of the existing value without adding a newline:
+
+```bash
+printf %s "$EXISTING_HMAC_SECRET" | base64 | tr -d '\n'
+```
+
+To preserve existing voter hashes without rotating, configure that output as `HMAC_SECRET`. To rotate simultaneously, configure a newly generated key as `HMAC_SECRET` and include the encoded old value in `PREVIOUS_HMAC_SECRETS`. Retain all keys used to create participation hashes for elections whose durable voting history must remain enforceable.
+
+Losing an earlier key prevents the service from matching participation rows created with it. The user-ID check still blocks an unchanged account, but a hard-deleted and recreated voter account could otherwise evade the durable participation check.
 
 ## Architecture
 

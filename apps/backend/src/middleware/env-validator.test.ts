@@ -55,7 +55,7 @@ describe("envValidator middleware", () => {
     const res = await app.request("/test", { method: "GET" }, {
       NODE_ENV: "production",
       TURSO_DATABASE_URL: "libsql://prod.db",
-      HMAC_SECRET: "secret-key-32-characters-minimum-pepper",
+      HMAC_SECRET: "c2VjcmV0LWtleS0zMi1jaGFyYWN0ZXJzLW1pbmltdW0tcGVwcGVy",
       // TURNSTILE_SECRET_KEY is missing
     } as any);
     expect(res.status).toBe(500);
@@ -78,18 +78,19 @@ describe("envValidator middleware", () => {
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
-  it("fails validation when HMAC_SECRET is less than 32 characters long", async () => {
+  it("fails validation when HMAC_SECRET decodes to fewer than 32 bytes", async () => {
+    const shortBase64Secret = btoa("x".repeat(31));
     const { app, mockLogger } = buildApp();
     const res = await app.request("/test", { method: "GET" }, {
       NODE_ENV: "production",
       TURSO_DATABASE_URL: "libsql://prod.db",
       TURNSTILE_SECRET_KEY: "secret-key",
-      HMAC_SECRET: "short-key",
+      HMAC_SECRET: shortBase64Secret,
     } as any);
     expect(res.status).toBe(500);
     const body = (await res.json()) as any;
     expect(body.message).toContain(
-      "HMAC_SECRET must be at least 32 bytes (or 32 character plain text)",
+      "HMAC_SECRET must be valid base64 and decode to at least 32 bytes",
     );
     expect(mockLogger.error).toHaveBeenCalled();
   });
@@ -100,7 +101,7 @@ describe("envValidator middleware", () => {
       NODE_ENV: "production",
       TURSO_DATABASE_URL: "libsql://prod.db",
       TURNSTILE_SECRET_KEY: "secret-key",
-      HMAC_SECRET: "secret-key-32-characters-minimum-pepper",
+      HMAC_SECRET: "c2VjcmV0LWtleS0zMi1jaGFyYWN0ZXJzLW1pbmltdW0tcGVwcGVy",
     } as any);
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;

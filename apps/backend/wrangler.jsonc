@@ -16,9 +16,6 @@
     "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
     "B2_PUBLIC_ACCESS": "false",
   },
-  "secrets": {
-    "required": ["HMAC_SECRET"],
-  },
   "ratelimits": [
     {
       "name": "LOGIN_IP_LIMITER",

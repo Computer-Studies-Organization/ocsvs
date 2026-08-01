@@ -9,7 +9,7 @@ import { positionRepo } from "@/database/repositories/position.repository";
 import { ballotSnapshots, voterElectionParticipation, votes } from "@/database/schema";
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
-import { isValidSecret } from "@/middleware/env";
+import { decodeHmacSecret } from "@/middleware/env";
 
 export async function computeLegacyVoterHash(
   electionId: string,
@@ -35,11 +35,9 @@ export async function computeVoterHash(
   if (!identifier) {
     throw new Error("studentId must be a non-empty string for voter hash computation");
   }
-  if (!isValidSecret(hmacSecret)) {
-    throw new Error("hmacSecret must be at least 32 bytes (or 32 character plain text)");
-  }
+  const decodedKey = decodeHmacSecret(hmacSecret);
+  const keyData = new Uint8Array(decodedKey);
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(hmacSecret);
   const key = await crypto.subtle.importKey(
     "raw",
     keyData,
