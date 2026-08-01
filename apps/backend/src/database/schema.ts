@@ -222,11 +222,10 @@ export const ballotSnapshots = sqliteTable(
 );
 
 // Durable voter participation record separate from ballot contents.
-// Stores a deterministic unsalted SHA-256 hash of (election_id + student_id) so the row
-// survives account hard-deletes and blocks re-imported accounts from double-voting.
-// Note: student IDs are low-entropy and the hash is unsalted, so it is not a strong
-// anonymity guarantee — anyone with DB access and the student roster can reverse it
-// (revealing who participated, not their choices).
+// New participation records use a deterministic keyed HMAC-SHA256 value (prefixed with "v1:")
+// using a secret pepper (HMAC_SECRET) so the row survives account hard-deletes and blocks
+// re-imported accounts from double-voting. Unprefixed legacy SHA-256 records may remain
+// during migration and are checked temporarily to preserve durable double-voting protection.
 export const voterElectionParticipation = sqliteTable(
   "voter_election_participation",
   {

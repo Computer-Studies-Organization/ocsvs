@@ -223,11 +223,17 @@ describe("votes Routes (repository)", () => {
 
     it("returns 401 when not authenticated for submitVote", async () => {
       AUTH_ENABLED = false;
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({ electionId: testElectionId, votes: [] }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({ electionId: testElectionId, votes: [] }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
       expect(res.status).toBe(401);
     });
 
@@ -281,22 +287,49 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [
-            { candidateId: testCandidateId1, positionId: testPositionId1 },
-            { candidateId: testCandidateId2, positionId: testPositionId2 },
-          ],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [
+              { candidateId: testCandidateId1, positionId: testPositionId1 },
+              { candidateId: testCandidateId2, positionId: testPositionId2 },
+            ],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY);
       expect(json.votes).toHaveLength(2);
+      expect(mockCast).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          hmacSecret: "mock-hmac-secret-key-at-least-32-chars-long",
+        }),
+      );
+    });
+
+    it("should return 500 when HMAC_SECRET is missing from environment", async () => {
+      setUser();
+      const res = await router.request("/votes", {
+        method: "POST",
+        body: JSON.stringify({
+          electionId: testElectionId,
+          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+        }),
+        headers: { "content-type": "application/json" },
+      });
+      expect(res.status).toBe(500);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
     });
 
     it("should return 409 if user has already voted", async () => {
@@ -310,14 +343,20 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(409);
       const json = (await res.json()) as any;
@@ -335,17 +374,23 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [
-            { candidateId: testCandidateId1, positionId: testPositionId1 },
-            { candidateId: testCandidateId2, positionId: testPositionId1 },
-          ],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [
+              { candidateId: testCandidateId1, positionId: testPositionId1 },
+              { candidateId: testCandidateId2, positionId: testPositionId1 },
+            ],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(422);
       const json = (await res.json()) as any;
@@ -363,14 +408,20 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(404);
       const json = (await res.json()) as any;
@@ -388,14 +439,20 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId2 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId2 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(400);
       const json = (await res.json()) as any;
@@ -413,14 +470,20 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: "non-existent-election-id",
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: "non-existent-election-id",
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(404);
       const json = (await res.json()) as any;
@@ -438,14 +501,20 @@ describe("votes Routes (repository)", () => {
         },
       });
 
-      const res = await router.request("/votes", {
-        method: "POST",
-        body: JSON.stringify({
-          electionId: testElectionId,
-          votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        {
+          HMAC_SECRET: "mock-hmac-secret-key-at-least-32-chars-long",
+        },
+      );
 
       expect(res.status).toBe(409);
       const json = (await res.json()) as any;

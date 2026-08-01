@@ -22,10 +22,31 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   const authUser = c.get("authUser");
   const { db } = createDb(c);
 
+  if (!c.env?.HMAC_SECRET) {
+    return c.json(
+      { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
+
+  const previousSecretsRaw = (c.env as any)?.PREVIOUS_HMAC_SECRETS;
+  const previousHmacSecrets = previousSecretsRaw
+    ? typeof previousSecretsRaw === "string"
+      ? previousSecretsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : Array.isArray(previousSecretsRaw)
+        ? previousSecretsRaw
+        : []
+    : [];
+
   const result = await ballotCaster.cast(db, {
     accountId: authUser.id,
     electionId,
     selections: voteItems,
+    hmacSecret: c.env.HMAC_SECRET,
+    previousHmacSecrets,
   });
 
   if (!result.success) {

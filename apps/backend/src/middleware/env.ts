@@ -71,6 +71,16 @@ const EnvSchema = z
       (val) => (val === "" ? undefined : val),
       z.string().optional(),
     ),
+    HMAC_SECRET: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+    PREVIOUS_HMAC_SECRETS: z.preprocess((val) => {
+      if (!val || val === "") return [];
+      if (typeof val === "string")
+        return val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      return val;
+    }, z.array(z.string()).optional().default([])),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === "production" && !data.TURNSTILE_SECRET_KEY) {
@@ -80,7 +90,46 @@ const EnvSchema = z
         path: ["TURNSTILE_SECRET_KEY"],
       });
     }
+    if (data.NODE_ENV === "production" && !data.HMAC_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "HMAC_SECRET is required in production",
+        path: ["HMAC_SECRET"],
+      });
+    }
+    if (data.HMAC_SECRET && !isValidSecret(data.HMAC_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "HMAC_SECRET must be at least 32 bytes (or 32 character plain text)",
+        path: ["HMAC_SECRET"],
+      });
+    }
+    if (data.PREVIOUS_HMAC_SECRETS) {
+      for (let i = 0; i < data.PREVIOUS_HMAC_SECRETS.length; i++) {
+        const secret = data.PREVIOUS_HMAC_SECRETS[i];
+        if (!isValidSecret(secret)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `PREVIOUS_HMAC_SECRETS[${i}] must be at least 32 bytes (or 32 character plain text)`,
+            path: ["PREVIOUS_HMAC_SECRETS", i],
+          });
+        }
+      }
+    }
   });
+
+export function isValidSecret(secret: string): boolean {
+  if (!secret) return false;
+  try {
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(secret) && secret.length % 4 === 0) {
+      const decoded = atob(secret);
+      if (decoded.length >= 32) {
+        return true;
+      }
+    }
+  } catch {}
+  return new TextEncoder().encode(secret).length >= 32;
+}
 
 /**
  * TypeScript type representing the validated environment configuration.

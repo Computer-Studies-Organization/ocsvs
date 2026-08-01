@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ballotCaster, computeVoterHash } from "./ballot-caster";
+import { ballotCaster, computeVoterHash, computeLegacyVoterHash } from "./ballot-caster";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 const {
@@ -78,7 +78,12 @@ describe("DrizzleBallotCaster", () => {
 
   it("should fail with USER_NOT_FOUND when user is missing", async () => {
     mockFindByAccountId.mockResolvedValue(null);
-    const result = await ballotCaster.cast(mockDb, { accountId, electionId, selections: [] });
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("USER_NOT_FOUND");
@@ -89,7 +94,12 @@ describe("DrizzleBallotCaster", () => {
   it("should fail with ELECTION_NOT_FOUND when election is missing", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId });
     mockFindElectionById.mockResolvedValue(null);
-    const result = await ballotCaster.cast(mockDb, { accountId, electionId, selections: [] });
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("ELECTION_NOT_FOUND");
@@ -100,7 +110,12 @@ describe("DrizzleBallotCaster", () => {
   it("should fail with ELECTION_NOT_OPEN when election status is draft", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId });
     mockFindElectionById.mockResolvedValue({ id: electionId, status: "draft" });
-    const result = await ballotCaster.cast(mockDb, { accountId, electionId, selections: [] });
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("ELECTION_NOT_OPEN");
@@ -116,7 +131,12 @@ describe("DrizzleBallotCaster", () => {
       opensAt: now + 3600,
       closesAt: now + 7200,
     });
-    const result = await ballotCaster.cast(mockDb, { accountId, electionId, selections: [] });
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("ELECTION_NOT_OPEN");
@@ -133,7 +153,12 @@ describe("DrizzleBallotCaster", () => {
       closesAt: now + 3600,
     });
     mockExistsForUserInElection.mockResolvedValue(true);
-    const result = await ballotCaster.cast(mockDb, { accountId, electionId, selections: [] });
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("VOTE_ALREADY_CAST");
@@ -156,6 +181,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -181,6 +207,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -216,6 +243,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId, // Election A
       selections: [{ candidateId, positionId: electionBPositionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
 
     expect(result.success).toBe(false);
@@ -249,6 +277,7 @@ describe("DrizzleBallotCaster", () => {
         { candidateId, positionId },
         { candidateId: "cand-2", positionId },
       ],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -278,6 +307,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
 
     expect(result.success).toBe(false);
@@ -308,6 +338,7 @@ describe("DrizzleBallotCaster", () => {
       accountId,
       electionId,
       selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
     });
 
     expect(result.success).toBe(true);
@@ -316,31 +347,214 @@ describe("DrizzleBallotCaster", () => {
       expect(result.data.votes[0].id).toBe("vote-1");
     }
   });
+
+  it("should fail with internal error when hmacSecret is missing or too short during cast", async () => {
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+
+    // Missing hmacSecret
+    await expect(
+      ballotCaster.cast(mockDb, {
+        accountId,
+        electionId,
+        selections: [{ candidateId, positionId }],
+      } as any),
+    ).rejects.toThrow("hmacSecret must be at least 32 bytes (or 32 character plain text)");
+
+    // Too short hmacSecret
+    await expect(
+      ballotCaster.cast(mockDb, {
+        accountId,
+        electionId,
+        selections: [{ candidateId, positionId }],
+        hmacSecret: "short-key",
+      }),
+    ).rejects.toThrow("hmacSecret must be at least 32 bytes (or 32 character plain text)");
+  });
+
+  it("should fail with VOTE_ALREADY_CAST if a legacy (SHA-256) participation record exists", async () => {
+    const studentId = "2024-0001";
+    const legacyHash = await computeLegacyVoterHash(electionId, studentId);
+
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+
+    // mockHasVoterHashParticipated should return true if legacyHash is checked
+    mockHasVoterHashParticipated.mockImplementation(async (db, elId, hashes) => {
+      return hashes.includes(legacyHash);
+    });
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VOTE_ALREADY_CAST");
+      expect(result.error.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST);
+    }
+  });
+
+  it("should block voting if matching record is found under rotated secret (rotation/key change)", async () => {
+    const studentId = "2024-0001";
+    const oldSecret = "old-secret-key-32-characters-minimum";
+    const newSecret = "new-secret-key-32-characters-minimum";
+
+    const oldHash = await computeVoterHash(electionId, studentId, oldSecret);
+
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+
+    // Repository reports a match only when the rotated oldHash is checked
+    mockHasVoterHashParticipated.mockImplementation(async (db, elId, hashes) => {
+      return hashes.includes(oldHash);
+    });
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: newSecret,
+      previousHmacSecrets: [oldSecret],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("VOTE_ALREADY_CAST");
+      expect(result.error.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST);
+    }
+  });
+
+  it("should successfully cast when legacy checks do not match but active works", async () => {
+    const studentId = "2024-0001";
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+    mockFindByUserAndElection.mockResolvedValue([
+      { id: "vote-1", userId, candidateId, positionId, electionId },
+    ]);
+
+    // DB has no participating rows matching
+    mockHasVoterHashParticipated.mockResolvedValue(false);
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "test-secret-key-32-characters-minimum",
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("computeVoterHash", () => {
-  it("should compute deterministic SHA-256 hash for valid studentId", async () => {
-    const hash1 = await computeVoterHash("election-1", "2024-0001");
-    const hash2 = await computeVoterHash("election-1", "2024-0001");
+  const testSecret = "test-secret-key-32-characters-minimum";
+  const diffSecret = "different-secret-key-32-chars-long";
+
+  it("should compute deterministic HMAC-SHA256 hash for valid studentId", async () => {
+    const hash1 = await computeVoterHash("election-1", "2024-0001", testSecret);
+    const hash2 = await computeVoterHash("election-1", "2024-0001", testSecret);
     expect(hash1).toBe(hash2);
-    expect(hash1).toHaveLength(64);
+    expect(hash1).toHaveLength(67);
+    expect(hash1.startsWith("v1:")).toBe(true);
   });
 
-  it("should generate distinct hashes for different studentIds", async () => {
-    const hashA = await computeVoterHash("election-1", "2024-0001");
-    const hashB = await computeVoterHash("election-1", "2024-0002");
+  it("should generate distinct hashes for different studentIds or secrets", async () => {
+    const hashA = await computeVoterHash("election-1", "2024-0001", testSecret);
+    const hashB = await computeVoterHash("election-1", "2024-0002", testSecret);
+    const hashC = await computeVoterHash("election-1", "2024-0001", diffSecret);
     expect(hashA).not.toBe(hashB);
+    expect(hashA).not.toBe(hashC);
   });
 
   it("should throw an error if studentId is missing, empty, or whitespace", async () => {
-    await expect(computeVoterHash("election-1", undefined)).rejects.toThrow(
+    await expect(computeVoterHash("election-1", undefined, testSecret)).rejects.toThrow(
       "studentId must be a non-empty string for voter hash computation",
     );
-    await expect(computeVoterHash("election-1", "")).rejects.toThrow(
+    await expect(computeVoterHash("election-1", "", testSecret)).rejects.toThrow(
       "studentId must be a non-empty string for voter hash computation",
     );
-    await expect(computeVoterHash("election-1", "   ")).rejects.toThrow(
+    await expect(computeVoterHash("election-1", "   ", testSecret)).rejects.toThrow(
       "studentId must be a non-empty string for voter hash computation",
     );
+  });
+
+  it("should throw an error if hmacSecret is missing, empty, or less than 32 characters/bytes", async () => {
+    await expect(computeVoterHash("election-1", "2024-0001", "")).rejects.toThrow(
+      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+    );
+    await expect(computeVoterHash("election-1", "2024-0001", "short-secret")).rejects.toThrow(
+      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+    );
+    // Base64 secret that decodes to less than 32 bytes -> should fail
+    const shortBase64 = btoa("short-secret-17b");
+    await expect(computeVoterHash("election-1", "2024-0001", shortBase64)).rejects.toThrow(
+      "hmacSecret must be at least 32 bytes (or 32 character plain text)",
+    );
+  });
+
+  it("should pass if hmacSecret is a valid base64 key that decodes to >= 32 bytes", async () => {
+    const validBase64 = btoa("this-is-a-very-long-secret-key-that-is-at-least-32-bytes-long");
+    const hash = await computeVoterHash("election-1", "2024-0001", validBase64);
+    expect(hash.startsWith("v1:")).toBe(true);
+  });
+});
+
+describe("computeLegacyVoterHash", () => {
+  it("should compute deterministic SHA-256 hash for valid studentId without prefix", async () => {
+    const hash1 = await computeLegacyVoterHash("election-1", "2024-0001");
+    const hash2 = await computeLegacyVoterHash("election-1", "2024-0001");
+    expect(hash1).toBe(hash2);
+    expect(hash1).toHaveLength(64);
+    expect(hash1.includes(":")).toBe(false);
+  });
+
+  it("should generate distinct legacy hashes for different studentIds", async () => {
+    const hashA = await computeLegacyVoterHash("election-1", "2024-0001");
+    const hashB = await computeLegacyVoterHash("election-1", "2024-0002");
+    expect(hashA).not.toBe(hashB);
   });
 });

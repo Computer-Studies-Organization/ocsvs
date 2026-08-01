@@ -1,13 +1,13 @@
 import type { DbClient } from "./database.type";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { voterElectionParticipation, votes } from "@/database/schema";
 
 export const voteRepo = {
-  // Check if voterHash has already participated in an election
+  // Check if any of the voterHashes have already participated in an election
   async hasVoterHashParticipated(
     db: DbClient,
     electionId: string,
-    voterHash: string,
+    voterHashes: string[],
   ): Promise<boolean> {
     const result = await db
       .select({ id: voterElectionParticipation.id })
@@ -15,7 +15,7 @@ export const voteRepo = {
       .where(
         and(
           eq(voterElectionParticipation.electionId, electionId),
-          eq(voterElectionParticipation.voterHash, voterHash),
+          inArray(voterElectionParticipation.voterHash, voterHashes),
         ),
       )
       .limit(1)

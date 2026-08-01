@@ -11,3 +11,8 @@ B2_APPLICATION_KEY=your_b2_key
 # Database (Turso / libSQL)
 TURSO_DATABASE_URL=file:./local.db
 TURSO_AUTH_TOKEN=
+
+# Pepper for deterministic voter participation HMAC hashes (HMAC-SHA256)
+# Generate a random 32-byte key using: openssl rand -base64 32
+HMAC_SECRET=replace-with-random-32-byte-secret
+

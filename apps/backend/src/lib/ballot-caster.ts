@@ -9,8 +9,12 @@ import { positionRepo } from "@/database/repositories/position.repository";
 import { ballotSnapshots, voterElectionParticipation, votes } from "@/database/schema";
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
+import { isValidSecret } from "@/middleware/env";
 
-export async function computeVoterHash(electionId: string, studentId?: string): Promise<string> {
+export async function computeLegacyVoterHash(
+  electionId: string,
+  studentId: string | undefined,
+): Promise<string> {
   const identifier = (studentId ?? "").trim().toLowerCase();
   if (!identifier) {
     throw new Error("studentId must be a non-empty string for voter hash computation");
@@ -22,6 +26,34 @@ export async function computeVoterHash(electionId: string, studentId?: string): 
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export async function computeVoterHash(
+  electionId: string,
+  studentId: string | undefined,
+  hmacSecret: string,
+): Promise<string> {
+  const identifier = (studentId ?? "").trim().toLowerCase();
+  if (!identifier) {
+    throw new Error("studentId must be a non-empty string for voter hash computation");
+  }
+  if (!isValidSecret(hmacSecret)) {
+    throw new Error("hmacSecret must be at least 32 bytes (or 32 character plain text)");
+  }
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(hmacSecret);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: { name: "SHA-256" } },
+    false,
+    ["sign"],
+  );
+  const data = encoder.encode(`voter-hash:${electionId}:${identifier}`);
+  const signature = await crypto.subtle.sign("HMAC", key, data);
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hexHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `v1:${hexHash}`;
+}
+
 export interface BallotSelection {
   candidateId: string;
   positionId: string;
@@ -31,6 +63,8 @@ export interface CastBallotInput {
   accountId: string; // Account ID of the authenticated Student
   electionId: string; // The Election being voted in
   selections: BallotSelection[]; // Array of selected candidates per position
+  hmacSecret: string; // Secret key for HMAC voter hash
+  previousHmacSecrets?: string[]; // Previous secrets for key rotation support
 }
 
 export type BallotCastingError =
@@ -149,14 +183,35 @@ export class DrizzleBallotCaster implements BallotCastingModule {
       }
 
       // 3. Double-voting check (by user.id AND by durable voterHash)
-      const voterHash =
+      const currentHash =
         user.studentId && user.studentId.trim()
-          ? await computeVoterHash(input.electionId, user.studentId)
+          ? await computeVoterHash(input.electionId, user.studentId, input.hmacSecret)
           : null;
+      const legacyHash =
+        user.studentId && user.studentId.trim()
+          ? await computeLegacyVoterHash(input.electionId, user.studentId)
+          : null;
+
+      const previousHashes =
+        user.studentId && user.studentId.trim() && input.previousHmacSecrets
+          ? await Promise.all(
+              input.previousHmacSecrets.map((secret) =>
+                computeVoterHash(input.electionId, user.studentId, secret),
+              ),
+            )
+          : [];
+
+      const hashesToCheck = [
+        ...(currentHash ? [currentHash] : []),
+        ...previousHashes,
+        ...(legacyHash ? [legacyHash] : []),
+      ];
+
       const hasVoted = await voteRepo.existsForUserInElection(db, user.id, input.electionId);
-      const hasParticipated = voterHash
-        ? await voteRepo.hasVoterHashParticipated(db, input.electionId, voterHash)
-        : false;
+      const hasParticipated =
+        hashesToCheck.length > 0
+          ? await voteRepo.hasVoterHashParticipated(db, input.electionId, hashesToCheck)
+          : false;
 
       if (hasVoted || hasParticipated) {
         return {
@@ -273,12 +328,12 @@ export class DrizzleBallotCaster implements BallotCastingModule {
           db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
         ];
 
-        if (voterHash) {
+        if (currentHash) {
           batchStatements.push(
             db.insert(voterElectionParticipation).values({
               id: crypto.randomUUID(),
               electionId: input.electionId,
-              voterHash,
+              voterHash: currentHash,
               createdAt: now,
             }),
           );
