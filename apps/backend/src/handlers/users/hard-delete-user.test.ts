@@ -41,6 +41,14 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
   },
 }));
 
+const mockFindOpen = vi.fn().mockResolvedValue(null);
+
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findOpen: (...args: any[]) => mockFindOpen(...args),
+  },
+}));
+
 vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     isCandidate: (...args: any[]) => mockIsCandidate(...args),

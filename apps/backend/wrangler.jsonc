@@ -10,8 +10,8 @@
     "not_found_handling": "single-page-application",
   },
   "vars": {
-    "NODE_ENV": "development",
-    "LOG_LEVEL": "debug",
+    "NODE_ENV": "production",
+    "LOG_LEVEL": "info",
     "B2_BUCKET_NAME": "cso-voting-candidates",
     "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
     "B2_PUBLIC_ACCESS": "false",

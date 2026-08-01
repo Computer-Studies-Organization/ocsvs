@@ -199,12 +199,23 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     expect(userVotes[0].userId).toBe(dbUser!.id);
 
     // 5. Step 3: Log in as Super Admin and perform a Hard Delete on that student voter account
-    // (confirming with "DELETE")
     const superAdminActor = {
       id: adminAccountId,
       username: "admin_user",
       role: "super_admin" as const,
     };
+
+    // Attempting hard delete while election is open should fail
+    await expect(
+      userLifecycleCoordinator.hardDelete(db, dbUser!.id, superAdminActor),
+    ).rejects.toThrowError(expect.objectContaining({ code: "ELECTION_IS_OPEN", statusCode: 400 }));
+
+    // Close election to allow administrative hard delete
+    await db
+      .update(schema.elections)
+      .set({ status: "closed" })
+      .where(eq(schema.elections.id, electionId))
+      .run();
     await userLifecycleCoordinator.hardDelete(db, dbUser!.id, superAdminActor);
 
     // 6. Step 4: Check election turnout and candidate counts again
@@ -437,5 +448,160 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     expect(logEntry.action).toBe("election.create");
     expect(logEntry.targetType).toBe("election");
     expect(logEntry.targetId).toBe(electionId);
+  });
+
+  it("prevents double voting when a hard-deleted voter is re-imported with a new user ID", async () => {
+    cleanup();
+
+    activeClient = createClient({ url: `file:${dbPath}` });
+    const client = activeClient;
+    await client.execute("PRAGMA foreign_keys = ON");
+
+    const migrationsDir = resolve(__dirname, "migrations");
+    const migrationFiles = readdirSync(migrationsDir)
+      .filter((file) => file.endsWith(".sql"))
+      .sort();
+
+    for (const file of migrationFiles) {
+      const sqlContent = readFileSync(resolve(migrationsDir, file), "utf8");
+      const statements = sqlContent
+        .split("--> statement-breakpoint")
+        .map((chunk) =>
+          chunk
+            .split("\n")
+            .filter((line) => !line.trimStart().startsWith("--"))
+            .join("\n")
+            .trim(),
+        )
+        .filter((s) => s.length > 0);
+
+      for (const stmt of statements) {
+        await client.execute(stmt);
+      }
+    }
+
+    const db = drizzle(client, { schema });
+
+    const adminAccountId = crypto.randomUUID();
+    await voterAccountStore.create(db, {
+      accountId: adminAccountId,
+      username: "admin_user",
+      email: "admin@cso.org",
+      passwordHash: "dummy-hash",
+      studentId: "A24-0000",
+      firstName: "Admin",
+      lastName: "User",
+      course: "BSCS",
+      yearLevel: "4th Year",
+      role: "super_admin",
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const electionId = await electionRepo.create(db, {
+      name: "Durable Participation Election",
+      opensAt: now - 60,
+      closesAt: now + 3600,
+    });
+    await db
+      .update(schema.elections)
+      .set({ status: "open" })
+      .where(eq(schema.elections.id, electionId))
+      .run();
+
+    const positionId = await positionRepo.create(db, {
+      electionId,
+      name: "President",
+      displayOrder: 1,
+    });
+
+    const candidateAccountId = crypto.randomUUID();
+    await voterAccountStore.create(db, {
+      accountId: candidateAccountId,
+      username: "candidate1",
+      email: "candidate1@cso.org",
+      passwordHash: "dummy-hash",
+      studentId: "A24-1111",
+      firstName: "Candidate",
+      lastName: "One",
+      course: "BSCS",
+      yearLevel: "3rd Year",
+      role: "user",
+    });
+
+    const candidateId = await candidateRepo.create(db, {
+      accountId: candidateAccountId,
+      positionId,
+      fullName: "Candidate One",
+      manifesto: "Test manifesto",
+    });
+
+    // 1. Register voter
+    const studentId = "2026-8888";
+    const voterReg = await userLifecycleCoordinator.register(db, {
+      username: "voter_durable",
+      email: "voter_durable@cso.org",
+      password: "password123",
+      studentId,
+      firstName: "Voter",
+      lastName: "Durable",
+      course: "BSCS",
+      yearLevel: "1st Year",
+    });
+
+    // 2. Cast initial vote
+    const caster = new DrizzleBallotCaster();
+    const voteRes = await caster.cast(db, {
+      accountId: voterReg.accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+    });
+    expect(voteRes.success).toBe(true);
+
+    // 3. Temporarily close election to allow administrative hard delete
+    const superAdminActor = {
+      id: adminAccountId,
+      username: "admin_user",
+      role: "super_admin" as const,
+    };
+    await db
+      .update(schema.elections)
+      .set({ status: "draft" })
+      .where(eq(schema.elections.id, electionId))
+      .run();
+    const voter = await voterAccountStore.findByAccountId(db, voterReg.accountId);
+    await userLifecycleCoordinator.hardDelete(db, voter!.id, superAdminActor);
+
+    // Re-open election
+    await db
+      .update(schema.elections)
+      .set({ status: "open" })
+      .where(eq(schema.elections.id, electionId))
+      .run();
+
+    // 4. Re-import/re-register the student with the exact same studentId (creates new account/user ID)
+    const reimportedVoter = await userLifecycleCoordinator.register(db, {
+      username: "voter_durable_reimported",
+      email: "voter_durable_reimported@cso.org",
+      password: "password123",
+      studentId,
+      firstName: "Voter",
+      lastName: "Durable",
+      course: "BSCS",
+      yearLevel: "1st Year",
+    });
+
+    expect(reimportedVoter.accountId).not.toBe(voterReg.accountId);
+
+    // 5. Attempting to recast ballot with new account/user ID must fail
+    const recastRes = await caster.cast(db, {
+      accountId: reimportedVoter.accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+    });
+
+    expect(recastRes.success).toBe(false);
+    if (!recastRes.success) {
+      expect(recastRes.error.code).toBe("VOTE_ALREADY_CAST");
+    }
   });
 });

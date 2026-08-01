@@ -81,10 +81,13 @@ export async function deleteSession(db: Database, sessionId: string): Promise<vo
 export function setSessionCookie(c: Context, sessionId: string, expiresAt: number): void {
   const expires = new Date(expiresAt * 1000);
   const isProduction = c.env?.NODE_ENV === "production";
+  const isHttps = c.req?.url?.startsWith("https://") ?? false;
+  const isHttp = c.req?.url?.startsWith("http://") ?? false;
+  const isSecure = isHttps || (isProduction && !isHttp);
 
   c.header(
     "Set-Cookie",
-    `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}${isProduction ? "; Secure" : ""}`,
+    `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}${isSecure ? "; Secure" : ""}`,
   );
 }
 
@@ -93,10 +96,13 @@ export function setSessionCookie(c: Context, sessionId: string, expiresAt: numbe
  */
 export function clearSessionCookie(c: Context): void {
   const isProduction = c.env?.NODE_ENV === "production";
+  const isHttps = c.req?.url?.startsWith("https://") ?? false;
+  const isHttp = c.req?.url?.startsWith("http://") ?? false;
+  const isSecure = isHttps || (isProduction && !isHttp);
 
   c.header(
     "Set-Cookie",
-    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT${isProduction ? "; Secure" : ""}`,
+    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? "; Secure" : ""}`,
   );
 }
 
@@ -104,7 +110,7 @@ export function clearSessionCookie(c: Context): void {
  * Gets the session ID from the request cookie.
  */
 export function getSessionIdFromCookie(c: Context): string | undefined {
-  const cookieHeader = c.req.header("Cookie");
+  const cookieHeader = c.req?.header("Cookie");
   if (!cookieHeader) return undefined;
 
   const cookies = cookieHeader.split(";").map((c) => c.trim());

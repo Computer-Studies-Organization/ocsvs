@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ballotCaster } from "./ballot-caster";
+import { ballotCaster, computeVoterHash } from "./ballot-caster";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 const {
   mockFindByAccountId,
   mockFindElectionById,
   mockExistsForUserInElection,
+  mockHasVoterHashParticipated,
   mockFindActiveByIds,
   mockListByElection,
   mockFindByUserAndElection,
@@ -13,6 +14,7 @@ const {
   mockFindByAccountId: vi.fn(),
   mockFindElectionById: vi.fn(),
   mockExistsForUserInElection: vi.fn(),
+  mockHasVoterHashParticipated: vi.fn().mockResolvedValue(false),
   mockFindActiveByIds: vi.fn(),
   mockListByElection: vi.fn(),
   mockFindByUserAndElection: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
 vi.mock("@/database/repositories/votes.repository", () => ({
   voteRepo: {
     existsForUserInElection: mockExistsForUserInElection,
+    hasVoterHashParticipated: mockHasVoterHashParticipated,
     findByUserAndElection: mockFindByUserAndElection,
   },
 }));
@@ -312,5 +315,32 @@ describe("DrizzleBallotCaster", () => {
       expect(result.data.votes).toHaveLength(1);
       expect(result.data.votes[0].id).toBe("vote-1");
     }
+  });
+});
+
+describe("computeVoterHash", () => {
+  it("should compute deterministic SHA-256 hash for valid studentId", async () => {
+    const hash1 = await computeVoterHash("election-1", "2024-0001");
+    const hash2 = await computeVoterHash("election-1", "2024-0001");
+    expect(hash1).toBe(hash2);
+    expect(hash1).toHaveLength(64);
+  });
+
+  it("should generate distinct hashes for different studentIds", async () => {
+    const hashA = await computeVoterHash("election-1", "2024-0001");
+    const hashB = await computeVoterHash("election-1", "2024-0002");
+    expect(hashA).not.toBe(hashB);
+  });
+
+  it("should throw an error if studentId is missing, empty, or whitespace", async () => {
+    await expect(computeVoterHash("election-1", undefined)).rejects.toThrow(
+      "studentId must be a non-empty string for voter hash computation",
+    );
+    await expect(computeVoterHash("election-1", "")).rejects.toThrow(
+      "studentId must be a non-empty string for voter hash computation",
+    );
+    await expect(computeVoterHash("election-1", "   ")).rejects.toThrow(
+      "studentId must be a non-empty string for voter hash computation",
+    );
   });
 });

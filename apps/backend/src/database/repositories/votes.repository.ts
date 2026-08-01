@@ -1,8 +1,27 @@
 import type { DbClient } from "./database.type";
 import { and, count, eq } from "drizzle-orm";
-import { votes } from "@/database/schema";
+import { voterElectionParticipation, votes } from "@/database/schema";
 
 export const voteRepo = {
+  // Check if voterHash has already participated in an election
+  async hasVoterHashParticipated(
+    db: DbClient,
+    electionId: string,
+    voterHash: string,
+  ): Promise<boolean> {
+    const result = await db
+      .select({ id: voterElectionParticipation.id })
+      .from(voterElectionParticipation)
+      .where(
+        and(
+          eq(voterElectionParticipation.electionId, electionId),
+          eq(voterElectionParticipation.voterHash, voterHash),
+        ),
+      )
+      .limit(1)
+      .get();
+    return result !== undefined;
+  },
   // Find all votes for a user in a specific election
   async findByUserAndElection(
     db: DbClient,

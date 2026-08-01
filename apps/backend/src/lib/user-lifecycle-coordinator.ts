@@ -8,6 +8,7 @@ import { deleteSession, createSession } from "@/lib/session";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { validateProfanity } from "@/lib/profanity";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { electionRepo } from "@/database/repositories/election.repository";
 import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
@@ -112,6 +113,7 @@ export class UserLifecycleError extends Error {
       | "CANNOT_DELETE_SELF"
       | "CANNOT_DELETE_LAST_ADMIN"
       | "USER_IS_CANDIDATE"
+      | "ELECTION_IS_OPEN"
       | "RATE_LIMITED_ACCOUNT"
       | "INVALID_CREDENTIALS"
       | "PROFANITY_DETECTED"
@@ -676,7 +678,17 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
         throw new UserLifecycleError("USER_IS_CANDIDATE", 400);
       }
 
-      // 6. Hard deletion
+      // 6. Open election check: cannot delete users while an election is open
+      const openElection = await electionRepo.findOpen(tx);
+      if (openElection) {
+        throw new UserLifecycleError(
+          "ELECTION_IS_OPEN",
+          400,
+          "Cannot delete users while an election is open",
+        );
+      }
+
+      // 7. Hard deletion
       const details = await voterAccountStore.findById(tx, userId);
       const username = details?.username ?? "unknown";
       const studentId = details?.studentId ?? "unknown";

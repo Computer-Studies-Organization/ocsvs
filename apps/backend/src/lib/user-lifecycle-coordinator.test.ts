@@ -98,6 +98,13 @@ vi.mock("@/lib/profanity", () => ({
   validateProfanity: mockValidateProfanity,
 }));
 
+const mockFindOpenElection = vi.fn().mockResolvedValue(null);
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findOpen: (...args: any[]) => mockFindOpenElection(...args),
+  },
+}));
+
 vi.mock("@/database/repositories/audit-log.repository", () => ({
   auditLogRepo: {
     insert: mockAuditLoggerInsert,

@@ -1,3 +1,4 @@
+import type { BatchItem } from "drizzle-orm/batch";
 import type { Database } from "@/database/repositories/database.type";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
@@ -5,9 +6,21 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
-import { ballotSnapshots, votes } from "@/database/schema";
+import { ballotSnapshots, voterElectionParticipation, votes } from "@/database/schema";
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
+
+export async function computeVoterHash(electionId: string, studentId?: string): Promise<string> {
+  const identifier = (studentId ?? "").trim().toLowerCase();
+  if (!identifier) {
+    throw new Error("studentId must be a non-empty string for voter hash computation");
+  }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`voter-hash:${electionId}:${identifier}`);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export interface BallotSelection {
   candidateId: string;
@@ -135,9 +148,17 @@ export class DrizzleBallotCaster implements BallotCastingModule {
         };
       }
 
-      // 3. Double-voting check
+      // 3. Double-voting check (by user.id AND by durable voterHash)
+      const voterHash =
+        user.studentId && user.studentId.trim()
+          ? await computeVoterHash(input.electionId, user.studentId)
+          : null;
       const hasVoted = await voteRepo.existsForUserInElection(db, user.id, input.electionId);
-      if (hasVoted) {
+      const hasParticipated = voterHash
+        ? await voteRepo.hasVoterHashParticipated(db, input.electionId, voterHash)
+        : false;
+
+      if (hasVoted || hasParticipated) {
         return {
           success: false,
           error: {
@@ -243,16 +264,27 @@ export class DrizzleBallotCaster implements BallotCastingModule {
 
       if (recordsToInsert.length > 0) {
         const snapshotId = crypto.randomUUID();
-        // NOTE: The ballot_snapshots insert is kept atomic with the votes insert
-        // inside db.batch. Since ballot_snapshots contains no user_id to prevent
-        // double-casting directly, we rely on the unique constraint on the votes
-        // table (votes_user_position_election_unique_idx) to fail the entire
-        // transaction if a user attempts to vote twice. This prevents duplicate
-        // snapshot entries in concurrent race conditions.
-        await db.batch([
+        // NOTE: The ballot_snapshots and voter_election_participation inserts are kept atomic
+        // with the votes insert inside db.batch. The voter_election_participation unique constraint
+        // (idx_voter_election_participation_unique) enforces durable double-vote prevention even
+        // across user hard-deletes.
+        const batchStatements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
           db.insert(votes).values(recordsToInsert),
           db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
-        ]);
+        ];
+
+        if (voterHash) {
+          batchStatements.push(
+            db.insert(voterElectionParticipation).values({
+              id: crypto.randomUUID(),
+              electionId: input.electionId,
+              voterHash,
+              createdAt: now,
+            }),
+          );
+        }
+
+        await db.batch(batchStatements);
       }
 
       // 9. Fetch created votes

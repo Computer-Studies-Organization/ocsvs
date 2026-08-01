@@ -153,6 +153,18 @@ describe("session utilities", () => {
 
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
     });
+
+    it("should omit Secure attribute when request protocol is plain HTTP even in production", () => {
+      const c = {
+        header: vi.fn(),
+        env: { NODE_ENV: "production" },
+        req: { url: "http://localhost:8787/api/auth/login" },
+      } as any;
+
+      setSessionCookie(c, "test-session-id", 1234567890);
+
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.not.stringContaining("Secure"));
+    });
   });
 
   describe("clearSessionCookie", () => {
@@ -203,6 +215,12 @@ describe("session utilities", () => {
       };
       const c = { req: mockReq } as any;
 
+      const sessionId = getSessionIdFromCookie(c);
+      expect(sessionId).toBeUndefined();
+    });
+
+    it("should return undefined if req is missing from context", () => {
+      const c = {} as any;
       const sessionId = getSessionIdFromCookie(c);
       expect(sessionId).toBeUndefined();
     });

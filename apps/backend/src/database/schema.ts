@@ -221,6 +221,29 @@ export const ballotSnapshots = sqliteTable(
   (table) => [index("idx_ballot_snapshots_election_id").on(table.electionId)],
 );
 
+// Durable voter participation record separate from ballot contents.
+// Stores a deterministic unsalted SHA-256 hash of (election_id + student_id) so the row
+// survives account hard-deletes and blocks re-imported accounts from double-voting.
+// Note: student IDs are low-entropy and the hash is unsalted, so it is not a strong
+// anonymity guarantee — anyone with DB access and the student roster can reverse it
+// (revealing who participated, not their choices).
+export const voterElectionParticipation = sqliteTable(
+  "voter_election_participation",
+  {
+    id: text("id").primaryKey(),
+    electionId: text("election_id")
+      .notNull()
+      .references(() => elections.id, { onDelete: "restrict" }),
+    voterHash: text("voter_hash").notNull(),
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex("idx_voter_election_participation_unique").on(table.electionId, table.voterHash),
+  ],
+);
+
 export const auditLog = sqliteTable(
   "audit_log",
   {
