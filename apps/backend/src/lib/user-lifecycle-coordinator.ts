@@ -157,40 +157,7 @@ function generateVoterUsername(
   return username;
 }
 
-/**
- * The User Lifecycle Coordinator Interface.
- * Orchestrates administrative and auth operations for Account and Student entities.
- */
-export interface IUserLifecycleCoordinator {
-  register(
-    db: Database,
-    input: RegisterUserInput,
-    auditContext?: RegisterAuditContext,
-  ): Promise<{ accountId: string; username: string }>;
-
-  bulkImport(db: DbClient, records: ImportUserRecord[], actor: ActorInfo): Promise<ImportResult>;
-
-  update(db: DbClient, userId: string, input: UpdateUserInput, actor: ActorInfo): Promise<void>;
-
-  softDelete(db: DbClient, userId: string, actor: ActorInfo): Promise<void>;
-
-  restore(db: DbClient, userId: string, actor: ActorInfo): Promise<void>;
-
-  hardDelete(db: DbClient, userId: string, actor: ActorInfo): Promise<void>;
-
-  authenticate(
-    db: DbClient,
-    studentNumber: string,
-    password: string,
-    clientIp: string,
-  ): Promise<AuthSuccessPayload>;
-
-  logout(db: DbClient, sessionId: string): Promise<void>;
-
-  unlock(db: DbClient, userId: string, actor: ActorInfo): Promise<void>;
-}
-
-export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
+export class UserLifecycleCoordinator {
   private generateRandomPassword(): string {
     const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let rawPassword = "";
