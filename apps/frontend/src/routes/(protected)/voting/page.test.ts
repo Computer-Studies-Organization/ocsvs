@@ -33,15 +33,60 @@ describe("voting page loader", () => {
     }));
   });
 
-  it("propagates party-list loading failures", async () => {
-    const failure = new Error("party-list request failed");
-    mockListPartyLists.mockRejectedValueOnce(failure);
+  it("surfaces party-list loading failures through loadError", async () => {
+    mockListPartyLists.mockRejectedValueOnce(new Error("party-list request failed"));
 
-    await expect(
-      load({
-        fetch: vi.fn(),
-        depends: vi.fn(),
-      } as any),
-    ).rejects.toBe(failure);
+    const result = (await load({
+      fetch: vi.fn(),
+      depends: vi.fn(),
+    } as any)) as any;
+
+    expect(result.partyLists).toEqual([]);
+    expect(result.loadError).toBe("party-list request failed");
+  });
+
+  it("propagates voting-state cache failures to the page data", async () => {
+    const errorEntry = {
+      error: "voting-state request failed",
+      fetch: vi.fn().mockResolvedValue(null),
+    };
+    mockCacheGet.mockReturnValueOnce(errorEntry);
+
+    const result = await load({ fetch: vi.fn(), depends: vi.fn() } as any);
+
+    expect(result).toMatchObject({
+      votingState: null,
+      candidates: null,
+      positions: null,
+      partyLists: [],
+      loadError: "voting-state request failed",
+    });
+  });
+
+  it("rejects partial ballot data when a required cache request fails", async () => {
+    const openState = {
+      open: { id: "election-1" },
+      nextDraft: null,
+      lastClosed: null,
+      myVotes: { electionId: "election-1", votes: [] },
+    };
+    mockCacheGet.mockImplementation((resource: string) => {
+      if (resource === "votingState") {
+        return { error: null, fetch: vi.fn().mockResolvedValue(openState) };
+      }
+      if (resource === "candidates") {
+        return {
+          error: "candidate request failed",
+          fetch: vi.fn().mockResolvedValue(null),
+        };
+      }
+      return { error: null, fetch: vi.fn().mockResolvedValue([]) };
+    });
+    mockListPartyLists.mockResolvedValue([]);
+
+    const result = (await load({ fetch: vi.fn(), depends: vi.fn() } as any)) as any;
+
+    expect(result.loadError).toBe("candidate request failed");
+    expect(result.candidates).toBeNull();
   });
 });

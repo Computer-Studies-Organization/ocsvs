@@ -174,3 +174,39 @@ test("CacheEntry.fetch forwards custom options to the fetcher", async () => {
   await entry.fetch(false, { fetch: dummyFetch as any });
   expect(passedOpts).toEqual({ fetch: dummyFetch });
 });
+
+test("CacheEntry keeps a newer in-flight request active after a stale request finishes", async () => {
+  let calls = 0;
+  let resolveFirst!: (value: number) => void;
+  let resolveSecond!: (value: number) => void;
+  const entry = new CacheEntry<number>(() => {
+    calls += 1;
+    if (calls === 1) {
+      return new Promise<number>((resolve) => {
+        resolveFirst = resolve;
+      });
+    }
+    if (calls === 2) {
+      return new Promise<number>((resolve) => {
+        resolveSecond = resolve;
+      });
+    }
+    return Promise.resolve(3);
+  });
+
+  const first = entry.fetch();
+  entry.invalidate();
+  const second = entry.fetch();
+
+  resolveFirst(1);
+  await flushMicrotasks();
+
+  const third = entry.fetch();
+  expect(calls).toBe(2);
+
+  resolveSecond(2);
+  expect(await second).toBe(2);
+  expect(await third).toBe(2);
+  expect(await first).toBeNull();
+  expect(entry.data).toBe(2);
+});

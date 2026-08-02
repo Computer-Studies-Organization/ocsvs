@@ -38,7 +38,8 @@
   const positions = $derived<TPosition[] | null>(data.positions)
   const candidates = $derived<TCandidate[] | null>(data.candidates)
   const partyLists = $derived<TPartyList[]>(data.partyLists || [])
-  let loadError = $state<string | null>(null)
+  let runtimeError = $state<string | null>(null)
+  const loadError = $derived(data.loadError ?? runtimeError)
   let isSubmitting = $state(false)
 
   const isAdmin = $derived(authStore.user?.role === UserRole.ADMIN || authStore.user?.role === UserRole.SUPER_ADMIN)
@@ -72,7 +73,7 @@
   async function submit() {
     if (pageState.kind !== 'stepper') return
     isSubmitting = true
-    loadError = null
+    runtimeError = null
     try {
       await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
       await appCache.get('votingState', {}).fetch(true)
@@ -81,7 +82,7 @@
       addToast('success', 'Vote submitted')
     }
     catch (e: unknown) {
-      loadError = extractErrorMessage(e, 'Failed to submit vote')
+      runtimeError = extractErrorMessage(e, 'Failed to submit vote')
       addToast('error', extractErrorMessage(e, 'Failed to submit vote'))
     }
     finally {

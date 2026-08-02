@@ -54,9 +54,8 @@ export class CacheEntry<T> {
         this.error = err?.message ?? "Unknown error";
         return null;
       })
-      // .finally runs in the same microtask continuation as the prior handler,
-      // so `this.inflight` is cleared before any later fetch() observes the slot.
       .finally(() => {
+        if (myEpoch !== this.epoch) return;
         this.loading = false;
         this.inflight = null;
       });
@@ -75,6 +74,7 @@ export class CacheEntry<T> {
     this.epoch++;
     this.data = null;
     this.lastFetched = 0;
+    this.loading = false;
     this.inflight = null;
   }
 }
