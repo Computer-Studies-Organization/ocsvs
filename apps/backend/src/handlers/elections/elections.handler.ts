@@ -40,8 +40,13 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
 export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = async (c) => {
   const { db } = createDb(c);
   const { status } = c.req.valid("query");
+  const elections = await electionRepo.list(
+    db,
+    status ? { status: status as TElectionStatus } : undefined,
+  );
+  const isAdmin = c.var.authUser.role === "admin" || c.var.authUser.role === "super_admin";
   return c.json(
-    await electionRepo.list(db, status ? { status: status as TElectionStatus } : undefined),
+    isAdmin ? elections : elections.filter((election) => election.status !== "draft"),
     httpStatusCodes.OK,
   );
 };
@@ -70,7 +75,8 @@ export const getElectionHandler: AppRouteHandler<typeof getElectionRoute> = asyn
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
   const row = await electionRepo.findById(db, id);
-  if (!row) {
+  const isAdmin = c.var.authUser.role === "admin" || c.var.authUser.role === "super_admin";
+  if (!row || (row.status === "draft" && !isAdmin)) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
   return c.json(row, httpStatusCodes.OK);

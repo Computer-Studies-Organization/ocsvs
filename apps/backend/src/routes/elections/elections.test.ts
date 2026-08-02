@@ -172,6 +172,19 @@ describe("elections routes", () => {
       expect(res.status).toBe(200);
       expect(mockList).toHaveBeenCalledWith(mockDb, { status: "open" });
     });
+
+    it("hides draft elections from non-admin users", async () => {
+      setUser();
+      mockList.mockResolvedValue([
+        makeElection({ id: "draft-1", status: "draft" }),
+        makeElection({ id: "open-1", status: "open" }),
+      ]);
+
+      const res = await router.request("/elections", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([makeElection({ id: "open-1", status: "open" })]);
+    });
   });
 
   describe("pOST /elections (createElection)", () => {
@@ -231,6 +244,16 @@ describe("elections routes", () => {
       mockFindById.mockResolvedValue(null);
       const res = await router.request(`/elections/${electionId}`, { method: "GET" });
       expect(res.status).toBe(404);
+    });
+
+    it("does not reveal a draft election to non-admin users", async () => {
+      setUser();
+      mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
+
+      const res = await router.request(`/elections/${electionId}`, { method: "GET" });
+
+      expect(res.status).toBe(404);
+      expect(mockFindById).toHaveBeenCalledWith(mockDb, electionId);
     });
   });
 

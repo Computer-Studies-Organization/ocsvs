@@ -27,6 +27,7 @@ export const listPositionsRoute = createRoute({
       z.array(PositionSchema),
       "List of positions for the election",
     ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_FOUND),
   },
 });
 

@@ -108,6 +108,12 @@ export const listCandidatesRoute = createRoute({
       }),
       "List of candidates",
     ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.ELECTION_NOT_FOUND,
+    ),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
       z.object({
         message: z.string(),

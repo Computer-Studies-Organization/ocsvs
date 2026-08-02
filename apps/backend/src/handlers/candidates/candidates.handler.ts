@@ -12,6 +12,7 @@ import {
   candidateLifecycleCoordinator,
   CandidateLifecycleError,
 } from "@/lib/candidate-lifecycle-coordinator";
+import { findVisibleElection, isAdminRole } from "@/lib/election-visibility";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -50,6 +51,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
   const { page, limit, includeInactive, includeDeleted, positionId, electionId } =
     c.req.valid("query");
   const shouldIncludeInactive = includeInactive || includeDeleted;
+  const isAdmin = isAdminRole(c.var.authUser.role);
 
   if (
     shouldIncludeInactive &&
@@ -60,6 +62,12 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
   }
 
   const { db } = createDb(c);
+  if (electionId) {
+    const election = await findVisibleElection(db, electionId, c.var.authUser.role);
+    if (!election) {
+      return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+    }
+  }
   const urlCtx = { env: c.env, requestUrl: c.req.url };
 
   const result = await candidateStore.listForAdminTable(
@@ -70,6 +78,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
       includeInactive: shouldIncludeInactive,
       positionId,
       electionId,
+      ...(isAdmin ? {} : { excludeDraft: true }),
     },
     urlCtx,
   );
@@ -88,8 +97,13 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
   const { db } = createDb(c);
   const urlCtx = { env: c.env, requestUrl: c.req.url };
 
-  const isAdmin = c.var.authUser?.role === "admin" || c.var.authUser?.role === "super_admin";
-  const candidate = await candidateStore.findById(db, id, { includeInactive: isAdmin }, urlCtx);
+  const isAdmin = isAdminRole(c.var.authUser.role);
+  const candidate = await candidateStore.findById(
+    db,
+    id,
+    { includeInactive: isAdmin, ...(isAdmin ? {} : { excludeDraft: true }) },
+    urlCtx,
+  );
 
   if (!candidate) {
     return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);

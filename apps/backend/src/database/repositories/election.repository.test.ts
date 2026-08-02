@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import * as schema from "@/database/schema";
 
 const chain: any = {
   values: vi.fn(() => chain),
@@ -51,5 +54,38 @@ describe("electionRepo", () => {
   });
   it("updateMetadata updates and reports affected", async () => {
     expect(await electionRepo.updateMetadata(mockDb as any, "e1", { name: "New" })).toBe(true);
+  });
+
+  it("returns a scheduled draft before an unscheduled draft", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+      );
+      await client.execute({
+        sql: "INSERT INTO elections (id, name, status, opens_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)",
+        args: [
+          "unscheduled",
+          "Unscheduled",
+          "draft",
+          null,
+          1,
+          1,
+          "scheduled",
+          "Scheduled",
+          "draft",
+          200,
+          1,
+          1,
+        ],
+      });
+
+      const row = await electionRepo.findEarliestDraft(drizzle(client, { schema }));
+
+      expect(row?.id).toBe("scheduled");
+    } finally {
+      client.close();
+    }
   });
 });

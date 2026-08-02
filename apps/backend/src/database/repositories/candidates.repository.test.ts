@@ -15,7 +15,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 });
 
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { candidates } from "@/database/schema";
+import { candidates, elections, positions } from "@/database/schema";
 import { candidateRepo } from "./candidates.repository";
 
 function createMockChain() {
@@ -149,6 +149,19 @@ describe("candidateRepo", () => {
     });
   });
 
+  it("excludes candidates from draft elections when requested", async () => {
+    dataQueryChain.all.mockResolvedValueOnce([]);
+    countQueryChain.get.mockResolvedValueOnce({ count: 0 });
+
+    await candidateRepo.listForAdminTable(mockDb as any, { excludeDraft: true });
+
+    expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
+    expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
+    expect(countQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
+    expect(countQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
+    expect(ne).toHaveBeenCalledWith(elections.status, "draft");
+  });
+
   describe("listForBallot", () => {
     it("fetches active candidates with minimal fields", async () => {
       dataQueryChain.all.mockResolvedValueOnce([
@@ -204,6 +217,19 @@ describe("candidateRepo", () => {
       expect(eq).toHaveBeenCalledWith(candidates.id, "c2");
       expect(res?.isActive).toBe(0);
     });
+  });
+
+  it("excludes a candidate from a draft election when requested", async () => {
+    dataQueryChain.get.mockResolvedValueOnce(undefined);
+
+    const result = await candidateRepo.getForAdminView(mockDb as any, "c1", {
+      excludeDraft: true,
+    });
+
+    expect(result).toBeNull();
+    expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
+    expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
+    expect(ne).toHaveBeenCalledWith(elections.status, "draft");
   });
 
   describe("counts & batch lookups", () => {

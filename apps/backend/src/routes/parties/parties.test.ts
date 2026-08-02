@@ -3,14 +3,21 @@ import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import router from "./index";
 import { createPartyListRoute, updatePartyListRoute } from "./parties.routes";
 
-const { mockElectionFindById, mockPartyFindById, mockPartyDelete, mockAuditInsert } = vi.hoisted(
-  () => ({
-    mockElectionFindById: vi.fn(),
-    mockPartyFindById: vi.fn(),
-    mockPartyDelete: vi.fn(),
-    mockAuditInsert: vi.fn(),
-  }),
-);
+let mockAuthRole = "admin";
+
+const {
+  mockElectionFindById,
+  mockPartyFindById,
+  mockPartyListByElection,
+  mockPartyDelete,
+  mockAuditInsert,
+} = vi.hoisted(() => ({
+  mockElectionFindById: vi.fn(),
+  mockPartyFindById: vi.fn(),
+  mockPartyListByElection: vi.fn(),
+  mockPartyDelete: vi.fn(),
+  mockAuditInsert: vi.fn(),
+}));
 
 const mockDb: any = {
   transaction: vi.fn(async (callback) => await callback(mockDb)),
@@ -26,7 +33,7 @@ vi.mock("@/middleware/auth", () => ({
       id: "admin-1",
       email: "admin@example.com",
       username: "admin",
-      role: "admin",
+      role: mockAuthRole,
     });
     await next();
   },
@@ -42,6 +49,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
 vi.mock("@/database/repositories/party-list.repository", () => ({
   partyListRepo: {
     findById: mockPartyFindById,
+    listByElection: mockPartyListByElection,
     delete: mockPartyDelete,
   },
 }));
@@ -55,6 +63,7 @@ vi.mock("@/database/repositories/audit-log.repository", () => ({
 describe("party-list routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthRole = "admin";
   });
 
   it("returns 409 when deleting a party outside draft", async () => {
@@ -77,6 +86,23 @@ describe("party-list routes", () => {
     expect(await response.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT });
     expect(mockPartyDelete).not.toHaveBeenCalled();
     expect(mockAuditInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when a non-admin lists parties for a draft election", async () => {
+    mockAuthRole = "user";
+    mockElectionFindById.mockResolvedValueOnce({
+      id: "election-1",
+      status: "draft",
+    });
+    mockPartyListByElection.mockResolvedValueOnce([
+      { id: "party-1", electionId: "election-1", name: "Innovators", code: "INNOV" },
+    ]);
+
+    const response = await router.request("/elections/election-1/parties", { method: "GET" });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+    expect(mockPartyListByElection).not.toHaveBeenCalled();
   });
 
   it("returns 422 when creating a party list with an invalid code", async () => {

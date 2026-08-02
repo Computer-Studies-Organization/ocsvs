@@ -412,7 +412,7 @@ export class CandidateLifecycleCoordinator {
     db: DbClient,
     id: string,
     storage: ImageStorage,
-    opts: { includeInactive?: boolean } = {},
+    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
   ): Promise<{ data: ArrayBuffer; contentType: string }> {
     const candidate = await candidateRepo.getForAdminView(db, id, opts);
     if (!candidate || !candidate.imageUrl) {

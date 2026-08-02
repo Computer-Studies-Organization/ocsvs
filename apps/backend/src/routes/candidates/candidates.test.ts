@@ -63,7 +63,7 @@ vi.mock("@/database/repositories/position.repository", () => ({
 
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
-    findById: vi.fn().mockResolvedValue({ id: "el-123", status: "draft" }),
+    findById: mockElectionFindById,
   },
 }));
 
@@ -93,6 +93,7 @@ const {
   mockDeleteImage,
   mockDownloadImage,
   mockAuditInsert,
+  mockElectionFindById,
 } = vi.hoisted(() => ({
   mockExistsActiveForAccountPosition: vi.fn(),
   mockCreate: vi.fn(),
@@ -107,6 +108,7 @@ const {
   mockDeleteImage: vi.fn(),
   mockDownloadImage: vi.fn(),
   mockAuditInsert: vi.fn(),
+  mockElectionFindById: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -185,6 +187,9 @@ describe("candidate Routes (repository)", () => {
     mockUploadImage.mockReset();
     mockDeleteImage.mockReset();
     mockAuditInsert.mockReset();
+    mockElectionFindById.mockReset();
+    mockElectionFindById.mockResolvedValue({ id: "el-123", status: "draft" });
+    mockAuthRole = "admin";
   });
 
   describe("pOST /candidates (createCandidate)", () => {
@@ -343,6 +348,58 @@ describe("candidate Routes (repository)", () => {
       );
     });
 
+    it("should hide active candidates for draft elections from non-admin users", async () => {
+      mockAuthRole = "voter";
+      mockElectionFindById.mockResolvedValue({ id: "el-123", status: "draft" });
+      mockListForAdminTable.mockResolvedValue({
+        data: [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      });
+
+      try {
+        const res = await router.request("/candidates?electionId=el-123&page=1&limit=10", {
+          method: "GET",
+        });
+
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+        expect(mockListForAdminTable).not.toHaveBeenCalled();
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
+
+    it.each([
+      ["unscoped", "/candidates?page=1&limit=10"],
+      ["position-scoped", "/candidates?positionId=position-1&page=1&limit=10"],
+    ])("hides active draft candidates from non-admin users for %s reads", async (_scope, path) => {
+      mockAuthRole = "voter";
+      mockListForAdminTable.mockImplementation(async (_db: any, opts: any) => ({
+        data: opts.excludeDraft
+          ? []
+          : [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
+        meta: {
+          total: opts.excludeDraft ? 0 : 1,
+          page: 1,
+          limit: 10,
+          totalPages: opts.excludeDraft ? 0 : 1,
+        },
+      }));
+
+      try {
+        const res = await router.request(path, { method: "GET" });
+
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as any).data).toEqual([]);
+        expect(mockListForAdminTable).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ excludeDraft: true }),
+        );
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
+
     it("should reject includeInactive=true with 403 for non-admin voter", async () => {
       mockAuthRole = "voter";
       try {
@@ -400,6 +457,26 @@ describe("candidate Routes (repository)", () => {
         expect(res.status).toBe(200);
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
           includeInactive: false,
+          excludeDraft: true,
+        });
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
+
+    it("hides active candidates from draft elections for non-admin ID reads", async () => {
+      mockAuthRole = "voter";
+      mockGetForAdminView.mockImplementation(async (_db: any, _id: string, opts: any) =>
+        opts.excludeDraft ? null : { id: "cand-1", positionId: "pos-101", isActive: 1 },
+      );
+
+      try {
+        const res = await router.request("/candidates/cand-1", { method: "GET" });
+
+        expect(res.status).toBe(404);
+        expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
+          includeInactive: false,
+          excludeDraft: true,
         });
       } finally {
         mockAuthRole = "admin";
@@ -768,6 +845,7 @@ describe("candidate Routes (repository)", () => {
         expect(res.status).toBe(200);
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
           includeInactive: false,
+          excludeDraft: true,
         });
       } finally {
         mockAuthRole = "admin";

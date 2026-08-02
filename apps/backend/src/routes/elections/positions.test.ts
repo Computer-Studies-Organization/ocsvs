@@ -139,6 +139,7 @@ describe("positions routes", () => {
     mockDelete.mockReset();
     mockCountByPositionId.mockReset();
     mockElectionFindById.mockReset();
+    mockElectionFindById.mockResolvedValue(makeElection());
     TEST_USER = {
       id: "test-user-id",
       email: "test@example.com",
@@ -179,6 +180,18 @@ describe("positions routes", () => {
       const json = (await res.json()) as any;
       expect(json).toHaveLength(2);
       expect(mockListByElection).toHaveBeenCalledWith(mockDb, electionId);
+    });
+
+    it("returns 404 when a non-admin lists positions for a draft election", async () => {
+      setUser();
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      mockListByElection.mockResolvedValue([makePosition()]);
+
+      const res = await router.request(`/elections/${electionId}/positions`, { method: "GET" });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+      expect(mockListByElection).not.toHaveBeenCalled();
     });
   });
 

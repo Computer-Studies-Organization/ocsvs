@@ -6,16 +6,16 @@ import type {
   updatePartyListRoute,
 } from "@/routes/parties/parties.routes";
 import { createDb } from "@/config/db";
-import { electionRepo } from "@/database/repositories/election.repository";
 import { partyListRepo } from "@/database/repositories/party-list.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { partyLifecycleCoordinator, PartyLifecycleError } from "@/lib/party-lifecycle-coordinator";
+import { findVisibleElection } from "@/lib/election-visibility";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const listPartyListsHandler: AppRouteHandler<typeof listPartyListsRoute> = async (c) => {
   const { db } = createDb(c);
   const { id: electionId } = c.req.valid("param");
-  const election = await electionRepo.findById(db, electionId);
+  const election = await findVisibleElection(db, electionId, c.var.authUser.role);
   if (!election) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/candidate-lifecycle-coordinator";
 import { getImageStorage } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isAdminRole } from "@/lib/election-visibility";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const uploadImage: AppRouteHandler<typeof uploadImageRoute> = async (c) => {
@@ -104,14 +105,14 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   const { db } = createDb(c);
   const storage = getImageStorage(c.env);
 
-  const isAdmin = c.var.authUser?.role === "admin" || c.var.authUser?.role === "super_admin";
+  const isAdmin = isAdminRole(c.var.authUser.role);
 
   try {
     const { data, contentType } = await candidateLifecycleCoordinator.downloadAvatar(
       db,
       id,
       storage,
-      { includeInactive: isAdmin },
+      { includeInactive: isAdmin, ...(isAdmin ? {} : { excludeDraft: true }) },
     );
     return c.body(data, httpStatusCodes.OK, {
       "Content-Type": contentType,

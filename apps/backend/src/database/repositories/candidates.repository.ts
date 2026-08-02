@@ -1,6 +1,6 @@
 import type { DbClient } from "./database.type";
 import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
-import { candidates, positions, votes } from "@/database/schema";
+import { candidates, elections, positions, votes } from "@/database/schema";
 
 export type CandidateRow = typeof candidates.$inferSelect;
 
@@ -48,6 +48,7 @@ export const candidateRepo = {
       includeInactive?: boolean;
       positionId?: string;
       electionId?: string;
+      excludeDraft?: boolean;
     } = {},
   ): Promise<AdminListResult> {
     const page = opts.page ?? 1;
@@ -55,6 +56,7 @@ export const candidateRepo = {
     const includeInactive = opts.includeInactive ?? false;
     const positionId = opts.positionId;
     const electionId = opts.electionId;
+    const excludeDraft = opts.excludeDraft ?? false;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -66,6 +68,9 @@ export const candidateRepo = {
     }
     if (electionId) {
       conditions.push(eq(positions.electionId, electionId));
+    }
+    if (excludeDraft) {
+      conditions.push(ne(elections.status, "draft"));
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -84,13 +89,19 @@ export const candidateRepo = {
       })
       .from(candidates);
 
-    if (electionId) {
+    if (electionId || excludeDraft) {
       dataQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
+    }
+    if (excludeDraft) {
+      dataQuery.innerJoin(elections, eq(positions.electionId, elections.id));
     }
 
     const countQuery = db.select({ count: count() }).from(candidates);
-    if (electionId) {
+    if (electionId || excludeDraft) {
       countQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
+    }
+    if (excludeDraft) {
+      countQuery.innerJoin(elections, eq(positions.electionId, elections.id));
     }
 
     const [data, totalRaw] = await Promise.all([
@@ -133,31 +144,38 @@ export const candidateRepo = {
   async getForAdminView(
     db: DbClient,
     id: string,
-    opts: { includeInactive?: boolean } = {},
+    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
   ): Promise<CandidateRow | null> {
     const includeInactive = opts.includeInactive ?? false;
-    const whereClause = includeInactive
+    const excludeDraft = opts.excludeDraft ?? false;
+    const candidateWhere = includeInactive
       ? eq(candidates.id, id)
       : and(eq(candidates.id, id), eq(candidates.isActive, 1));
+    const whereClause = excludeDraft
+      ? and(candidateWhere, ne(elections.status, "draft"))
+      : candidateWhere;
 
-    return (
-      (await db
-        .select({
-          id: candidates.id,
-          fullName: candidates.fullName,
-          accountId: candidates.accountId,
-          positionId: candidates.positionId,
-          partyId: candidates.partyId,
-          manifesto: candidates.manifesto,
-          isActive: candidates.isActive,
-          imageUrl: candidates.imageUrl,
-          createdAt: candidates.createdAt,
-          updatedAt: candidates.updatedAt,
-        })
-        .from(candidates)
-        .where(whereClause)
-        .get()) ?? null
-    );
+    const query = db
+      .select({
+        id: candidates.id,
+        fullName: candidates.fullName,
+        accountId: candidates.accountId,
+        positionId: candidates.positionId,
+        partyId: candidates.partyId,
+        manifesto: candidates.manifesto,
+        isActive: candidates.isActive,
+        imageUrl: candidates.imageUrl,
+        createdAt: candidates.createdAt,
+        updatedAt: candidates.updatedAt,
+      })
+      .from(candidates);
+
+    if (excludeDraft) {
+      query.innerJoin(positions, eq(candidates.positionId, positions.id));
+      query.innerJoin(elections, eq(positions.electionId, elections.id));
+    }
+
+    return ((await query.where(whereClause).get()) as CandidateRow | undefined) ?? null;
   },
 
   // Count of active candidates

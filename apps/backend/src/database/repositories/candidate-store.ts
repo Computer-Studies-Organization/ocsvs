@@ -52,7 +52,7 @@ export const candidateStore = {
   async findById(
     db: DbClient,
     id: string,
-    opts: { includeInactive?: boolean } = {},
+    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
     urlCtx?: UrlContext,
   ): Promise<CandidateWithResolvedUrl | null> {
     const raw = await candidateRepo.getForAdminView(db, id, opts);
@@ -62,7 +62,7 @@ export const candidateStore = {
   async getForAdminView(
     db: DbClient,
     id: string,
-    opts: { includeInactive?: boolean } = {},
+    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
     urlCtx?: UrlContext,
   ): Promise<CandidateWithResolvedUrl | null> {
     return this.findById(db, id, opts, urlCtx);
@@ -76,6 +76,7 @@ export const candidateStore = {
       includeInactive?: boolean;
       positionId?: string;
       electionId?: string;
+      excludeDraft?: boolean;
     } = {},
     urlCtx?: UrlContext,
   ): Promise<AdminListResult> {

@@ -12,11 +12,18 @@ import {
   positionLifecycleCoordinator,
   PositionLifecycleError,
 } from "@/lib/position-lifecycle-coordinator";
+import { findVisibleElection } from "@/lib/election-visibility";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const listPositionsHandler: AppRouteHandler<typeof listPositionsRoute> = async (c) => {
   const { db } = createDb(c);
   const { id } = c.req.valid("param");
+  const election = await findVisibleElection(db, id, c.var.authUser.role);
+
+  if (!election) {
+    return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
+  }
+
   return c.json(await positionRepo.listByElection(db, id), httpStatusCodes.OK);
 };
 

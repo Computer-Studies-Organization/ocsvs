@@ -1,5 +1,5 @@
 import type { DbClient } from "./database.type";
-import { and, asc, desc, eq, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
 export type ElectionRow = typeof elections.$inferSelect;
@@ -96,7 +96,11 @@ export const electionRepo = {
         .select()
         .from(elections)
         .where(eq(elections.status, "draft"))
-        .orderBy(asc(elections.opensAt))
+        .orderBy(
+          asc(sql`CASE WHEN ${elections.opensAt} IS NULL THEN 1 ELSE 0 END`),
+          asc(elections.opensAt),
+          asc(elections.id),
+        )
         .get()) ?? null
     );
   },
