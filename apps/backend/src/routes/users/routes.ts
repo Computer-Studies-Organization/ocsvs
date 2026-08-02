@@ -243,10 +243,11 @@ export const ImportUsersBodySchema = z
           yearLevel: z.enum(IMPORT_YEAR_LEVELS),
         }),
       )
-      // Cap at 500 to stay within Cloudflare Workers' CPU time limit.
-      // Each record runs hashPassword() sequentially (PBKDF2-SHA256, 100k iterations
-      // in lib/password.ts). If ITERATIONS is ever changed, re-benchmark this ceiling.
-      .max(500, "Maximum batch size is 500 records per request"),
+      // Cap at 300 to stay within Cloudflare Workers' paid-plan CPU time limit (30s).
+      // Each record runs hashPassword() sequentially (PBKDF2-SHA256, 600k iterations
+      // in lib/password.ts); at ~70-80ms per hash, 300 records ≈ 22s, leaving headroom
+      // for the DB queries and batch inserts. If ITERATIONS is ever changed, re-benchmark this ceiling.
+      .max(300, "Maximum batch size is 300 records per request"),
   })
   .openapi("ImportUsersBody");
 

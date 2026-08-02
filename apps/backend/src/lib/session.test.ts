@@ -154,10 +154,22 @@ describe("session utilities", () => {
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
     });
 
-    it("should omit Secure attribute when request protocol is plain HTTP even in production", () => {
+    it("should include Secure attribute in production even when request protocol is plain HTTP", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "production" },
+        req: { url: "http://localhost:8787/api/auth/login" },
+      } as any;
+
+      setSessionCookie(c, "test-session-id", 1234567890);
+
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+    });
+
+    it("should omit Secure attribute in development over plain HTTP", () => {
+      const c = {
+        header: vi.fn(),
+        env: { NODE_ENV: "development" },
         req: { url: "http://localhost:8787/api/auth/login" },
       } as any;
 
@@ -182,6 +194,18 @@ describe("session utilities", () => {
           "session_id=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
         ),
       );
+    });
+
+    it("should include Secure attribute in production when clearing cookie", () => {
+      const c = {
+        header: vi.fn(),
+        env: { NODE_ENV: "production" },
+        req: { url: "http://localhost:8787/api/auth/logout" },
+      } as any;
+
+      clearSessionCookie(c);
+
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
     });
   });
 

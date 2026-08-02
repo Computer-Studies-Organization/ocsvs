@@ -48,6 +48,7 @@ export const ERROR_MESSAGES = {
 
   // Validation errors
   INVALID_REQUEST: "Invalid request",
+  CROSS_SITE_REQUEST_FORBIDDEN: "Cross-site request forbidden",
   INVALID_CREDENTIALS: "Invalid credentials",
   INVALID_CANDIDATE: "Invalid candidate",
   INCOMPLETE_BALLOT: "You must select a candidate for every position",

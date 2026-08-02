@@ -105,6 +105,9 @@ const { mockVerifyPassword } = vi.hoisted(() => ({
 vi.mock("@/lib/password", () => ({
   hashPassword: vi.fn().mockResolvedValue("hashed-password"),
   verifyPassword: mockVerifyPassword,
+  needsRehash: vi.fn().mockReturnValue(false),
+  CURRENT_COST_DUMMY_HASH:
+    "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 }));
 
 // Mock session functions

@@ -81,6 +81,15 @@ const EnvSchema = z
           .filter(Boolean);
       return val;
     }, z.array(z.string()).optional().default([])),
+    ALLOWED_ORIGINS: z.preprocess((val) => {
+      if (!val || val === "") return [];
+      if (typeof val === "string")
+        return val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      return val;
+    }, z.array(z.string()).optional().default([])),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === "production" && !data.TURNSTILE_SECRET_KEY) {

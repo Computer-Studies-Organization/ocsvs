@@ -6,6 +6,7 @@ const {
   mockAccountCreate,
   mockUsernameExists,
   mockUpdateAccount,
+  mockUpdatePassword,
   mockCountActiveAdminsAndSuperAdmins,
   mockAccountSoftDelete,
   mockAccountRestore,
@@ -16,6 +17,7 @@ const {
   mockGetAccountDeleteStatus,
   mockHashPassword,
   mockVerifyPassword,
+  mockNeedsRehash,
   mockCreateSessionFn,
   mockDeleteSessionFn,
   mockRecordAttempt,
@@ -30,6 +32,7 @@ const {
   mockAccountCreate: vi.fn(),
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
+  mockUpdatePassword: vi.fn(),
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
   mockAccountSoftDelete: vi.fn(),
   mockAccountRestore: vi.fn(),
@@ -40,6 +43,7 @@ const {
   mockGetAccountDeleteStatus: vi.fn(),
   mockHashPassword: vi.fn(),
   mockVerifyPassword: vi.fn(),
+  mockNeedsRehash: vi.fn().mockReturnValue(false),
   mockCreateSessionFn: vi.fn(),
   mockDeleteSessionFn: vi.fn(),
   mockRecordAttempt: vi.fn(),
@@ -58,6 +62,7 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     create: mockAccountCreate,
     usernameExists: mockUsernameExists,
     updateAccount: mockUpdateAccount,
+    updatePassword: mockUpdatePassword,
     updateUser: mockUpdateUser,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     softDelete: mockAccountSoftDelete,
@@ -72,6 +77,9 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
 vi.mock("@/lib/password", () => ({
   hashPassword: mockHashPassword,
   verifyPassword: mockVerifyPassword,
+  needsRehash: mockNeedsRehash,
+  CURRENT_COST_DUMMY_HASH:
+    "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 }));
 
 vi.mock("@/lib/session", () => ({
@@ -184,6 +192,57 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         expiresAt: 9999,
       });
       expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "student-123");
+    });
+
+    it("rehashes a legacy password hash with current policy after successful login", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "legacy-hash",
+        deletedAt: null,
+      });
+      mockVerifyPassword.mockResolvedValueOnce(true);
+      mockNeedsRehash.mockReturnValueOnce(true);
+      mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$600000$salt$new-hash");
+      mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
+
+      const result = await coordinator.authenticate(
+        mockDb,
+        "student-123",
+        "password123",
+        "127.0.0.1",
+      );
+
+      expect(mockHashPassword).toHaveBeenCalledWith("password123");
+      expect(mockUpdatePassword).toHaveBeenCalledWith(
+        mockDb,
+        "acc-123",
+        "pbkdf2-sha256$600000$salt$new-hash",
+      );
+      expect(result.sessionId).toBe("sess-123");
+    });
+
+    it("does not rehash when the stored hash already uses current policy", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "current-hash",
+        deletedAt: null,
+      });
+      mockVerifyPassword.mockResolvedValueOnce(true);
+      mockNeedsRehash.mockReturnValueOnce(false);
+      mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
+
+      await coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1");
+
+      expect(mockHashPassword).not.toHaveBeenCalled();
+      expect(mockUpdatePassword).not.toHaveBeenCalled();
     });
 
     it("throws UserLifecycleError RATE_LIMITED_ACCOUNT with retryAfter if lockout threshold met", async () => {

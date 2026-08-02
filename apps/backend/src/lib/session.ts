@@ -82,8 +82,7 @@ export function setSessionCookie(c: Context, sessionId: string, expiresAt: numbe
   const expires = new Date(expiresAt * 1000);
   const isProduction = c.env?.NODE_ENV === "production";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isHttp = c.req?.url?.startsWith("http://") ?? false;
-  const isSecure = isHttps || (isProduction && !isHttp);
+  const isSecure = isProduction || isHttps;
 
   c.header(
     "Set-Cookie",
@@ -97,8 +96,7 @@ export function setSessionCookie(c: Context, sessionId: string, expiresAt: numbe
 export function clearSessionCookie(c: Context): void {
   const isProduction = c.env?.NODE_ENV === "production";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isHttp = c.req?.url?.startsWith("http://") ?? false;
-  const isSecure = isHttps || (isProduction && !isHttp);
+  const isSecure = isProduction || isHttps;
 
   c.header(
     "Set-Cookie",

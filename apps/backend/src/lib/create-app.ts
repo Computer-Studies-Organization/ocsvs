@@ -7,6 +7,8 @@ import onError from "@/middleware/utils/on-error";
 import serveEmojiFavicon from "@/middleware/utils/serve-emoji-favicon";
 import defaultHook from "@/openapi/default-hook";
 import { envValidator } from "@/middleware/env-validator";
+import { csrfProtection } from "@/middleware/csrf";
+import { securityHeaders } from "@/middleware/security-headers";
 
 export default function createApp() {
   const app = createRouter()
@@ -18,6 +20,8 @@ export default function createApp() {
         credentials: true,
       }),
     )
+    .use(csrfProtection())
+    .use(securityHeaders())
     .use(serveEmojiFavicon("🔥"));
 
   app.notFound(notFound);

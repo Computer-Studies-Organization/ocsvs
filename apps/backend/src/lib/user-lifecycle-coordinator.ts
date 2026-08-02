@@ -3,7 +3,7 @@ import { accounts, sessions, users } from "@/database/schema";
 import { eq, inArray, like, or } from "drizzle-orm";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { isUniqueConstraintError } from "@/lib/errors";
-import { hashPassword, verifyPassword } from "@/lib/password";
+import { hashPassword, verifyPassword, needsRehash, CURRENT_COST_DUMMY_HASH } from "@/lib/password";
 import { deleteSession, createSession } from "@/lib/session";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { validateProfanity } from "@/lib/profanity";
@@ -713,7 +713,7 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
     password: string,
     clientIp: string,
   ): Promise<AuthSuccessPayload> {
-    const dummyHash = "AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    const dummyHash = CURRENT_COST_DUMMY_HASH;
 
     // 1. Lockout window checks
     await loginAttemptRepo.deleteExpiredAttempts(db, studentNumber, 900);
@@ -750,7 +750,12 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
       throw new UserLifecycleError("INVALID_CREDENTIALS", 401);
     }
 
-    // 4. Successful login
+    // 4. Rehash legacy/below-current hashes with the current policy on successful login
+    if (needsRehash(result.password_hash)) {
+      await voterAccountStore.updatePassword(db, result.id, await hashPassword(password));
+    }
+
+    // 5. Successful login
     await loginAttemptRepo.clearAttempts(db, studentNumber);
     const session = await createSession(db as any, result.id);
 
