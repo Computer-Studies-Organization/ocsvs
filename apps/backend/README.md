@@ -187,7 +187,6 @@ src/
 ├── openapi/
 │   ├── default-hook.ts        # Validation hooks
 │   ├── http-status-codes.ts   # HTTP status constants
-│   └── http-status-phrases.ts # HTTP status messages
 ├── routes/
 │   ├── index.route.ts         # Root routes
 │   └── items/                 # Items resource routes

@@ -21,7 +21,6 @@
     "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.7",
     "@hono/zod-openapi": "^0.19.10",
     "@libsql/client": "^0.15.15",
     "@scalar/hono-api-reference": "^0.9.30",

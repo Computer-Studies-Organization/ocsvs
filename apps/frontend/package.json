@@ -17,14 +17,10 @@
     "clean": "rm -rf dist .svelte-kit"
   },
   "dependencies": {
-    "bits-ui": "^2.18.1",
-    "clsx": "^2.1.1",
     "lucide-svelte": "^1.0.1",
-    "tailwind-merge": "^3.4.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.57.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
@@ -36,7 +32,6 @@
     "svelte": "^5.55.2",
     "svelte-check": "^4.4.6",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.7",
     "vite-tsconfig-paths": "^5.1.4",
