@@ -225,6 +225,33 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(result.sessionId).toBe("sess-123");
     });
 
+    it("continues login when opportunistic password rehash fails", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "legacy-hash",
+        deletedAt: null,
+      });
+      mockVerifyPassword.mockResolvedValueOnce(true);
+      mockNeedsRehash.mockReturnValueOnce(true);
+      mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$600000$salt$new-hash");
+      mockUpdatePassword.mockRejectedValueOnce(new Error("database unavailable"));
+      mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
+
+      const result = await coordinator.authenticate(
+        mockDb,
+        "student-123",
+        "password123",
+        "127.0.0.1",
+      );
+
+      expect(result.sessionId).toBe("sess-123");
+      expect(mockCreateSessionFn).toHaveBeenCalledWith(mockDb, "acc-123");
+    });
+
     it("does not rehash when the stored hash already uses current policy", async () => {
       mockGetRecentAttempts.mockResolvedValueOnce([]);
       mockFindByStudentId.mockResolvedValueOnce({

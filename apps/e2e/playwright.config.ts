@@ -9,6 +9,9 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html"]] : [["list"], ["html"]],
   use: {
     baseURL: "http://localhost:3001",
+    extraHTTPHeaders: {
+      Origin: "http://localhost:3001",
+    },
     trace: "on-first-retry",
   },
   projects: [

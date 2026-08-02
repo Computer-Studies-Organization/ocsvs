@@ -752,7 +752,11 @@ export class UserLifecycleCoordinator implements IUserLifecycleCoordinator {
 
     // 4. Rehash legacy/below-current hashes with the current policy on successful login
     if (needsRehash(result.password_hash)) {
-      await voterAccountStore.updatePassword(db, result.id, await hashPassword(password));
+      try {
+        await voterAccountStore.updatePassword(db, result.id, await hashPassword(password));
+      } catch {
+        // Rehashing is opportunistic; verified credentials must still be allowed to log in.
+      }
     }
 
     // 5. Successful login
