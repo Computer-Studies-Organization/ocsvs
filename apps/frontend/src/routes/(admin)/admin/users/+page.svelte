@@ -471,7 +471,7 @@
                 <td class='px-4 py-3'>
                   <div class='flex flex-wrap gap-1'>
                     {#if ROLE_BADGE[u.role]}
-                      <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[u.role].pillCls} px-2 py-0.5">
+                      <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[u.role].pillCls} px-2 py-0.5 whitespace-nowrap">
                         <span class="h-1.5 w-1.5 rounded-full {u.deletedAt ? 'bg-orange-400' : 'bg-emerald-400'}"></span>
                         <span class="text-[10px] font-bold {ROLE_BADGE[u.role].textCls}">{ROLE_BADGE[u.role].label}</span>
                       </span>
