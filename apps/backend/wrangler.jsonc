@@ -7,8 +7,22 @@
   "assets": {
     "directory": "../frontend/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
+    "not_found_handling": "404-page",
     "run_worker_first": true,
+  },
+  "build": {
+    "command": "pnpm --dir ../frontend build",
+    "cwd": ".",
+  },
+  "secrets": {
+    "required": [
+      "TURSO_DATABASE_URL",
+      "TURSO_AUTH_TOKEN",
+      "TURNSTILE_SECRET_KEY",
+      "HMAC_SECRET",
+      "B2_APPLICATION_KEY_ID",
+      "B2_APPLICATION_KEY",
+    ],
   },
   "vars": {
     "NODE_ENV": "production",
@@ -24,5 +38,31 @@
       "simple": { "limit": 30, "period": 60 },
     },
   ],
+  "env": {
+    "test": {
+      "assets": {
+        "directory": "../frontend/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "404-page",
+        "run_worker_first": true,
+      },
+      "secrets": { "required": [] },
+      "vars": {
+        "NODE_ENV": "test",
+        "LOG_LEVEL": "debug",
+        "B2_BUCKET_NAME": "cso-voting-candidates",
+        "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
+        "B2_PUBLIC_ACCESS": "false",
+        "HMAC_SECRET": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      },
+      "ratelimits": [
+        {
+          "name": "LOGIN_IP_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 30, "period": 60 },
+        },
+      ],
+    },
+  },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 }

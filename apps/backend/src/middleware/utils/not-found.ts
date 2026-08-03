@@ -1,13 +1,46 @@
-import type { NotFoundHandler } from "hono";
+import type { Context, NotFoundHandler } from "hono";
 
+import type { AppBindings } from "@/lib/types/app-types";
 import { NOT_FOUND } from "@/openapi/http-status-codes";
+import { isNavigationRequest, normalizePath } from "@/middleware/utils/navigation";
+
+const ASSET_METHODS = new Set(["GET", "HEAD"]);
+
+function isNavigation(c: Context<AppBindings>): boolean {
+  return isNavigationRequest({
+    method: c.req.method,
+    path: c.req.path,
+    accept: c.req.header("Accept"),
+    secFetchMode: c.req.header("Sec-Fetch-Mode"),
+  });
+}
+
+function isAssetRequest(c: Context<AppBindings>): boolean {
+  if (!ASSET_METHODS.has(c.req.method)) {
+    return false;
+  }
+
+  const path = normalizePath(c.req.path);
+
+  return isNavigation(c) || /\.[^/]+$/.test(path);
+}
+
+function getAssetRequest(c: Context<AppBindings>): Request {
+  if (isNavigation(c)) {
+    const url = new URL(c.req.url);
+    url.pathname = "/";
+    return new Request(url, c.req.raw);
+  }
+
+  return c.req.raw;
+}
 
 /**
- * Global 404 Not Found handler for the Hono application.
+ * Global 404 handler for the Hono application.
  *
- * This middleware handles requests to routes that don't exist in the application.
- * It returns a standardized JSON response with a 404 status code and includes
- * the requested path in the error message for debugging purposes.
+ * Browser navigation and static asset misses are delegated to Cloudflare Assets
+ * when the binding is available. Navigations explicitly fetch the SPA shell so
+ * missing data or asset paths cannot be rewritten to HTML.
  *
  * Features:
  * - Returns consistent JSON error format
@@ -30,7 +63,14 @@ import { NOT_FOUND } from "@/openapi/http-status-codes";
  * app.notFound(notFound)
  * ```
  */
-const notFound: NotFoundHandler = (c) => {
+const notFound: NotFoundHandler = async (c) => {
+  if (isAssetRequest(c) && c.env?.ASSETS) {
+    const assetResponse = await c.env.ASSETS.fetch(getAssetRequest(c));
+    if (assetResponse.status !== NOT_FOUND) {
+      return assetResponse;
+    }
+  }
+
   return c.json(
     {
       message: `Not Found - ${c.req.path}`,
