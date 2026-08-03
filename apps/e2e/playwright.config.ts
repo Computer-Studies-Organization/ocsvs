@@ -8,13 +8,17 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [["github"], ["html"]] : [["list"], ["html"]],
   use: {
-    baseURL: "http://localhost:3001",
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:8787",
     extraHTTPHeaders: {
-      Origin: "http://localhost:3001",
+      Origin: process.env.E2E_ORIGIN ?? "http://localhost:8787",
     },
     trace: "on-first-retry",
   },
   projects: [
+    {
+      name: "worker-smoke",
+      testMatch: "worker/*.spec.ts",
+    },
     {
       name: "setup",
       testMatch: /global-setup\.ts/,
@@ -24,7 +28,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
       testMatch: "**/*.spec.ts",
-      testIgnore: /global-setup\.ts/,
+      testIgnore: [/global-setup\.ts/, /worker\/.*\.spec\.ts/],
     },
     ...(process.env.FULL_MATRIX === "true"
       ? [
@@ -33,28 +37,23 @@ export default defineConfig({
             use: { ...devices["Desktop Firefox"] },
             dependencies: ["setup"],
             testMatch: "**/*.spec.ts",
-            testIgnore: /global-setup\.ts/,
+            testIgnore: [/global-setup\.ts/, /worker\/.*\.spec\.ts/],
           },
           {
             name: "webkit",
             use: { ...devices["Desktop Safari"] },
             dependencies: ["setup"],
             testMatch: "**/*.spec.ts",
-            testIgnore: /global-setup\.ts/,
+            testIgnore: [/global-setup\.ts/, /worker\/.*\.spec\.ts/],
           },
         ]
       : []),
   ],
   webServer: [
     {
-      command: "pnpm --filter @cso-voting/backend dev",
-      url: "http://localhost:8787",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-    },
-    {
-      command: "pnpm --filter @cso-voting/frontend dev",
-      url: "http://localhost:3001",
+      command:
+        "pnpm --filter @cso-voting/backend exec wrangler dev --env test --var TURSO_DATABASE_URL:http://127.0.0.1:8080 --port 8787",
+      url: "http://localhost:8787/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
