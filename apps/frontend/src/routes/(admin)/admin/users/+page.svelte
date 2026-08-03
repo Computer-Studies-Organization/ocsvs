@@ -407,8 +407,8 @@
     </header>
 
     <!-- Search & Filters -->
-    <div class='mb-4 flex flex-wrap gap-3'>
-      <div class='relative flex-1 min-w-[200px]'>
+    <div class='mb-4 flex gap-3'>
+      <div class='relative flex-1 min-w-0'>
         <Search size={16} class='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500' />
         <input
           type='text'
@@ -418,9 +418,10 @@
           class='w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
         />
       </div>
-      <label class='flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800'>
+      <label class='flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 shrink-0 whitespace-nowrap'>
         <input type='checkbox' checked={includeDeleted} onchange={(e) => toggleArchived(e.currentTarget.checked)} class='h-4 w-4 accent-amber-400' />
-        Show archived
+        <span class='hidden sm:inline'>Show archived</span>
+        <span class='inline sm:hidden'>Archived</span>
       </label>
     </div>
 
