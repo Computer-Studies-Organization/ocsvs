@@ -7,6 +7,7 @@ Computer Studies Organization Voting System (OCSVS). This file is the fastest pa
 - **Node.js** >= 20.16.0 < 21 || >= 22.3.0
 - **pnpm** >= 9.0.0
 - **wrangler** (comes via devDependencies)
+- **Turso CLI** (required only for the seeded local E2E suite)
 - **Backblaze B2** account (free tier works for staging)
 
 ## 2. Clone and Install
@@ -150,7 +151,32 @@ pnpm build
 just check
 ```
 
-## 7. Database Commands (Backend)
+## 7. End-to-End Tests
+
+The Worker-origin Playwright suite starts Wrangler on port `8787`. Seeded browser tests also require a local Turso dev server on port `8080`; CI starts this service automatically.
+
+For the full suite, run the database server in one terminal:
+
+```bash
+turso dev --db-file "$PWD/apps/backend/local.db" --port 8080
+```
+
+In another terminal from the repository root:
+
+```bash
+export TURSO_DATABASE_URL=http://127.0.0.1:8080
+unset TURSO_AUTH_TOKEN
+pnpm --filter @cso-voting/backend db:migrate
+pnpm test:e2e
+```
+
+The dependency-free Worker asset smoke test does not require the database server:
+
+```bash
+pnpm --filter @cso-voting/e2e exec playwright test tests/worker/asset-routing.spec.ts --project=worker-smoke
+```
+
+## 8. Database Commands (Backend)
 
 ```bash
 cd apps/backend
@@ -161,16 +187,16 @@ pnpm db:push       # Push schema without migration (dev only)
 pnpm db:studio     # Open Drizzle Studio
 ```
 
-## 8. Deployment
+## 9. Deployment
 
 ```bash
 cd apps/backend
 pnpm deploy        # wrangler deploy --minify
 ```
 
-The backend serves the built frontend from `../frontend/dist` as Cloudflare Assets with SPA fallback.
+The backend serves the built frontend from `../frontend/dist` as Cloudflare Assets with SPA fallback. Production releases use the protected workflow and runbook in [`docs/deployment/production-release.md`](./docs/deployment/production-release.md).
 
-## 9. Troubleshooting Backblaze
+## 10. Troubleshooting Backblaze
 
 | Symptom                             | Fix                                                                                                                              |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
