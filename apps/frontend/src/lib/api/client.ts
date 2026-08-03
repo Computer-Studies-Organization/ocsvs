@@ -1,5 +1,10 @@
 import { PUBLIC_API_BASE_URL } from "$env/static/public";
 
+// Production assets and the API are served by the same Cloudflare Worker.
+// Keep the configurable base URL for local development, but never bake a
+// cross-origin API URL into a production bundle.
+const API_BASE_URL = import.meta.env.PROD ? "" : PUBLIC_API_BASE_URL;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -16,7 +21,7 @@ export interface ApiFetchOptions extends RequestInit {
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { fetch: customFetch, ...fetchOptions } = options;
-  const url = `${PUBLIC_API_BASE_URL}${path}`;
+  const url = `${API_BASE_URL}${path}`;
   const fetchFn = customFetch || fetch;
   const headers = new Headers(fetchOptions.headers);
   if (!(fetchOptions.body instanceof FormData) && !headers.has("Content-Type")) {
