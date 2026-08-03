@@ -3,7 +3,13 @@ import { accounts, sessions, users } from "@/database/schema";
 import { eq, inArray, like, or } from "drizzle-orm";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { isUniqueConstraintError } from "@/lib/errors";
-import { hashPassword, verifyPassword, needsRehash, CURRENT_COST_DUMMY_HASH } from "@/lib/password";
+import {
+  hashPassword,
+  verifyPassword,
+  needsRehash,
+  isPasswordHashSupported,
+  CURRENT_COST_DUMMY_HASH,
+} from "@/lib/password";
 import { deleteSession, createSession } from "@/lib/session";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { validateProfanity } from "@/lib/profanity";
@@ -116,6 +122,7 @@ export class UserLifecycleError extends Error {
       | "ELECTION_IS_OPEN"
       | "RATE_LIMITED_ACCOUNT"
       | "INVALID_CREDENTIALS"
+      | "PASSWORD_RESET_REQUIRED"
       | "PROFANITY_DETECTED"
       | "IMPORT_CONFLICT",
     public readonly statusCode: number,
@@ -711,6 +718,10 @@ export class UserLifecycleCoordinator {
     }
 
     // 3. Verify credentials
+    if (!isPasswordHashSupported(result.password_hash)) {
+      throw new UserLifecycleError("PASSWORD_RESET_REQUIRED", 401);
+    }
+
     const isValid = await verifyPassword(password, result.password_hash);
     if (!isValid) {
       await loginAttemptRepo.recordAttempt(db, studentNumber, clientIp);

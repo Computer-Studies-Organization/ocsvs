@@ -98,16 +98,18 @@ vi.mock("@/database/repositories/login-attempt.repository", () => ({
 }));
 
 // Mock password functions
-const { mockVerifyPassword } = vi.hoisted(() => ({
+const { mockVerifyPassword, mockIsPasswordHashSupported } = vi.hoisted(() => ({
   mockVerifyPassword: vi.fn(),
+  mockIsPasswordHashSupported: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("@/lib/password", () => ({
   hashPassword: vi.fn().mockResolvedValue("hashed-password"),
   verifyPassword: mockVerifyPassword,
+  isPasswordHashSupported: mockIsPasswordHashSupported,
   needsRehash: vi.fn().mockReturnValue(false),
   CURRENT_COST_DUMMY_HASH:
-    "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "pbkdf2-sha256$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 }));
 
 // Mock session functions

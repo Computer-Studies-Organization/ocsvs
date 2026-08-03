@@ -18,6 +18,7 @@ const {
   mockHashPassword,
   mockVerifyPassword,
   mockNeedsRehash,
+  mockIsPasswordHashSupported,
   mockCreateSessionFn,
   mockDeleteSessionFn,
   mockRecordAttempt,
@@ -44,6 +45,7 @@ const {
   mockHashPassword: vi.fn(),
   mockVerifyPassword: vi.fn(),
   mockNeedsRehash: vi.fn().mockReturnValue(false),
+  mockIsPasswordHashSupported: vi.fn().mockReturnValue(true),
   mockCreateSessionFn: vi.fn(),
   mockDeleteSessionFn: vi.fn(),
   mockRecordAttempt: vi.fn(),
@@ -78,8 +80,9 @@ vi.mock("@/lib/password", () => ({
   hashPassword: mockHashPassword,
   verifyPassword: mockVerifyPassword,
   needsRehash: mockNeedsRehash,
+  isPasswordHashSupported: mockIsPasswordHashSupported,
   CURRENT_COST_DUMMY_HASH:
-    "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "pbkdf2-sha256$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 }));
 
 vi.mock("@/lib/session", () => ({
@@ -160,6 +163,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateProfanity.mockReturnValue({ isClean: true });
+    mockIsPasswordHashSupported.mockReturnValue(true);
   });
 
   describe("authenticate", () => {
@@ -206,7 +210,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       });
       mockVerifyPassword.mockResolvedValueOnce(true);
       mockNeedsRehash.mockReturnValueOnce(true);
-      mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$600000$salt$new-hash");
+      mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$100000$salt$new-hash");
       mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
 
       const result = await coordinator.authenticate(
@@ -220,7 +224,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockUpdatePassword).toHaveBeenCalledWith(
         mockDb,
         "acc-123",
-        "pbkdf2-sha256$600000$salt$new-hash",
+        "pbkdf2-sha256$100000$salt$new-hash",
       );
       expect(result.sessionId).toBe("sess-123");
     });
@@ -308,6 +312,28 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         expect.objectContaining({ code: "INVALID_CREDENTIALS", statusCode: 401 }),
       );
       expect(mockRecordAttempt).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1");
+    });
+
+    it("requests a password reset for hashes unsupported by the Worker runtime", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "pbkdf2-sha256$600000$salt$hash",
+        deletedAt: null,
+      });
+      mockIsPasswordHashSupported.mockReturnValueOnce(false);
+
+      await expect(
+        coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1"),
+      ).rejects.toMatchObject({
+        code: "PASSWORD_RESET_REQUIRED",
+        statusCode: 401,
+      });
+      expect(mockVerifyPassword).not.toHaveBeenCalled();
+      expect(mockRecordAttempt).not.toHaveBeenCalled();
     });
   });
 

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword, needsRehash } from "./password";
+import { hashPassword, verifyPassword, needsRehash, isPasswordHashSupported } from "./password";
 
 const ALGORITHM_ID = "pbkdf2-sha256";
-const CURRENT_ITERATIONS = 600_000;
+const CURRENT_ITERATIONS = 100_000;
 const LEGACY_ITERATIONS = 100_000;
+const OLDER_ITERATIONS = 50_000;
 
 function toBase64(buffer: Uint8Array): string {
   return btoa(String.fromCharCode(...buffer));
@@ -85,12 +86,19 @@ describe("password utilities", () => {
       expect(await verifyPassword("wrong-password", legacy)).toBe(false);
     });
 
-    it("should verify a versioned hash with a non-current iteration count", async () => {
+    it("should verify a versioned hash with a supported non-current iteration count", async () => {
       const password = "older-versioned-password";
-      const legacy = await legacyHash(password);
-      const olderVersioned = `${ALGORITHM_ID}$${LEGACY_ITERATIONS}$${legacy}`;
+      const legacy = await legacyHash(password, OLDER_ITERATIONS);
+      const olderVersioned = `${ALGORITHM_ID}$${OLDER_ITERATIONS}$${legacy}`;
 
       expect(await verifyPassword(password, olderVersioned)).toBe(true);
+    });
+
+    it("should return false instead of throwing for hashes above the Worker limit", async () => {
+      const unsupported = `${ALGORITHM_ID}$600000$${toBase64(new Uint8Array(16))}$${toBase64(new Uint8Array(32))}`;
+
+      await expect(verifyPassword("my-secure-password", unsupported)).resolves.toBe(false);
+      expect(isPasswordHashSupported(unsupported)).toBe(false);
     });
 
     it("should return false for malformed stored hash formats", async () => {
@@ -137,8 +145,8 @@ describe("password utilities", () => {
     });
 
     it("should return true for a versioned hash with below-current iterations", async () => {
-      const legacy = await legacyHash("older-password");
-      expect(needsRehash(`${ALGORITHM_ID}$${LEGACY_ITERATIONS}$${legacy}`)).toBe(true);
+      const legacy = await legacyHash("older-password", OLDER_ITERATIONS);
+      expect(needsRehash(`${ALGORITHM_ID}$${OLDER_ITERATIONS}$${legacy}`)).toBe(true);
     });
 
     it("should return false for a versioned hash with current iterations", async () => {

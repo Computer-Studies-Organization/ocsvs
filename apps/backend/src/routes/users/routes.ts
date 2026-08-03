@@ -244,8 +244,8 @@ export const ImportUsersBodySchema = z
         }),
       )
       // Cap at 300 to stay within Cloudflare Workers' paid-plan CPU time limit (30s).
-      // Each record runs hashPassword() sequentially (PBKDF2-SHA256, 600k iterations
-      // in lib/password.ts); at ~70-80ms per hash, 300 records ≈ 22s, leaving headroom
+      // Each record runs hashPassword() sequentially (PBKDF2-SHA256, 100k iterations
+      // in lib/password.ts); at ~10-20ms per hash, 300 records ≈ 6s, leaving headroom
       // for the DB queries and batch inserts. If ITERATIONS is ever changed, re-benchmark this ceiling.
       .max(300, "Maximum batch size is 300 records per request"),
   })

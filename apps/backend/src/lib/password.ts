@@ -7,7 +7,10 @@
  * Legacy format (pre-versioning): `salt$hash` — implicitly PBKDF2-SHA256 at LEGACY_ITERATIONS.
  */
 
-const ITERATIONS = 600_000;
+// Cloudflare Workers rejects PBKDF2 iteration counts above 100,000.
+// Keep this value within the Worker runtime limit for both new and dummy hashes.
+const ITERATIONS = 100_000;
+const MAX_SUPPORTED_ITERATIONS = 100_000;
 const LEGACY_ITERATIONS = 100_000;
 const ALGORITHM_ID = "pbkdf2-sha256";
 const KEY_LENGTH = 256;
@@ -135,7 +138,7 @@ export async function hashPassword(password: string): Promise<string> {
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   const parsed = parseStoredHash(storedHash);
 
-  if (!parsed) {
+  if (!parsed || parsed.iterations > MAX_SUPPORTED_ITERATIONS) {
     return false;
   }
 
@@ -157,7 +160,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
 
 /**
  * Returns true when the stored hash should be rehashed with the current policy
- * (legacy format or below-current iteration count).
+ * (legacy format or any non-current iteration count).
  */
 export function needsRehash(storedHash: string): boolean {
   const parsed = parseStoredHash(storedHash);
@@ -166,7 +169,17 @@ export function needsRehash(storedHash: string): boolean {
     return false;
   }
 
-  return parsed.iterations < ITERATIONS;
+  return storedHash.split("$").length !== 4 || parsed.iterations !== ITERATIONS;
+}
+
+/**
+ * Returns false for hashes that this runtime cannot verify safely.
+ * This lets callers provide a controlled recovery path instead of surfacing
+ * Web Crypto's unsupported-iteration exception as a 500 response.
+ */
+export function isPasswordHashSupported(storedHash: string): boolean {
+  const parsed = parseStoredHash(storedHash);
+  return parsed !== null && parsed.iterations <= MAX_SUPPORTED_ITERATIONS;
 }
 
 /**

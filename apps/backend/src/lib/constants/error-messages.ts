@@ -50,6 +50,7 @@ export const ERROR_MESSAGES = {
   INVALID_REQUEST: "Invalid request",
   CROSS_SITE_REQUEST_FORBIDDEN: "Cross-site request forbidden",
   INVALID_CREDENTIALS: "Invalid credentials",
+  PASSWORD_RESET_REQUIRED: "Password reset required. Please contact an administrator.",
   INVALID_CANDIDATE: "Invalid candidate",
   INCOMPLETE_BALLOT: "You must select a candidate for every position",
   INVALID_TRANSITION_BODY: "opensAt and closesAt are required and closesAt must be after opensAt",

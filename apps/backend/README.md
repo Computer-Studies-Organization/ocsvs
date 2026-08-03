@@ -350,6 +350,24 @@ CMD ["npm", "start"]
 5. Run the test suite
 6. Submit a pull request
 
+### Resetting a password after the PBKDF2 policy change
+
+Cloudflare Workers supports PBKDF2-SHA256 hashes up to 100,000 iterations. If an
+account was created with the former 600,000-iteration policy, reset it with the
+guarded operational script below. Set the password through your deployment
+environment rather than sharing it in chat or source control:
+
+```bash
+RESET_STUDENT_ID='C24-01-00001-BSC001' \
+RESET_PASSWORD='new-password' \
+ALLOW_REMOTE_PASSWORD_RESET=true NODE_ENV=production \
+pnpm db:reset-password
+```
+
+The script updates the account hash atomically, clears login lockouts, and
+invalidates existing sessions. Deploy the backend after this code change, then
+run the reset against the production Turso database.
+
 ## License
 
 This project is licensed under the MIT License.
