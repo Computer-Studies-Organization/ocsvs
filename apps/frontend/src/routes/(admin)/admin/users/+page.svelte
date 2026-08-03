@@ -33,6 +33,12 @@
     course: 'Course',
   }
 
+  const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+    user: { label: 'VOTER', cls: 'bg-sky-500/80' },
+    admin: { label: 'ADMIN', cls: 'bg-violet-500/80' },
+    super_admin: { label: 'SUPER ADMIN', cls: 'bg-amber-500/80' },
+  }
+
   type EditField = 'firstName' | 'lastName' | 'username' | 'email' | 'yearLevel' | 'course'
   const EDIT_FIELDS: EditField[] = ['firstName', 'lastName', 'username', 'email', 'yearLevel', 'course']
   const EDIT_LABELS: Record<EditField, string> = {
@@ -435,7 +441,13 @@
         <table class='w-full text-sm'>
           <thead>
             <tr class='border-b border-slate-800 bg-slate-950/50'>
-              {#each SORTABLE_KEYS as key (key)}
+              <th class='sticky left-0 z-10 bg-slate-950/80 px-4 py-3 text-left shadow-[1px_0_0_0_#334155]'>
+                <button onclick={() => toggleSort('studentId')} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
+                  {SORTABLE_LABELS['studentId']}
+                  <ArrowUpDown size={12} />
+                </button>
+              </th>
+              {#each SORTABLE_KEYS.slice(1) as key (key)}
                 <th class='px-4 py-3 text-left'>
                   <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
                     {SORTABLE_LABELS[key]}
@@ -450,7 +462,7 @@
           <tbody>
             {#each paginated as u (u.id)}
               <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30 {u.deletedAt ? 'opacity-60' : ''}">
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.studentId}</td>
+                <td class="sticky left-0 z-10 whitespace-nowrap px-4 py-3 font-semibold text-slate-50 shadow-[1px_0_0_0_#334155] {u.deletedAt ? 'bg-slate-900/60' : 'bg-slate-900'}">{u.studentId}</td>
                 <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
                 <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
                 <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
@@ -458,6 +470,9 @@
                 <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
                 <td class='px-4 py-3'>
                   <div class='flex flex-wrap gap-1'>
+                    {#if ROLE_BADGE[u.role]}
+                      <span class="rounded {ROLE_BADGE[u.role].cls} px-2 py-0.5 text-[10px] font-bold text-white">{ROLE_BADGE[u.role].label}</span>
+                    {/if}
                     {#if u.deletedAt}
                       <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
                     {/if}
