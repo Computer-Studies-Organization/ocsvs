@@ -17,6 +17,9 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:import-students": "tsx scripts/import-students.ts",
+    "db:seed-admin": "tsx scripts/seed-admin.ts",
+    "db:seed-superadmin": "tsx scripts/seed-superadmin.ts",
+    "db:seed-voter": "tsx scripts/seed-voter.ts",
     "db:seed-voter": "tsx scripts/seed-voter.ts",
     "clean": "rm -rf dist .wrangler"
   },

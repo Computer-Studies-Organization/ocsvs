@@ -225,6 +225,28 @@ npx drizzle-kit migrate
 npx drizzle-kit studio
 ```
 
+
+## Local Seed Scripts
+
+The seed scripts require passwords from the environment and use the same versioned PBKDF2-SHA256 utility as the application. They refuse `NODE_ENV=production` and reject remote database URLs unless `ALLOW_REMOTE_SEEDING=true` is explicitly set for a non-production target.
+
+```bash
+TURSO_DATABASE_URL=file:./local.db \
+SUPERADMIN_PASSWORD='<local-superadmin-password>' \
+pnpm db:seed-superadmin
+
+TURSO_DATABASE_URL=file:./local.db \
+ADMIN_PASSWORD='<local-admin-password>' \
+pnpm db:seed-admin
+
+TURSO_DATABASE_URL=file:./local.db \
+VOTER_PASSWORD='<local-voter-password>' \
+pnpm db:seed-voter
+```
+
+Never commit the password variables or use these scripts against production. A remote non-production seed requires `ALLOW_REMOTE_SEEDING=true` in addition to the appropriate `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+
+
 ## Environment Variables
 
 | Variable                | Description                                                   | Default       | Required            |

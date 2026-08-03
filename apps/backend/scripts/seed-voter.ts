@@ -1,12 +1,12 @@
 /**
- * Seed script: creates an admin account + user record in the local database.
+ * Seed script: creates a test voter account + user record in the local database.
  *
  * Usage:
- *   ADMIN_PASSWORD='...' pnpm db:seed-admin
+ *   VOTER_PASSWORD='...' pnpm db:seed-voter
  *
  * Requires a local database URL by default. Set ALLOW_REMOTE_SEEDING=true only
  * for an explicitly approved non-production remote target.
- * Safe to run multiple times - skips if the admin account already exists.
+ * Safe to run multiple times - skips if the voter account already exists.
  */
 
 import { createClient } from "@libsql/client";
@@ -16,16 +16,16 @@ import { getSeedDatabaseUrl, getSeedPassword } from "./seed-utils";
 
 // --- Config ---
 
-const ADMIN = {
+const VOTER = {
   accountId: crypto.randomUUID(),
   userId: crypto.randomUUID(),
-  username: "admin",
-  email: "admin@cso.dev",
-  studentId: "C24-01-00001-BSC001",
-  firstName: "Admin",
-  lastName: "User",
+  username: "voter",
+  email: "voter@cso.dev",
+  studentId: "C25-01-10001-BSC001",
+  firstName: "Test",
+  lastName: "Voter",
   course: "BSCS",
-  yearLevel: "4th Year",
+  yearLevel: "1st Year",
 };
 
 // --- Main ---
@@ -38,51 +38,51 @@ async function main() {
     authToken: process.env.TURSO_AUTH_TOKEN || undefined,
   });
 
-  // Check if admin already exists
+  // Check if voter already exists
   const existing = await client.execute({
     sql: "SELECT id FROM accounts WHERE username = ?",
-    args: [ADMIN.username],
+    args: [VOTER.username],
   });
 
   if (existing.rows.length > 0) {
     console.log(
-      `Admin account "${ADMIN.username}" already exists (id: ${existing.rows[0].id}). Skipping.`,
+      `Voter account "${VOTER.username}" already exists (id: ${existing.rows[0].id}). Skipping.`,
     );
     return;
   }
 
-  const password = getSeedPassword(process.env, "ADMIN_PASSWORD");
+  const password = getSeedPassword(process.env, "VOTER_PASSWORD");
   const passwordHash = await hashPassword(password);
   const now = Math.floor(Date.now() / 1000);
 
   await client.batch([
     {
       sql: `INSERT INTO accounts (id, username, email, password_hash, role, created_at, updated_at, last_login)
-            VALUES (?, ?, ?, ?, 'super_admin', ?, ?, ?)`,
-      args: [ADMIN.accountId, ADMIN.username, ADMIN.email, passwordHash, now, now, now],
+            VALUES (?, ?, ?, ?, 'user', ?, ?, ?)`,
+      args: [VOTER.accountId, VOTER.username, VOTER.email, passwordHash, now, now, now],
     },
     {
       sql: `INSERT INTO users (id, account_id, student_id, first_name, last_name, course, year_level, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
-        ADMIN.userId,
-        ADMIN.accountId,
-        ADMIN.studentId,
-        ADMIN.firstName,
-        ADMIN.lastName,
-        ADMIN.course,
-        ADMIN.yearLevel,
+        VOTER.userId,
+        VOTER.accountId,
+        VOTER.studentId,
+        VOTER.firstName,
+        VOTER.lastName,
+        VOTER.course,
+        VOTER.yearLevel,
         now,
         now,
       ],
     },
   ]);
 
-  console.log("Admin account seeded successfully!");
-  console.log(`  Username:   ${ADMIN.username}`);
-  console.log(`  Student ID: ${ADMIN.studentId}`);
-  console.log(`  Role:       super_admin`);
-  console.log(`  Account ID: ${ADMIN.accountId}`);
+  console.log("Voter account seeded successfully!");
+  console.log(`  Username:   ${VOTER.username}`);
+  console.log(`  Student ID: ${VOTER.studentId}`);
+  console.log(`  Role:       user`);
+  console.log(`  Account ID: ${VOTER.accountId}`);
 }
 
 main().catch((err) => {
