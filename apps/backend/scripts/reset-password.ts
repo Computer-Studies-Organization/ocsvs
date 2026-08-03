@@ -2,9 +2,12 @@
  * Rehashes one account's password with the current Worker-compatible policy.
  *
  * Usage:
- *   RESET_STUDENT_ID='...' RESET_PASSWORD='...' \
+ *   RESET_STUDENT_ID='...' \
  *   ALLOW_REMOTE_PASSWORD_RESET=true NODE_ENV=production \
  *   pnpm db:reset-password
+ *
+ * The script prompts for RESET_PASSWORD without echoing it. For automation,
+ * inject RESET_PASSWORD from a secrets manager instead of putting it inline.
  *
  * The operation atomically updates the password, invalidates existing sessions,
  * and clears login-attempt lockouts for the selected student number.
@@ -29,6 +32,73 @@ function isLocalDatabaseUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function promptForPassword(): Promise<string> {
+  const input = process.stdin;
+  const output = process.stderr;
+
+  if (!input.isTTY || typeof input.setRawMode !== "function") {
+    return Promise.reject(
+      new Error("RESET_PASSWORD is required when no interactive terminal is available"),
+    );
+  }
+
+  return new Promise((resolve, reject) => {
+    let password = "";
+    let settled = false;
+
+    const cleanup = () => {
+      input.removeListener("data", onData);
+      input.removeListener("end", onEnd);
+      input.setRawMode(false);
+      input.pause();
+    };
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      output.write("\n");
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve(password);
+      }
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      for (const character of String(chunk)) {
+        if (character === "\u0003") {
+          finish(new Error("Password reset cancelled"));
+          return;
+        }
+
+        if (character === "\r" || character === "\n") {
+          finish();
+          return;
+        }
+
+        if (character === "\u007f" || character === "\b") {
+          password = password.slice(0, -1);
+          continue;
+        }
+
+        if (character >= " ") {
+          password += character;
+        }
+      }
+    };
+
+    const onEnd = () => finish(new Error("Password reset cancelled"));
+
+    input.setRawMode(true);
+    input.resume();
+    input.on("data", onData);
+    input.once("end", onEnd);
+    output.write("Reset password: ");
+  });
 }
 
 /**
@@ -110,15 +180,12 @@ export async function resetPassword(
 
 async function main(): Promise<void> {
   const studentId = process.env.RESET_STUDENT_ID?.trim();
-  const password = process.env.RESET_PASSWORD;
 
   if (!studentId) {
     throw new Error("RESET_STUDENT_ID is required");
   }
 
-  if (!password) {
-    throw new Error("RESET_PASSWORD is required");
-  }
+  const password = process.env.RESET_PASSWORD ?? (await promptForPassword());
 
   const client = createClient({
     url: getPasswordResetDatabaseUrl(),

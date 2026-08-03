@@ -122,7 +122,6 @@ export class UserLifecycleError extends Error {
       | "ELECTION_IS_OPEN"
       | "RATE_LIMITED_ACCOUNT"
       | "INVALID_CREDENTIALS"
-      | "PASSWORD_RESET_REQUIRED"
       | "PROFANITY_DETECTED"
       | "IMPORT_CONFLICT",
     public readonly statusCode: number,
@@ -717,13 +716,11 @@ export class UserLifecycleCoordinator {
       throw new UserLifecycleError("INVALID_CREDENTIALS", 401);
     }
 
-    // 3. Verify credentials
-    if (!isPasswordHashSupported(result.password_hash)) {
-      throw new UserLifecycleError("PASSWORD_RESET_REQUIRED", 401);
-    }
-
-    const isValid = await verifyPassword(password, result.password_hash);
-    if (!isValid) {
+    // 3. Verify credentials. Unsupported or malformed hashes use the dummy
+    // hash so account existence cannot be inferred from timing or messaging.
+    const isSupported = isPasswordHashSupported(result.password_hash);
+    const isValid = await verifyPassword(password, isSupported ? result.password_hash : dummyHash);
+    if (!isSupported || !isValid) {
       await loginAttemptRepo.recordAttempt(db, studentNumber, clientIp);
       throw new UserLifecycleError("INVALID_CREDENTIALS", 401);
     }

@@ -314,7 +314,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockRecordAttempt).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1");
     });
 
-    it("requests a password reset for hashes unsupported by the Worker runtime", async () => {
+    it("treats hashes unsupported by the Worker runtime as generic failed logins", async () => {
       mockGetRecentAttempts.mockResolvedValueOnce([]);
       mockFindByStudentId.mockResolvedValueOnce({
         id: "acc-123",
@@ -325,15 +325,16 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         deletedAt: null,
       });
       mockIsPasswordHashSupported.mockReturnValueOnce(false);
+      mockVerifyPassword.mockResolvedValueOnce(false);
 
       await expect(
         coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1"),
       ).rejects.toMatchObject({
-        code: "PASSWORD_RESET_REQUIRED",
+        code: "INVALID_CREDENTIALS",
         statusCode: 401,
       });
-      expect(mockVerifyPassword).not.toHaveBeenCalled();
-      expect(mockRecordAttempt).not.toHaveBeenCalled();
+      expect(mockVerifyPassword).toHaveBeenCalledWith("password123", expect.any(String));
+      expect(mockRecordAttempt).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1");
     });
   });
 
