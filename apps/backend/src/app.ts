@@ -5,7 +5,7 @@ import auditLog from "@/routes/audit-log";
 import auth from "@/routes/auth/auth.index";
 import candidates from "@/routes/candidates";
 import elections from "@/routes/elections";
-import index from "@/routes/index.route";
+import health from "@/routes/health";
 import parties from "@/routes/parties";
 import profile from "@/routes/profile";
 import users from "@/routes/users";
@@ -15,7 +15,7 @@ import adminStats from "@/routes/admin-stats";
 const app = createApp();
 
 const routes = [
-  index,
+  health,
   auth,
   profile,
   users,
@@ -31,11 +31,6 @@ configureOpenAPI(app as AppOpenAPI);
 
 routes.forEach((route) => {
   app.route("/", route);
-});
-
-app.get("/", (c) => {
-  c.var.logger.info("Root endpoint accessed");
-  return c.text("Hello Hono!");
 });
 
 export default app;
