@@ -279,13 +279,7 @@
         {/each}
       </div>
 
-      <!-- Trust badge -->
-      <div class='inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-900/40 border border-blue-500/30'>
-        <div class='w-2 h-2 rounded-full bg-emerald-400 animate-pulse'></div>
-        <span class='text-xs font-black uppercase tracking-wider text-blue-200'>
-          System Active
-        </span>
-      </div>
+
     </div>
   </div>
 </div>
