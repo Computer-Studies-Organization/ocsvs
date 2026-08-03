@@ -235,7 +235,7 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
       {
         message: ERROR_MESSAGES.USER_CREATED_SUCCESSFULLY,
         user: {
-          id: regResult.accountId,
+          id: regResult.userId,
           email,
           username: regResult.username,
           role,

@@ -26,10 +26,17 @@ vi.mock("@/middleware/auth", () => ({
   },
 }));
 
-const { mockListByTarget } = vi.hoisted(() => ({ mockListByTarget: vi.fn() }));
+const { mockListByTarget, mockGetAccountId } = vi.hoisted(() => ({
+  mockListByTarget: vi.fn(),
+  mockGetAccountId: vi.fn(),
+}));
 
 vi.mock("@/database/repositories/audit-log.repository", () => ({
   auditLogRepo: { insert: vi.fn(), list: vi.fn(), listByTarget: mockListByTarget },
+}));
+
+vi.mock("@/database/repositories/voter-account-store", () => ({
+  voterAccountStore: { getAccountId: mockGetAccountId },
 }));
 
 vi.mock("@/config/db", () => ({ createDb: vi.fn(() => ({ db: {} })) }));
@@ -47,6 +54,8 @@ describe("users audit route", () => {
     };
     AUTH_ENABLED = true;
     mockListByTarget.mockReset();
+    mockGetAccountId.mockReset();
+    mockGetAccountId.mockResolvedValue(null);
   });
 
   describe("middleware-layer guards (routes/users/index.ts wires requireAdmin)", () => {
@@ -89,6 +98,23 @@ describe("users audit route", () => {
       mockListByTarget.mockResolvedValue([]);
       await router.request(`/users/${userId}/audit`, { method: "GET" });
       expect(mockListByTarget).toHaveBeenCalledWith(expect.anything(), "user", userId);
+    });
+
+    it("includes legacy account-keyed entries while migration is pending", async () => {
+      mockGetAccountId.mockResolvedValue({ accountId: "account-id" });
+      mockListByTarget.mockImplementation((_db, _targetType, targetId) =>
+        Promise.resolve(
+          targetId === userId
+            ? [{ id: "current", createdAt: 200, targetId: userId }]
+            : [{ id: "legacy", createdAt: 100, targetId: "account-id" }],
+        ),
+      );
+
+      const res = await router.request(`/users/${userId}/audit`, { method: "GET" });
+      const json = (await res.json()) as any;
+
+      expect(json.items.map((item: { id: string }) => item.id)).toEqual(["current", "legacy"]);
+      expect(mockListByTarget).toHaveBeenNthCalledWith(2, expect.anything(), "user", "account-id");
     });
   });
 });

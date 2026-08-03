@@ -104,6 +104,7 @@ export const voterAccountStore = {
     db: Database,
     data: {
       accountId: string;
+      userId?: string;
       username: string;
       email: string | null;
       passwordHash: string;
@@ -124,7 +125,7 @@ export const voterAccountStore = {
       role: data.role || "user",
     });
     const userInsert = db.insert(users).values({
-      id: crypto.randomUUID(),
+      id: data.userId ?? crypto.randomUUID(),
       accountId: data.accountId,
       studentId: data.studentId,
       firstName: data.firstName,

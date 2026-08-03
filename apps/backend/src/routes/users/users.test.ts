@@ -847,6 +847,7 @@ describe("users Routes", () => {
       expect(body.message).toBe(ERROR_MESSAGES.USER_CREATED_SUCCESSFULLY);
       expect(body.user.username).toBe("johndoe");
       expect(body.user.role).toBe("user");
+      expect(body.user.id).toBe(mockCreate.mock.calls[0][1].userId);
       expect(mockAccountExists).toHaveBeenCalled();
       expect(mockCreate).toHaveBeenCalledWith(
         expect.anything(),

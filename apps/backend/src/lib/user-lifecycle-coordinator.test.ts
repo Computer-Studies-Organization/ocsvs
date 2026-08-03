@@ -381,11 +381,15 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
 
       expect(mockAccountCreate).toHaveBeenCalledWith(
         mockDb,
-        expect.objectContaining({ accountId: result.accountId, username: "johndoe" }),
+        expect.objectContaining({
+          accountId: result.accountId,
+          userId: result.userId,
+          username: "johndoe",
+        }),
         {
           action: "user.create",
           targetType: "user",
-          targetId: result.accountId,
+          targetId: result.userId,
           actorAccountIdSnapshot: "admin-id",
           actorUsernameSnapshot: "admin",
           description: "Created user account: johndoe (student-123)",

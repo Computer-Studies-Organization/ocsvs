@@ -35,6 +35,7 @@ describe("voterAccountStore.create", () => {
       mockDb as any,
       {
         accountId: "account-id",
+        userId: "user-id",
         username: "voter",
         email: "voter@example.com",
         passwordHash: "password-hash",
@@ -47,7 +48,7 @@ describe("voterAccountStore.create", () => {
       {
         action: "user.create",
         targetType: "user",
-        targetId: "account-id",
+        targetId: "user-id",
         actorAccountIdSnapshot: "admin-id",
         actorUsernameSnapshot: "admin",
         description: "Created user account: voter (student-id)",
@@ -67,6 +68,7 @@ describe("voterAccountStore.create", () => {
     expect(userInsertChain.values).toHaveBeenCalledWith(
       expect.objectContaining({
         accountId: "account-id",
+        id: "user-id",
         studentId: "student-id",
         firstName: "Voter",
         lastName: "Example",
@@ -78,7 +80,7 @@ describe("voterAccountStore.create", () => {
       expect.objectContaining({
         action: "user.create",
         targetType: "user",
-        targetId: "account-id",
+        targetId: "user-id",
         actorAccountIdSnapshot: "admin-id",
         actorUsernameSnapshot: "admin",
       }),

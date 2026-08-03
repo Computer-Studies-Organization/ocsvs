@@ -1,6 +1,11 @@
 import type { TUsersData } from "./types";
-import { expect, test } from "vitest";
-import { getCandidateUserLabel, resolveCandidateUserSelection } from "./adminUsers";
+import { expect, test, vi } from "vitest";
+import {
+  getCandidateUserLabel,
+  isLatestAuditRequest,
+  isOutsideMoreMenu,
+  resolveCandidateUserSelection,
+} from "./adminUsers";
 
 const baseUser = {
   username: "alex.cruz",
@@ -54,4 +59,17 @@ test("candidate picker label falls back to firstName and lastName if fullName is
     lastName: "Santos",
   };
   expect(getCandidateUserLabel(userWithoutFullName)).toBe("Maria Santos (C23-00-0003-MAN121)");
+});
+
+test("stale audit responses are rejected", () => {
+  expect(isLatestAuditRequest(1, 2)).toBe(false);
+  expect(isLatestAuditRequest(2, 2)).toBe(true);
+});
+
+test("outside-menu detection ignores clicks inside menu", () => {
+  const insideMenu = { closest: vi.fn().mockReturnValue({}) };
+  const outsideMenu = { closest: vi.fn().mockReturnValue(null) };
+
+  expect(isOutsideMoreMenu(insideMenu)).toBe(false);
+  expect(isOutsideMoreMenu(outsideMenu)).toBe(true);
 });

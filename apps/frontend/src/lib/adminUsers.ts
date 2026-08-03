@@ -12,3 +12,11 @@ export function getCandidateUserLabel(
     user.fullName || `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unknown";
   return `${name} (${user.studentId})`;
 }
+
+export function isLatestAuditRequest(requestId: number, latestRequestId: number) {
+  return requestId === latestRequestId;
+}
+
+export function isOutsideMoreMenu(target: Pick<HTMLElement, "closest"> | null) {
+  return !target?.closest(".more-menu-container");
+}

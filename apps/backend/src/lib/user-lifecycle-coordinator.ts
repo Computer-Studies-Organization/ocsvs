@@ -181,7 +181,7 @@ export class UserLifecycleCoordinator {
     db: Database,
     input: RegisterUserInput,
     auditContext?: RegisterAuditContext,
-  ): Promise<{ accountId: string; username: string }> {
+  ): Promise<{ accountId: string; userId: string; username: string }> {
     // Resolve username and handle generation if not provided
     let username = input.username;
     if (!username || !username.trim()) {
@@ -235,12 +235,14 @@ export class UserLifecycleCoordinator {
     const passwordHash = await hashPassword(password);
 
     const accountId = crypto.randomUUID();
+    const userId = crypto.randomUUID();
 
     try {
       await voterAccountStore.create(
         db,
         {
           accountId,
+          userId,
           username,
           email: input.email && input.email.trim() ? input.email : null,
           passwordHash,
@@ -254,7 +256,7 @@ export class UserLifecycleCoordinator {
         auditContext && {
           action: "user.create",
           targetType: "user",
-          targetId: accountId,
+          targetId: userId,
           ...auditContext,
           description: `Created user account: ${username} (${input.studentId})`,
         },
@@ -266,7 +268,7 @@ export class UserLifecycleCoordinator {
       throw error;
     }
 
-    return { accountId, username };
+    return { accountId, userId, username };
   }
 
   async bulkImport(

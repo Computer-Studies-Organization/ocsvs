@@ -1,7 +1,8 @@
 <script lang='ts'>
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
+  import { isLatestAuditRequest, isOutsideMoreMenu } from '$lib/adminUsers'
   import { goto, invalidate } from '$app/navigation'
-  import { onDestroy, untrack, tick } from 'svelte'
+  import { onDestroy, untrack } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
@@ -75,6 +76,7 @@
 
   // Modals
   let viewUser = $state<TUsersData | null>(null)
+  let pendingViewAction = $state<(() => void) | null>(null)
   let editUser = $state<TUsersData | null>(null)
   let editForm = $state<EditForm>({ firstName: '', lastName: '', username: '', email: '', yearLevel: '', course: '' })
   let isEditSaving = $state(false)
@@ -387,35 +389,161 @@
     }
   }
 
-  async function startMobileEdit(u: TUsersData) {
-    viewUser = null
-    await tick()
-    openEdit(u)
+  function runPendingViewAction() {
+    const action = pendingViewAction
+    pendingViewAction = null
+    action?.()
   }
 
-  async function startMobileArchive(u: TUsersData) {
+  function queueMobileAction(action: () => void) {
+    pendingViewAction = action
     viewUser = null
-    await tick()
-    archiveConfirmUser = u
   }
 
-  async function startMobileRestore(u: TUsersData) {
-    viewUser = null
-    await tick()
-    restoreConfirmUser = u
+  function startMobileEdit(u: TUsersData) {
+    queueMobileAction(() => openEdit(u))
   }
 
-  async function startMobileUnlock(u: TUsersData) {
-    viewUser = null
-    await tick()
-    unlockConfirmUser = u
+  function startMobileArchive(u: TUsersData) {
+    queueMobileAction(() => archiveConfirmUser = u)
   }
 
-  async function startMobileHardDelete(u: TUsersData) {
-    viewUser = null
-    await tick()
-    hardDeleteConfirmUser = u
-    hardDeleteConfirmText = ''
+  function startMobileRestore(u: TUsersData) {
+    queueMobileAction(() => restoreConfirmUser = u)
+  }
+
+  function startMobileUnlock(u: TUsersData) {
+    queueMobileAction(() => unlockConfirmUser = u)
+  }
+
+  function startMobileHardDelete(u: TUsersData) {
+    queueMobileAction(() => {
+      hardDeleteConfirmUser = u
+      hardDeleteConfirmText = ''
+    })
+  }
+
+  // Mobile/desktop view tabs state
+  import { fetchAuditLog, type AuditLogEntry } from '$lib/api/audit-log'
+
+  let activeTab = $state<'overview' | 'access' | 'audit'>('overview')
+  let isDangerZoneExpanded = $state(false)
+  let showMoreMenu = $state(false)
+
+  let userAuditLogs = $state<AuditLogEntry[]>([])
+  let isAuditLoading = $state(false)
+  let auditError = $state('')
+  let auditRequestId = 0
+
+  async function loadUserAuditLogs(userId: string) {
+    const requestId = ++auditRequestId
+    isAuditLoading = true
+    auditError = ''
+    try {
+      const res = await fetchAuditLog({ targetType: 'user', targetId: userId, limit: 10 })
+      if (!isLatestAuditRequest(requestId, auditRequestId)) return
+      userAuditLogs = res.items
+    } catch (e: any) {
+      if (!isLatestAuditRequest(requestId, auditRequestId)) return
+      auditError = e.message || 'Failed to load activity logs'
+    } finally {
+      if (isLatestAuditRequest(requestId, auditRequestId)) {
+        isAuditLoading = false
+      }
+    }
+  }
+
+  $effect(() => {
+    if (viewUser) {
+      loadUserAuditLogs(viewUser.id)
+      activeTab = 'overview'
+      isDangerZoneExpanded = false
+      showMoreMenu = false
+    }
+  })
+
+  $effect(() => {
+    if (!showMoreMenu) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (isOutsideMoreMenu(target)) {
+        showMoreMenu = false
+      }
+    }
+    window.addEventListener('click', handleOutsideClick, true)
+    return () => window.removeEventListener('click', handleOutsideClick, true)
+  })
+
+  function formatAuditTime(unixSeconds: number): string {
+    const date = new Date(unixSeconds * 1000)
+    const now = new Date()
+    const isToday = date.getDate() === now.getDate() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear()
+    const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+    if (isToday) {
+      return `Today · ${timeStr}`
+    }
+    const monthStr = date.toLocaleDateString([], { month: 'short' })
+    const dayStr = date.getDate()
+    return `${monthStr} ${dayStr} · ${timeStr}`
+  }
+
+  function getAuditDisplay(entry: AuditLogEntry) {
+    let title = ''
+    let subtitle = ''
+    switch (entry.action) {
+      case 'user.create':
+        title = 'User profile created'
+        subtitle = entry.description || 'Account was created.'
+        break
+      case 'user.unlock':
+        title = 'Account unlocked'
+        subtitle = `Performed by ${entry.actorUsernameSnapshot}.`
+        break
+      case 'user.soft_delete':
+        title = 'Account archived'
+        subtitle = `Performed by ${entry.actorUsernameSnapshot}.`
+        break
+      case 'user.restore':
+        title = 'Account restored'
+        subtitle = `Performed by ${entry.actorUsernameSnapshot}.`
+        break
+      case 'user.hard_delete':
+        title = 'Account permanently deleted'
+        subtitle = entry.description || `Performed by ${entry.actorUsernameSnapshot}.`
+        break
+      case 'user.bulk_import':
+        title = 'Users imported'
+        subtitle = entry.description || 'Bulk imported student records.'
+        break
+      case 'user.update':
+        if (entry.description) {
+          if (entry.description.toLowerCase().includes('role')) {
+            title = 'Role changed'
+            subtitle = entry.description
+          } else {
+            title = 'Profile updated'
+            subtitle = entry.description
+          }
+        } else {
+          title = 'User updated'
+          subtitle = `Performed by ${entry.actorUsernameSnapshot}.`
+        }
+        break
+      default:
+        title = entry.action.replace('_', ' ').replace('.', ': ')
+        title = title.charAt(0).toUpperCase() + title.slice(1)
+        subtitle = entry.description || `Performed by ${entry.actorUsernameSnapshot}.`
+    }
+    if (entry.description && entry.description.includes('changed to')) {
+      const parts = entry.description.split(' - ')
+      if (parts.length > 1) {
+        title = parts[0]
+        subtitle = parts[1]
+      }
+    }
+    return { title, subtitle }
   }
 </script>
 
@@ -631,132 +759,279 @@
 </div>
 
 <!-- View Modal -->
-<Modal open={Boolean(viewUser)} onclose={() => viewUser = null} ariaLabelledby="view-user-title" presentation="sheet">
+<Modal
+  open={Boolean(viewUser)}
+  onclose={() => viewUser = null}
+  onOutroEnd={runPendingViewAction}
+  ariaLabelledby="view-user-title"
+  presentation="sheet"
+>
   {#if viewUser}
-    <div class='mb-6 flex flex-col items-center text-center'>
-      <div class='flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500/20 to-violet-500/20 border border-sky-500/30 text-xl font-black uppercase tracking-wider text-sky-300 shadow-inner mb-3'>
-        {viewUser.firstName?.[0] ?? ''}{viewUser.lastName?.[0] ?? ''}
-      </div>
-      <h3 id="view-user-title" class='text-xl font-extrabold text-slate-50'>{viewUser.firstName} {viewUser.lastName}</h3>
-      <p class='mt-1 text-xs text-slate-400 font-semibold font-mono'>{viewUser.studentId}</p>
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-slate-400">Manage user</h2>
     </div>
 
-    <div class='space-y-4 text-sm'>
-      <!-- Details Grid -->
-      <div class='grid grid-cols-2 gap-2.5'>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Username</span>
-          <span class='mt-1 block font-semibold text-slate-100 truncate'>{viewUser.username ?? '—'}</span>
-        </div>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Email</span>
-          <span class='mt-1 block font-semibold text-slate-100 truncate' title={viewUser.email}>{viewUser.email ?? '—'}</span>
-        </div>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Year Level</span>
-          <span class='mt-1 block font-semibold text-slate-100'>{viewUser.yearLevel ?? '—'}</span>
-        </div>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Course</span>
-          <span class='mt-1 block font-semibold text-slate-100 truncate'>{viewUser.course ?? '—'}</span>
-        </div>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Role</span>
-          <div class='mt-1'>
-            {#if ROLE_BADGE[viewUser.role]}
-              <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[viewUser.role].pillCls} px-2 py-0.5 whitespace-nowrap">
-                <span class="h-1.5 w-1.5 rounded-full {viewUser.deletedAt ? 'bg-orange-400' : 'bg-emerald-400'}"></span>
-                <span class="text-[10px] font-bold {ROLE_BADGE[viewUser.role].textCls}">{ROLE_BADGE[viewUser.role].label}</span>
-              </span>
-            {/if}
-          </div>
-        </div>
-        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Status</span>
-          <div class='mt-1 flex items-center gap-1.5'>
-            <span class="h-1.5 w-1.5 rounded-full {viewUser.deletedAt ? 'bg-orange-500' : 'bg-emerald-500'}"></span>
-            <span class='font-semibold text-slate-100'>{viewUser.deletedAt ? 'Archived' : 'Active'}</span>
-          </div>
-        </div>
+    <!-- User Identity Header (Left Aligned) -->
+    <div class="flex items-center gap-4 mb-6">
+      <div class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border border-sky-500/30 bg-slate-950 text-xl font-bold uppercase tracking-wider text-sky-300 shadow-inner">
+        {viewUser.firstName?.[0] ?? ''}{viewUser.lastName?.[0] ?? ''}
       </div>
+      <div>
+        <h3 id="view-user-title" class="text-lg font-bold text-slate-50 leading-tight">
+          {viewUser.firstName} {viewUser.lastName}
+        </h3>
+        <p class="mt-1 text-xs text-slate-400 font-mono tracking-wider">
+          {viewUser.studentId}
+        </p>
+      </div>
+    </div>
 
-      <!-- Mobile sheet controls -->
-      <div class='mt-6 flex md:hidden flex-col gap-2'>
-        {#if !viewUser.deletedAt}
-          <button
-            disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
-            onclick={() => startMobileEdit(viewUser!)}
-            title={authStore.user?.id === viewUser.accountId 
-              ? 'You cannot edit your own account here' 
-              : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
-              ? 'Only super admins can edit admin accounts' 
-              : 'Edit'}
-            class='w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-          >
-            Edit User
-          </button>
-          
-          <button
-            onclick={() => startMobileUnlock(viewUser!)}
-            class='w-full flex items-center justify-center gap-2 rounded-xl bg-teal-600 py-3 text-sm font-bold text-white shadow-lg shadow-teal-600/30 hover:bg-teal-500 cursor-pointer'
-          >
-            Unlock Account
-          </button>
+    <!-- Tabs Navigation Bar -->
+    <div class="bg-slate-950 p-1 rounded-xl flex gap-1 mb-5">
+      <button
+        type="button"
+        onclick={() => activeTab = 'overview'}
+        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'overview' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Overview
+      </button>
+      <button
+        type="button"
+        onclick={() => activeTab = 'access'}
+        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'access' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Access
+      </button>
+      <button
+        type="button"
+        onclick={() => activeTab = 'audit'}
+        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'audit' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Audit
+      </button>
+    </div>
 
-          <button
-            disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
-            onclick={() => startMobileArchive(viewUser!)}
-            title={authStore.user?.id === viewUser.accountId 
-              ? 'You cannot archive your own account' 
-              : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
-              ? 'Only super admins can archive admin accounts' 
-              : 'Archive'}
-            class='w-full flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-3 text-sm font-bold text-white shadow-lg shadow-orange-600/30 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-          >
-            Archive User
-          </button>
+    <!-- Tab Content Area -->
+    <div class="min-h-[220px]">
+      {#if activeTab === 'overview'}
+        <div class="rounded-xl border border-slate-800 bg-slate-950/20 overflow-hidden divide-y divide-slate-800/60">
+          <div class="flex justify-between items-center px-4 py-3.5 text-sm">
+            <span class="text-slate-400 text-xs font-semibold">Username</span>
+            <span class="font-bold text-slate-100">{viewUser.username ?? '—'}</span>
+          </div>
+          <div class="flex justify-between items-center px-4 py-3.5 text-sm">
+            <span class="text-slate-400 text-xs font-semibold">Email</span>
+            <span class="font-bold text-slate-100 truncate max-w-[240px]" title={viewUser.email}>{viewUser.email ?? '—'}</span>
+          </div>
+          <div class="flex justify-between items-center px-4 py-3.5 text-sm">
+            <span class="text-slate-400 text-xs font-semibold">Year level</span>
+            <span class="font-bold text-slate-100">{viewUser.yearLevel ?? '—'}</span>
+          </div>
+          <div class="flex justify-between items-center px-4 py-3.5 text-sm">
+            <span class="text-slate-400 text-xs font-semibold">Course</span>
+            <span class="font-bold text-slate-100">{viewUser.course ?? '—'}</span>
+          </div>
+          <div class="flex justify-between items-center px-4 py-3.5 text-sm">
+            <span class="text-slate-400 text-xs font-semibold">Role</span>
+            <span class="font-bold text-slate-100 uppercase">{viewUser.role === 'user' ? 'Voter' : viewUser.role === 'admin' ? 'Admin' : 'Super Admin'}</span>
+          </div>
+        </div>
+      {:else}
+        <!-- Access Tab -->
+        {#if activeTab === 'access'}
+          <div class="space-y-4">
+            <!-- Account Active Card -->
+            {#if !viewUser.deletedAt}
+              <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex gap-3.5 items-start">
+                <div class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-100 text-sm">Account is active</h4>
+                  <p class="mt-1 text-xs text-slate-400 leading-normal">The user can sign in and participate in currently available voting activities.</p>
+                </div>
+              </div>
+            {:else}
+              <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex gap-3.5 items-start">
+                <div class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-100 text-sm">Account is archived</h4>
+                  <p class="mt-1 text-xs text-slate-400 leading-normal">This user account is soft-deleted and cannot participate in voting.</p>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Account actions -->
+            <div class="grid gap-3">
+              {#if !viewUser.deletedAt}
+              <button
+                type="button"
+                onclick={() => startMobileUnlock(viewUser!)}
+                class="rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 text-white py-3 text-sm font-bold transition cursor-pointer"
+              >
+                Unlock
+              </button>
+              {/if}
+            </div>
+
+            <!-- Danger Zone -->
+            <div>
+              <button
+                type="button"
+                onclick={() => isDangerZoneExpanded = !isDangerZoneExpanded}
+                class="w-full flex items-center justify-between rounded-xl border border-red-500/20 bg-red-950/5 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-950/15 transition cursor-pointer"
+              >
+                <span>Danger zone</span>
+                <svg class="h-4 w-4 transition-transform {isDangerZoneExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              {#if isDangerZoneExpanded}
+                <div class="mt-2 rounded-xl border border-red-500/10 bg-red-950/5 p-3 flex flex-col gap-2">
+                  {#if !viewUser.deletedAt}
+                    <button
+                      type="button"
+                      disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+                      onclick={() => startMobileArchive(viewUser!)}
+                      class="w-full rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      Archive User
+                    </button>
+                  {:else}
+                    <button
+                      type="button"
+                      disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
+                      onclick={() => startMobileRestore(viewUser!)}
+                      class="w-full rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      Restore User
+                    </button>
+                  {/if}
+
+                  <button
+                    type="button"
+                    disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+                    onclick={() => startMobileHardDelete(viewUser!)}
+                    class="w-full rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Delete Permanently
+                  </button>
+                </div>
+              {/if}
+            </div>
+          </div>
         {:else}
-          <button
-            disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
-            onclick={() => startMobileRestore(viewUser!)}
-            title={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin') 
-              ? 'Only super admins can restore admin accounts' 
-              : 'Restore'}
-            class='w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-          >
-            Restore User
-          </button>
+          <!-- Audit Tab -->
+          {#if isAuditLoading}
+            <div class="flex flex-col items-center justify-center py-12 text-slate-400 text-sm gap-2">
+              <Loader class="animate-spin text-sky-400" size={24} />
+              <span>Loading activity logs...</span>
+            </div>
+          {:else if auditError}
+            <div class="py-8 text-center text-sm text-red-400">
+              {auditError}
+            </div>
+          {:else if userAuditLogs.length === 0}
+            <div class="py-12 text-center text-sm text-slate-500">
+              No activity logs found for this user.
+            </div>
+          {:else}
+            <div class="relative pl-6 border-l border-slate-800 space-y-6 ml-3 py-2">
+              {#each userAuditLogs as entry (entry.id)}
+                {@const display = getAuditDisplay(entry)}
+                <div class="relative">
+                  <!-- Timeline node dot -->
+                  <span class="absolute -left-[33px] top-1 flex h-4 w-4 items-center justify-center rounded-full border border-sky-500 bg-slate-900">
+                    <span class="h-1.5 w-1.5 rounded-full bg-sky-400"></span>
+                  </span>
+                  <div>
+                    <h4 class="font-semibold text-slate-100 text-sm leading-tight">{display.title}</h4>
+                    {#if display.subtitle}
+                      <p class="mt-1 text-xs text-slate-400">{display.subtitle}</p>
+                    {/if}
+                    <p class="mt-1 text-[10px] text-slate-500 font-mono">{formatAuditTime(entry.createdAt)}</p>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
         {/if}
+      {/if}
+    </div>
 
+    <!-- Bottom Actions Row -->
+    <div class="relative flex gap-2.5 mt-6 border-t border-slate-800/80 pt-4">
+      <button
+        type="button"
+        disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+        onclick={() => startMobileEdit(viewUser!)}
+        class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-sky-500 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/20 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+      >
+        Edit user
+      </button>
+      <div class="relative more-menu-container">
         <button
-          disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
-          onclick={() => startMobileHardDelete(viewUser!)}
-          title={authStore.user?.id === viewUser.accountId 
-            ? 'You cannot delete your own account' 
-            : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
-            ? 'Only super admins can delete admin accounts' 
-            : 'Delete Permanently'}
-          class='w-full flex items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-bold text-white shadow-lg shadow-red-600/30 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+          type="button"
+          onclick={() => showMoreMenu = !showMoreMenu}
+          class="flex h-11.5 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 text-slate-400 transition cursor-pointer"
+          aria-label="More options"
         >
-          Delete Permanently
+          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"></path>
+          </svg>
         </button>
 
-        <a
-          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
-          class='w-full flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 py-3 text-sm font-bold text-sky-400 hover:bg-sky-500/20 transition'
-        >
-          View Audit Trail →
-        </a>
-      </div>
-
-      <!-- Desktop Audit Trail Link -->
-      <div class='hidden md:block'>
-        <a
-          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
-          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
-        >
-          View Audit Trail →
-        </a>
+        {#if showMoreMenu}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="absolute bottom-full right-0 mb-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-950 p-1.5 shadow-xl flex flex-col gap-1"
+            onclick={() => showMoreMenu = false}
+          >
+            {#if !viewUser.deletedAt}
+              <button
+                type="button"
+                onclick={() => startMobileUnlock(viewUser!)}
+                class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-900 rounded-lg transition cursor-pointer"
+              >
+                Unlock Account
+              </button>
+              <button
+                type="button"
+                disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+                onclick={() => startMobileArchive(viewUser!)}
+                class="w-full text-left px-3 py-2 text-xs font-semibold text-orange-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
+              >
+                Archive User
+              </button>
+            {:else}
+              <button
+                type="button"
+                disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
+                onclick={() => startMobileRestore(viewUser!)}
+                class="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
+              >
+                Restore User
+              </button>
+            {/if}
+            <button
+              type="button"
+              disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+              onclick={() => startMobileHardDelete(viewUser!)}
+              class="w-full text-left px-3 py-2 text-xs font-semibold text-red-400 hover:bg-slate-900 rounded-lg transition border-t border-slate-900 mt-1 pt-2 disabled:opacity-50 cursor-pointer"
+            >
+              Delete Permanently
+            </button>
+          </div>
+        {/if}
       </div>
     </div>
   {/if}

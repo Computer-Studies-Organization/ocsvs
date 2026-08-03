@@ -9,6 +9,9 @@ import { getUserAuditRoute } from "@/routes/users/audit.routes";
 import { createDb } from "@/config/db";
 import { AuditLogEntrySchema } from "@/database/openapi-schemas";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
+import type { AuditLogRow } from "@/database/repositories/audit-log.repository";
+import type { DbClient } from "@/database/repositories/database.type";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import type { TargetType } from "@/lib/constants/audit-actions";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -35,6 +38,18 @@ export const listAuditLog: AppRouteHandler<typeof listAuditLogRoute> = async (c)
     httpStatusCodes.OK,
   );
 };
+
+async function listUserAuditWithLegacyTarget(db: DbClient, userId: string): Promise<AuditLogRow[]> {
+  const items = await auditLogRepo.listByTarget(db, "user", userId);
+  const account = await voterAccountStore.getAccountId(db, userId);
+
+  if (!account || account.accountId === userId) return items;
+
+  const legacyItems = await auditLogRepo.listByTarget(db, "user", account.accountId);
+  return Array.from(
+    new Map([...items, ...legacyItems].map((item) => [item.id, item])).values(),
+  ).sort((left, right) => right.createdAt - left.createdAt || right.id.localeCompare(left.id));
+}
 
 /**
  * Per-target audit trail closure. Reads the resource id from path params
@@ -63,7 +78,10 @@ function makeListAuditLogByTarget<R extends RouteConfig>(
     const params = c.req.param();
     const targetId = targetType === "position" ? params.positionId : params.id;
     const { db } = createDb(c);
-    const items = await auditLogRepo.listByTarget(db, targetType, targetId!);
+    const items =
+      targetType === "user"
+        ? await listUserAuditWithLegacyTarget(db, targetId!)
+        : await auditLogRepo.listByTarget(db, targetType, targetId!);
     return c.json(
       { items: items as Array<z.infer<typeof AuditLogEntrySchema>> },
       httpStatusCodes.OK,
