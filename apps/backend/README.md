@@ -225,6 +225,15 @@ npx drizzle-kit migrate
 npx drizzle-kit studio
 ```
 
+## Deployment
+
+`pnpm deploy` validates same-origin production frontend variables, rebuilds `apps/frontend/dist` through Wrangler's custom build, and deploys the Worker with `wrangler deploy --minify`:
+
+```bash
+PUBLIC_API_BASE_URL= PUBLIC_TURNSTILE_SITEKEY="<real-site-key>" pnpm deploy
+```
+
+For the protected production workflow, follow [`docs/deployment/production-release.md`](../../docs/deployment/production-release.md). Do not apply `0001_sharp_lord_tyger.sql` to a populated database.
 
 ## Local Seed Scripts
 
@@ -245,7 +254,6 @@ pnpm db:seed-voter
 ```
 
 Never commit the password variables or use these scripts against production. A remote non-production seed requires `ALLOW_REMOTE_SEEDING=true` in addition to the appropriate `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
-
 
 ## Environment Variables
 
