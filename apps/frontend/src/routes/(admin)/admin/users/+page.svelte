@@ -33,10 +33,10 @@
     course: 'Course',
   }
 
-  const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
-    user: { label: 'VOTER', cls: 'bg-sky-500/80' },
-    admin: { label: 'ADMIN', cls: 'bg-violet-500/80' },
-    super_admin: { label: 'SUPER ADMIN', cls: 'bg-amber-500/80' },
+  const ROLE_BADGE: Record<string, { label: string; pillCls: string; textCls: string }> = {
+    user: { label: 'VOTER', pillCls: 'bg-sky-500/15', textCls: 'text-sky-300' },
+    admin: { label: 'ADMIN', pillCls: 'bg-violet-500/15', textCls: 'text-violet-300' },
+    super_admin: { label: 'S.ADMIN', pillCls: 'bg-amber-500/15', textCls: 'text-amber-300' },
   }
 
   type EditField = 'firstName' | 'lastName' | 'username' | 'email' | 'yearLevel' | 'course'
@@ -471,10 +471,10 @@
                 <td class='px-4 py-3'>
                   <div class='flex flex-wrap gap-1'>
                     {#if ROLE_BADGE[u.role]}
-                      <span class="rounded {ROLE_BADGE[u.role].cls} px-2 py-0.5 text-[10px] font-bold text-white">{ROLE_BADGE[u.role].label}</span>
-                    {/if}
-                    {#if u.deletedAt}
-                      <span class='rounded bg-orange-500/80 px-2 py-0.5 text-[10px] font-bold text-white'>ARCHIVED</span>
+                      <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[u.role].pillCls} px-2 py-0.5">
+                        <span class="h-1.5 w-1.5 rounded-full {u.deletedAt ? 'bg-orange-400' : 'bg-emerald-400'}"></span>
+                        <span class="text-[10px] font-bold {ROLE_BADGE[u.role].textCls}">{ROLE_BADGE[u.role].label}</span>
+                      </span>
                     {/if}
                   </div>
                 </td>
