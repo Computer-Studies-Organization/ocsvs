@@ -60,6 +60,21 @@ describe("AppCache", () => {
     expect(mockApi.listElections).toHaveBeenCalledTimes(2);
   });
 
+  it("refetches voting state after an authentication cache boundary", async () => {
+    const firstState = { myVotes: { electionId: "e1", votes: [{ candidateId: "a" }] } };
+    const secondState = { myVotes: { electionId: "e1", votes: [] } };
+    vi.mocked(mockApi.getVotingState)
+      .mockResolvedValueOnce(firstState as any)
+      .mockResolvedValueOnce(secondState as any);
+    const cache = new AppCache(mockApi);
+
+    await cache.get("votingState", {}).fetch();
+    cache.invalidate();
+
+    await expect(cache.get("votingState", {}).fetch()).resolves.toEqual(secondState);
+    expect(mockApi.getVotingState).toHaveBeenCalledTimes(2);
+  });
+
   it("supports partial parameters cascading invalidation", async () => {
     vi.mocked(mockApi.listPositions).mockResolvedValue([{ id: "pos-1", electionId: "e1" } as any]);
     vi.mocked(mockApi.listResults).mockResolvedValue([{ positionId: "pos-1" } as any]);
