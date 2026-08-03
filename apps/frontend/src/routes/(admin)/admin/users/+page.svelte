@@ -1,7 +1,7 @@
 <script lang='ts'>
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
-  import { onDestroy, untrack } from 'svelte'
+  import { onDestroy, untrack, tick } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
@@ -386,6 +386,37 @@
       isActionLoading = false
     }
   }
+
+  async function startMobileEdit(u: TUsersData) {
+    viewUser = null
+    await tick()
+    openEdit(u)
+  }
+
+  async function startMobileArchive(u: TUsersData) {
+    viewUser = null
+    await tick()
+    archiveConfirmUser = u
+  }
+
+  async function startMobileRestore(u: TUsersData) {
+    viewUser = null
+    await tick()
+    restoreConfirmUser = u
+  }
+
+  async function startMobileUnlock(u: TUsersData) {
+    viewUser = null
+    await tick()
+    unlockConfirmUser = u
+  }
+
+  async function startMobileHardDelete(u: TUsersData) {
+    viewUser = null
+    await tick()
+    hardDeleteConfirmUser = u
+    hardDeleteConfirmText = ''
+  }
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
@@ -437,7 +468,8 @@
 
     <!-- Table -->
     <div class='overflow-hidden rounded-2xl border border-slate-800 bg-slate-900'>
-      <div class='overflow-x-auto'>
+      <!-- Desktop Table -->
+      <div class='hidden md:block overflow-x-auto'>
         <table class='w-full text-sm'>
           <thead>
             <tr class='border-b border-slate-800 bg-slate-950/50'>
@@ -544,6 +576,39 @@
         </table>
       </div>
 
+      <!-- Mobile List -->
+      <div class='block md:hidden divide-y divide-slate-800 bg-slate-900'>
+        {#each paginated as u (u.id)}
+          <button
+            onclick={() => viewUser = u}
+            class="w-full text-left p-4 hover:bg-slate-800/30 transition-colors focus:outline-none focus:bg-slate-800/40 focus:ring-1 focus:ring-sky-500/50 flex items-center justify-between gap-4 {u.deletedAt ? 'opacity-60' : ''}"
+          >
+            <div class='min-w-0 flex-1'>
+              <div class='flex items-center gap-2 flex-wrap'>
+                <span class='text-sm font-bold text-slate-50 truncate'>{u.firstName} {u.lastName}</span>
+                {#if u.deletedAt}
+                  <span class='inline-flex items-center rounded bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-bold text-orange-400'>
+                    ARCHIVED
+                  </span>
+                {/if}
+              </div>
+              <p class='mt-1 text-xs text-slate-400 font-mono'>{u.studentId}</p>
+            </div>
+            <div class='flex flex-col items-end gap-1.5 shrink-0'>
+              {#if ROLE_BADGE[u.role]}
+                <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[u.role].pillCls} px-2 py-0.5 whitespace-nowrap">
+                  <span class="h-1.5 w-1.5 rounded-full {u.deletedAt ? 'bg-orange-400' : 'bg-emerald-400'}"></span>
+                  <span class="text-[10px] font-bold {ROLE_BADGE[u.role].textCls}">{ROLE_BADGE[u.role].label}</span>
+                </span>
+              {/if}
+            </div>
+          </button>
+        {/each}
+        {#if paginated.length === 0}
+          <div class='h-24 flex items-center justify-center text-slate-500 text-sm'>No users found.</div>
+        {/if}
+      </div>
+
       <!-- Pagination -->
       <div class='flex items-center justify-between border-t border-slate-800 px-4 py-3'>
         <p class='text-xs text-slate-500'>{filtered.length} user(s)</p>
@@ -566,60 +631,139 @@
 </div>
 
 <!-- View Modal -->
-<Modal open={Boolean(viewUser)} onclose={() => viewUser = null} ariaLabelledby="view-user-title">
-  <div class='mb-4 flex items-center justify-between'>
-    <h3 id="view-user-title" class='text-lg font-bold text-slate-50'>User Details</h3>
-  </div>
+<Modal open={Boolean(viewUser)} onclose={() => viewUser = null} ariaLabelledby="view-user-title" presentation="sheet">
   {#if viewUser}
-    <div class='space-y-2 text-sm'>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Student ID</span>
-        <span class='font-semibold text-slate-50'>{viewUser.studentId}</span>
+    <div class='mb-6 flex flex-col items-center text-center'>
+      <div class='flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500/20 to-violet-500/20 border border-sky-500/30 text-xl font-black uppercase tracking-wider text-sky-300 shadow-inner mb-3'>
+        {viewUser.firstName?.[0] ?? ''}{viewUser.lastName?.[0] ?? ''}
       </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>First Name</span>
-        <span class='font-semibold text-slate-50'>{viewUser.firstName}</span>
+      <h3 id="view-user-title" class='text-xl font-extrabold text-slate-50'>{viewUser.firstName} {viewUser.lastName}</h3>
+      <p class='mt-1 text-xs text-slate-400 font-semibold font-mono'>{viewUser.studentId}</p>
+    </div>
+
+    <div class='space-y-4 text-sm'>
+      <!-- Details Grid -->
+      <div class='grid grid-cols-2 gap-2.5'>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Username</span>
+          <span class='mt-1 block font-semibold text-slate-100 truncate'>{viewUser.username ?? '—'}</span>
+        </div>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Email</span>
+          <span class='mt-1 block font-semibold text-slate-100 truncate' title={viewUser.email}>{viewUser.email ?? '—'}</span>
+        </div>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Year Level</span>
+          <span class='mt-1 block font-semibold text-slate-100'>{viewUser.yearLevel ?? '—'}</span>
+        </div>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Course</span>
+          <span class='mt-1 block font-semibold text-slate-100 truncate'>{viewUser.course ?? '—'}</span>
+        </div>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Role</span>
+          <div class='mt-1'>
+            {#if ROLE_BADGE[viewUser.role]}
+              <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[viewUser.role].pillCls} px-2 py-0.5 whitespace-nowrap">
+                <span class="h-1.5 w-1.5 rounded-full {viewUser.deletedAt ? 'bg-orange-400' : 'bg-emerald-400'}"></span>
+                <span class="text-[10px] font-bold {ROLE_BADGE[viewUser.role].textCls}">{ROLE_BADGE[viewUser.role].label}</span>
+              </span>
+            {/if}
+          </div>
+        </div>
+        <div class='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
+          <span class='block text-[10px] font-bold uppercase tracking-wider text-slate-500'>Status</span>
+          <div class='mt-1 flex items-center gap-1.5'>
+            <span class="h-1.5 w-1.5 rounded-full {viewUser.deletedAt ? 'bg-orange-500' : 'bg-emerald-500'}"></span>
+            <span class='font-semibold text-slate-100'>{viewUser.deletedAt ? 'Archived' : 'Active'}</span>
+          </div>
+        </div>
       </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Last Name</span>
-        <span class='font-semibold text-slate-50'>{viewUser.lastName}</span>
+
+      <!-- Mobile sheet controls -->
+      <div class='mt-6 flex md:hidden flex-col gap-2'>
+        {#if !viewUser.deletedAt}
+          <button
+            disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+            onclick={() => startMobileEdit(viewUser!)}
+            title={authStore.user?.id === viewUser.accountId 
+              ? 'You cannot edit your own account here' 
+              : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
+              ? 'Only super admins can edit admin accounts' 
+              : 'Edit'}
+            class='w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+          >
+            Edit User
+          </button>
+          
+          <button
+            onclick={() => startMobileUnlock(viewUser!)}
+            class='w-full flex items-center justify-center gap-2 rounded-xl bg-teal-600 py-3 text-sm font-bold text-white shadow-lg shadow-teal-600/30 hover:bg-teal-500 cursor-pointer'
+          >
+            Unlock Account
+          </button>
+
+          <button
+            disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+            onclick={() => startMobileArchive(viewUser!)}
+            title={authStore.user?.id === viewUser.accountId 
+              ? 'You cannot archive your own account' 
+              : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
+              ? 'Only super admins can archive admin accounts' 
+              : 'Archive'}
+            class='w-full flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-3 text-sm font-bold text-white shadow-lg shadow-orange-600/30 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+          >
+            Archive User
+          </button>
+        {:else}
+          <button
+            disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
+            onclick={() => startMobileRestore(viewUser!)}
+            title={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin') 
+              ? 'Only super admins can restore admin accounts' 
+              : 'Restore'}
+            class='w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+          >
+            Restore User
+          </button>
+        {/if}
+
+        <button
+          disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+          onclick={() => startMobileHardDelete(viewUser!)}
+          title={authStore.user?.id === viewUser.accountId 
+            ? 'You cannot delete your own account' 
+            : (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')) 
+            ? 'Only super admins can delete admin accounts' 
+            : 'Delete Permanently'}
+          class='w-full flex items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-bold text-white shadow-lg shadow-red-600/30 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+        >
+          Delete Permanently
+        </button>
+
+        <a
+          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
+          class='w-full flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 py-3 text-sm font-bold text-sky-400 hover:bg-sky-500/20 transition'
+        >
+          View Audit Trail →
+        </a>
       </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Username</span>
-        <span class='font-semibold text-slate-50'>{viewUser.username ?? '—'}</span>
+
+      <!-- Desktop Audit Trail Link -->
+      <div class='hidden md:block'>
+        <a
+          href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
+          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+        >
+          View Audit Trail →
+        </a>
       </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Email</span>
-        <span class='font-semibold text-slate-50'>{viewUser.email ?? '—'}</span>
-      </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Year Level</span>
-        <span class='font-semibold text-slate-50'>{viewUser.yearLevel ?? '—'}</span>
-      </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Course</span>
-        <span class='font-semibold text-slate-50'>{viewUser.course ?? '—'}</span>
-      </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Role</span>
-        <span class='font-semibold text-slate-50'>{viewUser.role ?? '—'}</span>
-      </div>
-      <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
-        <span class='text-slate-400'>Status</span>
-        <span class='font-semibold text-slate-50'>{viewUser.deletedAt ? 'Archived' : 'Active'}</span>
-      </div>
-      <a
-        href={`/admin/audit-log?targetType=user&targetId=${viewUser.id}`}
-        class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
-      >
-        View Audit Trail →
-      </a>
     </div>
   {/if}
 </Modal>
 
 <!-- Edit Modal -->
-<Modal open={Boolean(editUser)} onclose={() => editUser = null} ariaLabelledby="edit-user-title">
+<Modal open={Boolean(editUser)} onclose={() => editUser = null} ariaLabelledby="edit-user-title" presentation="sheet">
   <div class='mb-4 flex items-center justify-between'>
     <h3 id="edit-user-title" class='text-lg font-bold text-slate-50'>Edit User</h3>
   </div>
@@ -656,7 +800,7 @@
 </Modal>
 
 <!-- Archive Confirm -->
-<Modal open={Boolean(archiveConfirmUser)} onclose={() => archiveConfirmUser = null} ariaLabelledby="archive-user-title">
+<Modal open={Boolean(archiveConfirmUser)} onclose={() => archiveConfirmUser = null} ariaLabelledby="archive-user-title" presentation="sheet">
   <h3 id="archive-user-title" class='mb-2 text-lg font-bold text-slate-50'>Archive User?</h3>
   {#if archiveConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Are you sure you want to archive <span class='font-semibold text-slate-200'>{archiveConfirmUser.firstName} {archiveConfirmUser.lastName}</span>? They will no longer be able to log in.</p>
@@ -675,7 +819,7 @@
 </Modal>
 
 <!-- Restore Confirm -->
-<Modal open={Boolean(restoreConfirmUser)} onclose={() => restoreConfirmUser = null} ariaLabelledby="restore-user-title">
+<Modal open={Boolean(restoreConfirmUser)} onclose={() => restoreConfirmUser = null} ariaLabelledby="restore-user-title" presentation="sheet">
   <h3 id="restore-user-title" class='mb-2 text-lg font-bold text-slate-50'>Restore User?</h3>
   {#if restoreConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Restore <span class='font-semibold text-slate-200'>{restoreConfirmUser.firstName} {restoreConfirmUser.lastName}</span> so they can log in again.</p>
@@ -694,7 +838,7 @@
 </Modal>
 
 <!-- Unlock Confirm -->
-<Modal open={Boolean(unlockConfirmUser)} onclose={() => unlockConfirmUser = null} ariaLabelledby="unlock-user-title">
+<Modal open={Boolean(unlockConfirmUser)} onclose={() => unlockConfirmUser = null} ariaLabelledby="unlock-user-title" presentation="sheet">
   <h3 id="unlock-user-title" class='mb-2 text-lg font-bold text-slate-50'>Unlock User Account?</h3>
   {#if unlockConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Unlock the account for <span class='font-semibold text-slate-200'>{unlockConfirmUser.firstName} {unlockConfirmUser.lastName}</span> to reset their password lockout login attempts.</p>
@@ -713,7 +857,7 @@
 </Modal>
 
 <!-- Hard Delete Confirm -->
-<Modal open={Boolean(hardDeleteConfirmUser)} onclose={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} ariaLabelledby="hard-delete-user-title">
+<Modal open={Boolean(hardDeleteConfirmUser)} onclose={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} ariaLabelledby="hard-delete-user-title" presentation="sheet">
   <h3 id="hard-delete-user-title" class='mb-2 text-lg font-bold text-slate-50'>⚠️ Permanently Delete User?</h3>
   {#if hardDeleteConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>This will permanently delete <span class='font-semibold text-slate-200'>{hardDeleteConfirmUser.firstName} {hardDeleteConfirmUser.lastName}</span> and cannot be undone.</p>
