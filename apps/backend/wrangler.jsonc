@@ -46,7 +46,9 @@
         "not_found_handling": "404-page",
         "run_worker_first": true,
       },
-      "secrets": { "required": [] },
+      "secrets": {
+        "required": ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"],
+      },
       "vars": {
         "NODE_ENV": "test",
         "LOG_LEVEL": "debug",
