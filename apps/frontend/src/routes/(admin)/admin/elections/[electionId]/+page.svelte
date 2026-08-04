@@ -240,7 +240,7 @@
             <button
               type='button'
               onclick={() => isPartyCreateOpen = true}
-              class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
+              class='hidden md:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
               style='background: oklch(0.45 0.15 250); color: oklch(0.98 0.005 250)'
             >
               <Plus size={16} stroke-width={2.5} />
@@ -308,7 +308,7 @@
               <button
                 type='button'
                 onclick={openCreate}
-                class='flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
+                class='hidden md:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
                 style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
               >
                 <Plus size={16} stroke-width={2.5} />
@@ -356,6 +356,31 @@
       {/if}
     </div>
   </div>
+
+  <!-- Floating Action Buttons for Mobile/Non-Desktop Screens -->
+  {#if election.status === 'draft' && activeTab === 'parties'}
+    <button
+      type='button'
+      onclick={() => isPartyCreateOpen = true}
+      class='md:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 cursor-pointer'
+      style='background: oklch(0.45 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.45 0.15 250 / 0.4)'
+      aria-label='Add Party List'
+    >
+      <Plus size={24} stroke-width={2.5} />
+    </button>
+  {/if}
+
+  {#if election.status === 'draft' && activeTab === 'positions'}
+    <button
+      type='button'
+      onclick={openCreate}
+      class='md:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 cursor-pointer'
+      style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.4)'
+      aria-label='Add Position'
+    >
+      <Plus size={24} stroke-width={2.5} />
+    </button>
+  {/if}
 </div>
 
 {#if isCreateOpen}
