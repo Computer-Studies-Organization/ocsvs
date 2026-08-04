@@ -69,7 +69,7 @@ describe("admin election party controls", () => {
 
   it("renders party management controls for draft elections", () => {
     const { body } = render(Page, {
-      props: { data: { election, positions: [], partyLists: [party] } },
+      props: { data: { election, positions: [], partyLists: [party], candidates: [] } },
     });
 
     expect(body).toContain("Add Party List");
@@ -85,6 +85,7 @@ describe("admin election party controls", () => {
             election: { ...election, status },
             positions: [],
             partyLists: [party],
+            candidates: [],
           },
         },
       });

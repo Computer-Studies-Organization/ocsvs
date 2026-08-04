@@ -17,5 +17,9 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
 
   const partyLists = await listPartyLists(params.electionId, { fetch });
 
-  return { election, positions: positions ?? [], partyLists };
+  const candidates = await appCache
+    .get("candidates", { electionId: params.electionId, includeInactive: true })
+    .fetch(false, { fetch });
+
+  return { election, positions: positions ?? [], partyLists, candidates: candidates ?? [] };
 };

@@ -5,9 +5,10 @@
   import Modal from './modal.svelte'
   import { addToast } from '$lib/stores/toast.svelte'
 
-  let { election, onsuccess = () => {} }: {
+  let { election, onsuccess = () => {}, class: className = '' }: {
     election: TElection
     onsuccess?: () => void
+    class?: string
   } = $props()
 
   let open = $state(false)
@@ -17,6 +18,12 @@
 
   const targets: TElectionStatus[] = ['open', 'closed', 'archived', 'draft']
   const allowed = $derived(targets.filter(t => canTransition(election.status, t)))
+  const labels: Record<TElectionStatus, string> = {
+    draft: 'Draft',
+    open: 'Open',
+    closed: 'Closed',
+    archived: 'Archived'
+  }
 
   function openConfirm(target: TElectionStatus) {
     activeTarget = target
@@ -59,18 +66,18 @@
     type='button'
     onclick={() => openConfirm(t)}
     disabled={busy}
-    class='px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer'
+    class='px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer {className}'
     style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
   >
-    Transition to {t}
+    Transition to {labels[t]}
   </button>
 {/each}
 
 <Modal open={open} onclose={() => (open = false)} presentation="sheet">
   <h2 class='text-xl font-black mb-2' style='color: oklch(0.95 0.008 250)'>Confirm transition</h2>
   <p class='text-sm mb-4' style='color: oklch(0.70 0.015 250)'>
-    Change status from <strong style='color: oklch(0.95 0.008 250)'>{election.status}</strong>
-    to <strong style='color: oklch(0.95 0.008 250)'>{activeTarget}</strong>?
+    Change status from <strong style='color: oklch(0.95 0.008 250)'>{labels[election.status]}</strong>
+    to <strong style='color: oklch(0.95 0.008 250)'>{activeTarget ? labels[activeTarget] : ''}</strong>?
   </p>
   {#if error}
     <p class='text-sm mb-4 px-3 py-2 rounded-lg' style='background: oklch(0.40 0.15 25); color: oklch(0.98 0.005 250)'>

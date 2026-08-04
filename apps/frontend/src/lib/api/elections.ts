@@ -40,7 +40,12 @@ export async function createElection(body: {
 
 export async function updateElection(
   id: string,
-  body: Partial<{ name: string; description: string; opensAt: number; closesAt: number }>,
+  body: Partial<{
+    name: string;
+    description: string | null;
+    opensAt: number | null;
+    closesAt: number | null;
+  }>,
 ): Promise<TElection> {
   return apiFetch<TElection>(`/elections/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 }
