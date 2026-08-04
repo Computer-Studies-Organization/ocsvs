@@ -1,6 +1,5 @@
 <script lang='ts'>
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
-  import { isLatestAuditRequest, isOutsideMoreMenu } from '$lib/adminUsers'
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
   import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
@@ -89,6 +88,7 @@
   let isActionLoading = $state(false)
   let actionMsg = $state('')
   let editTimeoutId: any
+  let showSortMenu = $state(false)
 
   // Add User State
   let showAddModal = $state(false)
@@ -441,13 +441,13 @@
     auditError = ''
     try {
       const res = await fetchAuditLog({ targetType: 'user', targetId: userId, limit: 10 })
-      if (!isLatestAuditRequest(requestId, auditRequestId)) return
+      if (requestId !== auditRequestId) return
       userAuditLogs = res.items
     } catch (e: any) {
-      if (!isLatestAuditRequest(requestId, auditRequestId)) return
+      if (requestId !== auditRequestId) return
       auditError = e.message || 'Failed to load activity logs'
     } finally {
-      if (isLatestAuditRequest(requestId, auditRequestId)) {
+      if (requestId === auditRequestId) {
         isAuditLoading = false
       }
     }
@@ -466,8 +466,20 @@
     if (!showMoreMenu) return
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (isOutsideMoreMenu(target)) {
+      if (!target?.closest('.more-menu-container')) {
         showMoreMenu = false
+      }
+    }
+    window.addEventListener('click', handleOutsideClick, true)
+    return () => window.removeEventListener('click', handleOutsideClick, true)
+  })
+
+  $effect(() => {
+    if (!showSortMenu) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target?.closest('.sort-menu-container')) {
+        showSortMenu = false
       }
     }
     window.addEventListener('click', handleOutsideClick, true)
@@ -572,7 +584,7 @@
     </header>
 
     <!-- Search & Filters -->
-    <div class='mb-4 flex gap-3'>
+    <div class='mb-4 flex flex-col gap-3 sm:flex-row'>
       <div class='relative flex-1 min-w-0'>
         <Search size={16} class='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500' />
         <input
@@ -583,11 +595,56 @@
           class='w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
         />
       </div>
-      <label class='flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 shrink-0 whitespace-nowrap'>
-        <input type='checkbox' checked={includeDeleted} onchange={(e) => toggleArchived(e.currentTarget.checked)} class='h-4 w-4 accent-amber-400' />
-        <span class='hidden sm:inline'>Show archived</span>
-        <span class='inline sm:hidden'>Archived</span>
-      </label>
+
+      <div class='flex gap-3 shrink-0'>
+        <!-- Mobile Sort Dropdown -->
+        <div class='relative md:hidden sort-menu-container flex-1 sm:flex-none'>
+          <button
+            type='button'
+            onclick={() => showSortMenu = !showSortMenu}
+            class='w-full flex items-center justify-between gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 cursor-pointer'
+          >
+            <div class='flex items-center gap-1.5 min-w-0'>
+              <ArrowUpDown size={14} class='text-slate-400 shrink-0' />
+              <span class='truncate text-slate-400'>Sort: <span class='text-slate-100'>{SORTABLE_LABELS[sortKey]}</span></span>
+            </div>
+            <span class='text-[10px] uppercase font-bold text-sky-400 shrink-0'>{sortAsc ? 'Asc' : 'Desc'}</span>
+          </button>
+
+          {#if showSortMenu}
+            <div class='absolute right-0 top-full mt-2 z-30 w-52 rounded-xl border border-slate-800 bg-slate-950 p-1.5 shadow-xl flex flex-col gap-1'>
+              <div class='px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-900 mb-1'>Sort Field</div>
+              {#each SORTABLE_KEYS as key (key)}
+                <button
+                  type='button'
+                  onclick={() => {
+                    if (sortKey === key) {
+                      sortAsc = !sortAsc
+                    } else {
+                      sortKey = key
+                      sortAsc = true
+                    }
+                    showSortMenu = false
+                    pageIndex = 0
+                  }}
+                  class='w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition cursor-pointer {sortKey === key ? 'bg-sky-500/10 text-sky-300' : 'text-slate-200 hover:bg-slate-900'}'
+                >
+                  <span>{SORTABLE_LABELS[key]}</span>
+                  {#if sortKey === key}
+                    <span class='text-[10px] uppercase font-bold text-sky-400'>{sortAsc ? 'Asc' : 'Desc'}</span>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <label class='flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 flex-1 sm:flex-none shrink-0 whitespace-nowrap'>
+          <input type='checkbox' checked={includeDeleted} onchange={(e) => toggleArchived(e.currentTarget.checked)} class='h-4 w-4 accent-amber-400' />
+          <span class='hidden sm:inline'>Show archived</span>
+          <span class='inline sm:hidden'>Archived</span>
+        </label>
+      </div>
     </div>
 
     {#if actionMsg}

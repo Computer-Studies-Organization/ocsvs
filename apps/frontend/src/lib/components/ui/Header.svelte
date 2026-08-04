@@ -2,7 +2,7 @@
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { authStore } from '$lib/stores/auth.svelte'
-  import { clearAuthCache } from '$lib/auth-cache'
+  import { appCache } from '$lib/cache'
   import { logout } from '$lib/api/auth'
   import { LogOut, Settings, UserCheck, Menu, X } from 'lucide-svelte'
   import { UserRole } from '$lib/types'
@@ -25,7 +25,7 @@
       // ignore API failure, proceed with local logout
     }
     finally {
-      clearAuthCache()
+      appCache.invalidate()
       authStore.set({ user: null, loading: false })
       goto('/auth', { replaceState: true })
     }

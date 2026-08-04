@@ -5,7 +5,7 @@
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
   import { authStore } from '$lib/stores/auth.svelte'
-  import { clearAuthCache } from '$lib/auth-cache'
+  import { appCache } from '$lib/cache'
   import { onMount } from 'svelte'
   import {
     ArrowRight,
@@ -103,7 +103,7 @@
         password: loginData.password,
         turnstileToken,
       })
-      clearAuthCache()
+      appCache.invalidate()
       authStore.set({ user: userData, loading: false })
       if (userData.user.role === 'admin' || userData.user.role === 'super_admin') {
         goto('/admin-dashboard', { replaceState: true })

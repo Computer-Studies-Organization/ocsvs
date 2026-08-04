@@ -5,7 +5,7 @@
   import { invalidate } from '$app/navigation'
   import { changePassword, updateMyProfile } from '$lib/api/profile'
   import { authStore } from '$lib/stores/auth.svelte'
-  import { clearAuthCache } from '$lib/auth-cache'
+  import { appCache } from '$lib/cache'
   import { UserRole } from '$lib/types'
   import { ArrowLeft, Eye, EyeOff, KeyRound, Loader, Save } from 'lucide-svelte'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
@@ -91,7 +91,7 @@
 
       if (!result.sessionRotated) {
         addToast('info', result.message)
-        clearAuthCache()
+        appCache.invalidate()
         authStore.set({ user: null, loading: false })
         goto('/auth', { replaceState: true })
         return

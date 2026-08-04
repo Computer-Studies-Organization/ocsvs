@@ -1,6 +1,12 @@
 import type { TVoteResultsResponse, TVoteStatus } from "$lib/types";
-import type { VoteCountResult } from "$lib/vote-count-utils";
 import { apiFetch } from "./client";
+
+export interface VoteCountResult {
+  voteCount: number;
+  candidateId: string;
+  candidateName: string;
+  position: string;
+}
 
 export async function submitVotes(candidateIds: string[]): Promise<{ message: string }> {
   const votes = candidateIds.map((candidateId) => ({ candidateId }));

@@ -1,5 +1,3 @@
-import type { ZodSchema } from "@/lib/types/zod-types";
-
 import { z } from "@hono/zod-openapi";
 
 /**
@@ -41,7 +39,7 @@ import { z } from "@hono/zod-openapi";
  * }
  * ```
  */
-function createErrorSchema<T extends ZodSchema>(schema: T) {
+function createErrorSchema<T extends z.ZodTypeAny>(schema: T) {
   const { error: _error } = schema.safeParse(
     schema._def.typeName === z.ZodFirstPartyTypeKind.ZodArray ? [] : {},
   );
