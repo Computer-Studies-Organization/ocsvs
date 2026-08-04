@@ -75,7 +75,7 @@
       <button
         type='button'
         onclick={openCreate}
-        class='flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
+        class='hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg cursor-pointer'
         style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
       >
         <Plus size={18} stroke-width={2.5} />
@@ -123,10 +123,21 @@
       </div>
     {/if}
   </div>
+
+  <!-- Floating Action Button for Mobile/Non-Desktop Screens -->
+  <button
+    type='button'
+    onclick={openCreate}
+    class='md:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 cursor-pointer'
+    style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.4)'
+    aria-label='New Election'
+  >
+    <Plus size={24} stroke-width={2.5} />
+  </button>
 </div>
 
 <!-- Create Election Modal -->
-<Modal open={isCreateOpen} onclose={closeCreate}>
+<Modal open={isCreateOpen} onclose={closeCreate} presentation="sheet">
   <h2 class='text-xl font-black mb-4' style='color: oklch(0.95 0.008 250)'>Create election</h2>
 
   <form onsubmit={submitCreate} class='space-y-5'>
