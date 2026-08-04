@@ -293,7 +293,7 @@
 
 <!-- Delete confirmation -->
 {#if canModify}
-<Modal open={isDeleteOpen} onclose={closeDelete}>
+<Modal open={isDeleteOpen} onclose={closeDelete} presentation="sheet">
   <h2 class='text-xl font-black mb-2' style='color: oklch(0.95 0.008 250)'>Delete candidate?</h2>
   <p class='text-sm mb-4' style='color: oklch(0.70 0.015 250)'>
     This will soft-delete <strong style='color: oklch(0.95 0.008 250)'>{candidate?.fullName ?? ''}</strong>. The candidate will be marked inactive.

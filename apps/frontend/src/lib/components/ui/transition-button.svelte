@@ -66,7 +66,7 @@
   </button>
 {/each}
 
-<Modal open={open} onclose={() => (open = false)}>
+<Modal open={open} onclose={() => (open = false)} presentation="sheet">
   <h2 class='text-xl font-black mb-2' style='color: oklch(0.95 0.008 250)'>Confirm transition</h2>
   <p class='text-sm mb-4' style='color: oklch(0.70 0.015 250)'>
     Change status from <strong style='color: oklch(0.95 0.008 250)'>{election.status}</strong>

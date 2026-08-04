@@ -87,7 +87,7 @@
   }
 </script>
 
-<Modal open={true} onclose={handleClose}>
+<Modal open={true} onclose={handleClose} presentation="sheet">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xl font-black" style="color: oklch(0.95 0.008 250)">Edit Party List</h2>
     <button

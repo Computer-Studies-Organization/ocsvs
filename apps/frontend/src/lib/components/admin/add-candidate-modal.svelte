@@ -103,7 +103,7 @@
   }
 </script>
 
-<Modal open={true} onclose={handleClose}>
+<Modal open={true} onclose={handleClose} presentation="sheet">
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add candidate</h2>
 
   {#if usersError}

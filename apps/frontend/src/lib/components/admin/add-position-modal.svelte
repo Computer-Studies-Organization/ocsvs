@@ -63,7 +63,7 @@
   }
 </script>
 
-<Modal open={true} onclose={handleClose}>
+<Modal open={true} onclose={handleClose} presentation="sheet">
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add position</h2>
 
   <form onsubmit={submitCreate} class="space-y-5">
