@@ -149,7 +149,7 @@ src/
 │   ├── security-headers.ts   # nosniff, framing, Referrer-Policy, Permissions-Policy, report-only CSP, HSTS
 │   ├── pino-logger.ts        # Request-id-aware Pino logger (primary logger for handlers)
 │   ├── custom-logger.ts      # Lightweight timestamped console.warn logger (fallback/alternative)
-│   └── utils/                # json-content, create-error-schema, id-params-validator, on-error, not-found, serve-emoji-favicon
+│   └── utils/                # json-content, create-error-schema, on-error, not-found, serve-emoji-favicon
 ├── openapi/
 │   ├── default-hook.ts       # Zod validation error hook (returns 422)
 │   ├── http-status-codes.ts  # Named HTTP status constants (OK=200, CREATED=201, etc.)

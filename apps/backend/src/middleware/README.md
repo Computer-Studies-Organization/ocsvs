@@ -12,11 +12,10 @@ middleware/
 ├── pino-logger.ts          # Structured logging with Pino
 └── utils/                  # Utility functions for middleware
     ├── create-error-schema.ts    # OpenAPI error schema generator
-    ├── id-params-validator.ts    # URL parameter validation
-    ├── json-content.ts          # OpenAPI JSON content helpers
-    ├── not-found.ts            # 404 error handler
-    ├── on-error.ts             # Global error handler
-    └── serve-emoji-favicon.ts   # Emoji favicon middleware
+    ├── json-content.ts           # OpenAPI JSON content helpers
+    ├── not-found.ts              # 404 error handler
+    ├── on-error.ts               # Global error handler
+    └── serve-emoji-favicon.ts    # Emoji favicon middleware
 ```
 
 ## Core Middleware
@@ -114,20 +113,6 @@ const createRouteDefinition = createRoute({
 });
 ```
 
-#### ID Parameter Validator (`id-params-validator.ts`)
-
-Validates numeric ID parameters in URL paths:
-
-```typescript
-import IdParamsSchema from "@/middleware/utils/id-params-validator";
-
-export const getItem = createRoute({
-  path: "/items/{id}",
-  request: { params: IdParamsSchema },
-  // ...
-});
-```
-
 ### Error Handling
 
 #### Global Error Handler (`on-error.ts`)
@@ -174,21 +159,23 @@ const app = createRouter().use(logger()).notFound(notFound).onError(onError);
 
 ```typescript
 import { createRoute } from "@hono/zod-openapi";
+import { z } from "@hono/zod-openapi";
 import createErrorSchema from "@/middleware/utils/create-error-schema";
-import IdParamsSchema from "@/middleware/utils/id-params-validator";
 import jsonContent from "@/middleware/utils/json-content";
+
+const itemParams = z.object({ id: z.string() });
 
 export const getItem = createRoute({
   path: "/items/{id}",
   method: "get",
   request: {
-    params: IdParamsSchema,
+    params: itemParams,
   },
   responses: {
     [httpStatusCodes.OK]: jsonContent(itemSchema, "Item details"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(errorSchema, "Item not found"),
     [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-      createErrorSchema(IdParamsSchema),
+      createErrorSchema(itemParams),
       "Invalid ID parameter",
     ),
   },
@@ -204,8 +191,6 @@ export const getItem = createRoute({
 3. **Logging**: Prefer the Pino logger for structured logging in production applications. Use the custom logger for simple development scenarios.
 
 4. **OpenAPI Documentation**: Use the JSON content utilities to maintain consistent OpenAPI schema definitions.
-
-5. **Parameter Validation**: Use `IdParamsSchema` for numeric ID parameters and create similar schemas for other parameter types.
 
 ## Development vs Production
 
