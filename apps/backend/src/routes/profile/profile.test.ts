@@ -140,7 +140,7 @@ describe("profile Routes", () => {
 
   it("should update user profile", async () => {
     mockFindByAccountId.mockResolvedValue({ id: "user-record-id" });
-    mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
+    mockValidateProfanity.mockReturnValue(null);
     mockUsernameExists.mockResolvedValue(false);
     mockUpdateAccount.mockResolvedValue(undefined);
     mockUpdateUser.mockResolvedValue(undefined);
@@ -207,10 +207,7 @@ describe("profile Routes", () => {
   // Error path tests
 
   it("should reject profile update with profanity in firstName", async () => {
-    mockValidateProfanity.mockReturnValue({
-      isClean: false,
-      message: "Profanity detected in First name",
-    });
+    mockValidateProfanity.mockReturnValue("Profanity detected in First name");
 
     const res = await router.request("/me/profile", {
       method: "PATCH",
@@ -228,8 +225,8 @@ describe("profile Routes", () => {
 
   it("should reject profile update with profanity in username", async () => {
     mockValidateProfanity
-      .mockReturnValueOnce({ isClean: true, message: null })
-      .mockReturnValueOnce({ isClean: false, message: "Profanity detected in Username" });
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce("Profanity detected in Username");
 
     const res = await router.request("/me/profile", {
       method: "PATCH",
@@ -247,7 +244,7 @@ describe("profile Routes", () => {
   });
 
   it("should reject profile update when username already exists", async () => {
-    mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
+    mockValidateProfanity.mockReturnValue(null);
     mockUsernameExists.mockResolvedValue(true);
 
     const res = await router.request("/me/profile", {
@@ -269,7 +266,7 @@ describe("profile Routes", () => {
   // unique index rejects the write. The handler must map that unique-constraint
   // error to a clean 409 instead of surfacing a 500.
   it("should return 409 when the username write hits a unique constraint (TOCTOU fallback)", async () => {
-    mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
+    mockValidateProfanity.mockReturnValue(null);
     mockFindByAccountId.mockResolvedValue({ id: "user-record-id" });
     // In-tx uniqueness check passes (race: someone else claimed it microseconds ago)
     mockUsernameExists.mockResolvedValue(false);
@@ -290,7 +287,7 @@ describe("profile Routes", () => {
   });
 
   it("should reject profile update when user record not found", async () => {
-    mockValidateProfanity.mockReturnValue({ isClean: true, message: null });
+    mockValidateProfanity.mockReturnValue(null);
     mockUsernameExists.mockResolvedValue(false);
     mockFindByAccountId.mockResolvedValue(null);
 

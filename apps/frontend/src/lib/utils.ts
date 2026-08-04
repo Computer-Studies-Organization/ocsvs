@@ -4,5 +4,3 @@ export function formatTimestamp(unixSeconds: number | null | undefined): string 
   }
   return new Date(unixSeconds * 1000).toLocaleString();
 }
-
-export const formatDate = formatTimestamp;

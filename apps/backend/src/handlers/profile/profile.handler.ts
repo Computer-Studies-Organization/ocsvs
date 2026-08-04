@@ -40,23 +40,23 @@ export const updateMyProfile: AppRouteHandler<typeof updateMyProfileRoute> = asy
 
   // Validate profanity in text fields
   if (updateData.firstName) {
-    const validation = validateProfanity(updateData.firstName, "First name");
-    if (!validation.isClean) {
-      return c.json({ message: validation.message! }, httpStatusCodes.BAD_REQUEST);
+    const message = validateProfanity(updateData.firstName, "First name");
+    if (message) {
+      return c.json({ message }, httpStatusCodes.BAD_REQUEST);
     }
   }
 
   if (updateData.lastName) {
-    const validation = validateProfanity(updateData.lastName, "Last name");
-    if (!validation.isClean) {
-      return c.json({ message: validation.message! }, httpStatusCodes.BAD_REQUEST);
+    const message = validateProfanity(updateData.lastName, "Last name");
+    if (message) {
+      return c.json({ message }, httpStatusCodes.BAD_REQUEST);
     }
   }
 
   if (updateData.username) {
-    const validation = validateProfanity(updateData.username, "Username");
-    if (!validation.isClean) {
-      return c.json({ message: validation.message! }, httpStatusCodes.BAD_REQUEST);
+    const message = validateProfanity(updateData.username, "Username");
+    if (message) {
+      return c.json({ message }, httpStatusCodes.BAD_REQUEST);
     }
   }
 

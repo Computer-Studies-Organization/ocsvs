@@ -12,7 +12,7 @@
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TElectionStatus } from '$lib/types'
   import { appCache } from '$lib/cache'
-  import { formatDate } from '$lib/utils'
+  import { formatTimestamp } from '$lib/utils'
 
   let { data } = $props()
   const elections = $derived(data.elections)
@@ -109,12 +109,12 @@
             <div class='space-y-1'>
               {#if election.opensAt}
                 <p class='text-xs' style='color: oklch(0.60 0.015 250)'>
-                  Opens: {formatDate(election.opensAt)}
+                  Opens: {formatTimestamp(election.opensAt)}
                 </p>
               {/if}
               {#if election.closesAt}
                 <p class='text-xs' style='color: oklch(0.60 0.015 250)'>
-                  Closes: {formatDate(election.closesAt)}
+                  Closes: {formatTimestamp(election.closesAt)}
                 </p>
               {/if}
             </div>

@@ -209,9 +209,9 @@ export class UserLifecycleCoordinator {
       { text: username, name: "username" },
     ];
     for (const f of fields) {
-      const res = validateProfanity(f.text, f.name);
-      if (!res.isClean) {
-        throw new UserLifecycleError("PROFANITY_DETECTED", 400, res.message);
+      const message = validateProfanity(f.text, f.name);
+      if (message) {
+        throw new UserLifecycleError("PROFANITY_DETECTED", 400, message);
       }
     }
 
@@ -346,12 +346,13 @@ export class UserLifecycleCoordinator {
       existingStudentIdsSet.add(record.studentId);
 
       // Profanity check on names
-      const profNameRes = validateProfanity(record.firstName, "firstName");
-      const profLastRes = validateProfanity(record.lastName, "lastName");
-      if (!profNameRes.isClean || !profLastRes.isClean) {
+      const profNameMessage = validateProfanity(record.firstName, "firstName");
+      const profLastNameMessage = validateProfanity(record.lastName, "lastName");
+      const profanityMessage = profNameMessage ?? profLastNameMessage;
+      if (profanityMessage) {
         skipped.push({
           studentId: record.studentId,
-          reason: profNameRes.message || profLastRes.message || "Profanity detected in name",
+          reason: profanityMessage,
         });
         continue;
       }
@@ -456,9 +457,9 @@ export class UserLifecycleCoordinator {
 
         // 4. Validate inputs & uniqueness
         if (input.username) {
-          const profRes = validateProfanity(input.username, "username");
-          if (!profRes.isClean) {
-            throw new UserLifecycleError("PROFANITY_DETECTED", 400, profRes.message);
+          const message = validateProfanity(input.username, "username");
+          if (message) {
+            throw new UserLifecycleError("PROFANITY_DETECTED", 400, message);
           }
 
           const exists = await voterAccountStore.usernameExists(tx, input.username, user.accountId);
@@ -472,16 +473,16 @@ export class UserLifecycleCoordinator {
         }
 
         if (input.firstName) {
-          const profRes = validateProfanity(input.firstName, "firstName");
-          if (!profRes.isClean) {
-            throw new UserLifecycleError("PROFANITY_DETECTED", 400, profRes.message);
+          const message = validateProfanity(input.firstName, "firstName");
+          if (message) {
+            throw new UserLifecycleError("PROFANITY_DETECTED", 400, message);
           }
         }
 
         if (input.lastName) {
-          const profRes = validateProfanity(input.lastName, "lastName");
-          if (!profRes.isClean) {
-            throw new UserLifecycleError("PROFANITY_DETECTED", 400, profRes.message);
+          const message = validateProfanity(input.lastName, "lastName");
+          if (message) {
+            throw new UserLifecycleError("PROFANITY_DETECTED", 400, message);
           }
         }
 

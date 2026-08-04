@@ -380,7 +380,6 @@ This is the primary endpoint the frontend uses to determine what to display on t
   - Tests build a `createMockDb()` builder (chainable `select/insert/update/delete`) and assert via `expect(mockDb.insert).toHaveBeenCalledWith(...)`.
   - Hono router is invoked directly with `router.request('/path', { method, headers, body })` (no real server).
 - **Lifecycle coordinators** have their own test files (e.g. `candidate-lifecycle-coordinator.test.ts`) that test transaction behavior with mocked DB.
-- **`FakeBallotCaster`** in `ballot-caster.ts` can be used to test voting flows without hitting the real casting logic.
 - **Always run the test suite after schema/handler changes** — DB-level invariants in `schema-names.test.ts` catch schema/API drift.
 
 ### Things to be careful about

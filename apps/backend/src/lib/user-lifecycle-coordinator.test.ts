@@ -162,7 +162,7 @@ const coordinator = new UserLifecycleCoordinator();
 describe("UserLifecycleCoordinator Unit Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockValidateProfanity.mockReturnValue({ isClean: true });
+    mockValidateProfanity.mockReturnValue(null);
     mockIsPasswordHashSupported.mockReturnValue(true);
   });
 
@@ -437,7 +437,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
     });
 
     it("throws PROFANITY_DETECTED if validation fails", async () => {
-      mockValidateProfanity.mockReturnValueOnce({ isClean: false, message: "Profanity!" });
+      mockValidateProfanity.mockReturnValueOnce("Profanity!");
 
       await expect(
         coordinator.register(mockDb, {
@@ -672,6 +672,36 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(result.imported).toHaveLength(2);
       expect(result.skipped).toHaveLength(0);
       expect(mockDbInsert).toHaveBeenCalledTimes(2); // exactly 1 for accounts, 1 for users
+    });
+
+    it("skips records with profanity and preserves the validation message", async () => {
+      mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
+      mockDbAll.mockResolvedValueOnce([]); // existing usernames check
+      mockValidateProfanity.mockReturnValueOnce("firstName contains inappropriate language");
+      mockValidateProfanity.mockReturnValueOnce(null);
+
+      const result = await coordinator.bulkImport(
+        mockDb,
+        [
+          {
+            studentId: "stud-1",
+            firstName: "Bad",
+            lastName: "Name",
+            course: "BSCS",
+            yearLevel: "1st Year",
+          },
+        ],
+        actor,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.skipped).toEqual([
+        {
+          studentId: "stud-1",
+          reason: "firstName contains inappropriate language",
+        },
+      ]);
+      expect(mockDbInsert).not.toHaveBeenCalled();
     });
   });
 });
