@@ -1449,7 +1449,7 @@
 </Modal>
 
 <!-- Add User Modal -->
-<Modal open={showAddModal} onclose={closeAddModal} ariaLabelledby="add-user-title">
+<Modal open={showAddModal} onclose={closeAddModal} ariaLabelledby="add-user-title" presentation="sheet">
   <div class='mb-4 flex items-center justify-between'>
     <h3 id="add-user-title" class='text-lg font-bold text-slate-50'>Add New User</h3>
   </div>
