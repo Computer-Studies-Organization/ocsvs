@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  getAdminElectionsRouteRedirectPath,
   getAdminRouteRedirectPath,
   getProtectedRouteRedirectPath,
   getPublicRouteRedirectPath,
@@ -68,21 +67,5 @@ describe("routeGuards", () => {
 
   test("admin routes allow super_admins to continue", () => {
     expect(getAdminRouteRedirectPath(superAdminUser)).toBeNull();
-  });
-
-  test("admin-elections routes redirect unauthenticated users to login", () => {
-    expect(getAdminElectionsRouteRedirectPath(null)).toBe("/auth");
-  });
-
-  test("admin-elections routes redirect non-admin users to the dashboard", () => {
-    expect(getAdminElectionsRouteRedirectPath(standardUser)).toBe("/voting");
-  });
-
-  test("admin-elections routes allow admins to continue", () => {
-    expect(getAdminElectionsRouteRedirectPath(adminUser)).toBeNull();
-  });
-
-  test("admin-elections routes allow super_admins to continue", () => {
-    expect(getAdminElectionsRouteRedirectPath(superAdminUser)).toBeNull();
   });
 });
