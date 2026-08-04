@@ -13,6 +13,7 @@
     Eye,
     EyeOff,
     Loader,
+    Plus,
     RotateCcw,
     Search,
     SlidersHorizontal,
@@ -652,7 +653,7 @@
         <h1 class='text-2xl font-black text-slate-50 sm:text-3xl'>User Management</h1>
         <p class='mt-1 text-xs text-slate-500'>Manage registered voters and administrators</p>
       </div>
-      <div>
+      <div class='hidden md:block'>
         <button
           onclick={() => showAddModal = true}
           class='flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
@@ -1033,6 +1034,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating Action Button for Mobile/Non-Desktop Screens -->
+  <button
+    onclick={() => showAddModal = true}
+    class='md:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg shadow-sky-500/40 hover:bg-sky-600 transition active:scale-95 cursor-pointer'
+    aria-label='Add User'
+  >
+    <Plus size={24} stroke-width={2.5} />
+  </button>
 </div>
 
 <!-- View Modal -->
