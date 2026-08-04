@@ -47,7 +47,7 @@
     const result = await usersEntry.fetch()
 
     if (result) {
-      users = result
+      users = result.data
     } else {
       usersError = usersEntry.error ?? 'Failed to load users'
       users = []

@@ -18,7 +18,7 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
   const { db } = createDb(c);
-  const { page, limit, search, yearLevel, course, includeDeleted } = c.req.valid("query");
+  const { page, limit, search, yearLevel, course, role, includeDeleted } = c.req.valid("query");
 
   const result = await voterAccountStore.listForAdmin(db, {
     page,
@@ -26,6 +26,7 @@ export const listUsers: AppRouteHandler<typeof listUsersRoute> = async (c) => {
     search,
     yearLevel,
     course,
+    role,
     includeDeleted,
   });
 

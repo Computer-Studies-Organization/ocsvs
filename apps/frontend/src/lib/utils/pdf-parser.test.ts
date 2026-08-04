@@ -213,22 +213,22 @@ describe("pdf-parser parseLines", () => {
     });
   });
 
-  it("should not match substring 'act' inside student names (e.g. ACTION, JOHN)", () => {
+  it("should not match substring 'wadt' inside student names (e.g. WADSWORTH, JOHN)", () => {
     const lines = [
       "ACLC College",
-      "C23-01-0095-ACT301",
-      "ACTION, JOHN",
-      "ACT 2ND YEAR",
+      "C23-01-0095-WADT301",
+      "WADSWORTH, JOHN",
+      "WADT 2ND YEAR",
       "Showing 1 to 1 of 1 entries",
     ];
 
     const result = parseLines(lines);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      studentId: "C23-01-0095-ACT301",
-      lastName: "ACTION",
+      studentId: "C23-01-0095-WADT301",
+      lastName: "WADSWORTH",
       firstName: "JOHN",
-      course: "ACT",
+      course: "WADT",
       yearLevel: "2nd Year",
       hasParseError: false,
       parseErrorMessage: undefined,

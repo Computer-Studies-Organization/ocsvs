@@ -1,7 +1,7 @@
 export const YEAR_LEVEL_VALUES = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
 export type TYearLevel = (typeof YEAR_LEVEL_VALUES)[number];
 
-export const COURSE_VALUES = ["BSCS", "BSIT"] as const;
+export const COURSE_VALUES = ["BSCS", "BSIT", "WADT"] as const;
 export type TCourse = (typeof COURSE_VALUES)[number];
 
 export enum UserRole {

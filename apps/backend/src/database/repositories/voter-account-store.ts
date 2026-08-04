@@ -352,6 +352,7 @@ export const voterAccountStore = {
       search?: string;
       yearLevel?: string;
       course?: string;
+      role?: string;
       includeDeleted?: boolean;
     } = {},
   ): Promise<AdminListResult> {
@@ -382,6 +383,10 @@ export const voterAccountStore = {
 
     if (opts.course) {
       conditions.push(eq(users.course, opts.course));
+    }
+
+    if (opts.role) {
+      conditions.push(eq(accounts.role, opts.role));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

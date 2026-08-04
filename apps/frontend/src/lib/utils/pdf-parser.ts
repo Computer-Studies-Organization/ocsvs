@@ -76,7 +76,7 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
           break;
         }
 
-        if (/\b(bscs|bsit|act)\b/i.test(nextLine)) {
+        if (/\b(bscs|bsit|wadt)\b/i.test(nextLine)) {
           courseInfoLine = nextLine;
           break;
         } else {
@@ -89,7 +89,7 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
       let courseIndex = -1;
       let detectedCourse = "BSCS";
 
-      const match = /\b(bscs|bsit|act)\b/i.exec(courseInfoLine);
+      const match = /\b(bscs|bsit|wadt)\b/i.exec(courseInfoLine);
       if (match) {
         courseIndex = match.index;
         detectedCourse = match[1].toUpperCase();

@@ -30,7 +30,7 @@
     parseErrorMessage?: string;
   }
 
-  const COURSES = ["BSCS", "BSIT", "ACT"];
+  const COURSES = ["BSCS", "BSIT", "WADT"];
   const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
   // States
@@ -368,7 +368,7 @@
             </h4>
             <ul class="text-xs text-slate-400 space-y-2 list-disc list-inside">
               <li>Expected format contains student numbers (e.g. <code>C23-01-095</code>).</li>
-              <li>Expected courses: <code>BSCS</code>, <code>BSIT</code>, or <code>ACT</code>.</li>
+              <li>Expected courses: <code>BSCS</code>, <code>BSIT</code>, or <code>WADT</code>.</li>
               <li>Expected year levels: <code>1ST</code>, <code>2ND</code>, <code>3RD</code>, or <code>4TH</code>.</li>
             </ul>
           </div>

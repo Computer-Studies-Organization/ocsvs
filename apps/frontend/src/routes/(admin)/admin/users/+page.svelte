@@ -5,6 +5,7 @@
   import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
+  import { slide } from 'svelte/transition'
   import {
     Archive,
     ArrowUpDown,
@@ -14,6 +15,7 @@
     Loader,
     RotateCcw,
     Search,
+    SlidersHorizontal,
     Trash2,
     Unlock,
     X,
@@ -29,6 +31,15 @@
     firstName: 'First Name',
     lastName: 'Last Name',
     username: 'Username',
+    yearLevel: 'Year',
+    course: 'Course',
+  }
+
+  const SORTABLE_LABELS_COMPACT: Record<SortableKey, string> = {
+    studentId: 'ID',
+    firstName: 'First',
+    lastName: 'Last',
+    username: 'User',
     yearLevel: 'Year',
     course: 'Course',
   }
@@ -63,15 +74,19 @@
   }
 
   let { data } = $props()
-  const users = $derived<TUsersData[]>(data.users)
+  const usersResponse = $derived(data.usersResponse)
+  const users = $derived(usersResponse.data)
+  const total = $derived(usersResponse.meta.total)
+  const pageCount = $derived(usersResponse.meta.totalPages)
+  const currentPage = $derived(data.page)
   const includeDeleted = $derived(data.includeDeleted)
 
-  // State
-  let search = $state('')
+  // svelte-ignore state_referenced_locally
+  let localSearch = $state(data.search)
   let sortKey = $state<SortableKey>('studentId')
   let sortAsc = $state(true)
-  let pageIndex = $state(0)
-  const pageSize = 25
+  let isFilterExpanded = $state(false)
+  let searchTimeoutId: any
 
   // Modals
   let viewUser = $state<TUsersData | null>(null)
@@ -206,45 +221,110 @@
     addFormVisiblePassword = false
   }
 
-  function toggleArchived(val: boolean) {
-    pageIndex = 0
+  const activeFiltersCount = $derived(
+    (data.course ? 1 : 0) + 
+    (data.yearLevel ? 1 : 0) + 
+    (data.role ? 1 : 0)
+  )
+
+  function clearFilters() {
+    localSearch = ''
+    updateFilters({
+      search: '',
+      course: '',
+      yearLevel: '',
+      role: '',
+      page: 1,
+    })
+  }
+
+  function updateFilters(newParams: Partial<{ page: number; search: string; course: string; yearLevel: string; role: string; archived: boolean }>) {
     const url = new URL(window.location.href)
-    if (val) {
+    
+    // Page
+    if (newParams.page !== undefined) {
+      url.searchParams.set('page', String(newParams.page))
+    } else if (
+      newParams.search !== undefined || 
+      newParams.course !== undefined || 
+      newParams.yearLevel !== undefined || 
+      newParams.role !== undefined || 
+      newParams.archived !== undefined
+    ) {
+      url.searchParams.set('page', '1')
+    }
+
+    // Search
+    const searchVal = newParams.search !== undefined ? newParams.search : localSearch
+    if (searchVal.trim()) {
+      url.searchParams.set('search', searchVal.trim())
+    } else {
+      url.searchParams.delete('search')
+    }
+
+    // Course
+    const courseVal = newParams.course !== undefined ? newParams.course : data.course
+    if (courseVal) {
+      url.searchParams.set('course', courseVal)
+    } else {
+      url.searchParams.delete('course')
+    }
+
+    // Year Level
+    const yearVal = newParams.yearLevel !== undefined ? newParams.yearLevel : data.yearLevel
+    if (yearVal) {
+      url.searchParams.set('yearLevel', yearVal)
+    } else {
+      url.searchParams.delete('yearLevel')
+    }
+
+    // Role
+    const roleVal = newParams.role !== undefined ? newParams.role : data.role
+    if (roleVal) {
+      url.searchParams.set('role', roleVal)
+    } else {
+      url.searchParams.delete('role')
+    }
+
+    // Archived
+    const archivedVal = newParams.archived !== undefined ? newParams.archived : includeDeleted
+    if (archivedVal) {
       url.searchParams.set('archived', 'true')
     } else {
       url.searchParams.delete('archived')
     }
-    if (url.toString() === window.location.href) return
-    goto(url.toString(), { replaceState: true, noScroll: true })
+
+    goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true })
   }
 
-  // Derived filtered + sorted + paginated list
-  const filtered = $derived.by(() => {
-    let list = includeDeleted ? users : users.filter((u) => !u.deletedAt)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter((u) => {
-        const studentIdMatch = u.studentId?.toLowerCase().includes(q)
-        const firstNameMatch = u.firstName?.toLowerCase().includes(q)
-        const lastNameMatch = u.lastName?.toLowerCase().includes(q)
-        const usernameMatch = u.username?.toLowerCase().includes(q)
-        return studentIdMatch || firstNameMatch || lastNameMatch || usernameMatch
-      })
-    }
-    list = [...list].sort((a, b) => {
+  function handleSearchInput(e: Event) {
+    const val = (e.currentTarget as HTMLInputElement).value
+    localSearch = val
+    if (searchTimeoutId) clearTimeout(searchTimeoutId)
+    searchTimeoutId = setTimeout(() => {
+      updateFilters({ search: val })
+    }, 300)
+  }
+
+  $effect(() => {
+    localSearch = data.search
+  })
+
+  // Derived sorted list from paginated data
+  const paginated = $derived.by(() => {
+    return [...users].sort((a, b) => {
       const av = String(a[sortKey] ?? '')
       const bv = String(b[sortKey] ?? '')
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
-    return list
   })
-
-  const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)))
-  const paginated = $derived(filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize))
 
   onDestroy(() => {
     if (editTimeoutId) {
       clearTimeout(editTimeoutId)
+    }
+    if (searchTimeoutId) {
+      clearTimeout(searchTimeoutId)
     }
   })
 
@@ -256,7 +336,6 @@
       sortKey = key
       sortAsc = true
     }
-    pageIndex = 0
   }
 
   function openEdit(u: TUsersData) {
@@ -589,26 +668,39 @@
         <Search size={16} class='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500' />
         <input
           type='text'
-          placeholder='Search users…'
-          bind:value={search}
-          oninput={() => pageIndex = 0}
+          placeholder='Search name, student ID, username…'
+          value={localSearch}
+          oninput={handleSearchInput}
           class='w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
         />
       </div>
 
-      <div class='flex gap-3 shrink-0'>
-        <!-- Mobile Sort Dropdown -->
-        <div class='relative md:hidden sort-menu-container flex-1 sm:flex-none'>
+      <div class='flex flex-nowrap items-center gap-1.5 sm:gap-3 w-full sm:w-auto'>
+        <!-- Filters toggle button -->
+        <button
+          type='button'
+          onclick={() => isFilterExpanded = !isFilterExpanded}
+          class='flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}'
+        >
+          <SlidersHorizontal size={14} class={activeFiltersCount > 0 ? 'text-sky-400' : 'text-slate-400'} />
+          <span>Filters</span>
+          {#if activeFiltersCount > 0}
+            <span class='flex h-4.5 w-4.5 items-center justify-center rounded-full bg-sky-950 border border-sky-500/30 text-[10px] font-black text-sky-400 shrink-0'>
+              {activeFiltersCount}
+            </span>
+          {/if}
+        </button>
+
+        <!-- Sort Dropdown Trigger (Visible on all sizes) -->
+        <div class='relative sort-menu-container flex-1 sm:flex-none'>
           <button
             type='button'
             onclick={() => showSortMenu = !showSortMenu}
-            class='w-full flex items-center justify-between gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 cursor-pointer'
+            class='w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
           >
-            <div class='flex items-center gap-1.5 min-w-0'>
-              <ArrowUpDown size={14} class='text-slate-400 shrink-0' />
-              <span class='truncate text-slate-400'>Sort: <span class='text-slate-100'>{SORTABLE_LABELS[sortKey]}</span></span>
-            </div>
-            <span class='text-[10px] uppercase font-bold text-sky-400 shrink-0'>{sortAsc ? 'Asc' : 'Desc'}</span>
+            <ArrowUpDown size={14} class='text-slate-400 shrink-0' />
+            <span>Sort: <span class='text-slate-300'><span class='hidden sm:inline'>{SORTABLE_LABELS[sortKey]}</span><span class='inline sm:hidden'>{SORTABLE_LABELS_COMPACT[sortKey]}</span></span></span>
+            <span class='text-[10px] uppercase font-black text-sky-400 shrink-0 ml-0.5'>{sortAsc ? 'Asc' : 'Desc'}</span>
           </button>
 
           {#if showSortMenu}
@@ -625,7 +717,6 @@
                       sortAsc = true
                     }
                     showSortMenu = false
-                    pageIndex = 0
                   }}
                   class='w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition cursor-pointer {sortKey === key ? 'bg-sky-500/10 text-sky-300' : 'text-slate-200 hover:bg-slate-900'}'
                 >
@@ -639,13 +730,142 @@
           {/if}
         </div>
 
-        <label class='flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 flex-1 sm:flex-none shrink-0 whitespace-nowrap'>
-          <input type='checkbox' checked={includeDeleted} onchange={(e) => toggleArchived(e.currentTarget.checked)} class='h-4 w-4 accent-amber-400' />
-          <span class='hidden sm:inline'>Show archived</span>
-          <span class='inline sm:hidden'>Archived</span>
-        </label>
+        <!-- Vertical Divider -->
+        <div class='h-6 w-px bg-slate-800 self-center shrink-0'></div>
+
+        <!-- Archived Checkbox Button -->
+        <button
+          type='button'
+          onclick={() => updateFilters({ archived: !includeDeleted })}
+          class='flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
+        >
+          <!-- Custom styled checkbox checkmark box -->
+          <div class='flex h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0 items-center justify-center rounded border transition-colors {includeDeleted ? 'bg-sky-500 border-sky-400 text-white' : 'border-slate-600 bg-slate-950 text-transparent'}'>
+            <svg class='h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' d='M4.5 12.75l6 6 9-13.5' />
+            </svg>
+          </div>
+          <span>Archived</span>
+        </button>
       </div>
     </div>
+
+    <!-- Active Filter Pills (Tags) -->
+    {#if data.search || data.course || data.yearLevel || data.role}
+      <div class='mb-4 flex flex-wrap gap-2 items-center'>
+        {#if data.search}
+          <button
+            type='button'
+            onclick={() => updateFilters({ search: '' })}
+            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+          >
+            <span>Search: "{data.search}"</span>
+            <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
+          </button>
+        {/if}
+
+        {#if data.course}
+          <button
+            type='button'
+            onclick={() => updateFilters({ course: '' })}
+            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+          >
+            <span>Course: {data.course}</span>
+            <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
+          </button>
+        {/if}
+
+        {#if data.yearLevel}
+          <button
+            type='button'
+            onclick={() => updateFilters({ yearLevel: '' })}
+            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+          >
+            <span>Year: {data.yearLevel}</span>
+            <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
+          </button>
+        {/if}
+
+        {#if data.role}
+          <button
+            type='button'
+            onclick={() => updateFilters({ role: '' })}
+            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+          >
+            <span>Role: {data.role === 'user' ? 'Voter' : data.role === 'admin' ? 'Admin' : 'Super Admin'}</span>
+            <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
+          </button>
+        {/if}
+      </div>
+    {/if}
+
+    {#if isFilterExpanded}
+      <div 
+        transition:slide={{ duration: 200 }} 
+        class='mb-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 shadow-lg backdrop-blur-md relative overflow-hidden'
+      >
+        <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/20 via-orange-400/40 to-rose-500/20"></div>
+
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Filter Voters</h3>
+          {#if activeFiltersCount > 0}
+            <button 
+              onclick={clearFilters}
+              class="text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+            >
+              Clear Filters
+            </button>
+          {/if}
+        </div>
+
+        <div class='grid grid-cols-1 gap-4 sm:grid-cols-3'>
+          <div>
+            <label for='filter-course' class='mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400'>Course</label>
+            <select
+              id='filter-course'
+              value={data.course}
+              onchange={(e) => updateFilters({ course: e.currentTarget.value })}
+              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+            >
+              <option value=''>All Courses</option>
+              <option value='BSCS'>BSCS (BS Computer Science)</option>
+              <option value='BSIT'>BSIT (BS Information Technology)</option>
+              <option value='WADT'>WADT (Web Application Development)</option>
+            </select>
+          </div>
+
+          <div>
+            <label for='filter-yearLevel' class='mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400'>Year Level</label>
+            <select
+              id='filter-yearLevel'
+              value={data.yearLevel}
+              onchange={(e) => updateFilters({ yearLevel: e.currentTarget.value })}
+              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+            >
+              <option value=''>All Years</option>
+              {#each YEAR_LEVEL_VALUES as y}
+                <option value={y}>{y}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div>
+            <label for='filter-role' class='mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400'>Role</label>
+            <select
+              id='filter-role'
+              value={data.role}
+              onchange={(e) => updateFilters({ role: e.currentTarget.value })}
+              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+            >
+              <option value=''>All Roles</option>
+              <option value='user'>Voter</option>
+              <option value='admin'>Admin</option>
+              <option value='super_admin'>Super Admin</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     {#if actionMsg}
       <div class='mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300'>{actionMsg}</div>
@@ -796,17 +1016,17 @@
 
       <!-- Pagination -->
       <div class='flex items-center justify-between border-t border-slate-800 px-4 py-3'>
-        <p class='text-xs text-slate-500'>{filtered.length} user(s)</p>
+        <p class='text-xs text-slate-500'>{total} user(s)</p>
         <div class='flex items-center gap-2'>
           <button
-            disabled={pageIndex === 0}
-            onclick={() => pageIndex--}
+            disabled={currentPage === 1}
+            onclick={() => updateFilters({ page: currentPage - 1 })}
             class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
           >←</button>
-          <span class='text-sm font-semibold text-slate-100'>{pageIndex + 1} / {pageCount}</span>
+          <span class='text-sm font-semibold text-slate-100'>{currentPage} / {pageCount}</span>
           <button
-            disabled={pageIndex >= pageCount - 1}
-            onclick={() => pageIndex++}
+            disabled={currentPage >= pageCount}
+            onclick={() => updateFilters({ page: currentPage + 1 })}
             class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
           >→</button>
         </div>

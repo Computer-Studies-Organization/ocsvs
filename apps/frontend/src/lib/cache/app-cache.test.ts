@@ -155,4 +155,17 @@ describe("AppCache", () => {
     expect(electionsEntry.data).toBeNull();
     expect(posEntry.data).not.toBeNull(); // different resource, untouched
   });
+
+  it("caches fetchUsers returns the full paginated response", async () => {
+    const mockResponse = {
+      data: [{ id: "u1", firstName: "Alice" }],
+      meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+    };
+    vi.mocked(mockApi.fetchUsers).mockResolvedValue(mockResponse as any);
+    const cache = new AppCache(mockApi);
+
+    const result = await cache.get("users", { page: 1, limit: 10 }).fetch();
+    expect(result).toEqual(mockResponse);
+    expect(mockApi.fetchUsers).toHaveBeenCalledWith({ page: 1, limit: 10 }, undefined);
+  });
 });

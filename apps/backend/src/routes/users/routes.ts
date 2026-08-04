@@ -13,6 +13,7 @@ const ListUsersQuerySchema = PaginationSchema.extend({
   search: z.string().optional(),
   yearLevel: z.string().optional(),
   course: z.string().optional(),
+  role: z.enum(["user", "admin", "super_admin"]).optional(),
   includeDeleted: booleanQuery.default("false"),
 });
 
@@ -228,7 +229,7 @@ export const restoreUserRoute = createRoute({
   },
 });
 
-const IMPORT_COURSES = ["BSCS", "BSIT", "ACT"] as const;
+const IMPORT_COURSES = ["BSCS", "BSIT", "WADT"] as const;
 const IMPORT_YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
 
 export const ImportUsersBodySchema = z

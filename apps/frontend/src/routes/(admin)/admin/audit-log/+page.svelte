@@ -154,7 +154,7 @@
         }
       } else if (entry.targetType === "user") {
         const cacheEntry = appCache.get("users", {});
-        const cachedUser = cacheEntry.data?.find(u => u.id === entry.targetId);
+        const cachedUser = cacheEntry.data?.data?.find((u) => u.id === entry.targetId);
         if (cachedUser) {
           name = `${cachedUser.firstName} ${cachedUser.lastName}`;
         } else {

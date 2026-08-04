@@ -5,10 +5,10 @@ import type {
   TVotingState,
   TPosition,
   TCandidate,
-  TUsersData,
 } from "$lib/types";
 import { CacheEntry } from "./cache-entry.svelte";
 import type { ApiClientAdapter } from "./api-client";
+import type { UsersResponse } from "$lib/api/users";
 
 export interface AppCacheMap {
   elections: {
@@ -36,8 +36,16 @@ export interface AppCacheMap {
     data: TResults;
   };
   users: {
-    params: { limit?: number; includeDeleted?: boolean };
-    data: TUsersData[];
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      yearLevel?: string;
+      course?: string;
+      role?: string;
+      includeDeleted?: boolean;
+    };
+    data: UsersResponse;
   };
 }
 
@@ -79,7 +87,7 @@ const fetchers: {
   positions: (api, params, opts) => api.listPositions(params.electionId, opts),
   candidates: (api, params, opts) => api.allCandidates(params, opts).then((res) => res.data),
   results: (api, params, opts) => api.listResults(params.electionId, opts),
-  users: (api, params, opts) => api.fetchUsers(params, opts).then((res) => res.data),
+  users: (api, params, opts) => api.fetchUsers(params, opts),
 };
 
 export class AppCache {

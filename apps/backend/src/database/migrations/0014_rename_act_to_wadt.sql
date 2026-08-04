@@ -1,0 +1,1 @@
+UPDATE users SET course = 'WADT' WHERE course = 'ACT';

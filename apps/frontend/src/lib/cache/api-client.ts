@@ -5,9 +5,9 @@ import type {
   TVotingState,
   TPosition,
   TCandidate,
-  TUsersData,
 } from "$lib/types";
 import type { ApiFetchOptions } from "$lib/api/client";
+import type { UsersResponse } from "$lib/api/users";
 
 export interface ApiClientAdapter {
   listElections(status?: TElectionStatus, options?: ApiFetchOptions): Promise<TElection[]>;
@@ -24,7 +24,15 @@ export interface ApiClientAdapter {
   ): Promise<{ data: TCandidate[] }>;
   listResults(electionId: string, options?: ApiFetchOptions): Promise<TResults>;
   fetchUsers(
-    query?: { limit?: number; includeDeleted?: boolean },
+    query?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      yearLevel?: string;
+      course?: string;
+      role?: string;
+      includeDeleted?: boolean;
+    },
     options?: ApiFetchOptions,
-  ): Promise<{ data: TUsersData[] }>;
+  ): Promise<UsersResponse>;
 }
