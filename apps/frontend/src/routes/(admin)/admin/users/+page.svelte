@@ -13,6 +13,7 @@
     Eye,
     EyeOff,
     Loader,
+    MoreHorizontal,
     Plus,
     RotateCcw,
     Search,
@@ -105,6 +106,27 @@
   let actionMsg = $state('')
   let editTimeoutId: any
   let showSortMenu = $state(false)
+  let activeDropdownUserId = $state<string | null>(null)
+  let activeDropdownUser = $state<TUsersData | null>(null)
+  let dropdownPosition = $state({ top: 0, left: 0 })
+
+  function openDropdown(u: TUsersData, e: MouseEvent) {
+    e.stopPropagation()
+    if (activeDropdownUserId === u.id) {
+      activeDropdownUserId = null
+      activeDropdownUser = null
+    } else {
+      activeDropdownUserId = u.id
+      activeDropdownUser = u
+      const rect = e.currentTarget ? (e.currentTarget as HTMLElement).getBoundingClientRect() : null
+      if (rect) {
+        dropdownPosition = {
+          top: rect.bottom + window.scrollY + 6,
+          left: rect.right + window.scrollX - 192
+        }
+      }
+    }
+  }
 
   // Add User State
   let showAddModal = $state(false)
@@ -240,6 +262,8 @@
   }
 
   function updateFilters(newParams: Partial<{ page: number; search: string; course: string; yearLevel: string; role: string; archived: boolean }>) {
+    activeDropdownUserId = null
+    activeDropdownUser = null
     const url = new URL(window.location.href)
     
     // Page
@@ -318,6 +342,13 @@
       const bv = String(b[sortKey] ?? '')
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
+  })
+
+  $effect(() => {
+    // Reset open dropdown when paginated data or sortKey/sortAsc changes
+    const _ = paginated
+    activeDropdownUserId = null
+    activeDropdownUser = null
   })
 
   onDestroy(() => {
@@ -894,19 +925,19 @@
                 </th>
               {/each}
               <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Status</th>
-              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400'>Actions</th>
+              <th class='px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400 w-20'>Actions</th>
             </tr>
           </thead>
           <tbody>
             {#each paginated as u (u.id)}
-              <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30 {u.deletedAt ? 'opacity-60' : ''}">
-                <td class="sticky left-0 z-10 whitespace-nowrap px-4 py-3 font-semibold text-slate-50 shadow-[1px_0_0_0_#334155] {u.deletedAt ? 'bg-slate-900/60' : 'bg-slate-900'}">{u.studentId}</td>
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.firstName}</td>
-                <td class='px-4 py-3 font-semibold text-slate-50'>{u.lastName}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.username ?? '—'}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.yearLevel ?? '—'}</td>
-                <td class='px-4 py-3 text-slate-300'>{u.course ?? '—'}</td>
-                <td class='px-4 py-3'>
+              <tr class="border-b border-slate-800/60 transition hover:bg-slate-800/30">
+                <td class="sticky left-0 z-10 whitespace-nowrap px-4 py-3 font-semibold text-slate-50 shadow-[1px_0_0_0_#334155] {u.deletedAt ? 'bg-slate-900/60 opacity-60' : 'bg-slate-900'}">{u.studentId}</td>
+                <td class='px-4 py-3 font-semibold text-slate-50 {u.deletedAt ? "opacity-60" : ""}'>{u.firstName}</td>
+                <td class='px-4 py-3 font-semibold text-slate-50 {u.deletedAt ? "opacity-60" : ""}'>{u.lastName}</td>
+                <td class='px-4 py-3 text-slate-300 {u.deletedAt ? "opacity-60" : ""}'>{u.username ?? '—'}</td>
+                <td class='px-4 py-3 text-slate-300 {u.deletedAt ? "opacity-60" : ""}'>{u.yearLevel ?? '—'}</td>
+                <td class='px-4 py-3 text-slate-300 {u.deletedAt ? "opacity-60" : ""}'>{u.course ?? '—'}</td>
+                <td class='px-4 py-3 {u.deletedAt ? "opacity-60" : ""}'>
                   <div class='flex flex-wrap gap-1'>
                     {#if ROLE_BADGE[u.role]}
                       <span class="inline-flex items-center gap-1 rounded {ROLE_BADGE[u.role].pillCls} px-2 py-0.5 whitespace-nowrap">
@@ -917,61 +948,14 @@
                   </div>
                 </td>
                 <td class='px-4 py-3'>
-                  <div class='flex gap-1.5'>
-                    <button onclick={() => viewUser = u} title='View' class='rounded-lg bg-slate-700 p-1.5 text-slate-200 transition hover:bg-slate-600 cursor-pointer'><Eye size={14} /></button>
-                    {#if u.deletedAt}
-                      <button
-                        disabled={authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')}
-                        onclick={() => restoreConfirmUser = u}
-                        title={authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin') 
-                          ? 'Only super admins can restore admin accounts' 
-                          : 'Restore'}
-                        class='rounded-lg bg-emerald-600 p-1.5 text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                      ><RotateCcw size={14} /></button>
-                      <button
-                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
-                        onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
-                        title={authStore.user?.id === u.accountId 
-                          ? 'You cannot delete your own account' 
-                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
-                          ? 'Only super admins can delete admin accounts' 
-                          : 'Delete Permanently'}
-                        class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                      ><Trash2 size={14} /></button>
-                    {:else}
-                      <button
-                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
-                        onclick={() => openEdit(u)}
-                        title={authStore.user?.id === u.accountId 
-                          ? 'You cannot edit your own account here' 
-                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
-                          ? 'Only super admins can edit admin accounts' 
-                          : 'Edit'}
-                        class='rounded-lg bg-sky-600 p-1.5 text-white transition hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                      ><Edit size={14} /></button>
-                      <button
-                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
-                        onclick={() => archiveConfirmUser = u}
-                        title={authStore.user?.id === u.accountId 
-                          ? 'You cannot archive your own account' 
-                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
-                          ? 'Only super admins can archive admin accounts' 
-                          : 'Archive'}
-                        class='rounded-lg bg-orange-600 p-1.5 text-white transition hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                      ><Archive size={14} /></button>
-                      <button onclick={() => unlockConfirmUser = u} title='Unlock Account' class='rounded-lg bg-teal-600 p-1.5 text-white transition hover:bg-teal-500 cursor-pointer'><Unlock size={14} /></button>
-                      <button
-                        disabled={authStore.user?.id === u.accountId || (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin'))}
-                        onclick={() => { hardDeleteConfirmUser = u; hardDeleteConfirmText = '' }}
-                        title={authStore.user?.id === u.accountId 
-                          ? 'You cannot delete your own account' 
-                          : (authStore.user?.role !== 'super_admin' && (u.role === 'admin' || u.role === 'super_admin')) 
-                          ? 'Only super admins can delete admin accounts' 
-                          : 'Delete Permanently'}
-                        class='rounded-lg bg-red-600 p-1.5 text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
-                      ><Trash2 size={14} /></button>
-                    {/if}
-                  </div>
+                  <button
+                    type='button'
+                    onclick={(e) => openDropdown(u, e)}
+                    title='Actions'
+                    class='flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition cursor-pointer border border-slate-700/50'
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
                 </td>
               </tr>
             {/each}
@@ -1641,4 +1625,108 @@
     </form>
   {/if}
 </Modal>
+
+{#if activeDropdownUserId && activeDropdownUser}
+  <!-- Backdrop to close dropdown on click outside -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class='fixed inset-0 z-40' onclick={() => { activeDropdownUserId = null; activeDropdownUser = null; }}></div>
+  
+  <div
+    class='absolute rounded-xl border border-slate-800 bg-slate-950 p-1.5 shadow-xl z-50 focus:outline-none text-left w-48'
+    style='top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;'
+  >
+    <!-- View Action -->
+    <button
+      type='button'
+      onclick={() => { viewUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
+      class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-slate-200 hover:bg-slate-900 transition cursor-pointer'
+    >
+      <Eye size={14} class='text-slate-400' />
+      <span>View Details</span>
+    </button>
+
+    {#if activeDropdownUser.deletedAt}
+      <!-- Restore Action -->
+      <button
+        type='button'
+        disabled={authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')}
+        onclick={() => { restoreConfirmUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
+        title={authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin') 
+          ? 'Only super admins can restore admin accounts' 
+          : 'Restore'}
+        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+      >
+        <RotateCcw size={14} />
+        <span>Restore</span>
+      </button>
+    {:else}
+      <!-- Edit Action -->
+      <button
+        type='button'
+        disabled={authStore.user?.id === activeDropdownUser.accountId || (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin'))}
+        onclick={() => { openEdit(activeDropdownUser!); activeDropdownUserId = null; activeDropdownUser = null; }}
+        title={authStore.user?.id === activeDropdownUser.accountId 
+          ? 'You cannot edit your own account here' 
+          : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
+          ? 'Only super admins can edit admin accounts' 
+          : 'Edit'}
+        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-sky-400 hover:bg-sky-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+      >
+        <Edit size={14} />
+        <span>Edit Account</span>
+      </button>
+
+      <!-- Archive Action -->
+      <button
+        type='button'
+        disabled={authStore.user?.id === activeDropdownUser.accountId || (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin'))}
+        onclick={() => { archiveConfirmUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
+        title={authStore.user?.id === activeDropdownUser.accountId 
+          ? 'You cannot archive your own account' 
+          : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
+          ? 'Only super admins can archive admin accounts' 
+          : 'Archive'}
+        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-orange-400 hover:bg-orange-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+      >
+        <Archive size={14} />
+        <span>Archive</span>
+      </button>
+
+      <!-- Unlock Action -->
+      <button
+        type='button'
+        onclick={() => { unlockConfirmUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
+        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-teal-400 hover:bg-teal-500/10 transition cursor-pointer'
+      >
+        <Unlock size={14} />
+        <span>Unlock Account</span>
+      </button>
+    {/if}
+
+    <!-- Divider -->
+    <div class='my-1 h-px bg-slate-800/60'></div>
+
+    <!-- Permanent Delete Action -->
+    <button
+      type='button'
+      disabled={authStore.user?.id === activeDropdownUser.accountId || (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin'))}
+      onclick={() => { hardDeleteConfirmUser = activeDropdownUser; hardDeleteConfirmText = ''; activeDropdownUserId = null; activeDropdownUser = null; }}
+      title={authStore.user?.id === activeDropdownUser.accountId 
+        ? 'You cannot delete your own account' 
+        : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
+        ? 'Only super admins can delete admin accounts' 
+        : 'Delete Permanently'}
+      class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-red-400 hover:bg-red-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+    >
+      <Trash2 size={14} />
+      <span>Delete Permanently</span>
+    </button>
+  </div>
+{/if}
+
+<svelte:window 
+  onresize={() => { activeDropdownUserId = null; activeDropdownUser = null; }} 
+  onscroll={() => { activeDropdownUserId = null; activeDropdownUser = null; }} 
+/>
 
