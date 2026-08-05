@@ -212,14 +212,6 @@
     <!-- Header -->
     <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div>
-        <p
-          class="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-300/90 mb-2"
-        >
-          <span
-            class="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]"
-          ></span>
-          Admin Panel
-        </p>
         <h1 class="text-2xl font-black sm:text-3xl text-slate-100">
           Audit Log
         </h1>
