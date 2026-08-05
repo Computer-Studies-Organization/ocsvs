@@ -2,6 +2,7 @@
   import { invalidate } from '$app/navigation'
   import { untrack } from 'svelte'
   import { deletePartyList, updatePartyList } from '$lib/api/parties'
+  import { appCache } from '$lib/cache'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { validatePartyCode } from '$lib/validation/party-code'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -46,6 +47,7 @@
         code: codeVal,
         color: editColor.trim() || null,
       })
+      appCache.invalidate({ resource: 'partyLists', params: { electionId } })
       await invalidate('app:election')
       addToast('success', 'Party list updated')
       onsuccess()
@@ -68,6 +70,7 @@
     busy = true
     try {
       await deletePartyList(electionId, party.id)
+      appCache.invalidate({ resource: 'partyLists', params: { electionId } })
       await invalidate('app:election')
       addToast('success', 'Party list deleted')
       onsuccess()

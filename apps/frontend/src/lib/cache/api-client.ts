@@ -5,11 +5,13 @@ import type {
   TVotingState,
   TPosition,
   TCandidate,
+  TPartyList,
 } from "$lib/types";
 import type { ApiFetchOptions } from "$lib/api/client";
 import type { UsersResponse } from "$lib/api/users";
 
 export interface ApiClientAdapter {
+  listPartyLists(electionId: string, options?: ApiFetchOptions): Promise<TPartyList[]>;
   listElections(status?: TElectionStatus, options?: ApiFetchOptions): Promise<TElection[]>;
   getElection(id: string, options?: ApiFetchOptions): Promise<TElection>;
   getVotingState(options?: ApiFetchOptions): Promise<TVotingState>;

@@ -5,6 +5,7 @@ import type {
   TVotingState,
   TPosition,
   TCandidate,
+  TPartyList,
 } from "$lib/types";
 import { CacheEntry } from "./cache-entry.svelte";
 import type { ApiClientAdapter } from "./api-client";
@@ -34,6 +35,10 @@ export interface AppCacheMap {
   results: {
     params: { electionId: string };
     data: TResults;
+  };
+  partyLists: {
+    params: { electionId: string };
+    data: TPartyList[];
   };
   users: {
     params: {
@@ -87,6 +92,7 @@ const fetchers: {
   positions: (api, params, opts) => api.listPositions(params.electionId, opts),
   candidates: (api, params, opts) => api.allCandidates(params, opts).then((res) => res.data),
   results: (api, params, opts) => api.listResults(params.electionId, opts),
+  partyLists: (api, params, opts) => api.listPartyLists(params.electionId, opts),
   users: (api, params, opts) => api.fetchUsers(params, opts),
 };
 

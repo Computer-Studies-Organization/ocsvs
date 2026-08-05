@@ -1,7 +1,6 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { appCache } from "$lib/cache";
-import { listPartyLists } from "$lib/api/parties";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:position");
@@ -13,7 +12,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     appCache
       .get("candidates", { electionId, positionId, includeInactive: true })
       .fetch(false, { fetch }),
-    listPartyLists(electionId, { fetch }),
+    appCache.get("partyLists", { electionId }).fetch(false, { fetch }),
   ]);
 
   if (!election) error(404, "Election not found");

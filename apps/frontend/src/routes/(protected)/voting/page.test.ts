@@ -19,18 +19,32 @@ vi.mock("$lib/api/parties", () => ({
 describe("voting page loader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCacheGet.mockImplementation((resource: string) => ({
-      fetch: vi.fn().mockResolvedValue(
-        resource === "votingState"
-          ? {
-              open: { id: "election-1" },
-              nextDraft: null,
-              lastClosed: null,
-              myVotes: { electionId: "election-1", votes: [] },
-            }
-          : [],
-      ),
-    }));
+    mockCacheGet.mockImplementation((resource: string) => {
+      const entry: { error: string | null; fetch: any } = {
+        error: null,
+        fetch: null,
+      };
+      entry.fetch = vi.fn().mockImplementation(async () => {
+        if (resource === "votingState") {
+          return {
+            open: { id: "election-1" },
+            nextDraft: null,
+            lastClosed: null,
+            myVotes: { electionId: "election-1", votes: [] },
+          };
+        }
+        if (resource === "partyLists") {
+          try {
+            return await mockListPartyLists();
+          } catch (err: any) {
+            entry.error = err.message;
+            return null;
+          }
+        }
+        return [];
+      });
+      return entry;
+    });
   });
 
   it("surfaces party-list loading failures through loadError", async () => {

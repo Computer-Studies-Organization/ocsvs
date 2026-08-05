@@ -21,6 +21,7 @@ describe("AppCache", () => {
 
   beforeEach(() => {
     mockApi = {
+      listPartyLists: vi.fn(),
       listElections: vi.fn(),
       getElection: vi.fn(),
       getVotingState: vi.fn(),

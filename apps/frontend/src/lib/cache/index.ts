@@ -2,11 +2,13 @@ import { listElections, getElection, getVotingState, listResults } from "$lib/ap
 import { listPositions } from "$lib/api/positions";
 import { allCandidates } from "$lib/api/candidates";
 import { fetchUsers } from "$lib/api/users";
+import { listPartyLists } from "$lib/api/parties";
 import { AppCache } from "./app-cache.svelte";
 import type { ApiClientAdapter } from "./api-client";
 
 // Build the production adapter
 const productionApi: ApiClientAdapter = {
+  listPartyLists,
   listElections,
   getElection,
   getVotingState,

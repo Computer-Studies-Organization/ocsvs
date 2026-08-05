@@ -3,7 +3,6 @@ import { error } from "@sveltejs/kit";
 import { getCandidate } from "$lib/api/candidates";
 import { fetchUser } from "$lib/api/users";
 import { appCache } from "$lib/cache";
-import { listPartyLists } from "$lib/api/parties";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:candidate");
@@ -24,7 +23,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     appCache.get("election", { id: electionId }).fetch(false, { fetch }),
     appCache.get("positions", { electionId }).fetch(false, { fetch }),
     fetchUser(cand.accountId, { fetch }).catch(() => null),
-    listPartyLists(electionId, { fetch }),
+    appCache.get("partyLists", { electionId }).fetch(false, { fetch }),
   ]);
 
   if (!election) error(404, "Election not found");

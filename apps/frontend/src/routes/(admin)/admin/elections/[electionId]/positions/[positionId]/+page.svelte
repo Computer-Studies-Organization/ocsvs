@@ -165,7 +165,7 @@
       onclose={closeCreate}
       electionId={election.id}
       positionId={position.id}
-      partyLists={data.partyLists}
+      partyLists={data.partyLists ?? undefined}
       onsuccess={closeCreate}
     />
   {/if}

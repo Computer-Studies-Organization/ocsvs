@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidate } from '$app/navigation'
   import { createPartyList } from '$lib/api/parties'
+  import { appCache } from '$lib/cache'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { validatePartyCode } from '$lib/validation/party-code'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -42,6 +43,7 @@
         code: codeVal,
         color: createColor.trim() || null,
       })
+      appCache.invalidate({ resource: 'partyLists', params: { electionId } })
       await invalidate('app:election')
       addToast('success', 'Party list created')
       onsuccess()

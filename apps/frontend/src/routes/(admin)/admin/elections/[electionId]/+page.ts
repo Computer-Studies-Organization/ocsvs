@@ -1,7 +1,6 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { appCache } from "$lib/cache";
-import { listPartyLists } from "$lib/api/parties";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:election");
@@ -15,11 +14,18 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     .get("positions", { electionId: params.electionId })
     .fetch(false, { fetch });
 
-  const partyLists = await listPartyLists(params.electionId, { fetch });
+  const partyLists = await appCache
+    .get("partyLists", { electionId: params.electionId })
+    .fetch(false, { fetch });
 
   const candidates = await appCache
     .get("candidates", { electionId: params.electionId, includeInactive: true })
     .fetch(false, { fetch });
 
-  return { election, positions: positions ?? [], partyLists, candidates: candidates ?? [] };
+  return {
+    election,
+    positions: positions ?? [],
+    partyLists: partyLists ?? [],
+    candidates: candidates ?? [],
+  };
 };
