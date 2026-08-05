@@ -258,7 +258,7 @@
             </a>
           </div>
 
-          <div class='flex-1 space-y-3 overflow-y-auto max-h-[460px] pr-1'>
+          <div class='flex-1 min-h-0 space-y-3 overflow-y-auto pr-1 no-scrollbar'>
             {#each stats.recentLogs as log (log.id)}
               <div class='rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5 space-y-1.5 transition hover:border-slate-700/60'>
                 <div class='flex items-center justify-between gap-2'>
