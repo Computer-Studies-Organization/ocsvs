@@ -119,21 +119,11 @@
   }
 </script>
 
-<div class='relative min-h-[100dvh] w-full overflow-hidden bg-slate-900 text-slate-100'>
-  <!-- Ambient glow -->
-  <div class='pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-blue-600/20 blur-[100px]'></div>
-  <div class='pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-rose-600/20 blur-[100px]'></div>
-
-  <div class='relative z-10 mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
+<div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
+  <div class='mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
     <!-- Header -->
     <header class='relative flex items-start justify-between gap-4 border-b border-slate-800/70 pb-4'>
       <div class='space-y-3'>
-        <div>
-          <p class='inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300/90'>
-            <span class='h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.9)]'></span>
-            Election Results
-          </p>
-        </div>
         <div>
           <h1 class='text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl'>Vote Results</h1>
           <p class='mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500'>
