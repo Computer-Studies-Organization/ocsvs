@@ -30,18 +30,29 @@ import * as PinoPretty from "pino-pretty";
  * ```
  */
 function logger() {
-  return ((c, next) =>
-    pinoLogger({
-      pino: pino(
+  let rootLogger: ReturnType<typeof pino> | undefined;
+
+  const middleware = pinoLogger({
+    pino: (c: Context<AppBindings>) =>
+      (rootLogger ??= pino(
         {
           level: c.env.LOG_LEVEL || "info",
         },
         c.env.NODE_ENV === "production" ? undefined : PinoPretty.PinoPretty(),
-      ),
-      http: {
-        reqId: () => crypto.randomUUID(),
-      },
-    })(c as unknown as Context<Env>, next)) satisfies MiddlewareHandler<AppBindings>;
+      )),
+    http: {
+      reqId: () => crypto.randomUUID(),
+      onReqBindings: (c) => ({
+        req: { url: c.req.path, method: c.req.method },
+      }),
+      onResBindings: (c) => ({
+        res: { status: c.res.status },
+      }),
+    },
+  });
+
+  return ((c, next) =>
+    middleware(c as unknown as Context<Env>, next)) satisfies MiddlewareHandler<AppBindings>;
 }
 
 export default logger;
