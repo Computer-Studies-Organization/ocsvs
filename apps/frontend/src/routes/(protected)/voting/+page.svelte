@@ -149,13 +149,15 @@
     <p class='text-red-400'>{pageState.message}</p>
   </div>
 {:else if pageState.kind === 'empty'}
-  <div class='flex min-h-[60vh] items-center justify-center p-8'>
-    <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+  <div class='flex min-h-[60vh] flex-col items-center justify-center p-8'>
+    <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/50 p-8 text-center shadow-2xl backdrop-blur-md'>
       {#if pageState.variant === 'next-draft' && pageState.nextDraft}
         {@const d = pageState.nextDraft}
-        <Calendar size={48} class='mx-auto mb-4 text-sky-400' />
-        <h1 class='text-2xl font-bold text-slate-100'>Next election: {d.name}</h1>
-        <p class='mt-2 text-slate-400'>Opens {d.opensAt ? formatTimestamp(d.opensAt) : 'Date TBD'}.</p>
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <Calendar size={14} class="text-blue-400" />
+          <span>Next election</span>
+        </div>
+        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>{d.name}</h1>
         {#if d.opensAt}
           <Countdown
             targetUnixSeconds={d.opensAt}
@@ -164,39 +166,91 @@
             onZero={guardedAutoRefresh}
           />
         {/if}
+
+        <hr class='my-6 border-white/10' />
+
+        <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 text-left'>
+          <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
+          <span class='mt-1 block text-sm font-bold text-slate-200'>
+            {formatTimestamp(d.opensAt)}
+          </span>
+        </div>
       {:else if pageState.variant === 'last-closed' && pageState.lastClosed}
         {@const c = pageState.lastClosed}
         {@const totalVotes = c.results.reduce((s, r) => s + r.totalVotes, 0)}
-        <CheckCircle size={48} class='mx-auto mb-4 text-emerald-400' />
-        <h1 class='text-2xl font-bold text-slate-100'>{c.name} has ended</h1>
-        <p class='mt-2 text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
-        <a href='/elections/{c.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <CheckCircle size={14} class="text-emerald-400" />
+          <span>Past election</span>
+        </div>
+        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>{c.name}</h1>
+        <p class='mt-2 text-sm text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
+        
+        <hr class='my-6 border-white/10' />
+
+        <div class='grid grid-cols-2 gap-4 text-left'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
+            <span class='mt-1 block text-sm font-bold text-slate-200'>
+              Ended {formatTimestamp(c.closesAt)}
+            </span>
+          </div>
+          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 flex flex-col justify-between'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Results</span>
+            <a href='/elections/{c.id}' class='mt-1 block text-sm font-bold text-blue-400 hover:underline'>
+              View results →
+            </a>
+          </div>
+        </div>
       {:else if pageState.variant === 'both' && pageState.nextDraft && pageState.lastClosed}
         {@const d = pageState.nextDraft}
         {@const c = pageState.lastClosed}
-        <Info size={48} class='mx-auto mb-4 text-slate-300' />
-        <h1 class='text-2xl font-bold text-slate-100'>No active election</h1>
-        <p class='mt-2 text-slate-400'>
-          Latest: {c.name} (ended {formatTimestamp(c.closesAt)}). Next: {d.name} opens {d.opensAt ? formatTimestamp(d.opensAt) : 'Date TBD'}.
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <Info size={14} class="text-slate-400" />
+          <span>Elections overview</span>
+        </div>
+        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>No active election</h1>
+        <p class='mt-2 text-sm text-slate-400'>
+          Latest: {c.name} (ended {formatTimestamp(c.closesAt)}). Next: {d.name} opens {formatTimestamp(d.opensAt)}.
         </p>
-        <a href='/elections/{c.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+
+        <hr class='my-6 border-white/10' />
+
+        <div class='grid grid-cols-2 gap-4 text-left'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Next Up</span>
+            <span class='mt-1 block text-sm font-bold text-slate-200'>{d.name}</span>
+          </div>
+          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 flex flex-col justify-between'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Past Election</span>
+            <a href='/elections/{c.id}' class='mt-1 block text-sm font-bold text-blue-400 hover:underline'>
+              View results →
+            </a>
+          </div>
+        </div>
       {:else}
-        <Vote size={48} class='mx-auto mb-4 text-slate-400' />
-        <h1 class='text-2xl font-bold text-slate-100'>No elections scheduled</h1>
-        <p class='mt-2 text-slate-400'>Check back later.</p>
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <Vote size={14} class="text-slate-400" />
+          <span>Status</span>
+        </div>
+        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>No elections scheduled</h1>
+        <p class='mt-2 text-sm text-slate-400'>Check back later.</p>
       {/if}
     </div>
-  </div>
-  {#if pageState.isAdmin}
-    <div class='mx-auto max-w-md px-8 pb-8'>
-      <div class='border-t border-white/10 pt-4'>
-        <p class='text-xs font-semibold uppercase tracking-wider text-slate-500'>Admin actions</p>
-        <a href='/admin/elections' class='mt-2 inline-block text-blue-400 hover:underline'>
-          Open election management →
-        </a>
+
+    {#if pageState.isAdmin}
+      <div class='w-full max-w-md mt-8'>
+        <div class='border-t border-white/10 pt-6'>
+          <p class='text-xs font-semibold uppercase tracking-wider text-slate-500'>Admin actions</p>
+          <a href='/admin/elections' class='mt-2 inline-block text-blue-400 hover:underline font-medium text-sm'>
+            Open election management →
+          </a>
+          <p class='mt-3 text-xs text-slate-500 leading-relaxed'>
+            As an administrator, you can create, configure, or transition elections from the management portal. Voters will only see the ballot interface when an election is actively open.
+          </p>
+        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 {:else if pageState.kind === 'voted'}
   <div class='flex min-h-[60vh] items-center justify-center p-8'>
     <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
