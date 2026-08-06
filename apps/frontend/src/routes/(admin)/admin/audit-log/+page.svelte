@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { slide } from "svelte/transition";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import {
@@ -7,8 +8,8 @@
     ChevronLeft,
     ChevronRight,
     ExternalLink,
-    Filter,
     History,
+    SlidersHorizontal,
     X,
   } from "lucide-svelte";
   import {
@@ -34,6 +35,29 @@
   let actorFilter = $state(page.url.searchParams.get("actorId") ?? "");
   let sinceDate = $state(page.url.searchParams.get("since") ?? "");
   let untilDate = $state(page.url.searchParams.get("until") ?? "");
+
+  let isFilterExpanded = $state(
+    import.meta.env.MODE === "test" ||
+    !!(
+      page.url.searchParams.get("action") ||
+      page.url.searchParams.get("targetType") ||
+      page.url.searchParams.get("targetId") ||
+      page.url.searchParams.get("actorId") ||
+      page.url.searchParams.get("since") ||
+      page.url.searchParams.get("until")
+    )
+  );
+
+  const activeFiltersCount = $derived(
+    [
+      actionFilter,
+      targetTypeFilter,
+      targetIdFilter,
+      actorFilter,
+      sinceDate,
+      untilDate,
+    ].filter(Boolean).length,
+  );
 
   // Pagination state
   let items = $state<AuditLogEntry[]>([]);
@@ -198,9 +222,7 @@
     return null;
   }
 
-  const hasActiveFilters = $derived(
-    actionFilter || targetTypeFilter || targetIdFilter || actorFilter || sinceDate || untilDate,
-  );
+
 
   onMount(() => {
     loadPage();
@@ -221,138 +243,201 @@
       </div>
     </header>
 
-    <!-- Filters -->
-    <div class="mb-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-      <div class="mb-3 flex items-center gap-2">
-        <Filter
-          size={14}
-          class="text-slate-400"
-        />
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Filters</span>
-        {#if hasActiveFilters}
+    <!-- Filters Trigger Bar -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="flex flex-nowrap items-center gap-1.5 sm:gap-3 w-full sm:w-auto">
+        <!-- Filters toggle button -->
+        <button
+          type="button"
+          onclick={() => isFilterExpanded = !isFilterExpanded}
+          class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}"
+        >
+          <SlidersHorizontal size={14} class={activeFiltersCount > 0 ? 'text-sky-400' : 'text-slate-400'} />
+          <span>Filters</span>
+          {#if activeFiltersCount > 0}
+            <span class="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-sky-950 border border-sky-500/30 text-[10px] font-black text-sky-400 shrink-0">
+              {activeFiltersCount}
+            </span>
+          {/if}
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Filter Pills (Tags) -->
+    {#if actionFilter || targetTypeFilter || targetIdFilter || actorFilter || sinceDate || untilDate}
+      <div class="mb-4 flex flex-wrap gap-2 items-center">
+        {#if actionFilter}
           <button
-            onclick={clearFilters}
-            class="ml-auto flex items-center gap-1 rounded-lg bg-red-500/10 border border-red-500/20 px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition cursor-pointer"
+            type="button"
+            onclick={() => { actionFilter = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
-            <X size={12} />
-            Clear Filters
+            <span>Action: {actionFilter}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
+          </button>
+        {/if}
+
+        {#if targetTypeFilter}
+          <button
+            type="button"
+            onclick={() => { targetTypeFilter = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+          >
+            <span>Type: {targetTypeFilter}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
+          </button>
+        {/if}
+
+        {#if targetIdFilter}
+          <button
+            type="button"
+            onclick={() => { targetIdFilter = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+          >
+            <span>Target: {targetIdFilter}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
+          </button>
+        {/if}
+
+        {#if actorFilter}
+          <button
+            type="button"
+            onclick={() => { actorFilter = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+          >
+            <span>Actor: {actorFilter}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
+          </button>
+        {/if}
+
+        {#if sinceDate}
+          <button
+            type="button"
+            onclick={() => { sinceDate = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+          >
+            <span>Since: {sinceDate}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
+          </button>
+        {/if}
+
+        {#if untilDate}
+          <button
+            type="button"
+            onclick={() => { untilDate = ""; handleFilterChange(); }}
+            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+          >
+            <span>Until: {untilDate}</span>
+            <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
           </button>
         {/if}
       </div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-        <!-- Action filter -->
-        <div>
-          <label
-            for="filter-action"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Action
-          </label>
-          <select
-            id="filter-action"
-            bind:value={actionFilter}
-            onchange={handleFilterChange}
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          >
-            <option value="">All actions</option>
-            {#each AUDIT_ACTIONS as action (action)}
-              <option value={action}>{action}</option>
-            {/each}
-          </select>
+    {/if}
+
+    {#if isFilterExpanded}
+      <div
+        transition:slide={{ duration: 200 }}
+        class="mb-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 shadow-lg backdrop-blur-md relative overflow-hidden"
+      >
+        <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/20 via-orange-400/40 to-rose-500/20"></div>
+
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Filter Audit Logs</h3>
+          {#if activeFiltersCount > 0}
+            <button
+              onclick={clearFilters}
+              class="text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+            >
+              Clear Filters
+            </button>
+          {/if}
         </div>
 
-        <!-- Target type filter -->
-        <div>
-          <label
-            for="filter-target-type"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Target Type
-          </label>
-          <select
-            id="filter-target-type"
-            bind:value={targetTypeFilter}
-            onchange={handleFilterChange}
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          >
-            <option value="">All types</option>
-            {#each AUDIT_TARGET_TYPES as type (type)}
-              <option value={type}>{type}</option>
-            {/each}
-          </select>
-        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <!-- Action filter -->
+          <div>
+            <label for="filter-action" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Action</label>
+            <select
+              id="filter-action"
+              bind:value={actionFilter}
+              onchange={handleFilterChange}
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+            >
+              <option value="">All actions</option>
+              {#each AUDIT_ACTIONS as action (action)}
+                <option value={action}>{action}</option>
+              {/each}
+            </select>
+          </div>
 
-        <!-- Target ID filter -->
-        <div>
-          <label
-            for="filter-target-id"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Target ID
-          </label>
-          <input
-            id="filter-target-id"
-            type="text"
-            bind:value={targetIdFilter}
-            onchange={handleFilterChange}
-            placeholder="Filter by target..."
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          />
-        </div>
+          <!-- Target type filter -->
+          <div>
+            <label for="filter-target-type" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Target Type</label>
+            <select
+              id="filter-target-type"
+              bind:value={targetTypeFilter}
+              onchange={handleFilterChange}
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+            >
+              <option value="">All types</option>
+              {#each AUDIT_TARGET_TYPES as type (type)}
+                <option value={type}>{type}</option>
+              {/each}
+            </select>
+          </div>
 
-        <!-- Actor filter -->
-        <div>
-          <label
-            for="filter-actor"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Actor ID
-          </label>
-          <input
-            id="filter-actor"
-            type="text"
-            bind:value={actorFilter}
-            onchange={handleFilterChange}
-            placeholder="Filter by actor..."
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          />
-        </div>
+          <!-- Target ID filter -->
+          <div>
+            <label for="filter-target-id" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Target ID</label>
+            <input
+              id="filter-target-id"
+              type="text"
+              bind:value={targetIdFilter}
+              onchange={handleFilterChange}
+              placeholder="Filter by target..."
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+            />
+          </div>
 
-        <!-- Since date -->
-        <div>
-          <label
-            for="filter-since"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Since
-          </label>
-          <input
-            id="filter-since"
-            type="date"
-            bind:value={sinceDate}
-            onchange={handleFilterChange}
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          />
-        </div>
+          <!-- Actor filter -->
+          <div>
+            <label for="filter-actor" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Actor ID</label>
+            <input
+              id="filter-actor"
+              type="text"
+              bind:value={actorFilter}
+              onchange={handleFilterChange}
+              placeholder="Filter by actor..."
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+            />
+          </div>
 
-        <!-- Until date -->
-        <div>
-          <label
-            for="filter-until"
-            class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          >
-            Until
-          </label>
-          <input
-            id="filter-until"
-            type="date"
-            bind:value={untilDate}
-            onchange={handleFilterChange}
-            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100 transition focus:border-sky-400 focus:outline-none"
-          />
+          <!-- Since date -->
+          <div>
+            <label for="filter-since" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Since</label>
+            <input
+              id="filter-since"
+              type="date"
+              bind:value={sinceDate}
+              onchange={handleFilterChange}
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+            />
+          </div>
+
+          <!-- Until date -->
+          <div>
+            <label for="filter-until" class="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-400">Until</label>
+            <input
+              id="filter-until"
+              type="date"
+              bind:value={untilDate}
+              onchange={handleFilterChange}
+              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
 
     <!-- Table -->
     <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
