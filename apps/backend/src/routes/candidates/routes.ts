@@ -1,9 +1,14 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { bodyLimit } from "hono/body-limit";
 import { SelectCandidateSchema } from "@/database/openapi-schemas";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { MAX_SIZE } from "@/lib/b2-client";
 import { booleanQuery } from "@/lib/validation/boolean-query";
+import { requireAdmin } from "@/middleware/auth";
 import jsonContent from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
+
+export const MAX_IMAGE_REQUEST_BYTES = MAX_SIZE + 1024 * 1024;
 
 export const createCandidateSchema = z.object({
   fullName: z.string(),
@@ -257,6 +262,14 @@ export const uploadImageRoute = createRoute({
   method: "post",
   path: "/candidates/{id}/image",
   security: [{ sessionAuth: [] }],
+  middleware: [
+    requireAdmin,
+    bodyLimit({
+      maxSize: MAX_IMAGE_REQUEST_BYTES,
+      onError: (c) =>
+        c.json({ message: ERROR_MESSAGES.PAYLOAD_TOO_LARGE }, httpStatusCodes.PAYLOAD_TOO_LARGE),
+    }),
+  ],
   request: {
     params: z.object({
       id: z.string(),
@@ -269,6 +282,10 @@ export const uploadImageRoute = createRoute({
         candidate: SelectCandidateSchema,
       }),
       ERROR_MESSAGES.CANDIDATE_UPDATED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.PAYLOAD_TOO_LARGE]: jsonContent(
+      z.object({ message: z.string() }),
+      ERROR_MESSAGES.PAYLOAD_TOO_LARGE,
     ),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({

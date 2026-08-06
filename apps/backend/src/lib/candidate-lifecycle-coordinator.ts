@@ -45,13 +45,18 @@ export type CandidateLifecycleErrorCode =
   | "ELECTION_NOT_FOUND"
   | "PARTY_LIST_NOT_FOUND"
   | "ELECTION_NOT_IN_DRAFT"
+  | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE";
 
 export class CandidateLifecycleError extends Error {
   readonly code: CandidateLifecycleErrorCode;
-  readonly status: 400 | 404 | 409 | 415;
+  readonly status: 400 | 404 | 409 | 413 | 415;
 
-  constructor(code: CandidateLifecycleErrorCode, status: 400 | 404 | 409 | 415, message?: string) {
+  constructor(
+    code: CandidateLifecycleErrorCode,
+    status: 400 | 404 | 409 | 413 | 415,
+    message?: string,
+  ) {
     super(message || ERROR_MESSAGES[code]);
     this.code = code;
     this.status = status;
@@ -297,6 +302,9 @@ export class CandidateLifecycleCoordinator {
       uploadResult = await storage.upload(id, file);
     } catch (uploadError) {
       if (uploadError instanceof ImageValidationError) {
+        if (uploadError.code === "FILE_TOO_LARGE") {
+          throw new CandidateLifecycleError("PAYLOAD_TOO_LARGE", 413);
+        }
         throw new CandidateLifecycleError("UNSUPPORTED_MEDIA_TYPE", 415, uploadError.message);
       }
       throw uploadError;

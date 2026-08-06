@@ -259,6 +259,68 @@ describe("votes Routes (repository)", () => {
   });
 
   describe("pOST /votes - Submit Vote", () => {
+    it("should reject more than 100 vote selections before casting", async () => {
+      setUser();
+      const votes = Array.from({ length: 101 }, (_, index) => ({
+        candidateId: `candidate-${index}`,
+        positionId: `position-${index}`,
+      }));
+
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({ electionId: testElectionId, votes }),
+          headers: { "Content-Type": "application/json" },
+        },
+        { HMAC_SECRET: "test-secret" },
+      );
+
+      expect(res.status).toBe(422);
+      expect(mockCast).not.toHaveBeenCalled();
+    });
+
+    it("should reject vote identifiers longer than 128 characters", async () => {
+      setUser();
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: "c".repeat(129), positionId: testPositionId1 }],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        { HMAC_SECRET: "test-secret" },
+      );
+
+      expect(res.status).toBe(422);
+      expect(mockCast).not.toHaveBeenCalled();
+    });
+
+    it("should reject oversized vote bodies before JSON parsing", async () => {
+      setUser();
+      const res = await router.request(
+        "/votes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            electionId: testElectionId,
+            votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+          }),
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": String(64 * 1024 + 1),
+          },
+        },
+        { HMAC_SECRET: "test-secret" },
+      );
+
+      expect(res.status).toBe(413);
+      expect(mockCast).not.toHaveBeenCalled();
+    });
+
     it("should successfully submit votes for multiple candidates", async () => {
       setUser();
       mockCast.mockResolvedValue({

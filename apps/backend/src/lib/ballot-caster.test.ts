@@ -166,6 +166,88 @@ describe("DrizzleBallotCaster", () => {
     }
   });
 
+  it("should run user-vote and participation checks concurrently", async () => {
+    let releaseUserVoteCheck!: (value: boolean) => void;
+    const userVoteCheck = new Promise<boolean>((resolve) => {
+      releaseUserVoteCheck = resolve;
+    });
+    let participationCheckStarted = false;
+
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockReturnValue(userVoteCheck);
+    mockHasVoterHashParticipated.mockImplementation(async () => {
+      participationCheckStarted = true;
+      return false;
+    });
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+    mockFindByUserAndElection.mockResolvedValue([]);
+
+    const castPromise = ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(participationCheckStarted).toBe(true);
+      });
+    } finally {
+      releaseUserVoteCheck(false);
+      await castPromise.catch(() => undefined);
+    }
+  });
+
+  it("should run candidate and position reads concurrently", async () => {
+    let releaseCandidateRead!: (value: Map<string, { id: string; positionId: string }>) => void;
+    const candidateRead = new Promise<Map<string, { id: string; positionId: string }>>(
+      (resolve) => {
+        releaseCandidateRead = resolve;
+      },
+    );
+    let positionReadStarted = false;
+
+    mockFindByAccountId.mockResolvedValue({ id: userId });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockHasVoterHashParticipated.mockResolvedValue(false);
+    mockFindActiveByIds.mockReturnValue(candidateRead);
+    mockListByElection.mockImplementation(async () => {
+      positionReadStarted = true;
+      return [{ id: positionId, electionId }];
+    });
+
+    const castPromise = ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
+    });
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(positionReadStarted).toBe(true);
+    } finally {
+      releaseCandidateRead(new Map([[candidateId, { id: candidateId, positionId }]]));
+      await castPromise.catch(() => undefined);
+    }
+  });
+
   it("should fail with CANDIDATE_NOT_FOUND when active candidate checks mismatch selections length", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId });
     mockFindElectionById.mockResolvedValue({
@@ -330,9 +412,6 @@ describe("DrizzleBallotCaster", () => {
       new Map([[candidateId, { id: candidateId, positionId }]]),
     );
     mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
-    mockFindByUserAndElection.mockResolvedValue([
-      { id: "vote-1", userId, candidateId, positionId, electionId },
-    ]);
 
     const result = await ballotCaster.cast(mockDb, {
       accountId,
@@ -344,8 +423,17 @@ describe("DrizzleBallotCaster", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.votes).toHaveLength(1);
-      expect(result.data.votes[0].id).toBe("vote-1");
+      expect(result.data.votes[0]).toMatchObject({
+        userId,
+        candidateId,
+        positionId,
+        electionId,
+        createdAt: expect.any(Number),
+        updatedAt: expect.any(Number),
+      });
+      expect(result.data.votes[0].id).toEqual(expect.any(String));
     }
+    expect(mockFindByUserAndElection).not.toHaveBeenCalled();
   });
 
   it("should fail with internal error when hmacSecret is missing or too short during cast", async () => {

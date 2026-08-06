@@ -1,26 +1,26 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { bodyLimit } from "hono/body-limit";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import jsonContent, { jsonContentRequired } from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
+export const MAX_IDENTIFIER_LENGTH = 128;
+export const MAX_BALLOT_SELECTIONS = 100;
+export const MAX_VOTE_BODY_BYTES = 64 * 1024;
+
+const boundedIdentifier = () => z.string().min(1).max(MAX_IDENTIFIER_LENGTH);
+
+export const VoteItemSchema = z.object({
+  candidateId: boundedIdentifier(),
+  positionId: boundedIdentifier(),
+});
+
 export const submitVoteSchema = z.object({
-  electionId: z.string().openapi({
+  electionId: boundedIdentifier().openapi({
     description: "Election the votes are cast in",
     example: "elec_202mno",
   }),
-  votes: z
-    .array(
-      z.object({
-        candidateId: z.string(),
-        positionId: z.string(),
-      }),
-    )
-    .min(1),
-});
-
-export const VoteItemSchema = z.object({
-  candidateId: z.string(),
-  positionId: z.string(),
+  votes: z.array(VoteItemSchema).min(1).max(MAX_BALLOT_SELECTIONS),
 });
 
 export const VoteResponseSchema = z.object({
@@ -79,6 +79,11 @@ export const submitVoteRoute = createRoute({
   method: "post",
   path: "/votes",
   security: [{ sessionAuth: [] }],
+  middleware: bodyLimit({
+    maxSize: MAX_VOTE_BODY_BYTES,
+    onError: (c) =>
+      c.json({ message: ERROR_MESSAGES.PAYLOAD_TOO_LARGE }, httpStatusCodes.PAYLOAD_TOO_LARGE),
+  }),
   request: {
     body: jsonContentRequired(
       submitVoteSchema,
@@ -89,6 +94,10 @@ export const submitVoteRoute = createRoute({
     [httpStatusCodes.OK]: jsonContent(
       SubmitVoteResponseSchema,
       ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.PAYLOAD_TOO_LARGE]: jsonContent(
+      z.object({ message: z.string() }),
+      ERROR_MESSAGES.PAYLOAD_TOO_LARGE,
     ),
     [httpStatusCodes.BAD_REQUEST]: jsonContent(
       z.object({

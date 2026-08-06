@@ -4,6 +4,11 @@ export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+export type ImageValidationErrorCode = "FILE_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE";
+type FileValidationResult =
+  | { valid: true; code?: undefined; error?: undefined }
+  | { valid: false; code: ImageValidationErrorCode; error: string };
+
 const MAGIC_BYTES: Readonly<
   Record<Exclude<(typeof ALLOWED_TYPES)[number], "image/webp">, number[][]>
 > = {
@@ -75,10 +80,11 @@ export class B2Client {
     return `candidates/${candidateId}/${uuid}.${ext}`;
   }
 
-  validateFile(file: { size: number; type: string }): { valid: boolean; error?: string } {
+  validateFile(file: { size: number; type: string }): FileValidationResult {
     if (!ALLOWED_TYPES.includes(file.type as (typeof ALLOWED_TYPES)[number])) {
       return {
         valid: false,
+        code: "UNSUPPORTED_MEDIA_TYPE",
         error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`,
       };
     }
@@ -86,6 +92,7 @@ export class B2Client {
     if (file.size > MAX_SIZE) {
       return {
         valid: false,
+        code: "FILE_TOO_LARGE",
         error: `File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`,
       };
     }
@@ -240,7 +247,10 @@ export interface DownloadedImage {
 }
 
 export class ImageValidationError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: ImageValidationErrorCode = "UNSUPPORTED_MEDIA_TYPE",
+  ) {
     super(message);
     this.name = "ImageValidationError";
   }
@@ -296,7 +306,7 @@ export class B2ImageStorage implements ImageStorage {
       type: file.type,
     });
     if (!validation.valid) {
-      throw new ImageValidationError(validation.error || "Unsupported media type");
+      throw new ImageValidationError(validation.error || "Unsupported media type", validation.code);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -339,7 +349,10 @@ export class InMemoryImageStorage implements ImageStorage {
       throw new ImageValidationError(`Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`);
     }
     if (file.size > MAX_SIZE) {
-      throw new ImageValidationError(`File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`);
+      throw new ImageValidationError(
+        `File too large. Maximum size: ${MAX_SIZE / 1024 / 1024}MB`,
+        "FILE_TOO_LARGE",
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

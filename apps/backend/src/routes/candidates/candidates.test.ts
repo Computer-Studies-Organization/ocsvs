@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { accounts } from "@/database/schema";
+import { MAX_SIZE } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import router from "./index";
 
@@ -14,6 +15,12 @@ vi.mock("@/middleware/auth", () => ({
       username: "testuser",
       role: mockAuthRole,
     });
+    await next();
+  },
+  requireAdmin: async (c: any, next: any) => {
+    if (mockAuthRole !== "admin" && mockAuthRole !== "super_admin") {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, 403);
+    }
     await next();
   },
   withAdmin: (handler: any) => async (c: any, next: any) => {
@@ -140,7 +147,7 @@ vi.mock("@/lib/b2-client", async () => {
       async upload(candidateId: string, file: File) {
         const validation = mockValidateFile({ size: file.size, type: file.type });
         if (validation && validation.valid === false) {
-          throw new ImageValidationError(validation.error || "Invalid file");
+          throw new ImageValidationError(validation.error || "Invalid file", validation.code);
         }
         const buffer = Buffer.from(await file.arrayBuffer());
         const magicCheck = mockValidateMagicBytes(buffer, file.type);
@@ -612,6 +619,67 @@ describe("candidate Routes (repository)", () => {
   });
 
   describe("POST /candidates/:id/image (uploadImage)", () => {
+    it("should reject oversized image bodies before multipart parsing", async () => {
+      const res = await router.request(
+        "/candidates/cand-1/image",
+        {
+          method: "POST",
+          body: "not-parsed",
+          headers: {
+            "Content-Type": "multipart/form-data; boundary=test-boundary",
+            "Content-Length": String(6 * 1024 * 1024 + 1),
+          },
+        },
+        {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(413);
+      expect(mockGetForAdminView).not.toHaveBeenCalled();
+      expect(mockValidateFile).not.toHaveBeenCalled();
+    });
+
+    it("should return 413 when the image exceeds the file limit within the request limit", async () => {
+      const candidateId = "cand-1";
+      mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });
+      mockValidateFile.mockReturnValue({
+        valid: false,
+        code: "FILE_TOO_LARGE",
+        error: "File too large",
+      });
+
+      const form = new FormData();
+      form.append(
+        "image",
+        new File([new Uint8Array(MAX_SIZE + 1)], "image.png", { type: "image/png" }),
+      );
+
+      const res = await router.request(
+        `/candidates/${candidateId}/image`,
+        {
+          method: "POST",
+          body: form,
+        },
+        {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "bucket",
+        },
+      );
+
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.PAYLOAD_TOO_LARGE });
+      expect(mockValidateFile).toHaveBeenCalledWith({ size: MAX_SIZE + 1, type: "image/png" });
+      expect(mockUploadImage).not.toHaveBeenCalled();
+      expect(mockUpdateImageUrl).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
     it("should upload candidate image, update database, and write audit log", async () => {
       const candidateId = "cand-1";
       mockGetForAdminView.mockResolvedValueOnce({ id: candidateId, imageUrl: null });

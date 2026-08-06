@@ -200,11 +200,12 @@ export class DrizzleBallotCaster {
         ...(legacyHash ? [legacyHash] : []),
       ];
 
-      const hasVoted = await voteRepo.existsForUserInElection(db, user.id, input.electionId);
-      const hasParticipated =
+      const [hasVoted, hasParticipated] = await Promise.all([
+        voteRepo.existsForUserInElection(db, user.id, input.electionId),
         hashesToCheck.length > 0
-          ? await voteRepo.hasVoterHashParticipated(db, input.electionId, hashesToCheck)
-          : false;
+          ? voteRepo.hasVoterHashParticipated(db, input.electionId, hashesToCheck)
+          : Promise.resolve(false),
+      ]);
 
       if (hasVoted || hasParticipated) {
         return {
@@ -232,7 +233,10 @@ export class DrizzleBallotCaster {
       // 5. Resolve and validate candidates
       const candidateIds = input.selections.map((s) => s.candidateId);
       if (candidateIds.length > 0) {
-        const activeCandidates = await candidateRepo.findActiveByIds(db, candidateIds);
+        const [activeCandidates, validPositions] = await Promise.all([
+          candidateRepo.findActiveByIds(db, candidateIds),
+          positionRepo.listByElection(db, input.electionId),
+        ]);
         if (activeCandidates.size !== candidateIds.length) {
           return {
             success: false,
@@ -272,7 +276,6 @@ export class DrizzleBallotCaster {
         }
 
         // 7. Check that positions belong to the election
-        const validPositions = await positionRepo.listByElection(db, input.electionId);
         const validPositionIds = new Set(validPositions.map((p) => p.id));
         for (const pid of positionIds) {
           if (!validPositionIds.has(pid)) {
@@ -335,12 +338,9 @@ export class DrizzleBallotCaster {
         await db.batch(batchStatements);
       }
 
-      // 9. Fetch created votes
-      const createdVotes = await voteRepo.findByUserAndElection(db, user.id, input.electionId);
-
       return {
         success: true,
-        data: { votes: createdVotes },
+        data: { votes: recordsToInsert },
       };
     } catch (err) {
       if (isUniqueConstraintError(err)) {

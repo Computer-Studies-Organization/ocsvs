@@ -64,6 +64,7 @@ describe("B2Client", () => {
   it("should reject file exceeding size limit", () => {
     const result = client.validateFile({ size: MAX_SIZE + 1, type: "image/jpeg" });
     expect(result.valid).toBe(false);
+    expect(result.code).toBe("FILE_TOO_LARGE");
     expect(result.error).toContain("File too large");
   });
 

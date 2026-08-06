@@ -55,6 +55,7 @@ export const ERROR_MESSAGES = {
   INVALID_TRANSITION_BODY: "opensAt and closesAt are required and closesAt must be after opensAt",
   CANDIDATE_INACTIVE: "Candidate is not active",
   NO_IMAGE_PROVIDED: "No image file provided",
+  PAYLOAD_TOO_LARGE: "Request body too large",
   UNSUPPORTED_MEDIA_TYPE: "Unsupported media type",
   DUPLICATE_POSITION_VOTE: "Cannot vote for multiple candidates in the same position",
   CURRENT_PASSWORD_INCORRECT: "Current password is incorrect",
