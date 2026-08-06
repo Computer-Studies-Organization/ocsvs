@@ -93,8 +93,13 @@ describe("session utilities", () => {
     it("should retrieve a session joined with account information", async () => {
       const sessionId = "test-session-id";
       const expectedResult = {
-        session: { id: sessionId, accountId: "acc-id", expiresAt: 12345 },
-        account: { id: "acc-id", username: "testuser", deletedAt: null },
+        session: { expiresAt: 12345 },
+        account: {
+          id: "acc-id",
+          email: "test@example.com",
+          username: "testuser",
+          role: "user",
+        },
       };
       selectChain.get.mockResolvedValue(expectedResult);
 
@@ -102,8 +107,13 @@ describe("session utilities", () => {
 
       expect(result).toEqual(expectedResult);
       expect(mockDb.select).toHaveBeenCalledWith({
-        session: sessions,
-        account: accounts,
+        session: { expiresAt: sessions.expiresAt },
+        account: {
+          id: accounts.id,
+          email: accounts.email,
+          username: accounts.username,
+          role: accounts.role,
+        },
       });
       expect(selectChain.from).toHaveBeenCalledWith(sessions);
       expect(selectChain.innerJoin).toHaveBeenCalledTimes(1);

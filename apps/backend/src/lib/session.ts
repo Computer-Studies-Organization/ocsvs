@@ -57,8 +57,13 @@ export async function getSessionAccount(db: Database, sessionId: string) {
 
   const result = await db
     .select({
-      session: sessions,
-      account: accounts,
+      session: { expiresAt: sessions.expiresAt },
+      account: {
+        id: accounts.id,
+        email: accounts.email,
+        username: accounts.username,
+        role: accounts.role,
+      },
     })
     .from(sessions)
     .innerJoin(accounts, eq(sessions.accountId, accounts.id))

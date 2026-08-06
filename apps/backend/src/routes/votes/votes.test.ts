@@ -85,7 +85,7 @@ const {
   mockFindByUserId,
   mockFindByUserAndElection,
   mockCountByCandidateId,
-  mockGetCurrentElection,
+  mockFindOpen,
   mockListByElection,
   mockFindElectionById,
   mockFindLatestClosed,
@@ -101,7 +101,7 @@ const {
   mockFindByUserId: vi.fn(),
   mockFindByUserAndElection: vi.fn(),
   mockCountByCandidateId: vi.fn(),
-  mockGetCurrentElection: vi.fn(),
+  mockFindOpen: vi.fn(),
   mockListByElection: vi.fn(),
   mockFindElectionById: vi.fn(),
   mockFindLatestClosed: vi.fn(),
@@ -152,13 +152,13 @@ vi.mock("@/database/repositories/position.repository", () => ({
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
     findById: mockFindElectionById,
+    findOpen: mockFindOpen,
     findLatestClosed: mockFindLatestClosed,
   },
 }));
 
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: {
-    getCurrentElection: mockGetCurrentElection,
     getResults: mockGetElectionResults,
   },
 }));
@@ -186,7 +186,7 @@ describe("votes Routes (repository)", () => {
     mockFindByUserId.mockReset();
     mockFindByUserAndElection.mockReset();
     mockCountByCandidateId.mockReset();
-    mockGetCurrentElection.mockReset();
+    mockFindOpen.mockReset();
     mockListByElection.mockReset();
     mockFindElectionById.mockReset();
     mockCast.mockReset();
@@ -529,7 +529,7 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindOpen.mockResolvedValue({ id: testElectionId });
       mockFindByUserAndElection.mockResolvedValue([
         {
           id: testVoteId1,
@@ -552,6 +552,7 @@ describe("votes Routes (repository)", () => {
         candidateId: testCandidateId1,
         positionId: testPositionId1,
       });
+      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("returns empty votes when there is no open election", async () => {
@@ -560,13 +561,14 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockGetCurrentElection.mockResolvedValue(null);
+      mockFindOpen.mockResolvedValue(null);
 
       const res = await router.request("/votes/me", { method: "GET" });
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json).toEqual({ electionId: null, votes: [] });
+      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("returns empty votes when user has not voted in the current election", async () => {
@@ -575,7 +577,7 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindOpen.mockResolvedValue({ id: testElectionId });
       mockFindByUserAndElection.mockResolvedValue([]);
 
       const res = await router.request("/votes/me", { method: "GET" });
@@ -584,6 +586,7 @@ describe("votes Routes (repository)", () => {
       const json = (await res.json()) as any;
       expect(json.electionId).toBe(testElectionId);
       expect(json.votes).toEqual([]);
+      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("returns empty votes when user record is missing", async () => {
@@ -601,7 +604,7 @@ describe("votes Routes (repository)", () => {
   describe("gET /votes/results - getVoteResults", () => {
     it("should return vote results grouped by position", async () => {
       setAdmin();
-      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindOpen.mockResolvedValue({ id: testElectionId });
       mockGetElectionResults.mockResolvedValue([
         {
           positionId: testPositionId1,
@@ -640,11 +643,12 @@ describe("votes Routes (repository)", () => {
       expect(json.results).toHaveLength(2);
       expect(json.meta.totalVotes).toBe(8);
       expect(json.meta.totalPositions).toBe(2);
+      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("should include zero-vote candidates", async () => {
       setAdmin();
-      mockGetCurrentElection.mockResolvedValue({ id: testElectionId });
+      mockFindOpen.mockResolvedValue({ id: testElectionId });
       mockGetElectionResults.mockResolvedValue([
         {
           positionId: testPositionId1,
@@ -667,6 +671,7 @@ describe("votes Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.results[0].candidates[0].voteCount).toBe(0);
+      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
     });
   });
 });

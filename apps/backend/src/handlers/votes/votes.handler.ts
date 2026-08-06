@@ -75,7 +75,7 @@ export const getMyVotes: AppRouteHandler<typeof getMyVotesRoute> = async (c) => 
 
   // Source of truth: the current open election. If none is open, the user has
   // no "current" votes to return.
-  const current = await electionQueries.getCurrentElection(db);
+  const current = await electionRepo.findOpen(db);
   if (!current) {
     return c.json({ electionId: null, votes: [] }, httpStatusCodes.OK);
   }
@@ -97,8 +97,7 @@ export const getVoteResults: AppRouteHandler<typeof getVoteResultsRoute> = async
   const { db } = createDb(c);
 
   // Get current active election or latest closed election
-  const current =
-    (await electionQueries.getCurrentElection(db)) ?? (await electionRepo.findLatestClosed(db));
+  const current = (await electionRepo.findOpen(db)) ?? (await electionRepo.findLatestClosed(db));
 
   if (!current) {
     return c.json(
