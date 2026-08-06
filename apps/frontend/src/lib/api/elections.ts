@@ -9,22 +9,6 @@ export async function listElections(
   return apiFetch<TElection[]>(`/elections${qs}`, options);
 }
 
-export async function getCurrentElection(options?: ApiFetchOptions): Promise<TElection | null> {
-  try {
-    return await apiFetch<TElection>("/elections/current", options);
-  } catch (err) {
-    if (
-      err &&
-      typeof err === "object" &&
-      "status" in err &&
-      (err as { status: number }).status === 404
-    ) {
-      return null;
-    }
-    throw err;
-  }
-}
-
 export async function getElection(id: string, options?: ApiFetchOptions): Promise<TElection> {
   return apiFetch<TElection>(`/elections/${id}`, options);
 }

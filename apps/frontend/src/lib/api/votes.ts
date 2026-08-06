@@ -11,10 +11,3 @@ export async function submitElectionVotes(
 ): Promise<{ message: string }> {
   return apiFetch("/votes", { method: "POST", body: JSON.stringify({ electionId, votes }) });
 }
-
-export async function getMyElectionVotes(): Promise<{
-  electionId: string | null;
-  votes: ElectionVoteItem[];
-}> {
-  return apiFetch("/votes/me");
-}

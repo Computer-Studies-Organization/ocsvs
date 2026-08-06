@@ -17,7 +17,6 @@ test("CacheEntry.fetch populates data on success and clears loading", async () =
   expect(entry.data).toBe(42);
   expect(entry.loading).toBe(false);
   expect(entry.error).toBeNull();
-  expect(entry.lastFetched).toBeGreaterThan(0);
 });
 
 test("CacheEntry.fetch captures error message and returns null", async () => {
@@ -72,13 +71,11 @@ test("CacheEntry.fetch with force=true bypasses cached data and re-fetches", asy
   expect(entry.data).toBe(2);
 });
 
-test("CacheEntry.invalidate clears data and lastFetched but not a prior error", () => {
+test("CacheEntry.invalidate clears cached data", () => {
   const entry = new CacheEntry<number>(async () => 1);
   entry.data = 1;
-  entry.lastFetched = Date.now();
   entry.invalidate();
   expect(entry.data).toBeNull();
-  expect(entry.lastFetched).toBe(0);
 });
 
 test("CacheEntry.invalidate during an in-flight fetch discards the stale result", async () => {
@@ -95,13 +92,11 @@ test("CacheEntry.invalidate during an in-flight fetch discards the stale result"
 
   entry.invalidate();
   expect(entry.data).toBeNull();
-  expect(entry.lastFetched).toBe(0);
 
   resolve(42);
   await fetchPromise;
 
   expect(entry.data).toBeNull();
-  expect(entry.lastFetched).toBe(0);
   expect(entry.error).toBeNull();
 });
 

@@ -1,6 +1,5 @@
 /**
- * A single-cache-slot wrapper that tracks a value, its fetch state, and the
- * time of the most recent successful fetch.
+ * A single-cache-slot wrapper that tracks a value and its fetch state.
  *
  * **Staleness contract**: this class performs no automatic TTL or background
  * refresh. A cached value is considered "fresh" until either:
@@ -19,7 +18,6 @@ export class CacheEntry<T> {
   data = $state.raw<T | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
-  lastFetched = $state<number>(0);
 
   private fetcher: (options?: { fetch?: typeof fetch }) => Promise<T>;
   private inflight: Promise<T | null> | null = null;
@@ -46,7 +44,6 @@ export class CacheEntry<T> {
       .then((result) => {
         if (myEpoch !== this.epoch) return null;
         this.data = result;
-        this.lastFetched = Date.now();
         return result;
       })
       .catch((err) => {
@@ -66,14 +63,13 @@ export class CacheEntry<T> {
   /**
    * Clear the cached value and discard any in-flight fetch result.
    *
-   * After this call, `data` is `null` and `lastFetched` is `0` even if a
-   * fetch was already running — the in-flight `.then` handler will see that
-   * the epoch has advanced and skip its write.
+   * After this call, `data` is `null` even if a fetch was already running —
+   * the in-flight `.then` handler will see that the epoch has advanced and
+   * skip its write.
    */
   invalidate(): void {
     this.epoch++;
     this.data = null;
-    this.lastFetched = 0;
     this.loading = false;
     this.inflight = null;
   }
