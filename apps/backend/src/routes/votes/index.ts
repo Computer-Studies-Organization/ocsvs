@@ -11,7 +11,6 @@ import {
 const router = createRouter();
 
 // Apply authentication middleware to votes routes
-router.use("/votes", requireAuth);
 router.use("/votes/*", requireAuth);
 
 // Admin-only routes
