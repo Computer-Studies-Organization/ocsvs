@@ -7,6 +7,10 @@ export interface Toast {
   duration?: number;
 }
 
+export function getToastTransition(prefersReducedMotion: boolean) {
+  return prefersReducedMotion ? { y: 0, duration: 0 } : { y: -20, duration: 250 };
+}
+
 class ToastStore {
   private _list = $state<Toast[]>([]);
   private _counter = 0;

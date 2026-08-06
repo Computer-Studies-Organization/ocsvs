@@ -1,8 +1,9 @@
 <!-- apps/frontend/src/lib/components/ui/toast-container.svelte -->
 <script lang='ts'>
-  import { toasts, dismissToast } from '$lib/stores/toast.svelte';
+  import { getToastTransition, toasts, dismissToast } from '$lib/stores/toast.svelte';
   import type { ToastType } from '$lib/stores/toast.svelte';
   import { X, CheckCircle, AlertCircle, Info } from 'lucide-svelte';
+  import { fly } from 'svelte/transition';
 
   const icons: Record<ToastType, typeof CheckCircle> = {
     success: CheckCircle,
@@ -30,14 +31,20 @@
       icon: 'oklch(0.65 0.15 250)',
     },
   };
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  const toastTransition = getToastTransition(prefersReducedMotion);
 </script>
 
-<div class='fixed bottom-4 right-4 z-50 flex flex-col gap-2 sm:bottom-6 sm:right-6'>
+<div class='fixed top-4 right-4 left-4 sm:left-auto sm:right-6 sm:top-6 sm:w-auto sm:max-w-md z-[100] flex flex-col gap-2'>
   {#each toasts.list as toast (toast.id)}
     {@const Icon = icons[toast.type]}
     {@const c = colors[toast.type]}
     <div
       role='alert'
+      transition:fly={toastTransition}
       class='flex items-center gap-3 rounded-xl px-4 py-3 shadow-lg backdrop-blur-sm border transition-all'
       style='background: {c.bg}; border-color: {c.border}; color: {c.text}'
     >
