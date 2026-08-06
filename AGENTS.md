@@ -30,18 +30,17 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 ocsvs/
 ├── apps/
 │   ├── backend/        # @cso-voting/backend — Hono API on Cloudflare Workers (Turso / libSQL)
-│   ├── frontend/       # @cso-voting/frontend — SvelteKit 2 + Svelte 5 (active frontend)
-│   └── frontend-react/ # Experimental: React + TanStack Router (excluded from pnpm workspace via !apps/frontend-react)
+│   └── frontend/       # @cso-voting/frontend — SvelteKit 2 + Svelte 5 (active frontend)
 ├── packages/           # Reserved for shared code (currently empty — just .gitkeep)
 ├── docs/
 │   └── superpowers/    # Project documentation
 ├── scripts/            # Root-level scripts
 ├── .github/workflows/ci.yml  # CI: install → typecheck → lint → test → build
 ├── justfile            # Task runner (just) — delegates to pnpm scripts
-└── pnpm-workspace.yaml # Workspace: apps/* (excl. frontend-react) + packages/*
+└── pnpm-workspace.yaml # Workspace: apps/* + packages/*
 ```
 
-The workspace is declared in `pnpm-workspace.yaml` (`apps/*` excluding `frontend-react`, and `packages/*`).
+The workspace is declared in `pnpm-workspace.yaml` (`apps/*` and `packages/*`).
 
 ## Task Runner — `justfile`
 
@@ -479,49 +478,6 @@ src/
 - **`CacheEntry.fetch()` never rejects.** On a failed fetch it resolves `null` and records the message in `entry.error` (see `cache-entry.svelte.ts`); the promise is never rejected. So `await entry.fetch()` never throws, and any `.catch()`/try-catch around it is unreachable. The correct consumer pattern is `const result = await entry.fetch(); if (result) { /* use result */ } else { usersError = entry.error ?? 'Failed to load' }`. `add-candidate-modal.svelte`'s `loadUsers()` is the reference example — do NOT rely on try/catch to surface cache load failures.
 - **`/users` pagination is capped at `limit=100`** (backend `ListUsersQuerySchema.max(100)`). `fetchUsers` in `lib/api/users.ts` defaults to `limit: 100`. The backend OpenAPI hook returns **422** for `limit > 100` before the repository is queried, so a higher request limit silently fails the whole list call rather than truncating — keep admin user-list requests at 100.
 
-## Frontend (`apps/frontend-react`) — Experimental React Rewrite
-
-A React + TanStack Router rewrite of the frontend, **excluded from the pnpm workspace** (`!apps/frontend-react` in `pnpm-workspace.yaml`). This is work-in-progress and not wired into CI/CD or the backend's asset serving.
-
-### Stack
-
-- **React 19** + **Vite 6**
-- **Routing:** TanStack Router (file-based via `@tanstack/router-plugin`, `routeTree.gen.ts` auto-generated)
-- **Data fetching:** TanStack React Query 5 + axios
-- **UI:** Tailwind 4 with `tw-animate-css`, `lucide-react` icons, `class-variance-authority`
-- **Path alias:** `@/` → `./src/` (Vite resolve alias)
-- **Tests:** Node built-in test runner (`node:test` with `tsx`)
-- **Lint:** `oxlint` + `oxfmt`
-
-### Architecture
-
-```
-src/
-├── routes/                   # TanStack Router file-based routes
-│   ├── __root.tsx            # Root layout (ToastProvider, TanStack Router Devtools)
-│   ├── index.tsx             # Landing page
-│   ├── auth/                 # login.tsx, register.tsx, login-v1.tsx, login-v2.tsx
-│   ├── dashboard/            # index.tsx, my-ballot/
-│   ├── admin-dashboard/      # index.tsx, users.tsx, users-table.tsx, view-results/
-│   └── settings.tsx
-├── api/                      # Axios-based API wrappers
-│   ├── axios.ts             # Axios instance (baseURL localhost:8787, withCredentials)
-│   └── *._api.ts            # candidate_api, profile_api, user_api, votes_api
-├── lib/                      # UI and utility modules
-├── hooks/                    # React hooks
-├── components/               # Shared components
-├── middleware/                # Auth redirect middleware
-├── data/                     # Data layer
-└── assets/                   # Static assets
-```
-
-### Notes
-
-- **Axios** is used with `withCredentials: true` for session cookie auth.
-- Has multiple login page versions (v1, v2, current) — indicates active redesign work.
-- Has admin-dashboard variants (`admin-dashboard-v1.tsx`, `admin-dashboard-v2.tsx`, `admin-dashboard/` directory).
-- Route auto-code-splitting enabled (`autoCodeSplitting: true` in router plugin config).
-- Not connected to CI/CD. Run `pnpm dev`, `pnpm build`, etc. from within `apps/frontend-react/` directory.
 
 ## E2E Testing (`apps/e2e`)
 

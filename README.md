@@ -4,15 +4,11 @@ A modern, secure, and transparent voting platform engineered for the Computer St
 
 ## ✨ Tech Stack
 
-### Active Frontend
+### Frontend
 
 - **Framework:** SvelteKit 2 + Svelte 5
 - **Styling:** Tailwind 4
 - **Routing:** SvelteKit file-based routing
-
-### Archived Frontend
-
-- **Framework:** React 19 (`apps/frontend-react`) — previous implementation, currently archived
 
 ### Backend
 

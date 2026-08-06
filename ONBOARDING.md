@@ -24,8 +24,7 @@ pnpm install
 ocsvs/
 ├── apps/
 │   ├── backend/        # Hono API on Cloudflare Workers (Turso / libSQL)
-│   ├── frontend/       # SvelteKit 2 + Svelte 5 (active)
-│   └── frontend-react/ # Previous frontend, currently archived — excluded from workspace
+│   └── frontend/       # SvelteKit 2 + Svelte 5 (active)
 ├── docs/superpowers/   # Plans + specs (agent scratchpads, stay untracked)
 ├── justfile            # Task runner shortcuts
 ├── pnpm-workspace.yaml
