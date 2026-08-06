@@ -26,34 +26,42 @@ export const accounts = sqliteTable("accounts", {
   password_hash: text("password_hash").notNull(),
 });
 
-export const users = sqliteTable("users", {
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  id: text("id").primaryKey(),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id),
-  studentId: text("student_id").notNull().unique(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  yearLevel: text("year_level").notNull(),
-  course: text("course").notNull(),
-});
+export const users = sqliteTable(
+  "users",
+  {
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    studentId: text("student_id").notNull().unique(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    yearLevel: text("year_level").notNull(),
+    course: text("course").notNull(),
+  },
+  (table) => [index("idx_users_account_id").on(table.accountId)],
+);
 
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id, { onDelete: "cascade" }),
-  expiresAt: integer("expires_at").notNull(),
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    expiresAt: integer("expires_at").notNull(),
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index("idx_sessions_account_id").on(table.accountId)],
+);
 
 export const elections = sqliteTable(
   "elections",
@@ -167,6 +175,7 @@ export const candidates = sqliteTable(
     imageUrl: text("image_url"),
   },
   (table) => [
+    index("idx_candidates_position_id").on(table.positionId),
     uniqueIndex("idx_candidates_active_party_position")
       .on(table.positionId, table.partyId)
       .where(sql`${table.isActive} = 1 AND ${table.partyId} IS NOT NULL`),
@@ -195,6 +204,7 @@ export const votes = sqliteTable(
       .references(() => elections.id, { onDelete: "restrict" }),
   },
   (table) => [
+    index("idx_votes_candidate_id").on(table.candidateId),
     uniqueIndex("votes_user_candidate_unique_idx").on(table.userId, table.candidateId),
     uniqueIndex("votes_user_position_election_unique_idx").on(
       table.userId,

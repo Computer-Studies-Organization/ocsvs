@@ -6,10 +6,14 @@ import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./open
 import {
   DbSelectUserSchema,
   auditLog,
+  candidates,
   elections,
   loginAttempts,
   partyLists,
   positions,
+  sessions,
+  users,
+  votes,
 } from "./schema";
 
 describe("user schema exports", () => {
@@ -58,6 +62,23 @@ describe("election management schema", () => {
     const indexNames = indexes.map((idx) => idx.config.name);
     expect(indexNames).toContain("idx_party_lists_election_name");
     expect(indexNames).toContain("idx_party_lists_election_code");
+  });
+});
+
+describe("lookup indexes", () => {
+  it("defines indexes for the account, position, and candidate lookup paths", () => {
+    expect(getTableConfig(users).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_users_account_id",
+    );
+    expect(getTableConfig(sessions).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_sessions_account_id",
+    );
+    expect(getTableConfig(candidates).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_candidates_position_id",
+    );
+    expect(getTableConfig(votes).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_votes_candidate_id",
+    );
   });
 });
 

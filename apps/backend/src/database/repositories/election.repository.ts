@@ -65,7 +65,10 @@ export const electionRepo = {
     },
   ): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
-    const set: Record<string, unknown> = { status: data.status, updatedAt: now };
+    const set: Record<string, unknown> = {
+      status: data.status,
+      updatedAt: sql`max(${now}, ${elections.updatedAt} + 1)`,
+    };
     if (data.opensAt !== undefined) set.opensAt = data.opensAt;
     if (data.closesAt !== undefined) set.closesAt = data.closesAt;
     const result = await db

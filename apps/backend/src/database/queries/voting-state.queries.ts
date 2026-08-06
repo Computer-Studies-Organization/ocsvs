@@ -31,6 +31,28 @@ export interface VotingState {
   myVotes: MyVotes;
 }
 
+// ponytail: one-entry per-isolate cache; move to shared KV/Cache API if isolate misses matter.
+let cachedClosedResults: {
+  key: string;
+  results: Promise<ResultsPosition[]>;
+} | null = null;
+
+function getCachedClosedResults(db: DbClient, election: ElectionRow): Promise<ResultsPosition[]> {
+  const key = `${election.id}:${election.updatedAt}`;
+  if (cachedClosedResults?.key === key) {
+    return cachedClosedResults.results;
+  }
+
+  const results = electionQueries.getResults(db, election.id);
+  cachedClosedResults = { key, results };
+  void results.catch(() => {
+    if (cachedClosedResults?.results === results) {
+      cachedClosedResults = null;
+    }
+  });
+  return results;
+}
+
 export async function getVotingState(db: DbClient, accountId: string): Promise<VotingState> {
   const now = Math.floor(Date.now() / 1000);
   const [dbOpen, draftRow, closedRow] = await Promise.all([
@@ -77,7 +99,7 @@ export async function getVotingState(db: DbClient, accountId: string): Promise<V
 
   let lastClosed: LastClosed | null = null;
   if (virtualClosed && virtualClosed.closesAt !== null) {
-    const results = await electionQueries.getResults(db, virtualClosed.id);
+    const results = await getCachedClosedResults(db, virtualClosed);
     lastClosed = {
       id: virtualClosed.id,
       name: virtualClosed.name,

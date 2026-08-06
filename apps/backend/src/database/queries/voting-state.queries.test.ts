@@ -165,6 +165,61 @@ describe("getVotingState", () => {
     expect(electionQueries.getResults).toHaveBeenCalledWith(db, "c2");
   });
 
+  it("reuses closed results for the same election version across accounts", async () => {
+    const closed = {
+      id: "cache-c1",
+      name: "Cached",
+      description: null,
+      status: "closed",
+      opensAt: 1,
+      closesAt: 200,
+      createdAt: 2,
+      updatedAt: 100,
+    };
+    const results = [
+      {
+        positionId: "p1",
+        positionName: "President",
+        totalVotes: 1,
+        candidates: [],
+      },
+    ];
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(null);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(closed as any);
+    vi.mocked(electionQueries.getResults).mockResolvedValue(results as any);
+
+    await getVotingState(db, "acc-1");
+    await getVotingState(db, "acc-2");
+
+    expect(electionQueries.getResults).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes closed results when the election version changes", async () => {
+    const firstVersion = {
+      id: "cache-c2",
+      name: "Cached",
+      description: null,
+      status: "closed",
+      opensAt: 1,
+      closesAt: 200,
+      createdAt: 2,
+      updatedAt: 200,
+    };
+    const secondVersion = { ...firstVersion, updatedAt: 201 };
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(null);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed)
+      .mockResolvedValueOnce(firstVersion as any)
+      .mockResolvedValueOnce(secondVersion as any);
+    vi.mocked(electionQueries.getResults).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    await getVotingState(db, "acc-1");
+    await getVotingState(db, "acc-1");
+
+    expect(electionQueries.getResults).toHaveBeenCalledTimes(2);
+  });
+
   it("returns user-scoped myVotes when an open election exists", async () => {
     const nowSecs = Math.floor(Date.now() / 1000);
     const openRow = {

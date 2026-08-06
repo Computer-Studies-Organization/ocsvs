@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@libsql/client";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "@/database/schema";
 
@@ -51,6 +52,52 @@ describe("electionRepo", () => {
         status: "open",
       }),
     ).toBe(true);
+  });
+  it("keeps updatedAt unique across rapid status transitions", async () => {
+    const client = createClient({ url: "file::memory:" });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+      );
+      const db = drizzle(client, { schema });
+      await db.insert(schema.elections).values({
+        id: "e1",
+        name: "CSO 2026",
+        description: null,
+        status: "draft",
+        opensAt: null,
+        closesAt: null,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+
+      await electionRepo.updateStatus(db, "e1", {
+        existingStatus: "draft",
+        status: "open",
+      });
+      const first = await db
+        .select({ updatedAt: schema.elections.updatedAt })
+        .from(schema.elections)
+        .where(eq(schema.elections.id, "e1"))
+        .get();
+
+      await electionRepo.updateStatus(db, "e1", {
+        existingStatus: "open",
+        status: "closed",
+      });
+      const second = await db
+        .select({ updatedAt: schema.elections.updatedAt })
+        .from(schema.elections)
+        .where(eq(schema.elections.id, "e1"))
+        .get();
+
+      expect(second?.updatedAt).toBeGreaterThan(first?.updatedAt ?? 0);
+    } finally {
+      nowSpy.mockRestore();
+      client.close();
+    }
   });
   it("updateMetadata updates and reports affected", async () => {
     expect(await electionRepo.updateMetadata(mockDb as any, "e1", { name: "New" })).toBe(true);
