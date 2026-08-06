@@ -35,6 +35,12 @@
   let actorFilter = $state(page.url.searchParams.get("actorId") ?? "");
   let sinceDate = $state(page.url.searchParams.get("since") ?? "");
   let untilDate = $state(page.url.searchParams.get("until") ?? "");
+  const initialLimit = page.url.searchParams.get("limit");
+  let limitFilter = $state(
+    initialLimit && [10, 20, 50].includes(Number(initialLimit))
+      ? Number(initialLimit)
+      : 10,
+  );
 
   let isFilterExpanded = $state(
     import.meta.env.MODE === "test" ||
@@ -60,11 +66,18 @@
   );
 
   // Pagination state
-  let items = $state<AuditLogEntry[]>([]);
+  let fetchedItems = $state<AuditLogEntry[]>([]);
+  let pageIndex = $state(0);
   let nextCursor = $state<string | null>(null);
-  let cursorStack = $state<string[]>([]);
   let isLoading = $state(true);
   let errorMsg = $state("");
+  let currentQueryId = 0;
+
+  const BATCH_SIZE = 100;
+
+  const displayedItems = $derived(
+    fetchedItems.slice(pageIndex * limitFilter, (pageIndex + 1) * limitFilter)
+  );
 
   // Expanded row state
   let expandedId = $state<string | null>(null);
@@ -79,6 +92,7 @@
     if (actorFilter) params.set("actorId", actorFilter);
     if (sinceDate) params.set("since", sinceDate);
     if (untilDate) params.set("until", untilDate);
+    if (limitFilter !== 10) params.set("limit", String(limitFilter));
     const qs = params.toString();
     goto(`/admin/audit-log${qs ? `?${qs}` : ""}`, {
       replaceState: true,
@@ -103,36 +117,59 @@
     return f;
   }
 
-  async function loadPage(cursor?: string) {
+  async function fetchNextBatch() {
     isLoading = true;
     errorMsg = "";
+    const queryId = ++currentQueryId;
     try {
       const filters = buildFilters();
-      const page = await fetchAuditLog({ ...filters, cursor, limit: 50 });
-      items = page.items;
-      nextCursor = page.nextCursor;
+      const pageRes = await fetchAuditLog({
+        ...filters,
+        cursor: nextCursor ?? undefined,
+        limit: BATCH_SIZE,
+      });
+      if (queryId !== currentQueryId) return;
+      fetchedItems = [...fetchedItems, ...pageRes.items];
+      nextCursor = pageRes.nextCursor;
     } catch (e: any) {
+      if (queryId !== currentQueryId) return;
       errorMsg = e.message || "Failed to load audit log";
     } finally {
-      isLoading = false;
+      if (queryId === currentQueryId) {
+        isLoading = false;
+      }
     }
   }
 
-  function handleNext() {
-    if (nextCursor) {
-      cursorStack = [...cursorStack, nextCursor];
-      loadPage(nextCursor);
+  async function resetAndLoad() {
+    fetchedItems = [];
+    nextCursor = null;
+    pageIndex = 0;
+    await fetchNextBatch();
+  }
+
+  async function handleNext() {
+    if (isLoading) return;
+    const nextOffset = (pageIndex + 1) * limitFilter;
+    if (nextOffset < fetchedItems.length) {
+      pageIndex += 1;
+    } else if (nextCursor) {
+      await fetchNextBatch();
+      if (nextOffset < fetchedItems.length) {
+        pageIndex += 1;
+      }
     }
   }
 
   function handlePrev() {
-    if (cursorStack.length > 0) {
-      const newStack = [...cursorStack];
-      newStack.pop();
-      cursorStack = newStack;
-      const prevCursor = newStack[newStack.length - 1];
-      loadPage(prevCursor);
+    if (pageIndex > 0) {
+      pageIndex -= 1;
     }
+  }
+
+  function handlePageSizeChange() {
+    pageIndex = 0;
+    syncParamsToUrl();
   }
 
   function clearFilters() {
@@ -142,15 +179,14 @@
     actorFilter = "";
     sinceDate = "";
     untilDate = "";
-    cursorStack = [];
+    limitFilter = 10;
     syncParamsToUrl();
-    loadPage();
+    resetAndLoad();
   }
 
   function handleFilterChange() {
-    cursorStack = [];
     syncParamsToUrl();
-    loadPage();
+    resetAndLoad();
   }
 
   function toggleExpand(entry: AuditLogEntry) {
@@ -225,7 +261,7 @@
 
 
   onMount(() => {
-    loadPage();
+    resetAndLoad();
   });
 </script>
 
@@ -439,18 +475,39 @@
       </div>
     {/if}
 
+    {#if errorMsg && fetchedItems.length > 0}
+      <div class="mb-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 flex items-center justify-between gap-3 text-red-400">
+        <span class="text-sm font-semibold">{errorMsg}</span>
+        <button
+          onclick={() => errorMsg = ""}
+          class="p-1 rounded-lg hover:bg-red-500/10 text-red-400 transition cursor-pointer"
+          aria-label="Dismiss error"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    {/if}
+
     <!-- Table -->
     <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-      {#if isLoading}
+      {#if isLoading && fetchedItems.length === 0}
         <div class="p-4">
           <SkeletonTable rows={8} cols={5} />
         </div>
-      {:else if errorMsg}
+      {:else if errorMsg && fetchedItems.length === 0}
         <div class="flex h-40 items-center justify-center text-sm text-red-400">
           {errorMsg}
         </div>
       {:else}
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative">
+          {#if isLoading}
+            <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <div class="rounded-xl bg-slate-900/80 border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 shadow-xl flex items-center gap-2">
+                <div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-sky-400"></div>
+                Loading more...
+              </div>
+            </div>
+          {/if}
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-slate-800 bg-slate-950/50">
@@ -462,7 +519,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each items as entry (entry.id)}
+              {#each displayedItems as entry (entry.id)}
                 <tr
                   class="cursor-pointer border-b border-slate-800/50 transition hover:bg-slate-800/30 {expandedId === entry.id ? 'bg-slate-950' : ''}"
                   onclick={() => toggleExpand(entry)}
@@ -587,30 +644,44 @@
         </div>
 
         <!-- Pagination -->
-        <div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-slate-800 px-4 py-3">
           <p class="text-xs text-slate-500">
-            {items.length} {items.length === 1 ? "entry" : "entries"}
-            {#if cursorStack.length > 0}
-              · Page {cursorStack.length + 1}
-            {/if}
+            Showing {displayedItems.length} {displayedItems.length === 1 ? "entry" : "entries"}
+            · Page {pageIndex + 1}
           </p>
-          <div class="flex items-center gap-2">
-            <button
-              disabled={cursorStack.length === 0}
-              onclick={handlePrev}
-              class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
-            >
-              <ChevronLeft size={14} />
-              Previous
-            </button>
-            <button
-              disabled={!nextCursor}
-              onclick={handleNext}
-              class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
-            >
-              Next
-              <ChevronRight size={14} />
-            </button>
+          <div class="flex flex-wrap items-center gap-4 justify-between sm:justify-end">
+            <div class="flex items-center gap-2">
+              <label for="page-size-select" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Show:</label>
+              <select
+                id="page-size-select"
+                bind:value={limitFilter}
+                onchange={handlePageSizeChange}
+                disabled={isLoading}
+                class="rounded-xl border-2 border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer disabled:opacity-30"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                disabled={pageIndex === 0 || isLoading}
+                onclick={handlePrev}
+                class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
+              >
+                <ChevronLeft size={14} />
+                Previous
+              </button>
+              <button
+                disabled={!((pageIndex + 1) * limitFilter < fetchedItems.length || nextCursor) || isLoading}
+                onclick={handleNext}
+                class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
+              >
+                Next
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
       {/if}
