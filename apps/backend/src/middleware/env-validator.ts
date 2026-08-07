@@ -2,10 +2,13 @@ import type { MiddlewareHandler } from "hono";
 import { parseEnv } from "./env";
 
 /**
- * Middleware that validates environment variables (bindings) on every request in production/development.
+ * Middleware that validates environment bindings before requests in production/development.
+ * Reuses successful validation while the Worker environment object is stable.
  * Skips full validation during Vitest unit/integration testing to avoid breaking partial mocks.
  */
 export function envValidator(): MiddlewareHandler {
+  let validatedEnvironment: object | undefined;
+
   return async (c, next) => {
     // Skip full validation during tests to avoid breaking partial environment mocks in unit tests
     if (typeof process !== "undefined" && process.env?.VITEST) {
@@ -14,7 +17,10 @@ export function envValidator(): MiddlewareHandler {
     }
 
     try {
-      parseEnv(c.env);
+      if (validatedEnvironment !== c.env) {
+        parseEnv(c.env);
+        validatedEnvironment = c.env;
+      }
     } catch (err: any) {
       const log = c.var.logger || console;
       log.error({ error: err.message }, "Environment validation failed");

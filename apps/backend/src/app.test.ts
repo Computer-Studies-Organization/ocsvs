@@ -13,6 +13,29 @@ function buildAssets(status = 200) {
 }
 
 describe("production asset routing", () => {
+  it.each(["/docs", "/docs/", "/reference", "/reference/"])(
+    "hides %s in production",
+    async (path) => {
+      const response = await app.request(
+        `https://cso-voting.example.workers.dev${path}`,
+        { headers: { Accept: "application/json" } },
+        { NODE_ENV: "production" } as any,
+      );
+
+      expect(response.status).toBe(404);
+    },
+  );
+
+  it.each(["/docs", "/reference"])("keeps %s available outside production", async (path) => {
+    const response = await app.request(
+      `https://cso-voting.example.workers.dev${path}`,
+      { headers: { Accept: "application/json" } },
+      { NODE_ENV: "test" } as any,
+    );
+
+    expect(response.status).toBe(200);
+  });
+
   it("serves the SPA shell for the root navigation", async () => {
     const assets = buildAssets();
 

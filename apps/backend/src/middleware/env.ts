@@ -1,14 +1,11 @@
-import { config } from "dotenv";
-import { expand } from "dotenv-expand";
 import { z } from "zod";
 
 /**
  * Environment configuration module with type-safe validation.
  *
- * This module loads and validates environment variables using Zod schemas,
+ * This module validates Worker environment bindings using Zod schemas,
  * ensuring that the application has all required configuration values
- * with proper types before startup. It uses dotenv for loading .env files
- * and dotenv-expand for variable expansion.
+ * with proper types at request time.
  *
  * Features:
  * - Type-safe environment variable access
@@ -28,8 +25,6 @@ import { z } from "zod";
  * ```
  */
 
-expand(config());
-
 /**
  * Zod schema defining the structure and validation rules for environment variables.
  *
@@ -48,7 +43,7 @@ expand(config());
  */
 const EnvSchema = z
   .object({
-    NODE_ENV: z.string().default("development"),
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().default(3000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])

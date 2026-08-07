@@ -12,7 +12,8 @@ describe("envValidator middleware", () => {
   });
 
   afterEach(() => {
-    process.env.VITEST = originalVitestEnv;
+    if (originalVitestEnv === undefined) delete process.env.VITEST;
+    else process.env.VITEST = originalVitestEnv;
   });
 
   function buildApp() {
@@ -36,6 +37,17 @@ describe("envValidator middleware", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
     expect(body.ok).toBe(true);
+  });
+
+  it("rejects unknown NODE_ENV values", async () => {
+    const { app, mockLogger } = buildApp();
+    const res = await app.request("/test", { method: "GET" }, {
+      NODE_ENV: "prodction",
+      TURSO_DATABASE_URL: "libsql://local.db",
+    } as any);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ message: expect.stringContaining("NODE_ENV") });
+    expect(mockLogger.error).toHaveBeenCalled();
   });
 
   it("fails validation when TURSO_DATABASE_URL is missing", async () => {

@@ -1,5 +1,6 @@
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
+import type { Database } from "@/database/repositories/database.type";
 import type { Environment } from "@/middleware/env";
 import type { UserRole } from "@/lib/user-lifecycle-coordinator";
 
@@ -15,6 +16,7 @@ export interface AppBindings {
   Variables: {
     logger: PinoLogger;
     authUser: AuthUser;
+    db: Database;
   };
 }
 

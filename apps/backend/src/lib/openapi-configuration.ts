@@ -1,8 +1,20 @@
-import type { AppOpenAPI } from "@/lib/types/app-types";
+import type { AppBindings, AppOpenAPI } from "@/lib/types/app-types";
 import { Scalar } from "@scalar/hono-api-reference";
+import { createMiddleware } from "hono/factory";
 import packageJSON from "../../package.json";
 
+const hideProductionDocumentation = createMiddleware<AppBindings>(async (c, next) => {
+  if (c.env.NODE_ENV === "production") {
+    return c.notFound();
+  }
+
+  await next();
+});
+
 export default function configureOpenAPI(app: AppOpenAPI) {
+  app.use("/docs", hideProductionDocumentation);
+  app.use("/reference", hideProductionDocumentation);
+
   app.doc("/docs", {
     openapi: "3.0.0",
     info: {
