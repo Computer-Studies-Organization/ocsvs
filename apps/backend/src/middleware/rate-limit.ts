@@ -9,7 +9,7 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
 const RATE_LIMIT_PERIOD_SECONDS = 60;
 
 export function getClientIp(c: Context): string {
-  return c.req.header("CF-Connecting-IP") || c.req.header("X-Real-IP") || "unknown";
+  return c.req.header("CF-Connecting-IP") || "unknown";
 }
 
 export function createIpRateLimiter(bindingName: "LOGIN_IP_LIMITER") {

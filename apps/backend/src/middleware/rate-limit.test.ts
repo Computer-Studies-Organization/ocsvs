@@ -52,14 +52,14 @@ describe("createIpRateLimiter", () => {
     expect(mockLogger.warn).toHaveBeenCalled();
   });
 
-  it("falls back to X-Real-IP when CF-Connecting-IP is absent", async () => {
+  it("does not trust X-Real-IP when CF-Connecting-IP is absent", async () => {
     const { app, mockLimiter } = buildApp({ success: true });
 
     await app.request("/login", { method: "POST", headers: { "X-Real-IP": "5.6.7.8" } }, {
       LOGIN_IP_LIMITER: mockLimiter,
     } as any);
 
-    expect(mockLimiter.limit).toHaveBeenCalledWith({ key: "5.6.7.8" });
+    expect(mockLimiter.limit).toHaveBeenCalledWith({ key: "unknown" });
   });
 });
 

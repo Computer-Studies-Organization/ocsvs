@@ -34,14 +34,14 @@ describe("securityHeaders", () => {
     expect(policy).toContain("geolocation=()");
   });
 
-  it("should set an enforcing CSP that forbids framing", async () => {
+  it("should keep CSP report-only until the static shell is CSP-compatible", async () => {
     const res = await buildTestApp().request("http://api.test/", undefined, {
       NODE_ENV: "production",
     } as any);
-    const csp = res.headers.get("Content-Security-Policy");
+    const csp = res.headers.get("Content-Security-Policy-Report-Only");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("default-src 'self'");
-    expect(res.headers.get("Content-Security-Policy-Report-Only")).toBeNull();
+    expect(res.headers.get("Content-Security-Policy")).toBeNull();
   });
 
   it.each(["development", "test"])("should use report-only CSP in %s", async (NODE_ENV) => {

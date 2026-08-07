@@ -4,10 +4,12 @@ import { createMiddleware } from "hono/factory";
 const HSTS_VALUE = "max-age=31536000; includeSubDomains";
 
 /**
- * CSP for the SPA documents served by this Worker: self-hosted scripts,
- * Google Fonts, Cloudflare Turnstile, and Svelte runtime-injected styles.
+ * Report-only CSP. The policy targets the SPA documents served by this Worker
+ * (production): self-hosted scripts, Google Fonts, Cloudflare Turnstile, and
+ * Svelte runtime-injected styles. Run in report-only until violations are
+ * observed in production.
  */
-const CSP = [
+const CSP_REPORT_ONLY = [
   "default-src 'self'",
   "script-src 'self' https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -31,11 +33,7 @@ export function securityHeaders() {
     c.header("X-Frame-Options", "DENY");
     c.header("Referrer-Policy", "strict-origin-when-cross-origin");
     c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    const cspHeader =
-      c.env?.NODE_ENV === "development" || c.env?.NODE_ENV === "test"
-        ? "Content-Security-Policy-Report-Only"
-        : "Content-Security-Policy";
-    c.header(cspHeader, CSP);
+    c.header("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
 
     if (c.req.url.startsWith("https://")) {
       c.header("Strict-Transport-Security", HSTS_VALUE);
