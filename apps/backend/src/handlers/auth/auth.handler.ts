@@ -50,6 +50,7 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      signal: AbortSignal.timeout(10_000),
       body: bodyParams,
     });
     const result = (await response.json()) as { success: boolean; "error-codes"?: string[] };

@@ -189,6 +189,32 @@ describe("auth Routes", () => {
     expect(mockCreateSession).toHaveBeenCalled();
   });
 
+  it("bounds Turnstile verification with a 10-second timeout", async () => {
+    const timeoutSignal = new AbortController().signal;
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeoutSignal);
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ success: false }),
+    } as Response);
+    globalThis.fetch = fetchMock;
+
+    await router.request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentNumber: "C23-01-1234-CSA001",
+        password: "password123",
+        turnstileToken: "mock-token",
+      }),
+    });
+
+    expect(timeoutSpy).toHaveBeenCalledWith(10_000);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      expect.objectContaining({ signal: timeoutSignal }),
+    );
+    timeoutSpy.mockRestore();
+  });
+
   it("should logout a user", async () => {
     mockGetSessionIdFromCookie.mockReturnValue("session-id");
     mockDeleteSession.mockResolvedValue(undefined);
