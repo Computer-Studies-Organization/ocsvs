@@ -1,6 +1,7 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { appCache } from "$lib/cache";
+import type { TElectionStatus } from "$lib/types";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:election-detail");
@@ -10,15 +11,32 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     .fetch(false, { fetch });
   if (!election) error(404, "Election not found");
 
+  const now = Math.floor(Date.now() / 1000);
+  const effectiveStatus: TElectionStatus =
+    election.status !== "open"
+      ? election.status
+      : election.opensAt === null || election.closesAt === null
+        ? "draft"
+        : now < election.opensAt
+          ? "draft"
+          : now > election.closesAt
+            ? "closed"
+            : "open";
+  const votingState =
+    effectiveStatus === "open"
+      ? await appCache.get("votingState", {}).fetch(true, { fetch })
+      : null;
+  const effectiveElection =
+    effectiveStatus === election.status ? election : { ...election, status: effectiveStatus };
+
   let results = null;
   let hasVoted = false;
 
-  if (election.status === "closed" || election.status === "archived") {
+  if (effectiveElection.status === "closed" || effectiveElection.status === "archived") {
     results = await appCache
       .get("results", { electionId: params.electionId })
       .fetch(false, { fetch });
-  } else if (election.status === "open") {
-    const votingState = await appCache.get("votingState", {}).fetch(true, { fetch });
+  } else if (effectiveElection.status === "open") {
     hasVoted =
       votingState?.myVotes.electionId === params.electionId && votingState.myVotes.votes.length > 0;
     if (hasVoted) {
@@ -28,5 +46,5 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     }
   }
 
-  return { election, results, hasVoted };
+  return { election: effectiveElection, results, hasVoted };
 };

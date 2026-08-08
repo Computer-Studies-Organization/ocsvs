@@ -345,6 +345,30 @@ describe("getVotingState", () => {
     });
   });
 
+  it("does not expose an open election with a missing time bound", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
+    const openRow = {
+      id: "e-incomplete",
+      name: "Incomplete",
+      description: null,
+      status: "open",
+      opensAt: nowSecs - 3600,
+      closesAt: null,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
+
+    const result = await getVotingState(db, accountId);
+
+    expect(result.open).toBeNull();
+    expect(result.nextDraft).toBeNull();
+    expect(result.lastClosed).toBeNull();
+    expect(result.myVotes).toEqual({ electionId: null, votes: [] });
+  });
+
   it("virtualizes open election to lastClosed when it has already ended", async () => {
     const nowSecs = Math.floor(Date.now() / 1000);
     const openRow = {

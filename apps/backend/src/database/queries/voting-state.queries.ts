@@ -4,6 +4,7 @@ import { electionRepo, type ElectionRow } from "@/database/repositories/election
 import { electionQueries } from "@/database/queries/election.queries";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
+import { isElectionCurrentlyOpen } from "@/lib/election-lifecycle";
 
 export interface NextDraft {
   id: string;
@@ -69,20 +70,25 @@ export async function getVotingState(db: DbClient, accountId: string): Promise<V
   // window (admin transitioned early, or forgot to close) by demoting it into
   // the right UI slot. The DB row is left alone — only the response shape
   // reflects what the wall clock says.
-  if (dbOpen) {
-    if (dbOpen.opensAt !== null && now < dbOpen.opensAt) {
-      open = null;
-      if (!virtualDraft || virtualDraft.opensAt === null || dbOpen.opensAt < virtualDraft.opensAt) {
-        virtualDraft = dbOpen;
-      }
-    } else if (dbOpen.closesAt !== null && now > dbOpen.closesAt) {
-      open = null;
-      if (
-        !virtualClosed ||
-        virtualClosed.closesAt === null ||
-        dbOpen.closesAt > virtualClosed.closesAt
-      ) {
-        virtualClosed = dbOpen;
+  if (dbOpen && !isElectionCurrentlyOpen(dbOpen, now)) {
+    open = null;
+    if (dbOpen.opensAt !== null && dbOpen.closesAt !== null) {
+      if (now < dbOpen.opensAt) {
+        if (
+          !virtualDraft ||
+          virtualDraft.opensAt === null ||
+          dbOpen.opensAt < virtualDraft.opensAt
+        ) {
+          virtualDraft = dbOpen;
+        }
+      } else if (now > dbOpen.closesAt) {
+        if (
+          !virtualClosed ||
+          virtualClosed.closesAt === null ||
+          dbOpen.closesAt > virtualClosed.closesAt
+        ) {
+          virtualClosed = dbOpen;
+        }
       }
     }
   }

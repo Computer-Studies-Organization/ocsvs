@@ -137,4 +137,53 @@ describe("admin stats routes", () => {
       turnoutPct: 65,
     });
   });
+
+  it("includes soft-deleted voters in the turnout denominator", async () => {
+    const whereConditions: unknown[] = [];
+    const hasColumn = (value: unknown, name: string, seen = new Set<object>()): boolean => {
+      if (value === null || typeof value !== "object" || seen.has(value)) return false;
+      seen.add(value);
+      if ((value as { name?: string }).name === name) return true;
+      if ("queryChunks" in value) {
+        return (value as { queryChunks: unknown[] }).queryChunks.some((child) =>
+          hasColumn(child, name, seen),
+        );
+      }
+      return false;
+    };
+
+    mockDb = createMockDb();
+    mockDb.where.mockImplementation((condition: unknown) => {
+      whereConditions.push(condition);
+      return mockDb;
+    });
+
+    let getCallCount = 0;
+    mockDb.get.mockImplementation(() => {
+      getCallCount++;
+      if (getCallCount === 1) {
+        return { count: hasColumn(whereConditions[0], "deleted_at") ? 1 : 2 };
+      }
+      if (getCallCount === 2) return { count: 1 };
+      if (getCallCount === 3) {
+        return {
+          id: "elec-open",
+          name: "Open Election",
+          opensAt: 1700000000,
+          closesAt: 1710000000,
+          status: "open",
+        };
+      }
+      if (getCallCount === 4) return { count: 2 };
+      return null;
+    });
+    mockDb.all.mockReturnValue([]);
+
+    const res = await router.request("/admin/stats", { method: "GET" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.activeElection.votersCount).toBe(2);
+    expect(body.activeElection.votedCount).toBe(2);
+    expect(body.activeElection.turnoutPct).toBe(100);
+  });
 });

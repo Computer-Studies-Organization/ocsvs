@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { assertTransition, canTransition, TransitionError } from "./election-lifecycle";
+import {
+  assertTransition,
+  canTransition,
+  getEffectiveElectionStatus,
+  isElectionCurrentlyOpen,
+  TransitionError,
+} from "./election-lifecycle";
 import { ERROR_MESSAGES } from "./constants/error-messages";
 
 describe("canTransition", () => {
@@ -51,6 +57,12 @@ describe("assertTransition", () => {
     );
   });
 
+  it("rejects draft -> open when a position has no active candidates", () => {
+    expect(() =>
+      assertTransition("draft", "open", { opensAt: now, closesAt: later }, 2, 1),
+    ).toThrow(expect.objectContaining({ code: "ELECTION_HAS_POSITION_WITHOUT_CANDIDATE" }));
+  });
+
   it("throws INVALID_TRANSITION_BODY when opening without opensAt/closesAt", () => {
     expect(() => assertTransition("draft", "open", {}, 1)).toThrow(
       expect.objectContaining({ code: "INVALID_TRANSITION_BODY" }),
@@ -70,5 +82,37 @@ describe("assertTransition", () => {
       const e = err as TransitionError;
       expect(e.message).toBe(ERROR_MESSAGES[e.code]);
     }
+  });
+});
+
+describe("election time window", () => {
+  const now = 1_700_000_000;
+
+  it("treats an expired open election as closed", () => {
+    const election = { status: "open" as const, opensAt: now - 3600, closesAt: now - 1 };
+
+    expect(isElectionCurrentlyOpen(election, now)).toBe(false);
+    expect(getEffectiveElectionStatus(election, now)).toBe("closed");
+  });
+
+  it("treats a scheduled open election as draft until it starts", () => {
+    const election = { status: "open" as const, opensAt: now + 1, closesAt: now + 3600 };
+
+    expect(isElectionCurrentlyOpen(election, now)).toBe(false);
+    expect(getEffectiveElectionStatus(election, now)).toBe("draft");
+  });
+
+  it("keeps an election open at its inclusive time boundaries", () => {
+    const election = { status: "open" as const, opensAt: now, closesAt: now };
+
+    expect(isElectionCurrentlyOpen(election, now)).toBe(true);
+    expect(getEffectiveElectionStatus(election, now)).toBe("open");
+  });
+
+  it("treats an open election with a missing time bound as an inactive draft", () => {
+    const election = { status: "open" as const, opensAt: now, closesAt: null };
+
+    expect(isElectionCurrentlyOpen(election, now)).toBe(false);
+    expect(getEffectiveElectionStatus(election, now)).toBe("draft");
   });
 });

@@ -67,6 +67,7 @@ const {
   mockUpdateMetadata,
   mockGetCurrentElection,
   mockCountPositions,
+  mockCountPositionsWithActiveCandidates,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockFindById: vi.fn(),
@@ -75,6 +76,7 @@ const {
   mockUpdateMetadata: vi.fn(),
   mockGetCurrentElection: vi.fn(),
   mockCountPositions: vi.fn(),
+  mockCountPositionsWithActiveCandidates: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/election.repository", () => ({
@@ -93,6 +95,7 @@ vi.mock("@/database/queries/election.queries", () => ({
     getCurrentElection: mockGetCurrentElection,
     getElectionWithPositions: vi.fn(),
     countPositions: mockCountPositions,
+    countPositionsWithActiveCandidates: mockCountPositionsWithActiveCandidates,
     getResults: vi.fn(),
   },
 }));
@@ -124,6 +127,7 @@ describe("elections routes", () => {
     mockUpdateMetadata.mockReset();
     mockGetCurrentElection.mockReset();
     mockCountPositions.mockReset();
+    mockCountPositionsWithActiveCandidates.mockReset();
     TEST_USER = {
       id: "test-user-id",
       email: "test@example.com",
@@ -175,15 +179,48 @@ describe("elections routes", () => {
 
     it("hides draft elections from non-admin users", async () => {
       setUser();
+      const now = Math.floor(Date.now() / 1000);
+      const openElection = makeElection({
+        id: "open-1",
+        status: "open",
+        opensAt: now - 1,
+        closesAt: now + 1,
+      });
+      mockList.mockResolvedValue([makeElection({ id: "draft-1", status: "draft" }), openElection]);
+
+      const res = await router.request("/elections", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([openElection]);
+    });
+
+    it("reports an expired open election as closed to non-admin users", async () => {
+      setUser();
       mockList.mockResolvedValue([
-        makeElection({ id: "draft-1", status: "draft" }),
-        makeElection({ id: "open-1", status: "open" }),
+        makeElection({ id: "expired-1", status: "open", opensAt: 1, closesAt: 2 }),
       ]);
 
       const res = await router.request("/elections", { method: "GET" });
 
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual([makeElection({ id: "open-1", status: "open" })]);
+      expect(await res.json()).toEqual([
+        makeElection({ id: "expired-1", status: "closed", opensAt: 1, closesAt: 2 }),
+      ]);
+    });
+
+    it("filters public lists by effective status", async () => {
+      setUser();
+      mockList.mockResolvedValue([
+        makeElection({ id: "expired-1", status: "open", opensAt: 1, closesAt: 2 }),
+      ]);
+
+      const res = await router.request("/elections?status=closed", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([
+        makeElection({ id: "expired-1", status: "closed", opensAt: 1, closesAt: 2 }),
+      ]);
+      expect(mockList).toHaveBeenCalledWith(mockDb, undefined);
     });
   });
 
@@ -254,6 +291,16 @@ describe("elections routes", () => {
 
       expect(res.status).toBe(404);
       expect(mockFindById).toHaveBeenCalledWith(mockDb, electionId);
+    });
+
+    it("reports an expired open election as closed to non-admin users", async () => {
+      setUser();
+      mockFindById.mockResolvedValue(makeElection({ status: "open", opensAt: 1, closesAt: 2 }));
+
+      const res = await router.request(`/elections/${electionId}`, { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as any).status).toBe("closed");
     });
   });
 
@@ -353,6 +400,7 @@ describe("elections routes", () => {
     it("returns 400 when draft->open is missing opensAt/closesAt", async () => {
       mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountPositions.mockResolvedValue(2);
+      mockCountPositionsWithActiveCandidates.mockResolvedValue(2);
       const res = await router.request(`/elections/${electionId}/transitions`, {
         method: "POST",
         body: JSON.stringify({ to: "open" }),
@@ -379,6 +427,7 @@ describe("elections routes", () => {
     it("returns 200 for valid draft->open transition", async () => {
       mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountPositions.mockResolvedValue(2);
+      mockCountPositionsWithActiveCandidates.mockResolvedValue(2);
       mockUpdateStatus.mockResolvedValue(true);
       const res = await router.request(`/elections/${electionId}/transitions`, {
         method: "POST",

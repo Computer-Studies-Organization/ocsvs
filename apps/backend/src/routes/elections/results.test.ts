@@ -164,6 +164,21 @@ describe("election results route", () => {
       expect(res.status).toBe(200);
     });
 
+    it("returns results for an expired open election without requiring a vote", async () => {
+      mockFindById.mockResolvedValue({
+        id: electionId,
+        status: "open",
+        opensAt: 1,
+        closesAt: 2,
+      });
+      mockGetResults.mockResolvedValue(results);
+
+      const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(mockFindByAccountId).not.toHaveBeenCalled();
+    });
+
     it("returns 200 with results when election is open and user is admin (even if not voted)", async () => {
       TEST_USER.role = "admin";
       mockFindById.mockResolvedValue({ id: electionId, status: "open" });

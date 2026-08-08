@@ -2,7 +2,8 @@ import type { AppRouteHandler } from "@/lib/types/app-types";
 import type { getAdminStatsRoute } from "@/routes/admin-stats/routes";
 import { createDb } from "@/config/db";
 import { accounts, elections, ballotSnapshots, auditLog } from "@/database/schema";
-import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { electionRepo } from "@/database/repositories/election.repository";
+import { count, desc, eq } from "drizzle-orm";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import type { AuditAction, TargetType } from "@/lib/constants/audit-actions";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -14,11 +15,11 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
 
   const { db } = createDb(c);
 
-  // 1. Count active voters (role = 'user' and not deleted)
+  // 1. Count voter accounts, including soft-deleted voters whose ballots remain durable
   const voterCountResult = await db
     .select({ count: count() })
     .from(accounts)
-    .where(and(eq(accounts.role, "user"), isNull(accounts.deletedAt)))
+    .where(eq(accounts.role, "user"))
     .get();
   const votersCount = voterCountResult?.count ?? 0;
 
@@ -27,7 +28,7 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
   const electionsCount = electionCountResult?.count ?? 0;
 
   // 3. Get active election and turnout details
-  const openElection = await db.select().from(elections).where(eq(elections.status, "open")).get();
+  const openElection = await electionRepo.findCurrentlyOpen(db);
 
   let activeElection = null;
   if (openElection) {

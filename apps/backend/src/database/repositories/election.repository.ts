@@ -1,5 +1,5 @@
 import type { DbClient } from "./database.type";
-import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, or, sql, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
 export type ElectionRow = typeof elections.$inferSelect;
@@ -52,6 +52,25 @@ export const electionRepo = {
 
   async findOpen(db: DbClient): Promise<ElectionRow | null> {
     return (await db.select().from(elections).where(eq(elections.status, "open")).get()) ?? null;
+  },
+
+  async findCurrentlyOpen(
+    db: DbClient,
+    now = Math.floor(Date.now() / 1000),
+  ): Promise<ElectionRow | null> {
+    return (
+      (await db
+        .select()
+        .from(elections)
+        .where(
+          and(
+            eq(elections.status, "open"),
+            lte(elections.opensAt, now),
+            gte(elections.closesAt, now),
+          ),
+        )
+        .get()) ?? null
+    );
   },
 
   async updateStatus(
@@ -115,6 +134,25 @@ export const electionRepo = {
         .from(elections)
         .where(eq(elections.status, "closed"))
         .orderBy(desc(elections.closesAt))
+        .get()) ?? null
+    );
+  },
+
+  async findLatestClosedOrExpiredOpen(
+    db: DbClient,
+    now = Math.floor(Date.now() / 1000),
+  ): Promise<ElectionRow | null> {
+    return (
+      (await db
+        .select()
+        .from(elections)
+        .where(
+          or(
+            eq(elections.status, "closed"),
+            and(eq(elections.status, "open"), lte(elections.closesAt, now)),
+          ),
+        )
+        .orderBy(desc(elections.closesAt), desc(elections.id))
         .get()) ?? null
     );
   },

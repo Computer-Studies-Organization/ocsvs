@@ -6,6 +6,7 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { getEffectiveElectionStatus } from "@/lib/election-lifecycle";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResultsRoute> = async (
@@ -21,15 +22,16 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
 
   const user = c.var.authUser;
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const effectiveStatus = getEffectiveElectionStatus(election);
 
   // Draft elections are not visible to non-admins (404 matches the UI behaviour
   // of hiding drafts from the voter listing, and avoids leaking candidate names).
-  if (election.status === "draft" && !isAdmin) {
+  if (effectiveStatus === "draft" && !isAdmin) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
   // If election is open, only admins or users who have voted can access results
-  if (election.status === "open" && !isAdmin) {
+  if (effectiveStatus === "open" && !isAdmin) {
     const studentUser = await voterAccountStore.findByAccountId(db, user!.id);
     if (!studentUser) {
       return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);

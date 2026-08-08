@@ -13,7 +13,7 @@ import { electionQueries } from "@/database/queries/election.queries";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import { TransitionError } from "@/lib/election-lifecycle";
+import { getEffectiveElectionStatus, TransitionError } from "@/lib/election-lifecycle";
 import { ElectionLifecycleCoordinator } from "@/lib/election-lifecycle-coordinator";
 import type { TElectionStatus } from "@/database/schema";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -40,15 +40,22 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
 export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = async (c) => {
   const { db } = createDb(c);
   const { status } = c.req.valid("query");
+  const isAdmin = c.var.authUser.role === "admin" || c.var.authUser.role === "super_admin";
   const elections = await electionRepo.list(
     db,
-    status ? { status: status as TElectionStatus } : undefined,
+    !isAdmin && status ? undefined : status ? { status: status as TElectionStatus } : undefined,
   );
-  const isAdmin = c.var.authUser.role === "admin" || c.var.authUser.role === "super_admin";
-  return c.json(
-    isAdmin ? elections : elections.filter((election) => election.status !== "draft"),
-    httpStatusCodes.OK,
-  );
+  const visibleElections = isAdmin
+    ? elections
+    : elections
+        .map((election) => ({
+          ...election,
+          status: getEffectiveElectionStatus(election),
+        }))
+        .filter(
+          (election) => election.status !== "draft" && (!status || election.status === status),
+        );
+  return c.json(visibleElections, httpStatusCodes.OK);
 };
 
 export const getCurrentElectionHandler: AppRouteHandler<typeof getCurrentElectionRoute> = async (
@@ -76,10 +83,11 @@ export const getElectionHandler: AppRouteHandler<typeof getElectionRoute> = asyn
   const { id } = c.req.valid("param");
   const row = await electionRepo.findById(db, id);
   const isAdmin = c.var.authUser.role === "admin" || c.var.authUser.role === "super_admin";
-  if (!row || (row.status === "draft" && !isAdmin)) {
+  const visibleRow = row && !isAdmin ? { ...row, status: getEffectiveElectionStatus(row) } : row;
+  if (!visibleRow || (visibleRow.status === "draft" && !isAdmin)) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  return c.json(row, httpStatusCodes.OK);
+  return c.json(visibleRow, httpStatusCodes.OK);
 };
 
 export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> = async (c) => {

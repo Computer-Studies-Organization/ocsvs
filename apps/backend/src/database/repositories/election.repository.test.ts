@@ -45,6 +45,89 @@ describe("electionRepo", () => {
     chain.get.mockReturnValueOnce({ id: "e1", status: "open" });
     expect((await electionRepo.findOpen(mockDb as any))?.id).toBe("e1");
   });
+  it("uses election time windows for current and completed reads", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+      );
+      const db = drizzle(client, { schema });
+      await db
+        .insert(schema.elections)
+        .values([
+          {
+            id: "expired",
+            name: "Expired",
+            description: null,
+            status: "open",
+            opensAt: 1,
+            closesAt: 950,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            id: "closed",
+            name: "Closed",
+            description: null,
+            status: "closed",
+            opensAt: 1,
+            closesAt: 900,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            id: "current",
+            name: "Current",
+            description: null,
+            status: "open",
+            opensAt: 900,
+            closesAt: 1100,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ])
+        .run();
+
+      expect((await electionRepo.findCurrentlyOpen(db, 1000))?.id).toBe("current");
+      expect((await electionRepo.findLatestClosedOrExpiredOpen(db, 1000))?.id).toBe("expired");
+    } finally {
+      client.close();
+    }
+  });
+
+  it("does not treat an open election with missing bounds as currently open", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+      );
+      await client.execute({
+        sql: "INSERT INTO elections (id, name, status, opens_at, closes_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)",
+        args: [
+          "missing-open",
+          "Missing opening time",
+          "open",
+          null,
+          2000,
+          1,
+          1,
+          "missing-close",
+          "Missing closing time",
+          "open",
+          1,
+          null,
+          1,
+          1,
+        ],
+      });
+
+      expect(await electionRepo.findCurrentlyOpen(drizzle(client, { schema }), 1000)).toBeNull();
+    } finally {
+      client.close();
+    }
+  });
   it("updateStatus updates and reports affected", async () => {
     expect(
       await electionRepo.updateStatus(mockDb as any, "e1", {

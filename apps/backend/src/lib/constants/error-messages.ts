@@ -26,6 +26,8 @@ export const ERROR_MESSAGES = {
   PARTY_LIST_ALREADY_EXISTS: "Party list name or code already exists for this election",
   POSITION_ALREADY_EXISTS: "Position name or display order already exists for this election",
   ELECTION_HAS_NO_POSITIONS: "Cannot open an election with no positions",
+  ELECTION_HAS_POSITION_WITHOUT_CANDIDATE:
+    "Cannot open an election with a position that has no active candidates",
   ELECTION_NOT_IN_DRAFT: "This operation is only allowed while the election is in draft",
   ELECTION_NOT_OPEN: "This election is not currently open for voting",
   ELECTION_TRANSITION_CONFLICT:

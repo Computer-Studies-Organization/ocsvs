@@ -117,6 +117,10 @@ export const ElectionLifecycleCoordinator = {
 
       // 2. Count positions
       const positionCount = await electionQueries.countPositions(tx, electionId);
+      const positionsWithActiveCandidates =
+        toStatus === "open"
+          ? await electionQueries.countPositionsWithActiveCandidates(tx, electionId)
+          : positionCount;
 
       // 3. Prevent duplicate open elections at application level (backed by DB index)
       if (toStatus === "open") {
@@ -152,6 +156,7 @@ export const ElectionLifecycleCoordinator = {
         toStatus,
         { opensAt: resolvedOpensAt ?? undefined, closesAt: resolvedClosesAt ?? undefined },
         positionCount,
+        positionsWithActiveCandidates,
       );
 
       // 6. Update Status

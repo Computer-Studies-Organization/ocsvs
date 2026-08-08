@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { electionQueries } from "./election.queries";
 
+const { mockFindCurrentlyOpen } = vi.hoisted(() => ({
+  mockFindCurrentlyOpen: vi.fn(),
+}));
+
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findCurrentlyOpen: mockFindCurrentlyOpen,
+  },
+}));
+
 const chain: any = {
   values: vi.fn(() => chain),
   set: vi.fn(() => chain),
@@ -24,7 +34,10 @@ const mockDb = {
 };
 vi.mock("@/config/db", () => ({ createDb: () => ({ db: mockDb }) }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFindCurrentlyOpen.mockReset();
+});
 
 describe("electionQueries", () => {
   describe("getCurrentElection", () => {
@@ -39,7 +52,7 @@ describe("electionQueries", () => {
         createdAt: 500,
         updatedAt: 600,
       };
-      chain.get.mockReturnValueOnce(election);
+      mockFindCurrentlyOpen.mockResolvedValueOnce(election);
       chain.get.mockReturnValueOnce(election);
       chain.all.mockReturnValueOnce([
         {
@@ -87,7 +100,7 @@ describe("electionQueries", () => {
     });
 
     it("returns null when there is no open election", async () => {
-      chain.get.mockReturnValueOnce(undefined);
+      mockFindCurrentlyOpen.mockResolvedValueOnce(null);
       const result = await electionQueries.getCurrentElection(mockDb as any);
       expect(result).toBeNull();
     });
@@ -213,6 +226,11 @@ describe("electionQueries", () => {
     it("returns the position count for the election", async () => {
       chain.get.mockReturnValueOnce({ count: 3 });
       expect(await electionQueries.countPositions(mockDb as any, "e1")).toBe(3);
+    });
+
+    it("counts positions that have active candidates", async () => {
+      chain.get.mockReturnValueOnce({ count: 2 });
+      expect(await electionQueries.countPositionsWithActiveCandidates(mockDb as any, "e1")).toBe(2);
     });
   });
 

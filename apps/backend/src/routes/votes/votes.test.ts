@@ -85,10 +85,10 @@ const {
   mockFindByUserId,
   mockFindByUserAndElection,
   mockCountByCandidateId,
-  mockFindOpen,
+  mockFindCurrentlyOpen,
   mockListByElection,
   mockFindElectionById,
-  mockFindLatestClosed,
+  mockFindLatestClosedOrExpiredOpen,
   mockGetElectionResults,
   mockCast,
 } = vi.hoisted(() => ({
@@ -101,10 +101,10 @@ const {
   mockFindByUserId: vi.fn(),
   mockFindByUserAndElection: vi.fn(),
   mockCountByCandidateId: vi.fn(),
-  mockFindOpen: vi.fn(),
+  mockFindCurrentlyOpen: vi.fn(),
   mockListByElection: vi.fn(),
   mockFindElectionById: vi.fn(),
-  mockFindLatestClosed: vi.fn(),
+  mockFindLatestClosedOrExpiredOpen: vi.fn(),
   mockGetElectionResults: vi.fn(),
   mockCast: vi.fn(),
 }));
@@ -152,8 +152,8 @@ vi.mock("@/database/repositories/position.repository", () => ({
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
     findById: mockFindElectionById,
-    findOpen: mockFindOpen,
-    findLatestClosed: mockFindLatestClosed,
+    findCurrentlyOpen: mockFindCurrentlyOpen,
+    findLatestClosedOrExpiredOpen: mockFindLatestClosedOrExpiredOpen,
   },
 }));
 
@@ -186,7 +186,7 @@ describe("votes Routes (repository)", () => {
     mockFindByUserId.mockReset();
     mockFindByUserAndElection.mockReset();
     mockCountByCandidateId.mockReset();
-    mockFindOpen.mockReset();
+    mockFindCurrentlyOpen.mockReset();
     mockListByElection.mockReset();
     mockFindElectionById.mockReset();
     mockCast.mockReset();
@@ -197,7 +197,7 @@ describe("votes Routes (repository)", () => {
       opensAt: nowSecs - 3600,
       closesAt: nowSecs + 3600,
     });
-    mockFindLatestClosed.mockReset();
+    mockFindLatestClosedOrExpiredOpen.mockReset();
     mockGetElectionResults.mockReset();
     TEST_USER = {
       id: testUserId,
@@ -591,7 +591,7 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockFindOpen.mockResolvedValue({ id: testElectionId });
+      mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
       mockFindByUserAndElection.mockResolvedValue([
         {
           id: testVoteId1,
@@ -614,7 +614,7 @@ describe("votes Routes (repository)", () => {
         candidateId: testCandidateId1,
         positionId: testPositionId1,
       });
-      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("returns empty votes when there is no open election", async () => {
@@ -623,14 +623,26 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockFindOpen.mockResolvedValue(null);
+      mockFindCurrentlyOpen.mockResolvedValue(null);
 
       const res = await router.request("/votes/me", { method: "GET" });
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json).toEqual({ electionId: null, votes: [] });
-      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
+    });
+
+    it("does not return votes for an expired open election", async () => {
+      setUser();
+      mockFindByAccountId.mockResolvedValue({ id: testUserId, accountId: testUserAccountId });
+      mockFindCurrentlyOpen.mockResolvedValue(null);
+
+      const res = await router.request("/votes/me", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ electionId: null, votes: [] });
+      expect(mockFindByUserAndElection).not.toHaveBeenCalled();
     });
 
     it("returns empty votes when user has not voted in the current election", async () => {
@@ -639,7 +651,7 @@ describe("votes Routes (repository)", () => {
         id: testUserId,
         accountId: testUserAccountId,
       });
-      mockFindOpen.mockResolvedValue({ id: testElectionId });
+      mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
       mockFindByUserAndElection.mockResolvedValue([]);
 
       const res = await router.request("/votes/me", { method: "GET" });
@@ -648,7 +660,7 @@ describe("votes Routes (repository)", () => {
       const json = (await res.json()) as any;
       expect(json.electionId).toBe(testElectionId);
       expect(json.votes).toEqual([]);
-      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("returns empty votes when user record is missing", async () => {
@@ -666,7 +678,7 @@ describe("votes Routes (repository)", () => {
   describe("gET /votes/results - getVoteResults", () => {
     it("should return vote results grouped by position", async () => {
       setAdmin();
-      mockFindOpen.mockResolvedValue({ id: testElectionId });
+      mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
       mockGetElectionResults.mockResolvedValue([
         {
           positionId: testPositionId1,
@@ -705,12 +717,12 @@ describe("votes Routes (repository)", () => {
       expect(json.results).toHaveLength(2);
       expect(json.meta.totalVotes).toBe(8);
       expect(json.meta.totalPositions).toBe(2);
-      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
     });
 
     it("should include zero-vote candidates", async () => {
       setAdmin();
-      mockFindOpen.mockResolvedValue({ id: testElectionId });
+      mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
       mockGetElectionResults.mockResolvedValue([
         {
           positionId: testPositionId1,
@@ -733,7 +745,25 @@ describe("votes Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.results[0].candidates[0].voteCount).toBe(0);
-      expect(mockFindOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
+    });
+
+    it("uses an expired open election as the legacy results election", async () => {
+      setAdmin();
+      mockFindCurrentlyOpen.mockResolvedValue(null);
+      mockFindLatestClosedOrExpiredOpen.mockResolvedValue({
+        id: testElectionId,
+        status: "open",
+        opensAt: 1,
+        closesAt: 2,
+      });
+      mockGetElectionResults.mockResolvedValue([]);
+
+      const res = await router.request("/votes/results", { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(mockFindLatestClosedOrExpiredOpen).toHaveBeenCalledWith(mockDb);
+      expect(((await res.json()) as any).meta.totalPositions).toBe(0);
     });
   });
 });

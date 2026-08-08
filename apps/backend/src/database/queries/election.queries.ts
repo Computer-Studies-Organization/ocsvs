@@ -1,6 +1,7 @@
 import type { DbClient } from "../repositories/database.type";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { candidates, elections, positions, votes } from "@/database/schema";
+import { electionRepo } from "@/database/repositories/election.repository";
 
 export interface ElectionWithPositions {
   id: string;
@@ -40,7 +41,7 @@ export interface ResultsPosition {
 
 export const electionQueries = {
   async getCurrentElection(db: DbClient): Promise<ElectionWithPositions | null> {
-    const election = await db.select().from(elections).where(eq(elections.status, "open")).get();
+    const election = await electionRepo.findCurrentlyOpen(db);
     if (!election) return null;
     return this.getElectionWithPositions(db, election.id);
   },
@@ -87,6 +88,16 @@ export const electionQueries = {
       .select({ count: count() })
       .from(positions)
       .where(eq(positions.electionId, electionId))
+      .get();
+    return (row as { count: number } | null)?.count ?? 0;
+  },
+
+  async countPositionsWithActiveCandidates(db: DbClient, electionId: string): Promise<number> {
+    const row = await db
+      .select({ count: sql<number>`count(distinct ${positions.id})` })
+      .from(positions)
+      .innerJoin(candidates, eq(candidates.positionId, positions.id))
+      .where(and(eq(positions.electionId, electionId), eq(candidates.isActive, 1)))
       .get();
     return (row as { count: number } | null)?.count ?? 0;
   },

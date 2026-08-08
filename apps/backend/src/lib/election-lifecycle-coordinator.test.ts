@@ -8,6 +8,7 @@ const {
   mockUpdateMetadata,
   mockFindOpen,
   mockCountPositions,
+  mockCountPositionsWithActiveCandidates,
   mockAuditInsert,
 } = vi.hoisted(() => ({
   mockFindById: vi.fn(),
@@ -16,6 +17,7 @@ const {
   mockUpdateMetadata: vi.fn(),
   mockFindOpen: vi.fn(),
   mockCountPositions: vi.fn(),
+  mockCountPositionsWithActiveCandidates: vi.fn(),
   mockAuditInsert: vi.fn(),
 }));
 
@@ -32,6 +34,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: {
     countPositions: mockCountPositions,
+    countPositionsWithActiveCandidates: mockCountPositionsWithActiveCandidates,
   },
 }));
 
@@ -131,6 +134,7 @@ describe("ElectionLifecycleCoordinator", () => {
         closesAt: null,
       });
       mockCountPositions.mockResolvedValueOnce(3);
+      mockCountPositionsWithActiveCandidates.mockResolvedValueOnce(3);
       mockFindOpen.mockResolvedValueOnce(null);
       mockUpdateStatus.mockResolvedValueOnce(true);
 
@@ -172,6 +176,7 @@ describe("ElectionLifecycleCoordinator", () => {
         closesAt: null,
       });
       mockCountPositions.mockResolvedValueOnce(3);
+      mockCountPositionsWithActiveCandidates.mockResolvedValueOnce(3);
       mockFindOpen.mockResolvedValueOnce({ id: "other-open-id", status: "open" });
 
       await expect(
