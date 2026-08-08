@@ -13,6 +13,7 @@ export async function fetchUsers(
     search?: string;
     yearLevel?: string;
     course?: string;
+    role?: string;
     includeDeleted?: boolean;
   } = {},
   options?: ApiFetchOptions,
@@ -24,6 +25,7 @@ export async function fetchUsers(
   if (query.search) params.append("search", query.search);
   if (query.yearLevel) params.append("yearLevel", query.yearLevel);
   if (query.course) params.append("course", query.course);
+  if (query.role) params.append("role", query.role);
   if (query.includeDeleted !== undefined)
     params.append("includeDeleted", String(query.includeDeleted));
   return apiFetch(`/users?${params.toString()}`, options);
