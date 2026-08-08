@@ -421,12 +421,32 @@ export class CandidateLifecycleCoordinator {
     id: string,
     storage: ImageStorage,
     opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
-  ): Promise<{ data: ArrayBuffer; contentType: string }> {
+    ifNoneMatch?: string,
+  ): Promise<
+    | { notModified: true; etag: string }
+    | { notModified: false; data: ArrayBuffer; contentType: string; etag: string }
+  > {
     const candidate = await candidateRepo.getForAdminView(db, id, opts);
     if (!candidate || !candidate.imageUrl) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
-    return await storage.download(candidate.imageUrl);
+
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(candidate.imageUrl),
+    );
+    const etag = `"${Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("")}"`;
+    const matches = ifNoneMatch
+      ?.split(",")
+      .map((tag) => tag.trim())
+      .some((tag) => tag === "*" || tag === etag || tag === `W/${etag}`);
+
+    if (matches) {
+      return { notModified: true, etag };
+    }
+
+    const { data, contentType } = await storage.download(candidate.imageUrl);
+    return { notModified: false, data, contentType, etag };
   }
 }
 

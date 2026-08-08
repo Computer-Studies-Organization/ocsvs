@@ -108,15 +108,27 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   const isAdmin = isAdminRole(c.var.authUser.role);
 
   try {
-    const { data, contentType } = await candidateLifecycleCoordinator.downloadAvatar(
+    const image = await candidateLifecycleCoordinator.downloadAvatar(
       db,
       id,
       storage,
       { includeInactive: isAdmin, ...(isAdmin ? {} : { excludeDraft: true }) },
+      c.req.header("If-None-Match"),
     );
-    return c.body(data, httpStatusCodes.OK, {
-      "Content-Type": contentType,
-      "Cache-Control": "private, no-store",
+    if (image.notModified) {
+      return new Response(null, {
+        status: httpStatusCodes.NOT_MODIFIED,
+        headers: {
+          ETag: image.etag,
+          "Cache-Control": "private, no-cache",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+    return c.body(image.data, httpStatusCodes.OK, {
+      "Content-Type": image.contentType,
+      "Cache-Control": "private, no-cache",
+      ETag: image.etag,
       "X-Content-Type-Options": "nosniff",
     });
   } catch (error: unknown) {

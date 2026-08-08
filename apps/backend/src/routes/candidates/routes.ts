@@ -393,6 +393,9 @@ export const getCandidateImageRoute = createRoute({
         },
       },
     },
+    [httpStatusCodes.NOT_MODIFIED]: {
+      description: "Candidate image has not changed",
+    },
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),

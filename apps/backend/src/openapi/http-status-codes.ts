@@ -5,6 +5,7 @@ export const CREATED = 201;
 export const FORBIDDEN = 403;
 export const INTERNAL_SERVER_ERROR = 500;
 export const NOT_FOUND = 404;
+export const NOT_MODIFIED = 304;
 export const OK = 200;
 export const PAYLOAD_TOO_LARGE = 413;
 export const TOO_MANY_REQUESTS = 429;

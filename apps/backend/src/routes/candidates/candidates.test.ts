@@ -878,11 +878,56 @@ describe("candidate Routes (repository)", () => {
 
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toBe("image/png");
-      expect(res.headers.get("cache-control")).toBe("private, no-store");
+      expect(res.headers.get("cache-control")).toBe("private, no-cache");
+      expect(res.headers.get("etag")).toBeTruthy();
       expect(mockDownloadImage).toHaveBeenCalledWith("candidates/cand-1/image.png");
       expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
         includeInactive: true,
       });
+    });
+
+    it("returns 304 without downloading when the image ETag matches", async () => {
+      const candidateId = "cand-etag";
+      const imageUrl =
+        "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-etag/image.png";
+      mockGetForAdminView.mockResolvedValue({ id: candidateId, imageUrl });
+      mockDownloadImage.mockReset();
+      mockDownloadImage.mockResolvedValue({
+        data: new ArrayBuffer(8),
+        contentType: "image/png",
+      });
+
+      const first = await router.request(
+        `/candidates/${candidateId}/image`,
+        { method: "GET" },
+        {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "cso-voting-candidates",
+        },
+      );
+      const etag = first.headers.get("etag");
+
+      expect(first.status).toBe(200);
+      expect(etag).toBeTruthy();
+      expect(first.headers.get("cache-control")).toBe("private, no-cache");
+
+      mockDownloadImage.mockClear();
+      const second = await router.request(
+        `/candidates/${candidateId}/image`,
+        { method: "GET", headers: { "If-None-Match": etag! } },
+        {
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+          B2_APPLICATION_KEY_ID: "key-id",
+          B2_APPLICATION_KEY: "key",
+          B2_BUCKET_NAME: "cso-voting-candidates",
+        },
+      );
+
+      expect(second.status).toBe(304);
+      expect(second.headers.get("etag")).toBe(etag);
+      expect(mockDownloadImage).not.toHaveBeenCalled();
     });
 
     it("should pass includeInactive: false when non-admin voter requests candidate image", async () => {
