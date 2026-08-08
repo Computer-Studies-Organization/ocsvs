@@ -206,6 +206,15 @@ export const SelectSessionSchema = SessionSchema;
 export const SelectCandidateSchema = CandidateSchema;
 export const SelectVoteSchema = VoteSchema;
 
+export const BallotCandidateSchema = CandidateSchema.pick({
+  id: true,
+  fullName: true,
+  positionId: true,
+  partyId: true,
+  manifesto: true,
+  imageUrl: true,
+});
+
 // Election schemas
 export const ElectionSchema = z.object({
   createdAt: z.number().int().openapi({
@@ -532,6 +541,13 @@ export const VotingStateSchema = z.object({
   open: ElectionSchema.nullable(),
   nextDraft: NextDraftSchema.nullable(),
   lastClosed: LastClosedSchema.nullable(),
+  ballot: z
+    .object({
+      positions: z.array(PositionSchema),
+      parties: z.array(PartyListSchema),
+      candidates: z.array(BallotCandidateSchema),
+    })
+    .nullable(),
   myVotes: MyVotesSchema,
 });
 

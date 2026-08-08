@@ -51,6 +51,10 @@ export async function listResults(
   return apiFetch<TResults>(`/elections/${electionId}/results`, options);
 }
 
-export async function getVotingState(options?: ApiFetchOptions): Promise<TVotingState> {
-  return apiFetch<TVotingState>("/elections/state", options);
+export async function getVotingState(
+  options?: ApiFetchOptions,
+  includeBallot = false,
+): Promise<TVotingState> {
+  const path = includeBallot ? "/elections/state?includeBallot=true" : "/elections/state";
+  return apiFetch<TVotingState>(path, options);
 }

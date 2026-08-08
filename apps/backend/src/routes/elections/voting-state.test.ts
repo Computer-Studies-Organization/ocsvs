@@ -78,6 +78,7 @@ describe("GET /elections/state", () => {
       open: open as VotingState["open"],
       nextDraft: null,
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
 
@@ -90,11 +91,30 @@ describe("GET /elections/state", () => {
     expect(body.myVotes).toEqual({ electionId: null, votes: [] });
   });
 
+  it("passes includeBallot=true to the state query", async () => {
+    const ballot = { positions: [], parties: [], candidates: [] };
+    getState.mockResolvedValue({
+      open: null,
+      nextDraft: null,
+      lastClosed: null,
+      ballot,
+      myVotes: { electionId: null, votes: [] },
+    });
+
+    const res = await router.request("/elections/state?includeBallot=true", { method: "GET" });
+
+    expect(res.status).toBe(200);
+    expect(getState).toHaveBeenCalledWith({}, "acc-1", { includeBallot: true });
+    const body = (await res.json()) as VotingState;
+    expect(body.ballot).toEqual(ballot);
+  });
+
   it("returns nextDraft when only a draft exists", async () => {
     getState.mockResolvedValue({
       open: null,
       nextDraft: { id: "d1", name: "Fall", opensAt: 100, closesAt: 200 },
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
 
@@ -122,6 +142,7 @@ describe("GET /elections/state", () => {
           },
         ],
       },
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
 
@@ -141,6 +162,7 @@ describe("GET /elections/state", () => {
         closesAt: 200,
         results: [],
       },
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
 
@@ -155,6 +177,7 @@ describe("GET /elections/state", () => {
       open: null,
       nextDraft: null,
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
 
@@ -164,6 +187,7 @@ describe("GET /elections/state", () => {
       open: null,
       nextDraft: null,
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
   });
@@ -174,6 +198,7 @@ describe("GET /elections/state", () => {
       open: null,
       nextDraft: null,
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: "e-voted", votes: [{ candidateId: "c1", positionId: "p1" }] },
     });
 
@@ -183,6 +208,6 @@ describe("GET /elections/state", () => {
       electionId: "e-voted",
       votes: [{ candidateId: "c1", positionId: "p1" }],
     });
-    expect(getState).toHaveBeenCalledWith({}, "acc-7");
+    expect(getState).toHaveBeenCalledWith({}, "acc-7", { includeBallot: false });
   });
 });

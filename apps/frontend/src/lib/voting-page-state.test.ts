@@ -14,6 +14,7 @@ const base: TVotingState = {
   open: null,
   nextDraft: null,
   lastClosed: null,
+  ballot: null,
   myVotes: { electionId: null, votes: [] },
 };
 
@@ -105,6 +106,7 @@ const apiStateWithOpen: TVotingState = {
   open: openElection,
   nextDraft: null,
   lastClosed: null,
+  ballot: null,
   myVotes: { electionId: null, votes: [] },
 };
 
@@ -166,6 +168,7 @@ test("deriveVotingPageState returns empty/next-draft when only nextDraft is pres
     open: null,
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
     lastClosed: null,
+    ballot: null,
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
@@ -182,6 +185,7 @@ test("deriveVotingPageState returns empty/last-closed when only lastClosed is pr
     open: null,
     nextDraft: null,
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
+    ballot: null,
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
@@ -195,6 +199,7 @@ test("deriveVotingPageState returns empty/both when nextDraft and lastClosed are
     open: null,
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
+    ballot: null,
     myVotes: { electionId: null, votes: [] },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
@@ -300,10 +305,8 @@ test("buildStepperPositions filters out positions with no candidates", () => {
     {
       id: "c1",
       fullName: "Alice",
-      accountId: "a1",
       positionId: "p1",
       manifesto: "",
-      isActive: 1,
       imageUrl: null,
     },
   ]);

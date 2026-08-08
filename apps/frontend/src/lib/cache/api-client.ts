@@ -14,7 +14,7 @@ export interface ApiClientAdapter {
   listPartyLists(electionId: string, options?: ApiFetchOptions): Promise<TPartyList[]>;
   listElections(status?: TElectionStatus, options?: ApiFetchOptions): Promise<TElection[]>;
   getElection(id: string, options?: ApiFetchOptions): Promise<TElection>;
-  getVotingState(options?: ApiFetchOptions): Promise<TVotingState>;
+  getVotingState(options?: ApiFetchOptions, includeBallot?: boolean): Promise<TVotingState>;
   listPositions(electionId: string, options?: ApiFetchOptions): Promise<TPosition[]>;
   allCandidates(
     query: {

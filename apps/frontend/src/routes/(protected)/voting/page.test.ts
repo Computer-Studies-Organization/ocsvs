@@ -1,19 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "./+page";
 
-const { mockCacheGet, mockListPartyLists } = vi.hoisted(() => ({
+const { mockCacheGet } = vi.hoisted(() => ({
   mockCacheGet: vi.fn(),
-  mockListPartyLists: vi.fn(),
 }));
 
 vi.mock("$lib/cache", () => ({
   appCache: {
     get: mockCacheGet,
   },
-}));
-
-vi.mock("$lib/api/parties", () => ({
-  listPartyLists: mockListPartyLists,
 }));
 
 describe("voting page loader", () => {
@@ -31,15 +26,12 @@ describe("voting page loader", () => {
             nextDraft: null,
             lastClosed: null,
             myVotes: { electionId: "election-1", votes: [] },
+            ballot: {
+              positions: [{ id: "position-1" }],
+              candidates: [{ id: "candidate-1" }],
+              parties: [{ id: "party-1" }],
+            },
           };
-        }
-        if (resource === "partyLists") {
-          try {
-            return await mockListPartyLists();
-          } catch (err: any) {
-            entry.error = err.message;
-            return null;
-          }
         }
         return [];
       });
@@ -47,16 +39,17 @@ describe("voting page loader", () => {
     });
   });
 
-  it("surfaces party-list loading failures through loadError", async () => {
-    mockListPartyLists.mockRejectedValueOnce(new Error("party-list request failed"));
-
+  it("uses ballot data from voting state without fetching separate resources", async () => {
     const result = (await load({
       fetch: vi.fn(),
       depends: vi.fn(),
     } as any)) as any;
 
-    expect(result.partyLists).toEqual([]);
-    expect(result.loadError).toBe("party-list request failed");
+    expect(mockCacheGet).toHaveBeenCalledTimes(1);
+    expect(mockCacheGet).toHaveBeenCalledWith("votingState", { includeBallot: true });
+    expect(result.positions).toEqual([{ id: "position-1" }]);
+    expect(result.candidates).toEqual([{ id: "candidate-1" }]);
+    expect(result.partyLists).toEqual([{ id: "party-1" }]);
   });
 
   it("propagates voting-state cache failures to the page data", async () => {
@@ -83,24 +76,16 @@ describe("voting page loader", () => {
       nextDraft: null,
       lastClosed: null,
       myVotes: { electionId: "election-1", votes: [] },
+      ballot: null,
     };
-    mockCacheGet.mockImplementation((resource: string) => {
-      if (resource === "votingState") {
-        return { error: null, fetch: vi.fn().mockResolvedValue(openState) };
-      }
-      if (resource === "candidates") {
-        return {
-          error: "candidate request failed",
-          fetch: vi.fn().mockResolvedValue(null),
-        };
-      }
-      return { error: null, fetch: vi.fn().mockResolvedValue([]) };
+    mockCacheGet.mockReturnValue({
+      error: null,
+      fetch: vi.fn().mockResolvedValue(openState),
     });
-    mockListPartyLists.mockResolvedValue([]);
 
     const result = (await load({ fetch: vi.fn(), depends: vi.fn() } as any)) as any;
 
-    expect(result.loadError).toBe("candidate request failed");
+    expect(result.loadError).toBe("Failed to load ballot data");
     expect(result.candidates).toBeNull();
   });
 });

@@ -24,7 +24,7 @@
   import { formatTimestamp } from '$lib/utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { authStore } from '$lib/stores/auth.svelte'
-  import { UserRole, type TCandidate, type TPartyList, type TPosition, type TVotingState } from '$lib/types'
+  import { UserRole, type TPartyList, type TPosition, type TVotingCandidate, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
   import { Calendar, CheckCircle, Flag, Info, Vote, Zap } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
@@ -36,7 +36,7 @@
   let { data } = $props()
   const apiState = $derived<TVotingState | null>(data.votingState)
   const positions = $derived<TPosition[] | null>(data.positions)
-  const candidates = $derived<TCandidate[] | null>(data.candidates)
+  const candidates = $derived<TVotingCandidate[] | null>(data.candidates)
   const partyLists = $derived<TPartyList[]>(data.partyLists || [])
   let runtimeError = $state<string | null>(null)
   const loadError = $derived(data.loadError ?? runtimeError)
@@ -62,7 +62,7 @@
     }
     lastAutoFetch = nowMs
     try {
-      await appCache.get('votingState', {}).fetch(true)
+      await appCache.get('votingState', { includeBallot: true }).fetch(true)
       await invalidate('app:voting')
     }
     catch (e) {
@@ -76,7 +76,7 @@
     runtimeError = null
     try {
       await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
-      await appCache.get('votingState', {}).fetch(true)
+      await appCache.get('votingState', { includeBallot: true }).fetch(true)
       appCache.invalidate({ params: { electionId: pageState.election.id } })
       await invalidate('app:voting')
       addToast('success', 'Vote submitted')

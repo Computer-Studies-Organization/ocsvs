@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
+import { partyListRepo } from "@/database/repositories/party-list.repository";
+import { positionRepo } from "@/database/repositories/position.repository";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
 import { getVotingState } from "./voting-state.queries";
@@ -11,6 +14,15 @@ vi.mock("@/database/repositories/election.repository", () => ({
     findEarliestDraft: vi.fn(),
     findLatestClosed: vi.fn(),
   },
+}));
+vi.mock("@/database/repositories/candidates.repository", () => ({
+  candidateRepo: { listForBallot: vi.fn() },
+}));
+vi.mock("@/database/repositories/party-list.repository", () => ({
+  partyListRepo: { listByElection: vi.fn() },
+}));
+vi.mock("@/database/repositories/position.repository", () => ({
+  positionRepo: { listByElection: vi.fn() },
 }));
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: { getResults: vi.fn() },
@@ -32,6 +44,9 @@ beforeEach(() => {
   vi.mocked(electionRepo.findEarliestDraft).mockReset();
   vi.mocked(electionRepo.findLatestClosed).mockReset();
   vi.mocked(electionQueries.getResults).mockReset();
+  vi.mocked(candidateRepo.listForBallot).mockReset();
+  vi.mocked(partyListRepo.listByElection).mockReset();
+  vi.mocked(positionRepo.listByElection).mockReset();
   vi.mocked(voterAccountStore.findByAccountId).mockReset();
   vi.mocked(voteRepo.findByUserAndElection).mockReset();
 });
@@ -48,6 +63,7 @@ describe("getVotingState", () => {
       open: null,
       nextDraft: null,
       lastClosed: null,
+      ballot: null,
       myVotes: { electionId: null, votes: [] },
     });
     expect(voterAccountStore.findByAccountId).not.toHaveBeenCalled();
@@ -77,6 +93,55 @@ describe("getVotingState", () => {
     expect(result.open).toEqual(openRow);
     expect(result.nextDraft).toBeNull();
     expect(result.lastClosed).toBeNull();
+    expect(result.ballot).toBeNull();
+    expect(positionRepo.listByElection).not.toHaveBeenCalled();
+    expect(partyListRepo.listByElection).not.toHaveBeenCalled();
+    expect(candidateRepo.listForBallot).not.toHaveBeenCalled();
+  });
+
+  it("includes the current election ballot in the state response", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
+    const openRow = {
+      id: "e-ballot",
+      name: "Spring 2026",
+      description: null,
+      status: "open",
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const positions = [{ id: "p1", electionId: "e-ballot", name: "President" }];
+    const parties = [{ id: "party-1", electionId: "e-ballot", name: "Innovators" }];
+    const candidates = [
+      {
+        id: "c1",
+        fullName: "Alice",
+        accountId: "a1",
+        positionId: "p1",
+        partyId: "party-1",
+        manifesto: "Platform",
+        isActive: 1,
+        imageUrl: null,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ];
+
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
+    vi.mocked(positionRepo.listByElection).mockResolvedValue(positions as any);
+    vi.mocked(partyListRepo.listByElection).mockResolvedValue(parties as any);
+    vi.mocked(candidateRepo.listForBallot).mockResolvedValue(candidates as any);
+    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(null);
+
+    const result = await getVotingState(db, accountId, { includeBallot: true });
+
+    expect(result.ballot).toEqual({ positions, parties, candidates });
+    expect(positionRepo.listByElection).toHaveBeenCalledWith(db, "e-ballot");
+    expect(partyListRepo.listByElection).toHaveBeenCalledWith(db, "e-ballot");
+    expect(candidateRepo.listForBallot).toHaveBeenCalledWith(db, "e-ballot");
   });
 
   it("does not aggregate closed results when a usable open election exists", async () => {

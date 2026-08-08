@@ -22,20 +22,31 @@ export interface VoteCountResult {
   voteCount: number;
 }
 
+export interface BallotCandidateRow {
+  id: string;
+  fullName: string;
+  positionId: string;
+  partyId: string | null;
+  manifesto: string;
+  imageUrl: string | null;
+}
+
 export const candidateRepo = {
-  // Ballot: minimal fields, active-only
-  async listForBallot(
-    db: DbClient,
-  ): Promise<{ id: string; fullName: string; positionId: string; partyId: string | null }[]> {
+  // Ballot: active candidates with only fields the voter UI needs
+  async listForBallot(db: DbClient, electionId: string): Promise<BallotCandidateRow[]> {
     return await db
       .select({
         id: candidates.id,
         fullName: candidates.fullName,
         positionId: candidates.positionId,
         partyId: candidates.partyId,
+        manifesto: candidates.manifesto,
+        imageUrl: candidates.imageUrl,
       })
       .from(candidates)
-      .where(eq(candidates.isActive, 1))
+      .innerJoin(positions, eq(candidates.positionId, positions.id))
+      .where(and(eq(candidates.isActive, 1), eq(positions.electionId, electionId)))
+      .orderBy(desc(candidates.createdAt), desc(candidates.id))
       .all();
   },
 

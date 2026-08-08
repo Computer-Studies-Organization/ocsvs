@@ -163,14 +163,23 @@ describe("candidateRepo", () => {
   });
 
   describe("listForBallot", () => {
-    it("fetches active candidates with minimal fields", async () => {
+    it("fetches active candidates for one election", async () => {
       dataQueryChain.all.mockResolvedValueOnce([
-        { id: "c1", fullName: "Alice", positionId: "p1", partyId: null },
+        {
+          id: "c1",
+          fullName: "Alice",
+          positionId: "p1",
+          partyId: null,
+          manifesto: "Platform",
+          imageUrl: null,
+        },
       ]);
 
-      const result = await candidateRepo.listForBallot(mockDb as any);
+      const result = await candidateRepo.listForBallot(mockDb as any, "e1");
 
       expect(eq).toHaveBeenCalledWith(candidates.isActive, 1);
+      expect(eq).toHaveBeenCalledWith(positions.electionId, "e1");
+      expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
       expect(result).toHaveLength(1);
     });
   });

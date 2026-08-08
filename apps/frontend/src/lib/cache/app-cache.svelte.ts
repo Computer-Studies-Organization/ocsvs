@@ -21,7 +21,7 @@ export interface AppCacheMap {
     data: TElection;
   };
   votingState: {
-    params: Record<string, never>;
+    params: { includeBallot?: boolean };
     data: TVotingState;
   };
   positions: {
@@ -88,7 +88,7 @@ const fetchers: {
 } = {
   elections: (api, params, opts) => api.listElections(params.status, opts),
   election: (api, params, opts) => api.getElection(params.id, opts),
-  votingState: (api, params, opts) => api.getVotingState(opts),
+  votingState: (api, params, opts) => api.getVotingState(opts, params.includeBallot),
   positions: (api, params, opts) => api.listPositions(params.electionId, opts),
   candidates: (api, params, opts) => api.allCandidates(params, opts).then((res) => res.data),
   results: (api, params, opts) => api.listResults(params.electionId, opts),

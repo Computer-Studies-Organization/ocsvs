@@ -1,4 +1,4 @@
-import type { TCandidate, TElection, TPosition, TVotingState } from "./types";
+import type { TElection, TPosition, TVotingCandidate, TVotingState } from "./types";
 import type { TStepperPosition, TStepperVotingState } from "./voting-stepper-logic";
 import { createVotingState } from "./voting-stepper-logic";
 
@@ -40,14 +40,14 @@ export type TVotingPageState =
 export interface TVotingPageInput {
   apiState: TVotingState | null;
   positions: TPosition[] | null;
-  candidates: TCandidate[] | null;
+  candidates: TVotingCandidate[] | null;
   loadError: string | null;
   isAdmin: boolean;
 }
 
 export function buildStepperPositions(
   positions: TPosition[] | null,
-  candidates: TCandidate[] | null,
+  candidates: TVotingCandidate[] | null,
 ): TStepperPosition[] {
   if (!positions || !candidates) return [];
   return positions

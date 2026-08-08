@@ -200,9 +200,21 @@ export type TMyVotes = {
   votes: Array<{ candidateId: string; positionId: string }>;
 };
 
+export type TVotingBallot = {
+  positions: TPosition[];
+  parties: TPartyList[];
+  candidates: TVotingCandidate[];
+};
+
+export type TVotingCandidate = Pick<
+  TCandidate,
+  "id" | "fullName" | "positionId" | "partyId" | "manifesto" | "imageUrl"
+>;
+
 export type TVotingState = {
   open: TElection | null;
   nextDraft: TNextDraft | null;
   lastClosed: TLastClosed | null;
+  ballot: TVotingBallot | null;
   myVotes: TMyVotes;
 };

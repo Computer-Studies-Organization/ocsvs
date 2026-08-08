@@ -1,6 +1,12 @@
 import type { DbClient } from "../repositories/database.type";
 import type { ResultsPosition } from "@/database/queries/election.queries";
+import {
+  candidateRepo,
+  type BallotCandidateRow,
+} from "@/database/repositories/candidates.repository";
 import { electionRepo, type ElectionRow } from "@/database/repositories/election.repository";
+import { partyListRepo, type PartyListRow } from "@/database/repositories/party-list.repository";
+import { positionRepo, type PositionRow } from "@/database/repositories/position.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { voteRepo } from "@/database/repositories/votes.repository";
@@ -25,11 +31,22 @@ export interface MyVotes {
   votes: Array<{ candidateId: string; positionId: string }>;
 }
 
+export interface VotingBallot {
+  positions: PositionRow[];
+  parties: PartyListRow[];
+  candidates: BallotCandidateRow[];
+}
+
 export interface VotingState {
   open: ElectionRow | null;
   nextDraft: NextDraft | null;
   lastClosed: LastClosed | null;
+  ballot: VotingBallot | null;
   myVotes: MyVotes;
+}
+
+export interface GetVotingStateOptions {
+  includeBallot?: boolean;
 }
 
 // ponytail: one-entry per-isolate cache; move to shared KV/Cache API if isolate misses matter.
@@ -54,7 +71,12 @@ function getCachedClosedResults(db: DbClient, election: ElectionRow): Promise<Re
   return results;
 }
 
-export async function getVotingState(db: DbClient, accountId: string): Promise<VotingState> {
+export async function getVotingState(
+  db: DbClient,
+  accountId: string,
+  options: GetVotingStateOptions = {},
+): Promise<VotingState> {
+  const includeBallot = options.includeBallot ?? false;
   const now = Math.floor(Date.now() / 1000);
   const [dbOpen, draftRow, closedRow] = await Promise.all([
     electionRepo.findOpen(db),
@@ -114,9 +136,22 @@ export async function getVotingState(db: DbClient, accountId: string): Promise<V
     };
   }
 
-  const myVotes = await getMyVotesForOpen(db, accountId, open?.id ?? null);
+  const [ballot, myVotes] = await Promise.all([
+    includeBallot && open ? getBallotForOpen(db, open.id) : Promise.resolve(null),
+    getMyVotesForOpen(db, accountId, open?.id ?? null),
+  ]);
 
-  return { open, nextDraft, lastClosed, myVotes };
+  return { open, nextDraft, lastClosed, ballot, myVotes };
+}
+
+async function getBallotForOpen(db: DbClient, electionId: string): Promise<VotingBallot> {
+  const [positions, parties, candidates] = await Promise.all([
+    positionRepo.listByElection(db, electionId),
+    partyListRepo.listByElection(db, electionId),
+    candidateRepo.listForBallot(db, electionId),
+  ]);
+
+  return { positions, parties, candidates };
 }
 
 async function getMyVotesForOpen(
