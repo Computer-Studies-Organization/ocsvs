@@ -98,7 +98,7 @@ export async function getVotingState(db: DbClient, accountId: string): Promise<V
   }
 
   let lastClosed: LastClosed | null = null;
-  if (virtualClosed && virtualClosed.closesAt !== null) {
+  if (!open && virtualClosed && virtualClosed.closesAt !== null) {
     const results = await getCachedClosedResults(db, virtualClosed);
     lastClosed = {
       id: virtualClosed.id,

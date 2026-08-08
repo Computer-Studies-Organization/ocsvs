@@ -79,6 +79,40 @@ describe("getVotingState", () => {
     expect(result.lastClosed).toBeNull();
   });
 
+  it("does not aggregate closed results when a usable open election exists", async () => {
+    const nowSecs = Math.floor(Date.now() / 1000);
+    const openRow = {
+      id: "e-open-with-closed",
+      name: "Current",
+      description: null,
+      status: "open",
+      opensAt: nowSecs - 3600,
+      closesAt: nowSecs + 3600,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const closedRow = {
+      id: "e-previous",
+      name: "Previous",
+      description: null,
+      status: "closed",
+      opensAt: nowSecs - 7200,
+      closesAt: nowSecs - 3600,
+      createdAt: 2,
+      updatedAt: 2,
+    };
+    vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
+    vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
+    vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(closedRow as any);
+    vi.mocked(electionQueries.getResults).mockResolvedValue([]);
+
+    const result = await getVotingState(db, accountId);
+
+    expect(result.open).toEqual(openRow);
+    expect(result.lastClosed).toBeNull();
+    expect(electionQueries.getResults).not.toHaveBeenCalled();
+  });
+
   it("returns nextDraft with id/name/opensAt/closesAt when findEarliestDraft returns a row", async () => {
     const draft = {
       id: "d1",
