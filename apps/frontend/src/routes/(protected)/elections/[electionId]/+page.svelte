@@ -8,27 +8,29 @@
 
   let { data } = $props()
   const election = $derived(data.election)
-  const results = $derived<TResults>(data.results ?? [])
+  const resultsEntry = $derived(
+    election ? appCache.get('results', { electionId: election.id }) : null,
+  )
+  const results = $derived<TResults>(resultsEntry?.data ?? data.results ?? [])
   const hasVoted = $derived(data.hasVoted)
 
   async function poll() {
     if (election?.status !== 'open' || !hasVoted) return
     if (document.hidden) return
     try {
-      await appCache.get('elections', {}).fetch(true)
-      await appCache.get('results', { electionId: election.id }).fetch(true)
+      await resultsEntry?.fetch(true)
     } catch {
       // Fail silently (polling is best-effort)
     }
   }
 
-  // 5-second polling effect for open elections
+  // 15-second polling effect for open elections
   $effect(() => {
     if (election?.status !== 'open' || !hasVoted) return
 
-    const intervalId = setInterval(poll, 5000)
+    const intervalId = setInterval(poll, 15000)
     const onVisibility = () => {
-      // Refresh immediately on tab focus so users don't wait up to 5s.
+      // Refresh immediately on tab focus so users don't wait up to 15s.
       if (!document.hidden) poll()
     }
     document.addEventListener('visibilitychange', onVisibility)
