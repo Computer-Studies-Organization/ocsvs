@@ -104,7 +104,7 @@
       transition:fly={presentation === 'sheet' ? { y: 250, duration: 250 } : { y: 20, duration: 200 }}
       onoutroend={onOutroEnd}
       class={presentation === 'sheet'
-        ? 'relative w-full max-w-xl rounded-t-2xl rounded-b-none md:rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[85vh] md:max-h-[90vh] overflow-y-auto'
+        ? 'relative w-full max-w-xl rounded-t-2xl rounded-b-none md:rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[85vh] max-h-[100dvh] md:max-h-[90vh] overflow-y-auto overscroll-contain scroll-pb-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]'
         : 'relative w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:p-8 max-h-[90vh] overflow-y-auto'}
       onclick={(e) => e.stopPropagation()}
     >
