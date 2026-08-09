@@ -54,7 +54,7 @@
         type='button'
         onclick={() => dismissToast(toast.id)}
         aria-label='Dismiss notification'
-        class='ml-2 rounded-lg p-1 transition-colors hover:bg-white/10 cursor-pointer'
+        class='ml-auto rounded-lg p-1 transition-colors hover:bg-white/10 cursor-pointer'
       >
         <X size={14} />
       </button>
