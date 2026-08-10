@@ -4,9 +4,12 @@
   import { onMount } from 'svelte'
   import { navigating } from '$app/stores'
   import ToastContainer from '$lib/components/ui/toast-container.svelte'
+  import { installViewportTracking } from '$lib/keyboard-viewport'
   import '../app.css'
 
   const { children } = $props()
+
+  onMount(() => installViewportTracking())
 
   onMount(async () => {
     try {

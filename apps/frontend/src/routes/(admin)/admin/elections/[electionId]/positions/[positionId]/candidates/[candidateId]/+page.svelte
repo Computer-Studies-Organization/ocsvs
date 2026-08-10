@@ -130,7 +130,7 @@
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='keyboard-scroll-content mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8'>
     <a
       href={`/admin/elections/${electionId}/positions/${positionId}`}
       class='inline-flex items-center gap-1.5 text-sm font-semibold mb-4 transition-colors hover:opacity-80'

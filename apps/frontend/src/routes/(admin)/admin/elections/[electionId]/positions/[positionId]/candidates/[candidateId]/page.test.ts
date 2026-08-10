@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
 import Page from "./+page.svelte";
+
+const pageSource = readFileSync(fileURLToPath(new URL("./+page.svelte", import.meta.url)), "utf8");
 
 vi.mock("$app/state", () => ({
   page: {
@@ -24,6 +28,10 @@ vi.mock("$lib/cache", () => ({
 }));
 
 describe("candidate detail page", () => {
+  it("marks the full-page edit content as keyboard-scrollable", () => {
+    expect(pageSource).toContain("keyboard-scroll-content");
+  });
+
   it("does not expose candidate status as an editable field", () => {
     const { body } = render(Page, {
       props: {

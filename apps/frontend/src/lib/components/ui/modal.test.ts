@@ -15,6 +15,7 @@ describe("mobile sheet keyboard layout", () => {
     expect(modalSource).toContain("overscroll-contain");
     expect(modalSource).toContain("scroll-pb-6");
     expect(modalSource).toContain("pb-[max(1.5rem,env(safe-area-inset-bottom))]");
+    expect(modalSource).toContain("keyboard-sheet");
     expect(appHtmlSource).toContain("interactive-widget=resizes-content");
   });
 });

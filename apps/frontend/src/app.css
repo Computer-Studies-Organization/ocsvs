@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+:root {
+  --cso-visible-viewport-height: 100dvh;
+  --cso-visible-viewport-top: 0px;
+  --cso-keyboard-inset-bottom: 0px;
+}
+
+html {
+  scroll-padding-bottom: var(--cso-keyboard-inset-bottom, 0px);
+}
+
 @theme {
   /* Non-standard Tailwind shade used across forms, cards, and tables */
   --color-slate-850: oklch(0.222 0.016 270);
@@ -13,5 +23,22 @@
   scrollbar-width: none; /* Firefox */
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
+  }
+}
+
+@utility keyboard-scroll-content {
+  padding-bottom: var(--cso-keyboard-inset-bottom, 0px);
+  scroll-padding-bottom: var(--cso-keyboard-inset-bottom, 0px);
+}
+
+.keyboard-sheet {
+  max-height: min(100dvh, var(--cso-visible-viewport-height, 100dvh));
+  margin-bottom: var(--cso-keyboard-inset-bottom, 0px);
+}
+
+@media (min-width: 48rem) {
+  .keyboard-sheet {
+    max-height: 90vh;
+    margin-bottom: 0;
   }
 }
