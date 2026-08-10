@@ -29,4 +29,9 @@ describe("admin users actions", () => {
     expect(accountActions).toContain("{#if !viewUser.deletedAt}");
     expect(accountActions).toContain("startMobileUnlock");
   });
+
+  it("reserves mobile bottom space for the fixed add-user FAB", () => {
+    expect(pageSource).toContain("pt-6 pb-24 md:pb-6");
+    expect(pageSource).toContain("md:hidden fixed bottom-6 right-6");
+  });
 });

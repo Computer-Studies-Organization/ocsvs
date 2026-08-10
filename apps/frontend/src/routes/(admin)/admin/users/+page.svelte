@@ -673,7 +673,7 @@
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='h-1 w-full bg-gradient-to-r from-amber-500 via-orange-400 to-rose-500'></div>
 
-  <div class='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='mx-auto max-w-7xl px-4 pt-6 pb-24 md:pb-6 sm:px-6 lg:px-8'>
     <!-- Header -->
     <header class='mb-6 flex flex-wrap items-center justify-between gap-4'>
       <div>
@@ -1725,4 +1725,3 @@
   onresize={() => { activeDropdownUserId = null; activeDropdownUser = null; }} 
   onscroll={() => { activeDropdownUserId = null; activeDropdownUser = null; }} 
 />
-
