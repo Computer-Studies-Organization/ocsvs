@@ -111,13 +111,13 @@
   }
 </script>
 
-<div class='keyboard-scroll-content mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8'>
+<div class='keyboard-scroll-content mx-auto max-w-4xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8'>
 
     <!-- Header -->
     <div class='mb-8'>
       <button
         onclick={() => goto(isAdmin ? '/admin-dashboard' : '/voting')}
-        class='mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-50 cursor-pointer'
+        class='mb-4 flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-50 cursor-pointer'
       >
         <ArrowLeft size={20} stroke-width={2.5} />
         <span class='font-semibold'>Back</span>
@@ -127,7 +127,7 @@
     </div>
 
     <!-- Profile Information -->
-    <div class='mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-6'>
+    <div class='mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6'>
       <h2 class='mb-6 text-xl font-bold text-slate-50'>Profile Information</h2>
 
 
@@ -211,7 +211,7 @@
           <button
             type='submit'
             disabled={isSavingProfile}
-            class='flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-3 font-bold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
+            class='flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3 font-bold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer sm:w-auto'
           >
             {#if isSavingProfile}
               <Loader class='animate-spin' size={18} />
@@ -226,7 +226,7 @@
     </div>
 
     <!-- Change Password -->
-    <div class='rounded-2xl border border-slate-800 bg-slate-900 p-6'>
+    <div class='rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6'>
       <div class='mb-6 flex items-center gap-3'>
         <div class='rounded-lg bg-violet-500/15 p-2'>
           <KeyRound size={20} class='text-violet-400' />
@@ -248,7 +248,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.currentPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showCurrent = !showCurrent} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showCurrent = !showCurrent} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showCurrent}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>
@@ -269,7 +269,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.newPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showNew = !showNew} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showNew = !showNew} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showNew}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>
@@ -290,7 +290,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.confirmPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showConfirm = !showConfirm} class='absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showConfirm = !showConfirm} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showConfirm}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>
@@ -303,7 +303,7 @@
           <button
             type='submit'
             disabled={isSavingPassword}
-            class='flex items-center gap-2 rounded-xl bg-violet-500 px-6 py-3 font-bold text-white shadow-lg shadow-violet-500/30 transition hover:bg-violet-600 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
+            class='flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-500 px-6 py-3 font-bold text-white shadow-lg shadow-violet-500/30 transition hover:bg-violet-600 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer sm:w-auto'
           >
             {#if isSavingPassword}
               <Loader class='animate-spin' size={18} />

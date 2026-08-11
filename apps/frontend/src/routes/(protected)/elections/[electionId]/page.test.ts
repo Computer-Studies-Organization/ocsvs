@@ -77,4 +77,22 @@ describe("election detail results", () => {
     expect(body).toContain("Fresh Candidate");
     expect(body).not.toContain("Stale Candidate");
   });
+
+  it("keeps result controls and cards flexible on narrow screens", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election: { ...election, status: "closed" },
+          results: staleResults,
+          hasVoted: true,
+        },
+      },
+    });
+
+    expect(body).toContain("min-h-11");
+    expect(body).toContain("p-4 shadow-2xl backdrop-blur-xl sm:p-8");
+    expect(body).toContain("mb-4 flex flex-col items-start gap-3");
+    expect(body).toContain("max-w-full items-start gap-2");
+    expect(body).toContain("flex flex-wrap items-center gap-x-4 gap-y-1");
+  });
 });

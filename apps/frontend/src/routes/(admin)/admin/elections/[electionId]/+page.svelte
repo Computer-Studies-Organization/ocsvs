@@ -76,10 +76,10 @@
 />
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 space-y-6'>
+  <div class='mx-auto max-w-6xl space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:px-8'>
     <a
       href='/admin/elections'
-      class='inline-flex items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-80'
+      class='inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-80'
       style='color: oklch(0.70 0.015 250)'
     >
       <ArrowLeft size={16} />
@@ -88,13 +88,13 @@
 
     <!-- Header -->
     <header
-      class='rounded-2xl border p-5 shadow-lg flex flex-col gap-4'
+      class='flex flex-col gap-4 rounded-2xl border p-4 shadow-lg sm:p-5'
       style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
     >
-      <div class='flex items-start justify-between gap-4'>
+      <div class='flex flex-wrap items-start justify-between gap-3 sm:gap-4'>
         <div class='min-w-0 flex-1'>
-          <div class='flex flex-wrap items-center gap-3 mb-2'>
-            <h1 class='text-2xl font-black truncate' style='color: oklch(0.95 0.008 250)'>{election.name}</h1>
+          <div class='mb-2 flex flex-wrap items-start gap-2 sm:items-center sm:gap-3'>
+            <h1 class='min-w-0 break-words text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{election.name}</h1>
             <StatusBadge status={election.status} />
           </div>
           <p class='text-sm line-clamp-2' style='color: oklch(0.70 0.015 250)'>
@@ -105,7 +105,7 @@
 
       <div class='w-full h-[1px]' style='background-color: oklch(0.25 0.025 250)'></div>
 
-      <div class='flex items-center justify-between gap-3'>
+      <div class='flex flex-wrap items-start justify-between gap-3'>
         <span class='text-xs' style='color: oklch(0.70 0.015 250)'>
           {partyLists.length} {partyLists.length === 1 ? 'slate' : 'slates'} &middot; {positions.length} {positions.length === 1 ? 'position' : 'positions'} &middot; {candidates.length} {candidates.length === 1 ? 'candidate' : 'candidates'}
         </span>
@@ -116,7 +116,7 @@
             <button
               onclick={() => isMenuOpen = !isMenuOpen}
               type='button'
-              class='flex h-9 w-9 items-center justify-center rounded-xl transition cursor-pointer hover:bg-slate-800 text-slate-400 hover:text-slate-200 border'
+              class='flex h-11 w-11 items-center justify-center rounded-xl transition cursor-pointer hover:bg-slate-800 text-slate-400 hover:text-slate-200 border'
               style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
             >
               <MoreHorizontal size={18} />
@@ -151,19 +151,19 @@
     <div class='flex rounded-2xl p-1 border gap-1' style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'>
       <button
         onclick={() => activeTab = 'overview'}
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'overview' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
+        class="min-h-11 flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'overview' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
       >
         Overview
       </button>
       <button
         onclick={() => activeTab = 'parties'}
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'parties' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
+        class="min-h-11 flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'parties' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
       >
         Party lists
       </button>
       <button
         onclick={() => activeTab = 'positions'}
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'positions' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
+        class="min-h-11 flex-1 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer text-center border {activeTab === 'positions' ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 font-black' : 'text-slate-400 hover:text-slate-200 border-transparent'}"
       >
         Positions
       </button>
@@ -203,7 +203,7 @@
         </div>
 
         <!-- Progress indicators -->
-        <div class='grid grid-cols-3 gap-4'>
+        <div class='grid grid-cols-1 gap-4 sm:grid-cols-3'>
           {#each lifecycleInfo.steps as step}
             <div class='flex flex-col gap-2'>
               <div class='h-2.5 rounded-full {step.color} w-full transition-colors duration-300'></div>

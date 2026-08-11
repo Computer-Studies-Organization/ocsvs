@@ -1,0 +1,14 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+const pageSource = readFileSync(fileURLToPath(new URL("./+page.svelte", import.meta.url)), "utf8");
+
+describe("bulk import mobile layout", () => {
+  it("keeps the import flow compact and touch-friendly on small screens", () => {
+    expect(pageSource).toContain("px-3 py-4 sm:px-6 sm:py-6");
+    expect(pageSource).toContain("min-h-11 min-w-11");
+    expect(pageSource).toContain("p-6 text-center");
+    expect(pageSource).toContain("overflow-x-auto");
+  });
+});

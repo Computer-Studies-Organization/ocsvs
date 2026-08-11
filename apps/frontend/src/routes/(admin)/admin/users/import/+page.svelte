@@ -240,11 +240,11 @@
 <div class="w-full bg-slate-950 text-slate-100 flex-1 flex flex-col min-h-screen">
   <div class="h-1 w-full bg-gradient-to-r from-amber-500 via-orange-400 to-rose-500"></div>
 
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
+  <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 w-full flex-1 flex flex-col">
     <!-- Header -->
     <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div>
-        <a href="/admin/users" class="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-100 transition uppercase tracking-wider mb-2">
+        <a href="/admin/users" class="inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-100 transition uppercase tracking-wider mb-2">
           <ArrowLeft size={14} /> Back to Users
         </a>
         <h1 class="text-2xl font-black text-slate-50 sm:text-3xl">Voter Bulk Import</h1>
@@ -265,7 +265,7 @@
           <button 
             onclick={() => step = 1}
             disabled={step === 3 || isImporting}
-            class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 cursor-pointer disabled:cursor-not-allowed
+            class="min-h-11 min-w-11 h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 cursor-pointer disabled:cursor-not-allowed
               {step >= 1 ? 'bg-amber-500 border-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-slate-900 border-slate-700 text-slate-400'}"
           >
             {#if step > 1}
@@ -282,7 +282,7 @@
           <button 
             onclick={() => step = 2}
             disabled={(step !== 2 && records.length === 0) || step === 3 || isImporting}
-            class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 cursor-pointer disabled:cursor-not-allowed
+            class="min-h-11 min-w-11 h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 cursor-pointer disabled:cursor-not-allowed
               {step >= 2 ? 'bg-amber-500 border-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-slate-900 border-slate-700 text-slate-400'}"
           >
             {#if step > 2}
@@ -313,7 +313,7 @@
         <!-- Step 1: File Upload Dropzone -->
         <div class="max-w-3xl mx-auto w-full" in:fade={{ duration: 150 }}>
           <div 
-            class="relative overflow-hidden rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-300 flex flex-col items-center justify-center min-h-[320px] cursor-pointer
+            class="relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 sm:min-h-[320px] sm:p-12
               {isDragging ? 'border-amber-500 bg-amber-500/5' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'}"
             role="button"
             tabindex="0"
@@ -353,7 +353,7 @@
                 />
                 <button
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-6 py-3 shadow-[0_4px_12px_rgba(245,158,11,0.2)] transition-all duration-300 cursor-pointer"
+                  class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-6 py-3 shadow-[0_4px_12px_rgba(245,158,11,0.2)] transition-all duration-300 cursor-pointer"
                 >
                   Choose PDF File
                 </button>
@@ -362,7 +362,7 @@
           </div>
 
           <!-- Roster Guidelines -->
-          <div class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/30 p-6">
+          <div class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/30 p-4 sm:p-6">
             <h4 class="text-sm font-bold text-slate-350 uppercase tracking-wider mb-3 flex items-center gap-2">
               <Info size={16} class="text-amber-400" /> Roster PDF Guidelines
             </h4>
@@ -381,7 +381,7 @@
             <!-- Step 2: Preview & Edit -->
             <div class="w-full flex-1 flex flex-col space-y-6" in:fade={{ duration: 150 }}>
               <!-- Stats & Filters Toolbar -->
-              <div class="flex flex-wrap gap-4 items-center justify-between bg-slate-900/40 border border-slate-800 p-6 rounded-2xl">
+              <div class="flex flex-wrap gap-4 items-center justify-between bg-slate-900/40 border border-slate-800 p-4 rounded-2xl sm:p-6">
                 <div class="flex items-center gap-6">
                   <div>
                     <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Parsed</div>
@@ -398,7 +398,7 @@
 
                 <!-- Actions / Search bar -->
                 <div class="flex flex-wrap gap-3 items-center">
-                  <div class="relative w-64">
+                  <div class="relative w-full sm:w-64">
                     <Search size={16} class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="text"
@@ -410,7 +410,7 @@
 
                   <button
                     onclick={addStudent}
-                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-slate-100 transition cursor-pointer"
+                    class="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-slate-100 transition cursor-pointer"
                   >
                     <Plus size={14} /> Add Student
                   </button>
@@ -540,19 +540,19 @@
               </div>
 
               <!-- Footer Toolbar -->
-              <div class="flex justify-between items-center bg-slate-900/20 border border-slate-800/80 p-4 rounded-2xl">
+              <div class="flex flex-col items-stretch gap-3 bg-slate-900/20 border border-slate-800/80 p-4 rounded-2xl sm:flex-row sm:items-center sm:justify-between">
                 <button
                   onclick={() => {
                     records = [];
                     step = 1;
                   }}
                   disabled={isImporting}
-                  class="rounded-xl border border-slate-700 bg-slate-950 px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition disabled:opacity-50 cursor-pointer"
+                  class="min-h-11 rounded-xl border border-slate-700 bg-slate-950 px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition disabled:opacity-50 cursor-pointer"
                 >
                   Reset
                 </button>
 
-                <div class="flex items-center gap-4">
+                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                   {#if invalidCount > 0}
                     <span class="text-xs text-rose-400 font-semibold flex items-center gap-1.5 animate-pulse">
                       <AlertTriangle size={14} /> Resolve {invalidCount} error(s) to import
@@ -562,7 +562,7 @@
                   <button
                     onclick={submitImport}
                     disabled={isImporting || records.length === 0 || invalidCount > 0}
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-6 py-2.5 shadow-[0_4px_12px_rgba(245,158,11,0.2)] transition-all duration-300 disabled:opacity-30 disabled:pointer-events-none transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-6 py-2.5 shadow-[0_4px_12px_rgba(245,158,11,0.2)] transition-all duration-300 disabled:opacity-30 disabled:pointer-events-none transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   >
                     {#if isImporting}
                       <Loader size={16} class="animate-spin" /> Importing...
@@ -605,16 +605,16 @@
                     Passwords are encrypted/hashed on the server and cannot be recovered later. 
                     Please download the CSV or copy the credentials now.
                   </p>
-                  <div class="flex flex-wrap gap-3 pt-2">
+                  <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
                     <button
                       onclick={downloadCredentialsCsv}
-                      class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-5 py-2 text-xs transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer shadow-[0_4px_12px_rgba(245,158,11,0.15)]"
+                      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-5 py-2 text-xs transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer shadow-[0_4px_12px_rgba(245,158,11,0.15)]"
                     >
                       <FileSpreadsheet size={14} /> Download CSV
                     </button>
                     <button
                       onclick={copyAllCredentials}
-                      class="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-5 py-2 text-xs font-bold text-slate-200 hover:bg-slate-850 hover:text-slate-100 transition cursor-pointer"
+                      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-5 py-2 text-xs font-bold text-slate-200 hover:bg-slate-850 hover:text-slate-100 transition cursor-pointer"
                     >
                       <Copy size={14} /> Copy All
                     </button>
@@ -626,16 +626,16 @@
               <div class="border border-slate-800 rounded-2xl bg-slate-900 overflow-hidden">
                 {#if skippedList.length > 0}
                   <div class="flex border-b border-slate-800 bg-slate-950/40">
-                    <button 
-                      onclick={() => activeTab = "imported"} 
-                      class="px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition cursor-pointer
+                    <button
+                      onclick={() => activeTab = "imported"}
+                      class="min-h-11 px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition cursor-pointer
                         {activeTab === 'imported' ? 'border-amber-500 text-amber-400 bg-slate-900/40' : 'border-transparent text-slate-500 hover:text-slate-300'}"
                     >
                       Imported ({importedList.length})
                     </button>
                     <button 
                       onclick={() => activeTab = "skipped"} 
-                      class="px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition cursor-pointer
+                      class="min-h-11 px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition cursor-pointer
                         {activeTab === 'skipped' ? 'border-amber-500 text-amber-400 bg-slate-900/40' : 'border-transparent text-slate-500 hover:text-slate-300'}"
                     >
                       Skipped ({skippedList.length})
@@ -696,7 +696,7 @@
               <div class="flex justify-end">
                 <a
                   href="/admin/users"
-                  class="rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 hover:text-slate-50 text-slate-200 font-bold px-6 py-3 transition cursor-pointer"
+                  class="inline-flex min-h-11 items-center rounded-xl border border-slate-700 bg-slate-900 px-6 py-3 font-bold text-slate-200 transition hover:bg-slate-800 hover:text-slate-50 cursor-pointer"
                 >
                   Done & Return
                 </a>

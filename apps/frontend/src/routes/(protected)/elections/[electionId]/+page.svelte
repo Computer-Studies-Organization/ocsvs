@@ -41,7 +41,7 @@
   })
 </script>
 
-<div class='mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
+<div class='mx-auto flex max-w-4xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8'>
     <!-- Header -->
     <header class='relative flex flex-col gap-4 border-b border-slate-800/70 pb-4 sm:flex-row sm:items-start sm:justify-between'>
       <div class='space-y-2'>
@@ -63,7 +63,7 @@
       <div class='flex sm:self-start'>
         <a
           href='/elections'
-          class='inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700'
+          class='inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700'
         >
           <ArrowLeft size={16} />
           Back to list
@@ -112,9 +112,9 @@
             {@const winner = sortedCandidates[0]}
             {@const isTie = sortedCandidates.length > 1 && sortedCandidates[0].voteCount === sortedCandidates[1].voteCount}
 
-            <div class='rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl backdrop-blur-xl sm:p-8'>
+            <div class='rounded-2xl border border-white/10 bg-slate-900 p-4 shadow-2xl backdrop-blur-xl sm:p-8'>
               <!-- Position Header -->
-              <div class='mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-4'>
+              <div class='mb-4 flex flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4'>
                 <div>
                   <h3 class='text-lg font-bold text-slate-100 sm:text-xl'>{position.positionName}</h3>
                   <p class='mt-1 text-xs text-slate-400'>
@@ -123,14 +123,14 @@
                 </div>
                 {#if election.status !== 'open'}
                   {#if !isTie && winner && winner.voteCount > 0}
-                    <div class='flex items-center gap-2 rounded-full bg-emerald-500/25 px-3 py-1 border border-emerald-500/30'>
-                      <Trophy size={14} class='text-emerald-400' />
-                      <span class='text-xs font-semibold text-emerald-300'>{winner.fullName}</span>
+                    <div class='flex max-w-full items-start gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/25 px-3 py-1'>
+                      <Trophy size={14} class='mt-0.5 shrink-0 text-emerald-400' />
+                      <span class='break-words text-xs font-semibold text-emerald-300'>{winner.fullName}</span>
                     </div>
                   {:else if isTie && winner && winner.voteCount > 0}
-                    <div class='flex items-center gap-2 rounded-full bg-amber-500/25 px-3 py-1 border border-amber-500/30'>
-                      <Trophy size={14} class='text-amber-400' />
-                      <span class='text-xs font-semibold text-amber-300'>Tie</span>
+                    <div class='flex max-w-full items-start gap-2 rounded-full border border-amber-500/30 bg-amber-500/25 px-3 py-1'>
+                      <Trophy size={14} class='mt-0.5 shrink-0 text-amber-400' />
+                      <span class='break-words text-xs font-semibold text-amber-300'>Tie</span>
                     </div>
                   {/if}
                 {/if}
@@ -148,14 +148,14 @@
                     
                     <div class='min-w-0 flex-1'>
                       <div class='mb-2 flex items-center gap-2'>
-                        <h4 class="text-base font-semibold sm:text-lg {showTrophy ? 'text-emerald-300' : 'text-slate-100'}">
+                        <h4 class="min-w-0 break-words text-base font-semibold sm:text-lg {showTrophy ? 'text-emerald-300' : 'text-slate-100'}">
                           {candidate.fullName}
                         </h4>
                         {#if showTrophy}
                           <Trophy size={16} class='text-emerald-400' />
                         {/if}
                       </div>
-                      <div class='flex items-center gap-4 text-xs text-slate-400 sm:text-sm'>
+                      <div class='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 sm:text-sm'>
                         <span><span class='font-semibold text-slate-300'>{candidate.voteCount}</span> votes</span>
                         <span><span class='font-semibold text-slate-300'>{candidate.percentage}%</span> of total</span>
                       </div>

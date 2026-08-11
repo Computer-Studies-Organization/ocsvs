@@ -98,4 +98,14 @@ describe("admin election party controls", () => {
       expect(body).not.toContain('title="Edit Party"');
     },
   );
+
+  it("keeps the election detail controls usable on narrow screens", () => {
+    const { body } = render(Page, {
+      props: { data: { election, positions: [], partyLists: [party], candidates: [] } },
+    });
+
+    expect(body).toContain("min-h-11");
+    expect(body).toContain("grid grid-cols-1 gap-4 sm:grid-cols-3");
+    expect(body).toContain("h-11 w-11");
+  });
 });
