@@ -122,8 +122,15 @@
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
   <div class='mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8'>
     <!-- Header -->
-    <header class='relative flex items-start justify-between gap-4 border-b border-slate-800/70 pb-4'>
+    <header class='flex items-start gap-4 border-b border-slate-800/70 pb-4'>
       <div class='space-y-3'>
+        <a
+          href='/admin-dashboard'
+          class='inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-slate-400 transition hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950'
+        >
+          <ArrowLeft size={16} aria-hidden='true' />
+          Dashboard
+        </a>
         <div>
           <h1 class='text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl'>Vote Results</h1>
           <p class='mt-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-500'>
@@ -140,15 +147,6 @@
         </div>
       </div>
 
-      <div class='absolute right-0'>
-        <button
-          onclick={() => goto('/admin-dashboard')}
-          class='inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer'
-        >
-          <ArrowLeft size={16} />
-          Back
-        </button>
-      </div>
     </header>
 
     <!-- Election Selector & Actions -->
