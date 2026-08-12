@@ -189,6 +189,55 @@ describe("ElectionLifecycleCoordinator", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "ANOTHER_ELECTION_IS_OPEN", status: 409 }));
     });
 
+    it("closes an expired open election before opening the next one", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const expired = {
+        id: "expired-open-id",
+        status: "open",
+        opensAt: now - 7200,
+        closesAt: now - 1,
+      };
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "draft",
+        opensAt: null,
+        closesAt: null,
+      });
+      mockCountPositions.mockResolvedValueOnce(3);
+      mockCountPositionsWithActiveCandidates.mockResolvedValueOnce(3);
+      mockFindOpen.mockResolvedValueOnce(expired);
+      mockUpdateStatus.mockResolvedValue(true);
+
+      const result = await ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+        to: "open",
+        actor: { id: "admin-id", username: "admin" },
+        opensAt: now,
+        closesAt: now + 3600,
+      });
+
+      expect(result.newStatus).toBe("open");
+      expect(mockUpdateStatus).toHaveBeenNthCalledWith(1, mockDb, "expired-open-id", {
+        existingStatus: "open",
+        status: "closed",
+        opensAt: expired.opensAt,
+        closesAt: expired.closesAt,
+      });
+      expect(mockUpdateStatus).toHaveBeenNthCalledWith(2, mockDb, "e1", {
+        existingStatus: "draft",
+        status: "open",
+        opensAt: now,
+        closesAt: now + 3600,
+      });
+      expect(mockAuditInsert).toHaveBeenNthCalledWith(1, mockDb, {
+        action: "election.transition",
+        targetType: "election",
+        targetId: "expired-open-id",
+        actorAccountIdSnapshot: "admin-id",
+        actorUsernameSnapshot: "admin",
+        description: "open → closed",
+      });
+    });
+
     it("throws ELECTION_HAS_NO_POSITIONS when opening a draft election with 0 positions", async () => {
       mockFindById.mockResolvedValueOnce({
         id: "e1",

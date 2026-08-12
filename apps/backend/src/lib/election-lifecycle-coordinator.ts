@@ -4,7 +4,11 @@ import type { ElectionRow } from "@/database/repositories/election.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
-import { assertTransition, TransitionError } from "@/lib/election-lifecycle";
+import {
+  assertTransition,
+  getEffectiveElectionStatus,
+  TransitionError,
+} from "@/lib/election-lifecycle";
 import { isUniqueConstraintError } from "@/lib/errors";
 
 export interface CreateElectionInput {
@@ -114,6 +118,7 @@ export const ElectionLifecycleCoordinator = {
 
       const fromStatus = existing.status as TElectionStatus;
       const toStatus = params.to;
+      const now = Math.floor(Date.now() / 1000);
 
       // 2. Count positions
       const positionCount = await electionQueries.countPositions(tx, electionId);
@@ -126,12 +131,32 @@ export const ElectionLifecycleCoordinator = {
       if (toStatus === "open") {
         const activeOpen = await electionRepo.findOpen(tx);
         if (activeOpen && activeOpen.id !== electionId) {
-          throw new TransitionError("ANOTHER_ELECTION_IS_OPEN", 409);
+          if (getEffectiveElectionStatus(activeOpen, now) !== "closed") {
+            throw new TransitionError("ANOTHER_ELECTION_IS_OPEN", 409);
+          }
+
+          const closed = await electionRepo.updateStatus(tx, activeOpen.id, {
+            existingStatus: "open",
+            status: "closed",
+            opensAt: activeOpen.opensAt,
+            closesAt: activeOpen.closesAt,
+          });
+          if (!closed) {
+            throw new TransitionError("ELECTION_TRANSITION_CONFLICT", 409);
+          }
+
+          await auditLogRepo.insert(tx, {
+            action: "election.transition",
+            targetType: "election",
+            targetId: activeOpen.id,
+            actorAccountIdSnapshot: params.actor.id,
+            actorUsernameSnapshot: params.actor.username,
+            description: "open → closed",
+          });
         }
       }
 
       // 4. Resolve timestamps
-      const now = Math.floor(Date.now() / 1000);
       const resolvedOpensAt =
         toStatus === "draft"
           ? null
