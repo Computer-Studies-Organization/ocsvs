@@ -1,9 +1,11 @@
 import type { DbClient } from "./database.type";
-import { candidates } from "@/database/schema";
-import { candidateRepo } from "@/database/repositories/candidates.repository";
+import {
+  candidateRepo,
+  type AdminCandidateRow,
+} from "@/database/repositories/candidates.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 
-export type CandidateRow = typeof candidates.$inferSelect;
+export type CandidateRow = AdminCandidateRow;
 
 export interface CandidateWithResolvedUrl extends CandidateRow {
   imageUrl: string | null;

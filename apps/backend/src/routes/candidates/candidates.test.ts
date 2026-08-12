@@ -278,6 +278,7 @@ describe("candidate Routes (repository)", () => {
           id: "1",
           fullName: "Alice",
           accountId: "acc1",
+          userId: "user1",
           positionId: "pos-101",
           manifesto: "...",
           isActive: 1,
@@ -297,6 +298,7 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.data).toHaveLength(1);
+      expect(json.data[0].userId).toBe("user1");
       expect(json.meta).toEqual({
         total: 1,
         page: 1,
@@ -426,6 +428,7 @@ describe("candidate Routes (repository)", () => {
         id: "cand-1",
         fullName: "Bob",
         accountId: "acc1",
+        userId: "user1",
         positionId: "pos-101",
         manifesto: "...",
         isActive: 1,
@@ -439,6 +442,7 @@ describe("candidate Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.id).toBe("cand-1");
+      expect(json.userId).toBe("user1");
       expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
         includeInactive: true,
       });

@@ -33,6 +33,7 @@ vi.mock("$lib/cache", () => ({
 }));
 
 import { getCandidate } from "$lib/api/candidates";
+import { fetchUser } from "$lib/api/users";
 
 describe("candidate detail loader", () => {
   it("loads candidate successfully when hierarchy matches", async () => {
@@ -40,6 +41,7 @@ describe("candidate detail loader", () => {
       id: "candidate-1",
       fullName: "Alex Candidate",
       accountId: "account-1",
+      userId: "user-1",
       positionId: "position-1",
       manifesto: "Manifesto",
       isActive: 1,
@@ -58,6 +60,31 @@ describe("candidate detail loader", () => {
 
     expect((result as any).candidate.id).toBe("candidate-1");
     expect((result as any).position?.id).toBe("position-1");
+  });
+
+  it("loads identity details using the candidate user ID", async () => {
+    vi.mocked(getCandidate).mockResolvedValueOnce({
+      id: "candidate-1",
+      fullName: "Alex Candidate",
+      accountId: "account-1",
+      userId: "user-1",
+      positionId: "position-1",
+      manifesto: "Manifesto",
+      isActive: 1,
+      imageUrl: null,
+    } as any);
+
+    await load({
+      params: {
+        electionId: "election-1",
+        positionId: "position-1",
+        candidateId: "candidate-1",
+      },
+      fetch: vi.fn(),
+      depends: vi.fn(),
+    } as any);
+
+    expect(fetchUser).toHaveBeenCalledWith("user-1", { fetch: expect.any(Function) });
   });
 
   it("throws 404 when candidate positionId does not match positionId param", async () => {

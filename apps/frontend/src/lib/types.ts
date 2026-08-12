@@ -57,6 +57,7 @@ export interface TCandidate {
   id: string;
   fullName: string;
   accountId: string;
+  userId: string;
   positionId: string;
   partyId?: string | null;
   manifesto: string;

@@ -52,9 +52,13 @@ export async function getCandidate(id: string, options?: ApiFetchOptions): Promi
 }
 
 export async function createCandidate(
-  data: Omit<TCandidate, "id" | "isActive" | "imageUrl">,
+  data: Omit<TCandidate, "id" | "isActive" | "imageUrl" | "userId">,
 ): Promise<TCandidate> {
-  return apiFetch("/candidates", { method: "POST", body: JSON.stringify(data) });
+  const response = await apiFetch<{ message: string; candidate: TCandidate }>("/candidates", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return response.candidate;
 }
 
 export async function updateCandidate(

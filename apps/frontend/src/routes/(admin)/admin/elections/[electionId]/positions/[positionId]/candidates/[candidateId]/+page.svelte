@@ -10,22 +10,11 @@
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
   import { validate } from '$lib/validation/helpers'
   import { updateCandidateSchema } from '$lib/validation/candidate'
-  import type { TElection, TPartyList, TPosition, TUsersData } from '$lib/types'
+  import type { TCandidate, TElection, TPartyList, TPosition, TUsersData } from '$lib/types'
   import { appCache } from '$lib/cache'
 
-  type CandidateRecord = {
-    id: string
-    fullName: string
-    accountId: string
-    positionId: string
-    partyId?: string | null
-    manifesto: string
-    isActive: number
-    imageUrl: string | null
-  }
-
   let { data } = $props()
-  const candidate = $derived<CandidateRecord>(data.candidate)
+  const candidate = $derived<TCandidate>(data.candidate)
   const election = $derived<TElection>(data.election)
   const position = $derived<TPosition | null>(data.position)
   const user = $derived<TUsersData | null>(data.user)

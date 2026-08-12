@@ -19,6 +19,7 @@ const sampleCandidate: CandidateRow = {
   id: "cand-1",
   fullName: "Alice Smith",
   accountId: "acc-1",
+  userId: "user-1",
   positionId: "pos-1",
   partyId: "party-1",
   manifesto: "Vote for Alice",

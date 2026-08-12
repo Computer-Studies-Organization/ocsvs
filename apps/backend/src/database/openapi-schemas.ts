@@ -119,6 +119,10 @@ export const CandidateSchema = z.object({
     description: "Associated account ID",
     example: "acc_456def",
   }),
+  userId: z.string().openapi({
+    description: "Associated user ID",
+    example: "user_123abc",
+  }),
   positionId: z.string().openapi({
     description: "Position (FK into positions.id) the candidate is running for",
     example: "pos_101jkl",

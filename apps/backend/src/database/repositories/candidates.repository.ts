@@ -1,11 +1,12 @@
 import type { DbClient } from "./database.type";
 import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
-import { candidates, elections, positions, votes } from "@/database/schema";
+import { candidates, elections, positions, users, votes } from "@/database/schema";
 
 export type CandidateRow = typeof candidates.$inferSelect;
+export type AdminCandidateRow = CandidateRow & { userId: string };
 
 export interface AdminListResult {
-  data: CandidateRow[];
+  data: AdminCandidateRow[];
   meta: {
     total: number;
     page: number;
@@ -90,6 +91,7 @@ export const candidateRepo = {
         id: candidates.id,
         fullName: candidates.fullName,
         accountId: candidates.accountId,
+        userId: users.id,
         positionId: candidates.positionId,
         partyId: candidates.partyId,
         manifesto: candidates.manifesto,
@@ -100,6 +102,8 @@ export const candidateRepo = {
       })
       .from(candidates);
 
+    dataQuery.innerJoin(users, eq(candidates.accountId, users.accountId));
+
     if (electionId || excludeDraft) {
       dataQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
     }
@@ -108,6 +112,7 @@ export const candidateRepo = {
     }
 
     const countQuery = db.select({ count: count() }).from(candidates);
+    countQuery.innerJoin(users, eq(candidates.accountId, users.accountId));
     if (electionId || excludeDraft) {
       countQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
     }
@@ -156,7 +161,7 @@ export const candidateRepo = {
     db: DbClient,
     id: string,
     opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
-  ): Promise<CandidateRow | null> {
+  ): Promise<AdminCandidateRow | null> {
     const includeInactive = opts.includeInactive ?? false;
     const excludeDraft = opts.excludeDraft ?? false;
     const candidateWhere = includeInactive
@@ -171,6 +176,7 @@ export const candidateRepo = {
         id: candidates.id,
         fullName: candidates.fullName,
         accountId: candidates.accountId,
+        userId: users.id,
         positionId: candidates.positionId,
         partyId: candidates.partyId,
         manifesto: candidates.manifesto,
@@ -181,12 +187,14 @@ export const candidateRepo = {
       })
       .from(candidates);
 
+    query.innerJoin(users, eq(candidates.accountId, users.accountId));
+
     if (excludeDraft) {
       query.innerJoin(positions, eq(candidates.positionId, positions.id));
       query.innerJoin(elections, eq(positions.electionId, elections.id));
     }
 
-    return ((await query.where(whereClause).get()) as CandidateRow | undefined) ?? null;
+    return ((await query.where(whereClause).get()) as AdminCandidateRow | undefined) ?? null;
   },
 
   // Count of active candidates

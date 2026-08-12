@@ -15,7 +15,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 });
 
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { candidates, elections, positions } from "@/database/schema";
+import { candidates, elections, positions, users } from "@/database/schema";
 import { candidateRepo } from "./candidates.repository";
 
 function createMockChain() {
@@ -76,6 +76,18 @@ describe("candidateRepo", () => {
   });
 
   describe("listForAdminTable (query branch & metadata parity)", () => {
+    it("joins and projects the related user ID for administrative rows", async () => {
+      dataQueryChain.all.mockResolvedValueOnce([{ id: "c1", userId: "u1" }]);
+      countQueryChain.get.mockResolvedValueOnce({ count: 1 });
+
+      const result = await candidateRepo.listForAdminTable(mockDb as any);
+
+      expect(mockDb.select).toHaveBeenCalledWith(expect.objectContaining({ userId: users.id }));
+      expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(users, expect.anything());
+      expect(countQueryChain.innerJoin).toHaveBeenCalledWith(users, expect.anything());
+      expect(result.data[0].userId).toBe("u1");
+    });
+
     it("Branch 1: default options filter by active candidates (includeInactive=false, positionId=undefined)", async () => {
       dataQueryChain.all.mockResolvedValueOnce([{ id: "c1" }]);
       countQueryChain.get.mockResolvedValueOnce({ count: 1 });
@@ -180,6 +192,7 @@ describe("candidateRepo", () => {
       expect(eq).toHaveBeenCalledWith(candidates.isActive, 1);
       expect(eq).toHaveBeenCalledWith(positions.electionId, "e1");
       expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
+      expect(mockDb.select.mock.calls[0][0]).not.toHaveProperty("userId");
       expect(result).toHaveLength(1);
     });
   });
@@ -205,6 +218,16 @@ describe("candidateRepo", () => {
   });
 
   describe("getForAdminView", () => {
+    it("joins and projects the related user ID", async () => {
+      dataQueryChain.get.mockResolvedValueOnce({ id: "c1", userId: "u1", isActive: 1 });
+
+      const res = await candidateRepo.getForAdminView(mockDb as any, "c1");
+
+      expect(mockDb.select).toHaveBeenCalledWith(expect.objectContaining({ userId: users.id }));
+      expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(users, expect.anything());
+      expect(res?.userId).toBe("u1");
+    });
+
     it("queries active-only candidate by default", async () => {
       dataQueryChain.get.mockResolvedValueOnce({ id: "c1", fullName: "Alice", isActive: 1 });
 

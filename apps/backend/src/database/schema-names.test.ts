@@ -2,7 +2,13 @@ import { z } from "@hono/zod-openapi";
 import { getTableConfig } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
-import { AuditLogEntrySchema, AuditLogListResponse, UserApiSchema } from "./openapi-schemas";
+import {
+  AuditLogEntrySchema,
+  AuditLogListResponse,
+  BallotCandidateSchema,
+  CandidateSchema,
+  UserApiSchema,
+} from "./openapi-schemas";
 import {
   DbSelectUserSchema,
   auditLog,
@@ -62,6 +68,13 @@ describe("election management schema", () => {
     const indexNames = indexes.map((idx) => idx.config.name);
     expect(indexNames).toContain("idx_party_lists_election_name");
     expect(indexNames).toContain("idx_party_lists_election_code");
+  });
+});
+
+describe("candidate API schema", () => {
+  it("requires userId for administrative candidates but not ballot candidates", () => {
+    expect(CandidateSchema.shape.userId).toBeDefined();
+    expect(BallotCandidateSchema.shape).not.toHaveProperty("userId");
   });
 });
 
