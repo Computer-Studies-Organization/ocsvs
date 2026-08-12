@@ -45,7 +45,7 @@ export const users = sqliteTable(
     yearLevel: text("year_level").notNull(),
     course: text("course").notNull(),
   },
-  (table) => [index("idx_users_account_id").on(table.accountId)],
+  (table) => [uniqueIndex("idx_users_account_id").on(table.accountId)],
 );
 
 export const sessions = sqliteTable(
@@ -159,7 +159,7 @@ export const candidates = sqliteTable(
     fullName: text("full_name").notNull(),
     accountId: text("account_id")
       .notNull()
-      .references(() => accounts.id),
+      .references(() => users.accountId),
     positionId: text("position_id")
       .notNull()
       .references(() => positions.id, { onDelete: "restrict" }),

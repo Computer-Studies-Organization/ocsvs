@@ -5,6 +5,7 @@ import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
 import {
   AuditLogEntrySchema,
   AuditLogListResponse,
+  AdminCandidateSchema,
   BallotCandidateSchema,
   CandidateSchema,
   UserApiSchema,
@@ -72,9 +73,22 @@ describe("election management schema", () => {
 });
 
 describe("candidate API schema", () => {
-  it("requires userId for administrative candidates but not ballot candidates", () => {
-    expect(CandidateSchema.shape.userId).toBeDefined();
+  it("exposes userId only for administrative candidates", () => {
+    expect(CandidateSchema.shape).not.toHaveProperty("userId");
+    expect(AdminCandidateSchema.shape.userId).toBeDefined();
     expect(BallotCandidateSchema.shape).not.toHaveProperty("userId");
+  });
+
+  it("enforces one user per account and requires candidate accounts to belong to users", () => {
+    const userAccountIndex = getTableConfig(users).indexes.find(
+      (index) => index.config.name === "idx_users_account_id",
+    );
+    expect(userAccountIndex?.config.unique).toBe(true);
+
+    const candidateAccountReference = getTableConfig(candidates)
+      .foreignKeys.map((foreignKey) => foreignKey.reference())
+      .find((reference) => reference.columns[0] === candidates.accountId);
+    expect(candidateAccountReference?.foreignColumns).toEqual([users.accountId]);
   });
 });
 

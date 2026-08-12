@@ -1,6 +1,6 @@
 import type { DbClient } from "@/database/repositories/database.type";
 import type { ImageStorage } from "@/lib/b2-client";
-import { accounts } from "@/database/schema";
+import { users } from "@/database/schema";
 import { eq } from "drizzle-orm";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
@@ -94,13 +94,13 @@ export class CandidateLifecycleCoordinator {
     urlCtx?: UrlContext,
   ): Promise<CandidateWithResolvedUrl> {
     const rawCandidate = await db.transaction(async (tx) => {
-      // 1. Verify target account exists
-      const account = await tx
-        .select({ id: accounts.id })
-        .from(accounts)
-        .where(eq(accounts.id, input.accountId))
+      // 1. Verify target account belongs to exactly one user
+      const user = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.accountId, input.accountId))
         .get();
-      if (!account) {
+      if (!user) {
         throw new CandidateLifecycleError("ACCOUNT_NOT_FOUND", 400);
       }
 

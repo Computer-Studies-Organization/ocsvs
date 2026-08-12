@@ -3,13 +3,13 @@ import { error } from "@sveltejs/kit";
 import { getCandidate } from "$lib/api/candidates";
 import { fetchUser } from "$lib/api/users";
 import { appCache } from "$lib/cache";
-import type { TCandidate } from "$lib/types";
+import type { TAdminCandidate } from "$lib/types";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:candidate");
   const { electionId, positionId, candidateId } = params;
 
-  const cand: TCandidate = await getCandidate(candidateId, { fetch });
+  const cand: TAdminCandidate = await getCandidate(candidateId, { fetch });
 
   const [election, positions, user, partyLists] = await Promise.all([
     appCache.get("election", { id: electionId }).fetch(false, { fetch }),

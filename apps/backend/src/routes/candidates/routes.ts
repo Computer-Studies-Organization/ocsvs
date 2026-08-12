@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
-import { SelectCandidateSchema } from "@/database/openapi-schemas";
+import { CandidateReadSchema, SelectCandidateSchema } from "@/database/openapi-schemas";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { MAX_SIZE } from "@/lib/b2-client";
 import { booleanQuery } from "@/lib/validation/boolean-query";
@@ -103,7 +103,7 @@ export const listCandidatesRoute = createRoute({
   responses: {
     [httpStatusCodes.OK]: jsonContent(
       z.object({
-        data: z.array(SelectCandidateSchema),
+        data: z.array(CandidateReadSchema),
         meta: z.object({
           total: z.number().int(),
           page: z.number().int(),
@@ -145,7 +145,7 @@ export const getCandidateRoute = createRoute({
     }),
   },
   responses: {
-    [httpStatusCodes.OK]: jsonContent(SelectCandidateSchema, "Candidate details"),
+    [httpStatusCodes.OK]: jsonContent(CandidateReadSchema, "Candidate details"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),

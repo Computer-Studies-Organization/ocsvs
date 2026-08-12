@@ -1,4 +1,4 @@
-import type { TCandidate } from "$lib/types";
+import type { TAdminCandidate, TCandidate } from "$lib/types";
 import { apiFetch, type ApiFetchOptions } from "./client";
 
 export interface AllCandidatesOpts {
@@ -47,14 +47,17 @@ export async function allCandidates(
   };
 }
 
-export async function getCandidate(id: string, options?: ApiFetchOptions): Promise<TCandidate> {
+export async function getCandidate(
+  id: string,
+  options?: ApiFetchOptions,
+): Promise<TAdminCandidate> {
   return apiFetch(`/candidates/${id}`, options);
 }
 
 export async function createCandidate(
-  data: Omit<TCandidate, "id" | "isActive" | "imageUrl" | "userId">,
-): Promise<TCandidate> {
-  const response = await apiFetch<{ message: string; candidate: TCandidate }>("/candidates", {
+  data: Omit<TCandidate, "id" | "isActive" | "imageUrl">,
+): Promise<TAdminCandidate> {
+  const response = await apiFetch<{ message: string; candidate: TAdminCandidate }>("/candidates", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -64,8 +67,8 @@ export async function createCandidate(
 export async function updateCandidate(
   id: string,
   data: { fullName?: string; partyId?: string | null; manifesto?: string },
-): Promise<TCandidate> {
-  const res = await apiFetch<{ message: string; candidate: TCandidate }>(`/candidates/${id}`, {
+): Promise<TAdminCandidate> {
+  const res = await apiFetch<{ message: string; candidate: TAdminCandidate }>(`/candidates/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -76,11 +79,14 @@ export async function deleteCandidate(id: string): Promise<{ message: string }> 
   return apiFetch(`/candidates/${id}`, { method: "DELETE" });
 }
 
-export async function uploadCandidateImage(candidateId: string, file: File): Promise<TCandidate> {
+export async function uploadCandidateImage(
+  candidateId: string,
+  file: File,
+): Promise<TAdminCandidate> {
   const formData = new FormData();
   formData.append("image", file);
 
-  const res = await apiFetch<{ message: string; candidate: TCandidate }>(
+  const res = await apiFetch<{ message: string; candidate: TAdminCandidate }>(
     `/candidates/${candidateId}/image`,
     {
       method: "POST",
@@ -91,8 +97,8 @@ export async function uploadCandidateImage(candidateId: string, file: File): Pro
   return res.candidate;
 }
 
-export async function deleteCandidateImage(candidateId: string): Promise<TCandidate> {
-  const res = await apiFetch<{ message: string; candidate: TCandidate }>(
+export async function deleteCandidateImage(candidateId: string): Promise<TAdminCandidate> {
+  const res = await apiFetch<{ message: string; candidate: TAdminCandidate }>(
     `/candidates/${candidateId}/image`,
     {
       method: "DELETE",

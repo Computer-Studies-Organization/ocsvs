@@ -7,6 +7,7 @@ import type {
   updateCandidateRoute,
 } from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
+import { CandidateSchema } from "@/database/openapi-schemas";
 import { candidateStore } from "@/database/repositories/candidate-store";
 import {
   candidateLifecycleCoordinator,
@@ -85,7 +86,9 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
 
   return c.json(
     {
-      data: result.data,
+      data: isAdmin
+        ? result.data
+        : result.data.map((candidate) => CandidateSchema.parse(candidate)),
       meta: result.meta,
     },
     httpStatusCodes.OK,
@@ -109,7 +112,7 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
     return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
 
-  return c.json(candidate, httpStatusCodes.OK);
+  return c.json(isAdmin ? candidate : CandidateSchema.parse(candidate), httpStatusCodes.OK);
 };
 
 export const updateCandidate: AppRouteHandler<typeof updateCandidateRoute> = async (c) => {

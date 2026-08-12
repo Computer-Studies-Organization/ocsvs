@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { accounts } from "@/database/schema";
+import { users } from "@/database/schema";
 import { MAX_SIZE } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import router from "./index";
@@ -219,9 +219,9 @@ describe("candidate Routes (repository)", () => {
         updatedAt: 1000,
       });
 
-      // Mock account lookup: SELECT * FROM accounts WHERE id = ?
+      // Mock user lookup by account ID.
       mockDb.select.mockImplementationOnce(() => mockDb);
-      mockDb.from.mockImplementationOnce((table: any) => (table === accounts ? mockDb : mockDb));
+      mockDb.from.mockImplementationOnce(() => mockDb);
       mockDb.where.mockImplementationOnce(() => mockDb);
       mockDb.get.mockResolvedValueOnce({
         id: input.accountId,
@@ -242,6 +242,7 @@ describe("candidate Routes (repository)", () => {
         id: "new-candidate-id",
         ...input,
       });
+      expect(mockDb.from).toHaveBeenCalledWith(users);
     });
 
     it("should return 409 if candidate already exists for account+position", async () => {
@@ -255,7 +256,7 @@ describe("candidate Routes (repository)", () => {
 
       // Account exists, still need to pass account check to reach existsActive check
       mockDb.select.mockImplementationOnce(() => mockDb);
-      mockDb.from.mockImplementationOnce((table: any) => (table === accounts ? mockDb : mockDb));
+      mockDb.from.mockImplementationOnce(() => mockDb);
       mockDb.where.mockImplementationOnce(() => mockDb);
       mockDb.get.mockResolvedValueOnce({ id: input.accountId });
 
@@ -305,6 +306,38 @@ describe("candidate Routes (repository)", () => {
         limit: 10,
         totalPages: 1,
       });
+    });
+
+    it("omits userId from candidate lists returned to non-admin voters", async () => {
+      mockAuthRole = "voter";
+      mockListForAdminTable.mockResolvedValue({
+        data: [
+          {
+            id: "cand-1",
+            fullName: "Alice",
+            accountId: "acc1",
+            userId: "user1",
+            positionId: "pos-101",
+            partyId: null,
+            manifesto: "...",
+            isActive: 1,
+            imageUrl: null,
+            createdAt: 1000,
+            updatedAt: 1000,
+          },
+        ],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      });
+
+      try {
+        const res = await router.request("/candidates?page=1&limit=10", { method: "GET" });
+        const json = (await res.json()) as any;
+
+        expect(res.status).toBe(200);
+        expect(json.data[0]).not.toHaveProperty("userId");
+      } finally {
+        mockAuthRole = "admin";
+      }
     });
 
     it("should include inactive candidates when includeDeleted=true", async () => {
@@ -453,6 +486,7 @@ describe("candidate Routes (repository)", () => {
         id: "cand-1",
         fullName: "Bob",
         accountId: "acc1",
+        userId: "user1",
         positionId: "pos-101",
         manifesto: "...",
         isActive: 1,
@@ -466,6 +500,7 @@ describe("candidate Routes (repository)", () => {
         const res = await router.request("/candidates/cand-1", { method: "GET" });
 
         expect(res.status).toBe(200);
+        expect(await res.json()).not.toHaveProperty("userId");
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
           includeInactive: false,
           excludeDraft: true,

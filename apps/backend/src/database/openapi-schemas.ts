@@ -119,10 +119,6 @@ export const CandidateSchema = z.object({
     description: "Associated account ID",
     example: "acc_456def",
   }),
-  userId: z.string().openapi({
-    description: "Associated user ID",
-    example: "user_123abc",
-  }),
   positionId: z.string().openapi({
     description: "Position (FK into positions.id) the candidate is running for",
     example: "pos_101jkl",
@@ -145,6 +141,15 @@ export const CandidateSchema = z.object({
     example: "https://example.com/avatar.jpg",
   }),
 });
+
+export const AdminCandidateSchema = CandidateSchema.extend({
+  userId: z.string().openapi({
+    description: "Associated user ID",
+    example: "user_123abc",
+  }),
+});
+
+export const CandidateReadSchema = z.union([AdminCandidateSchema, CandidateSchema]);
 
 export const VoteSchema = z.object({
   createdAt: z.number().int().openapi({
@@ -207,7 +212,7 @@ export const AdminUserApiSchema = UserApiSchema.extend({
 export const UserOpenApiSchema = UserApiSchema;
 export const SelectAccountSchema = AccountSchema;
 export const SelectSessionSchema = SessionSchema;
-export const SelectCandidateSchema = CandidateSchema;
+export const SelectCandidateSchema = AdminCandidateSchema;
 export const SelectVoteSchema = VoteSchema;
 
 export const BallotCandidateSchema = CandidateSchema.pick({
