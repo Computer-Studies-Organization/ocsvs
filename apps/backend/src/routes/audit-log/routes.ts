@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { AuditLogListResponse } from "@/database/openapi-schemas";
+import { _decodeCursor } from "@/database/repositories/audit-log.repository";
 import { AUDIT_ACTIONS, TARGET_TYPES } from "@/lib/constants/audit-actions";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import jsonContent from "@/middleware/utils/json-content";
@@ -27,7 +28,20 @@ export const AuditLogQuerySchema = z.object({
   targetId: z.string().optional(),
   since: z.coerce.number().int().positive().optional(),
   until: z.coerce.number().int().positive().optional(),
-  cursor: z.string().optional(),
+  cursor: z
+    .string()
+    .refine(
+      (value) => {
+        try {
+          _decodeCursor(value);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid cursor" },
+    )
+    .optional(),
   // `.default(50)` already implies `.optional()` for input parsing; combining
   // `.default().optional()` causes the field to be omitted from the output when
   // not supplied (because `.optional()` widens the output type to `T | undefined`).

@@ -172,11 +172,10 @@ describe("audit-log route", () => {
   describe("cursor and limit handling", () => {
     it("forwards cursor query param to the repo", async () => {
       mockList.mockResolvedValue({ items: [], nextCursor: null });
-      await testApp.request("/audit-log?cursor=encoded-cursor-value", { method: "GET" });
-      expect(mockList).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ cursor: "encoded-cursor-value" }),
-      );
+      const { _encodeCursor } = await import("@/database/repositories/audit-log.repository");
+      const cursor = _encodeCursor({ createdAt: 1700000000, id: "abc-id-1" });
+      await testApp.request(`/audit-log?cursor=${encodeURIComponent(cursor)}`, { method: "GET" });
+      expect(mockList).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cursor }));
     });
 
     it("round-trips a cursor produced by _encodeCursor", async () => {
@@ -187,6 +186,13 @@ describe("audit-log route", () => {
         method: "GET",
       });
       expect(mockList).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cursor }));
+    });
+
+    it("rejects a malformed cursor with 422 before repository execution", async () => {
+      const res = await testApp.request("/audit-log?cursor=malformed", { method: "GET" });
+
+      expect(res.status).toBe(422);
+      expect(mockList).not.toHaveBeenCalled();
     });
 
     it("uses default limit of 50 when limit is not supplied (schema default)", async () => {
