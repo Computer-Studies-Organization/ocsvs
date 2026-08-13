@@ -263,7 +263,7 @@
 
       <div class='space-y-4'>
         {#each [
-          'End-to-end encrypted voting',
+          'Secure authenticated voting',
           'One student, one vote guarantee',
           'Real-time result transparency',
         ] as feature (feature)}
