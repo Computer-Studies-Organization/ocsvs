@@ -69,7 +69,7 @@ Run `just` with no args to list all recipes.
 - **ORM:** Drizzle ORM 0.44 + `drizzle-zod` for select schemas
 - **Validation:** Zod (and Zod from `@hono/zod-openapi`)
 - **Logging:** Pino via `hono-pino` (pretty in dev, JSON in prod)
-- **Auth:** Session cookies (`session_id`), PBKDF2-SHA256 password hashing (Web Crypto API; 600k iterations, 16-byte salt, 256-bit key, versioned stored format `pbkdf2-sha256$<iterations>$<salt>$<hash>` with legacy 2-field hashes verified at 100k and rehashed on login)
+- **Auth:** Session cookies (`session_id`), PBKDF2-SHA256 password hashing (Web Crypto API; 100k iterations in Cloudflare Workers; 600k is for Node/local compatibility only; 16-byte salt, 256-bit key, versioned stored format `pbkdf2-sha256$<iterations>$<salt>$<hash>` with legacy 2-field hashes verified at 100k and rehashed on login)
 - **Object storage:** Backblaze B2 for candidate images (via `backblaze-b2` SDK; upload, download, delete with magic-byte validation)
 - **OpenAPI UI:** Scalar at `GET /reference`; raw spec at `GET /docs`
 - **Tests:** Vitest 3
@@ -147,7 +147,6 @@ src/
 │   ├── csrf.ts               # Same-origin validation for POST/PUT/PATCH/DELETE (CSRF)
 │   ├── security-headers.ts   # nosniff, framing, Referrer-Policy, Permissions-Policy, report-only CSP, HSTS
 │   ├── pino-logger.ts        # Request-id-aware Pino logger (primary logger for handlers)
-│   ├── custom-logger.ts      # Lightweight timestamped console.warn logger (fallback/alternative)
 │   └── utils/                # json-content, create-error-schema, on-error, not-found, serve-emoji-favicon
 ├── openapi/
 │   ├── default-hook.ts       # Zod validation error hook (returns 422)
@@ -244,7 +243,7 @@ A new feature for organizing candidates into parties within an election. Current
 - `requireAuth` returns 401 with `{ message: 'Unauthorized' }` if cookie missing, and `{ message: 'Session expired or invalid' }` if lookup fails.
 - The session lookup joins `accounts` and filters out soft-deleted accounts (`isNull(accounts.deletedAt)`).
 - Login is by **student number + password** (`studentId`, not username or email). Register accepts email optionally.
-- On successful login, password hashes stored in the legacy `salt$hash` format (or any versioned hash below 600k iterations) are rehashed with the current policy (see `needsRehash` in `lib/password.ts`). The dummy hash used for non-existent/locked accounts is also current-cost.
+- On successful login, password hashes stored in the legacy `salt$hash` format (or any versioned hash that does not match the current 100k Worker policy) are rehashed with the current policy (see `needsRehash` in `lib/password.ts`). The dummy hash used for non-existent/locked accounts is also current-cost.
 - Voting status is derived from the `votes` table (not stored on account/user).
 
 ### Database
