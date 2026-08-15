@@ -138,7 +138,7 @@
           <a
             href='/settings'
             title='Settings'
-            class="p-2 rounded-lg transition hover:bg-slate-800 {isActive('/settings') ? (adminMode ? 'text-amber-400' : 'text-blue-400') : 'text-slate-400 hover:text-slate-200'}"
+            class="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-lg transition hover:bg-slate-800 {isActive('/settings') ? (adminMode ? 'text-amber-400' : 'text-blue-400') : 'text-slate-400 hover:text-slate-200'}"
           >
             <Settings size={18} />
           </a>
@@ -151,7 +151,7 @@
           <!-- Logout button -->
           <button
             onclick={handleLogout}
-            class='flex items-center gap-1.5 rounded-lg border border-red-950 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 transition cursor-pointer'
+            class='min-h-11 min-w-11 flex items-center gap-1.5 rounded-lg border border-red-950 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 transition cursor-pointer'
           >
             <LogOut size={14} />
             <span class='hidden sm:inline'>Logout</span>
@@ -161,7 +161,7 @@
           <button
             onclick={() => mobileMenuOpen = !mobileMenuOpen}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            class='p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition lg:hidden cursor-pointer'
+            class='min-h-11 min-w-11 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition lg:hidden cursor-pointer'
           >
             {#if mobileMenuOpen}
               <X size={18} />

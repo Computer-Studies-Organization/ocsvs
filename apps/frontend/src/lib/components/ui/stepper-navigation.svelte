@@ -38,7 +38,7 @@
     type="button"
     onclick={onprevious}
     disabled={currentPositionIndex === 0 || isSubmitting}
-    class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2 font-mono text-xs uppercase tracking-wider text-slate-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+    class="min-h-11 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2 font-mono text-xs uppercase tracking-wider text-slate-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
   >
     <ArrowLeft size={16} /> Prev_Step
   </button>
@@ -53,7 +53,7 @@
     <button
       type="button"
       onclick={onnext}
-      class="flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-wider text-white transition-all duration-300 cursor-pointer"
+      class="min-h-11 flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-wider text-white transition-all duration-300 cursor-pointer"
       class:bg-slate-800={!isCurrentSelected}
       class:border={!isCurrentSelected}
       class:border-slate-700={!isCurrentSelected}
@@ -72,7 +72,7 @@
       type="button"
       onclick={onsubmit}
       disabled={!canSubmit || isSubmitting}
-      class="flex items-center gap-2 rounded-xl px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-white transition-all duration-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed cursor-pointer"
+      class="min-h-11 flex items-center gap-2 rounded-xl px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-white transition-all duration-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed cursor-pointer"
       class:bg-emerald-600={canSubmit}
       class:hover:bg-emerald-500={canSubmit}
       class:shadow-[0_0_15px_rgba(16,185,129,0.4)]={canSubmit && !isSubmitting}
