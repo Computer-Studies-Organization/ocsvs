@@ -33,6 +33,10 @@ export function canTransition(from: TElectionStatus, to: TElectionStatus): boole
   return TRANSITIONS.some(([f, t]) => f === from && t === to);
 }
 
+export function isElectionEditable(status: string): boolean {
+  return status === "draft";
+}
+
 export interface TransitionBody {
   opensAt?: number;
   closesAt?: number;

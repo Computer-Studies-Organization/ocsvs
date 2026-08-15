@@ -5,16 +5,14 @@ import { eq } from "drizzle-orm";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
-import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { partyListRepo } from "@/database/repositories/party-list.repository";
 import {
-  candidateStore,
-  formatUrl,
-  type CandidateWithResolvedUrl,
-  type UrlContext,
-} from "@/database/repositories/candidate-store";
-import { ImageValidationError } from "@/lib/b2-client";
+  candidateRepo,
+  type AdminCandidateRow,
+} from "@/database/repositories/candidates.repository";
+import { partyListRepo } from "@/database/repositories/party-list.repository";
+import { ImageValidationError, resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isElectionEditable } from "@/lib/election-lifecycle";
 import { isUniqueConstraintError } from "@/lib/errors";
 
 export interface CreateCandidateInput {
@@ -64,7 +62,31 @@ export class CandidateLifecycleError extends Error {
   }
 }
 
-export type { CandidateWithResolvedUrl, UrlContext };
+export type CandidateWithResolvedUrl = AdminCandidateRow;
+
+export interface UrlContext {
+  env?: any;
+  requestUrl?: string;
+}
+
+function formatUrl(
+  candidate: AdminCandidateRow | null,
+  urlCtx?: UrlContext,
+): CandidateWithResolvedUrl | null {
+  if (!candidate) return null;
+  if (!urlCtx?.env || !urlCtx.requestUrl) {
+    return { ...candidate, imageUrl: candidate.imageUrl };
+  }
+  return {
+    ...candidate,
+    imageUrl: resolveCandidateImageUrl(
+      candidate.imageUrl,
+      candidate.id,
+      urlCtx.env,
+      urlCtx.requestUrl,
+    ),
+  };
+}
 
 export class CandidateLifecycleCoordinator {
   private async getDraftPosition(db: DbClient, positionId: string) {
@@ -77,7 +99,7 @@ export class CandidateLifecycleCoordinator {
     if (!election) {
       throw new CandidateLifecycleError("ELECTION_NOT_FOUND", 404);
     }
-    if (election.status !== "draft") {
+    if (!isElectionEditable(election.status)) {
       throw new CandidateLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
     }
 
@@ -291,7 +313,7 @@ export class CandidateLifecycleCoordinator {
     urlCtx?: UrlContext,
     logger?: { error(msg: string, ...args: any[]): void; warn(msg: string, ...args: any[]): void },
   ): Promise<CandidateWithResolvedUrl> {
-    const candidate = await candidateStore.findById(db, id, { includeInactive: true });
+    const candidate = await candidateRepo.getForAdminView(db, id, { includeInactive: true });
     if (!candidate || candidate.isActive === 0) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
@@ -358,7 +380,10 @@ export class CandidateLifecycleCoordinator {
       }
     }
 
-    const updated = await candidateStore.findById(db, id, { includeInactive: true }, urlCtx);
+    const updated = formatUrl(
+      await candidateRepo.getForAdminView(db, id, { includeInactive: true }),
+      urlCtx,
+    );
     if (!updated) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
@@ -373,7 +398,7 @@ export class CandidateLifecycleCoordinator {
     urlCtx?: UrlContext,
     logger?: { error(msg: string, ...args: any[]): void; warn(msg: string, ...args: any[]): void },
   ): Promise<CandidateWithResolvedUrl> {
-    const candidate = await candidateStore.findById(db, id, { includeInactive: true });
+    const candidate = await candidateRepo.getForAdminView(db, id, { includeInactive: true });
     if (!candidate) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }
@@ -409,7 +434,10 @@ export class CandidateLifecycleCoordinator {
       }
     }
 
-    const updated = await candidateStore.findById(db, id, { includeInactive: true }, urlCtx);
+    const updated = formatUrl(
+      await candidateRepo.getForAdminView(db, id, { includeInactive: true }),
+      urlCtx,
+    );
     if (!updated) {
       throw new CandidateLifecycleError("CANDIDATE_NOT_FOUND", 404);
     }

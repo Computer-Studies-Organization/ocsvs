@@ -8,11 +8,12 @@ import type {
 } from "@/routes/candidates/routes";
 import { createDb } from "@/config/db";
 import { CandidateSchema } from "@/database/openapi-schemas";
-import { candidateStore } from "@/database/repositories/candidate-store";
+import { candidateRepo } from "@/database/repositories/candidates.repository";
 import {
   candidateLifecycleCoordinator,
   CandidateLifecycleError,
 } from "@/lib/candidate-lifecycle-coordinator";
+import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { findVisibleElection, isAdminRole } from "@/lib/election-visibility";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -69,26 +70,22 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
       return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
     }
   }
-  const urlCtx = { env: c.env, requestUrl: c.req.url };
-
-  const result = await candidateStore.listForAdminTable(
-    db,
-    {
-      page,
-      limit,
-      includeInactive: shouldIncludeInactive,
-      positionId,
-      electionId,
-      ...(isAdmin ? {} : { excludeDraft: true }),
-    },
-    urlCtx,
-  );
+  const result = await candidateRepo.listForAdminTable(db, {
+    page,
+    limit,
+    includeInactive: shouldIncludeInactive,
+    positionId,
+    electionId,
+    ...(isAdmin ? {} : { excludeDraft: true }),
+  });
+  const data = result.data.map((candidate) => ({
+    ...candidate,
+    imageUrl: resolveCandidateImageUrl(candidate.imageUrl, candidate.id, c.env, c.req.url),
+  }));
 
   return c.json(
     {
-      data: isAdmin
-        ? result.data
-        : result.data.map((candidate) => CandidateSchema.parse(candidate)),
+      data: isAdmin ? data : data.map((candidate) => CandidateSchema.parse(candidate)),
       meta: result.meta,
     },
     httpStatusCodes.OK,
@@ -98,19 +95,20 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
 export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c) => {
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
-  const urlCtx = { env: c.env, requestUrl: c.req.url };
-
   const isAdmin = isAdminRole(c.var.authUser.role);
-  const candidate = await candidateStore.findById(
-    db,
-    id,
-    { includeInactive: isAdmin, ...(isAdmin ? {} : { excludeDraft: true }) },
-    urlCtx,
-  );
+  const rawCandidate = await candidateRepo.getForAdminView(db, id, {
+    includeInactive: isAdmin,
+    ...(isAdmin ? {} : { excludeDraft: true }),
+  });
 
-  if (!candidate) {
+  if (!rawCandidate) {
     return c.json({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
+
+  const candidate = {
+    ...rawCandidate,
+    imageUrl: resolveCandidateImageUrl(rawCandidate.imageUrl, rawCandidate.id, c.env, c.req.url),
+  };
 
   return c.json(isAdmin ? candidate : CandidateSchema.parse(candidate), httpStatusCodes.OK);
 };

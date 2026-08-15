@@ -7,6 +7,7 @@ import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import {
   assertTransition,
   getEffectiveElectionStatus,
+  isElectionEditable,
   TransitionError,
 } from "@/lib/election-lifecycle";
 import { isUniqueConstraintError } from "@/lib/errors";
@@ -78,7 +79,7 @@ export const ElectionLifecycleCoordinator = {
       if (!existing) {
         throw new TransitionError("ELECTION_NOT_FOUND", 404);
       }
-      if (existing.status !== "draft") {
+      if (!isElectionEditable(existing.status)) {
         throw new TransitionError("ELECTION_NOT_IN_DRAFT", 409);
       }
 

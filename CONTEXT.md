@@ -10,6 +10,16 @@ The combined 1-to-1 domain entity representing a registered voter within the sys
 
 The deep persistence module responsible for all database interactions and multi-table atomic transactions concerning Voter Accounts. It presents a single interface for user/account creation, updates, lookup queries, and soft/hard deletion.
 
-### CandidateStore
+### Election Editability
 
-The deep domain module responsible for Candidate persistence, avatar image storage, magic-byte validation, dynamic URL resolution, atomic audit logging, and lifecycle state invariants. It consolidates database queries, Backblaze B2 image operations, and URL signing behind a unified seam.
+Election configuration is editable only while the election is in `draft` status. The Election lifecycle module owns this policy through `isElectionEditable`; Position, Party, and Candidate lifecycle coordinators retain their resource-specific transactions and error handling while using that shared policy.
+
+### Candidate Persistence
+
+Candidate behavior intentionally remains split across a few modules with distinct ownership:
+
+- `candidateRepo` owns candidate database queries and row projections.
+- `candidateLifecycleCoordinator` owns cross-table lifecycle invariants, atomic mutations, and audit logging.
+- `b2-client` and its `ImageStorage` implementations own avatar validation, storage, and candidate image URL resolution.
+
+Route handlers compose those interfaces. Do not add a `CandidateStore` that forwards repository calls. Reconsider a deeper candidate seam only when it can absorb meaningful behavior currently split across these modules; a pass-through module has no useful depth or leverage.

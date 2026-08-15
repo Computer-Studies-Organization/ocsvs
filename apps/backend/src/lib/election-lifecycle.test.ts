@@ -3,6 +3,7 @@ import {
   assertTransition,
   canTransition,
   getEffectiveElectionStatus,
+  isElectionEditable,
   isElectionCurrentlyOpen,
   TransitionError,
 } from "./election-lifecycle";
@@ -29,6 +30,15 @@ describe("canTransition", () => {
     ["archived", "closed"],
   ] as const)("rejects %s -> %s", (from, to) => {
     expect(canTransition(from, to)).toBe(false);
+  });
+});
+
+describe("election editability", () => {
+  it("allows edits only while an election is draft", () => {
+    expect(isElectionEditable("draft")).toBe(true);
+    expect(isElectionEditable("open")).toBe(false);
+    expect(isElectionEditable("closed")).toBe(false);
+    expect(isElectionEditable("archived")).toBe(false);
   });
 });
 

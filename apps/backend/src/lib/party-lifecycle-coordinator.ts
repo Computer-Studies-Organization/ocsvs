@@ -5,6 +5,7 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { isUniqueConstraintError } from "@/lib/errors";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isElectionEditable } from "@/lib/election-lifecycle";
 
 export type PartyLifecycleErrorCode =
   | "ELECTION_NOT_FOUND"
@@ -59,7 +60,7 @@ export const partyLifecycleCoordinator = {
       if (!election) {
         throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
       }
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
@@ -112,7 +113,7 @@ export const partyLifecycleCoordinator = {
       if (!election) {
         throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
       }
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
@@ -164,7 +165,7 @@ export const partyLifecycleCoordinator = {
       if (!election) {
         throw new PartyLifecycleError("ELECTION_NOT_FOUND", 404);
       }
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PartyLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 

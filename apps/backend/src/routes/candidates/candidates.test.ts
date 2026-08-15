@@ -283,6 +283,8 @@ describe("candidate Routes (repository)", () => {
           positionId: "pos-101",
           manifesto: "...",
           isActive: 1,
+          imageUrl:
+            "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/1/image.png",
           createdAt: 1000,
           updatedAt: 1000,
         },
@@ -292,14 +294,23 @@ describe("candidate Routes (repository)", () => {
         meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
       });
 
-      const res = await router.request("/candidates?page=1&limit=10", {
-        method: "GET",
-      });
+      const res = await router.request(
+        "/candidates?page=1&limit=10",
+        {
+          method: "GET",
+        },
+        {
+          B2_BUCKET_NAME: "cso-voting-candidates",
+          B2_PUBLIC_ACCESS: false,
+          B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+        },
+      );
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.data).toHaveLength(1);
       expect(json.data[0].userId).toBe("user1");
+      expect(json.data[0].imageUrl).toBe("http://localhost/candidates/1/image");
       expect(json.meta).toEqual({
         total: 1,
         page: 1,

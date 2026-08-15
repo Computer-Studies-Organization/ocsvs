@@ -6,6 +6,7 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { isUniqueConstraintError } from "@/lib/errors";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { isElectionEditable } from "@/lib/election-lifecycle";
 
 export type PositionLifecycleErrorCode =
   | "ELECTION_NOT_FOUND"
@@ -48,7 +49,7 @@ export const positionLifecycleCoordinator = {
       }
 
       // 2. Verify election status is draft
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
@@ -103,7 +104,7 @@ export const positionLifecycleCoordinator = {
       if (!election) {
         throw new PositionLifecycleError("ELECTION_NOT_FOUND", 404);
       }
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
@@ -157,7 +158,7 @@ export const positionLifecycleCoordinator = {
       if (!election) {
         throw new PositionLifecycleError("ELECTION_NOT_FOUND", 404);
       }
-      if (election.status !== "draft") {
+      if (!isElectionEditable(election.status)) {
         throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
       }
 
