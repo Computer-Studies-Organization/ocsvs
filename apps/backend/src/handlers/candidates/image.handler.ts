@@ -106,13 +106,14 @@ export const getCandidateImage: AppRouteHandler<typeof getCandidateImageRoute> =
   const storage = getImageStorage(c.env);
 
   const isAdmin = isAdminRole(c.var.authUser.role);
+  const voterVisibleAt = Math.floor(Date.now() / 1000);
 
   try {
     const image = await candidateLifecycleCoordinator.downloadAvatar(
       db,
       id,
       storage,
-      { includeInactive: isAdmin, ...(isAdmin ? {} : { excludeDraft: true }) },
+      { includeInactive: isAdmin, ...(isAdmin ? {} : { voterVisibleAt }) },
       c.req.header("If-None-Match"),
     );
     if (image.notModified) {

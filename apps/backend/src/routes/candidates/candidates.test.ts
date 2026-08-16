@@ -422,20 +422,73 @@ describe("candidate Routes (repository)", () => {
       }
     });
 
+    it("should hide candidates for scheduled elections from non-admin users", async () => {
+      mockAuthRole = "voter";
+      const now = Math.floor(Date.now() / 1000);
+      mockElectionFindById.mockResolvedValue({
+        id: "el-123",
+        status: "open",
+        opensAt: now + 60,
+        closesAt: now + 3600,
+      });
+      mockListForAdminTable.mockResolvedValue({
+        data: [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      });
+
+      try {
+        const res = await router.request("/candidates?electionId=el-123&page=1&limit=10", {
+          method: "GET",
+        });
+
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+        expect(mockListForAdminTable).not.toHaveBeenCalled();
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
+
+    it("keeps scheduled candidates visible to administrators", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockElectionFindById.mockResolvedValue({
+        id: "el-123",
+        status: "open",
+        opensAt: now + 60,
+        closesAt: now + 3600,
+      });
+      mockListForAdminTable.mockResolvedValue({
+        data: [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      });
+
+      const res = await router.request("/candidates?electionId=el-123&page=1&limit=10", {
+        method: "GET",
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockListForAdminTable).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ electionId: "el-123" }),
+      );
+      expect(mockListForAdminTable.mock.calls[0][1]).not.toHaveProperty("voterVisibleAt");
+    });
+
     it.each([
       ["unscoped", "/candidates?page=1&limit=10"],
       ["position-scoped", "/candidates?positionId=position-1&page=1&limit=10"],
     ])("hides active draft candidates from non-admin users for %s reads", async (_scope, path) => {
       mockAuthRole = "voter";
       mockListForAdminTable.mockImplementation(async (_db: any, opts: any) => ({
-        data: opts.excludeDraft
-          ? []
-          : [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
+        data:
+          opts.voterVisibleAt !== undefined
+            ? []
+            : [{ id: "candidate-1", positionId: "position-1", isActive: 1 }],
         meta: {
-          total: opts.excludeDraft ? 0 : 1,
+          total: opts.voterVisibleAt !== undefined ? 0 : 1,
           page: 1,
           limit: 10,
-          totalPages: opts.excludeDraft ? 0 : 1,
+          totalPages: opts.voterVisibleAt !== undefined ? 0 : 1,
         },
       }));
 
@@ -446,7 +499,7 @@ describe("candidate Routes (repository)", () => {
         expect(((await res.json()) as any).data).toEqual([]);
         expect(mockListForAdminTable).toHaveBeenCalledWith(
           expect.anything(),
-          expect.objectContaining({ excludeDraft: true }),
+          expect.objectContaining({ voterVisibleAt: expect.any(Number) }),
         );
       } finally {
         mockAuthRole = "admin";
@@ -492,7 +545,7 @@ describe("candidate Routes (repository)", () => {
       });
     });
 
-    it("should pass includeInactive: false for non-admin voter", async () => {
+    it("should pass voter visibility time for non-admin voter", async () => {
       const mockCandidate = {
         id: "cand-1",
         fullName: "Bob",
@@ -514,17 +567,19 @@ describe("candidate Routes (repository)", () => {
         expect(await res.json()).not.toHaveProperty("userId");
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
           includeInactive: false,
-          excludeDraft: true,
+          voterVisibleAt: expect.any(Number),
         });
       } finally {
         mockAuthRole = "admin";
       }
     });
 
-    it("hides active candidates from draft elections for non-admin ID reads", async () => {
+    it("hides scheduled candidates for non-admin ID reads", async () => {
       mockAuthRole = "voter";
       mockGetForAdminView.mockImplementation(async (_db: any, _id: string, opts: any) =>
-        opts.excludeDraft ? null : { id: "cand-1", positionId: "pos-101", isActive: 1 },
+        opts.voterVisibleAt !== undefined
+          ? null
+          : { id: "cand-1", positionId: "pos-101", isActive: 1 },
       );
 
       try {
@@ -533,7 +588,7 @@ describe("candidate Routes (repository)", () => {
         expect(res.status).toBe(404);
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), "cand-1", {
           includeInactive: false,
-          excludeDraft: true,
+          voterVisibleAt: expect.any(Number),
         });
       } finally {
         mockAuthRole = "admin";
@@ -980,7 +1035,7 @@ describe("candidate Routes (repository)", () => {
       expect(mockDownloadImage).not.toHaveBeenCalled();
     });
 
-    it("should pass includeInactive: false when non-admin voter requests candidate image", async () => {
+    it("should pass voter visibility time when non-admin voter requests candidate image", async () => {
       const candidateId = "cand-1";
       mockGetForAdminView.mockResolvedValueOnce({
         id: candidateId,
@@ -1008,8 +1063,45 @@ describe("candidate Routes (repository)", () => {
         expect(res.status).toBe(200);
         expect(mockGetForAdminView).toHaveBeenCalledWith(expect.anything(), candidateId, {
           includeInactive: false,
-          excludeDraft: true,
+          voterVisibleAt: expect.any(Number),
         });
+      } finally {
+        mockAuthRole = "admin";
+      }
+    });
+
+    it("should not download an image for a scheduled candidate", async () => {
+      const candidateId = "cand-scheduled";
+      mockAuthRole = "voter";
+      mockGetForAdminView.mockImplementation(async (_db: any, _id: string, opts: any) =>
+        opts.voterVisibleAt !== undefined
+          ? null
+          : {
+              id: candidateId,
+              imageUrl:
+                "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-scheduled/image.png",
+            },
+      );
+      mockDownloadImage.mockResolvedValue({
+        data: new ArrayBuffer(8),
+        contentType: "image/png",
+      });
+
+      try {
+        const res = await router.request(
+          `/candidates/${candidateId}/image`,
+          { method: "GET" },
+          {
+            B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+            B2_APPLICATION_KEY_ID: "key-id",
+            B2_APPLICATION_KEY: "key",
+            B2_BUCKET_NAME: "cso-voting-candidates",
+          },
+        );
+
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ message: ERROR_MESSAGES.CANDIDATE_NOT_FOUND });
+        expect(mockDownloadImage).not.toHaveBeenCalled();
       } finally {
         mockAuthRole = "admin";
       }

@@ -193,6 +193,36 @@ describe("positions routes", () => {
       expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
       expect(mockListByElection).not.toHaveBeenCalled();
     });
+
+    it("returns 404 when a non-admin lists positions before a scheduled election opens", async () => {
+      setUser();
+      const now = Math.floor(Date.now() / 1000);
+      mockElectionFindById.mockResolvedValue(
+        makeElection({ status: "open", opensAt: now + 60, closesAt: now + 3600 }),
+      );
+      mockListByElection.mockResolvedValue([makePosition()]);
+
+      const res = await router.request(`/elections/${electionId}/positions`, { method: "GET" });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+      expect(mockListByElection).not.toHaveBeenCalled();
+    });
+
+    it("keeps scheduled positions visible to administrators", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const positions = [makePosition()];
+      mockElectionFindById.mockResolvedValue(
+        makeElection({ status: "open", opensAt: now + 60, closesAt: now + 3600 }),
+      );
+      mockListByElection.mockResolvedValue(positions);
+
+      const res = await router.request(`/elections/${electionId}/positions`, { method: "GET" });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual(positions);
+      expect(mockListByElection).toHaveBeenCalledWith(mockDb, electionId);
+    });
   });
 
   describe("pOST /elections/:id/positions (createPosition)", () => {

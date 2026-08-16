@@ -203,8 +203,8 @@ export const AdminUserApiSchema = UserApiSchema.extend({
     description: "Soft-delete timestamp (null if active)",
     example: null,
   }),
-  lastLogin: z.number().int().nullable().openapi({
-    description: "Last login timestamp (null if never logged in)",
+  lastLogin: z.number().int().openapi({
+    description: "Last login timestamp (initialized at account creation)",
     example: 1738000000,
   }),
 });

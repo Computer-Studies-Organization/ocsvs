@@ -448,7 +448,7 @@ export class CandidateLifecycleCoordinator {
     db: DbClient,
     id: string,
     storage: ImageStorage,
-    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
+    opts: { includeInactive?: boolean; voterVisibleAt?: number } = {},
     ifNoneMatch?: string,
   ): Promise<
     | { notModified: true; etag: string }

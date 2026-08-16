@@ -819,6 +819,43 @@ describe("users Routes", () => {
   });
 
   describe("POST /users - createUser", () => {
+    it.each([
+      ["omitted", undefined, null],
+      ["blank", "", null],
+      ["valid", "john@example.com", "john@example.com"],
+    ])("returns and persists normalized %s email", async (_label, requestEmail, expectedEmail) => {
+      mockAuthUser.role = "admin";
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockResolvedValue(undefined);
+
+      const payload: Record<string, unknown> = {
+        firstName: "John",
+        lastName: "Doe",
+        username: "johndoe",
+        password: "password123",
+        studentId: "C23-01-1234-CSA001",
+        course: "BSCS",
+        yearLevel: "1st Year",
+        role: "user",
+      };
+      if (requestEmail !== undefined) payload.email = requestEmail;
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      expect(res.status).toBe(201);
+      const responseBody = (await res.json()) as any;
+      expect(responseBody.user.email).toBe(expectedEmail);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ email: expectedEmail }),
+        expect.anything(),
+      );
+    });
+
     it("should allow admin to create a voter account", async () => {
       mockAuthUser.role = "admin";
       mockAccountExists.mockResolvedValue(false);

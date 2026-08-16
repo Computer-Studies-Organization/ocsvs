@@ -7,14 +7,17 @@ vi.mock("drizzle-orm", async (importOriginal) => {
     ...actual,
     eq: vi.fn(actual.eq),
     and: vi.fn(actual.and),
+    or: vi.fn(actual.or),
     inArray: vi.fn(actual.inArray),
     ne: vi.fn(actual.ne),
+    lte: vi.fn(actual.lte),
+    isNotNull: vi.fn(actual.isNotNull),
     desc: vi.fn(actual.desc),
     count: vi.fn(actual.count),
   };
 });
 
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lte, ne, or } from "drizzle-orm";
 import { candidates, elections, positions, users } from "@/database/schema";
 import { candidateRepo } from "./candidates.repository";
 
@@ -161,17 +164,23 @@ describe("candidateRepo", () => {
     });
   });
 
-  it("excludes candidates from draft elections when requested", async () => {
+  it("filters candidate rows and counts by effective voter visibility", async () => {
     dataQueryChain.all.mockResolvedValueOnce([]);
     countQueryChain.get.mockResolvedValueOnce({ count: 0 });
+    const now = 1_700_000_000;
 
-    await candidateRepo.listForAdminTable(mockDb as any, { excludeDraft: true });
+    await candidateRepo.listForAdminTable(mockDb as any, { voterVisibleAt: now });
 
     expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
     expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
     expect(countQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
     expect(countQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
-    expect(ne).toHaveBeenCalledWith(elections.status, "draft");
+    expect(or).toHaveBeenCalled();
+    expect(inArray).toHaveBeenCalledWith(elections.status, ["closed", "archived"]);
+    expect(eq).toHaveBeenCalledWith(elections.status, "open");
+    expect(isNotNull).toHaveBeenCalledWith(elections.opensAt);
+    expect(isNotNull).toHaveBeenCalledWith(elections.closesAt);
+    expect(lte).toHaveBeenCalledWith(elections.opensAt, now);
   });
 
   describe("listForBallot", () => {
@@ -251,17 +260,20 @@ describe("candidateRepo", () => {
     });
   });
 
-  it("excludes a candidate from a draft election when requested", async () => {
+  it("excludes a candidate from an effectively draft election when requested", async () => {
     dataQueryChain.get.mockResolvedValueOnce(undefined);
+    const now = 1_700_000_000;
 
     const result = await candidateRepo.getForAdminView(mockDb as any, "c1", {
-      excludeDraft: true,
+      voterVisibleAt: now,
     });
 
     expect(result).toBeNull();
     expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(positions, expect.anything());
     expect(dataQueryChain.innerJoin).toHaveBeenCalledWith(elections, expect.anything());
-    expect(ne).toHaveBeenCalledWith(elections.status, "draft");
+    expect(or).toHaveBeenCalled();
+    expect(inArray).toHaveBeenCalledWith(elections.status, ["closed", "archived"]);
+    expect(lte).toHaveBeenCalledWith(elections.opensAt, now);
   });
 
   describe("counts & batch lookups", () => {

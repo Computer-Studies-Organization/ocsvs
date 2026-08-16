@@ -54,6 +54,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
     c.req.valid("query");
   const shouldIncludeInactive = includeInactive || includeDeleted;
   const isAdmin = isAdminRole(c.var.authUser.role);
+  const voterVisibleAt = Math.floor(Date.now() / 1000);
 
   if (
     shouldIncludeInactive &&
@@ -76,7 +77,7 @@ export const listCandidates: AppRouteHandler<typeof listCandidatesRoute> = async
     includeInactive: shouldIncludeInactive,
     positionId,
     electionId,
-    ...(isAdmin ? {} : { excludeDraft: true }),
+    ...(isAdmin ? {} : { voterVisibleAt }),
   });
   const data = result.data.map((candidate) => ({
     ...candidate,
@@ -96,9 +97,10 @@ export const getCandidate: AppRouteHandler<typeof getCandidateRoute> = async (c)
   const { id } = c.req.valid("param");
   const { db } = createDb(c);
   const isAdmin = isAdminRole(c.var.authUser.role);
+  const voterVisibleAt = Math.floor(Date.now() / 1000);
   const rawCandidate = await candidateRepo.getForAdminView(db, id, {
     includeInactive: isAdmin,
-    ...(isAdmin ? {} : { excludeDraft: true }),
+    ...(isAdmin ? {} : { voterVisibleAt }),
   });
 
   if (!rawCandidate) {

@@ -12,7 +12,7 @@ const baseUser = {
   deletedAt: null,
   createdAt: 1_700_000_000,
   updatedAt: 1_700_000_000,
-  lastLogin: null,
+  lastLogin: 1_700_000_000,
 } as const;
 
 const duplicateNameUsers: TUsersData[] = [

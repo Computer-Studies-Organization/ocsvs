@@ -738,6 +738,9 @@ export class UserLifecycleCoordinator {
     }
 
     // 5. Successful login
+    await voterAccountStore.updateAccount(db, result.id, {
+      lastLogin: Math.floor(Date.now() / 1000),
+    });
     await loginAttemptRepo.clearAttempts(db, studentNumber);
     const session = await createSession(db as any, result.id);
 

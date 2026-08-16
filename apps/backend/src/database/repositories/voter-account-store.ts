@@ -14,7 +14,7 @@ export interface AuthView {
   role: string;
   createdAt: number;
   updatedAt: number;
-  lastLogin: number | null;
+  lastLogin: number;
   deletedAt: number | null;
 }
 
@@ -46,7 +46,7 @@ export interface AdminView {
   deletedAt: number | null;
   createdAt: number;
   updatedAt: number;
-  lastLogin: number | null;
+  lastLogin: number;
 }
 
 export interface AdminListResult {

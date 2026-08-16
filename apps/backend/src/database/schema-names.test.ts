@@ -6,6 +6,7 @@ import {
   AuditLogEntrySchema,
   AuditLogListResponse,
   AdminCandidateSchema,
+  AdminUserApiSchema,
   BallotCandidateSchema,
   CandidateSchema,
   UserApiSchema,
@@ -54,6 +55,13 @@ describe("user schema exports", () => {
 
   it("produces an OpenAPI-capable zod schema for API routes", () => {
     expect(UserApiSchema).toBeInstanceOf(z.ZodObject);
+  });
+
+  it("requires admin user lastLogin and documents its account-creation initialization", () => {
+    const lastLogin = AdminUserApiSchema.shape.lastLogin;
+
+    expect(lastLogin.safeParse(1_700_000_000).success).toBe(true);
+    expect(lastLogin.safeParse(null).success).toBe(false);
   });
 });
 

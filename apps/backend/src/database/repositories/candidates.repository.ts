@@ -1,6 +1,18 @@
 import type { DbClient } from "./database.type";
-import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, lte, ne, or } from "drizzle-orm";
 import { candidates, elections, positions, users, votes } from "@/database/schema";
+
+function voterElectionVisibility(now: number) {
+  return or(
+    inArray(elections.status, ["closed", "archived"]),
+    and(
+      eq(elections.status, "open"),
+      isNotNull(elections.opensAt),
+      isNotNull(elections.closesAt),
+      lte(elections.opensAt, now),
+    ),
+  );
+}
 
 export type CandidateRow = typeof candidates.$inferSelect;
 export type AdminCandidateRow = CandidateRow & { userId: string };
@@ -60,7 +72,7 @@ export const candidateRepo = {
       includeInactive?: boolean;
       positionId?: string;
       electionId?: string;
-      excludeDraft?: boolean;
+      voterVisibleAt?: number;
     } = {},
   ): Promise<AdminListResult> {
     const page = opts.page ?? 1;
@@ -68,7 +80,7 @@ export const candidateRepo = {
     const includeInactive = opts.includeInactive ?? false;
     const positionId = opts.positionId;
     const electionId = opts.electionId;
-    const excludeDraft = opts.excludeDraft ?? false;
+    const voterVisibleAt = opts.voterVisibleAt;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -81,8 +93,8 @@ export const candidateRepo = {
     if (electionId) {
       conditions.push(eq(positions.electionId, electionId));
     }
-    if (excludeDraft) {
-      conditions.push(ne(elections.status, "draft"));
+    if (voterVisibleAt !== undefined) {
+      conditions.push(voterElectionVisibility(voterVisibleAt));
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -104,19 +116,19 @@ export const candidateRepo = {
 
     dataQuery.innerJoin(users, eq(candidates.accountId, users.accountId));
 
-    if (electionId || excludeDraft) {
+    if (electionId || voterVisibleAt !== undefined) {
       dataQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
     }
-    if (excludeDraft) {
+    if (voterVisibleAt !== undefined) {
       dataQuery.innerJoin(elections, eq(positions.electionId, elections.id));
     }
 
     const countQuery = db.select({ count: count() }).from(candidates);
     countQuery.innerJoin(users, eq(candidates.accountId, users.accountId));
-    if (electionId || excludeDraft) {
+    if (electionId || voterVisibleAt !== undefined) {
       countQuery.innerJoin(positions, eq(candidates.positionId, positions.id));
     }
-    if (excludeDraft) {
+    if (voterVisibleAt !== undefined) {
       countQuery.innerJoin(elections, eq(positions.electionId, elections.id));
     }
 
@@ -160,16 +172,17 @@ export const candidateRepo = {
   async getForAdminView(
     db: DbClient,
     id: string,
-    opts: { includeInactive?: boolean; excludeDraft?: boolean } = {},
+    opts: { includeInactive?: boolean; voterVisibleAt?: number } = {},
   ): Promise<AdminCandidateRow | null> {
     const includeInactive = opts.includeInactive ?? false;
-    const excludeDraft = opts.excludeDraft ?? false;
+    const voterVisibleAt = opts.voterVisibleAt;
     const candidateWhere = includeInactive
       ? eq(candidates.id, id)
       : and(eq(candidates.id, id), eq(candidates.isActive, 1));
-    const whereClause = excludeDraft
-      ? and(candidateWhere, ne(elections.status, "draft"))
-      : candidateWhere;
+    const whereClause =
+      voterVisibleAt !== undefined
+        ? and(candidateWhere, voterElectionVisibility(voterVisibleAt))
+        : candidateWhere;
 
     const query = db
       .select({
@@ -189,7 +202,7 @@ export const candidateRepo = {
 
     query.innerJoin(users, eq(candidates.accountId, users.accountId));
 
-    if (excludeDraft) {
+    if (voterVisibleAt !== undefined) {
       query.innerJoin(positions, eq(candidates.positionId, positions.id));
       query.innerJoin(elections, eq(positions.electionId, elections.id));
     }

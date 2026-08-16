@@ -362,7 +362,7 @@ export const createUserResponseSchema = z
     message: z.string(),
     user: z.object({
       id: z.string(),
-      email: z.string().nullable(),
+      email: z.string().email().nullable(),
       username: z.string(),
       role: z.enum(["user", "admin", "super_admin"]),
       studentId: z.string(),

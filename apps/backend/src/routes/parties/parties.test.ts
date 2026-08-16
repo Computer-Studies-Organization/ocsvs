@@ -105,6 +105,44 @@ describe("party-list routes", () => {
     expect(mockPartyListByElection).not.toHaveBeenCalled();
   });
 
+  it("returns 404 when a non-admin lists parties for an incomplete open election", async () => {
+    mockAuthRole = "user";
+    mockElectionFindById.mockResolvedValueOnce({
+      id: "election-1",
+      status: "open",
+      opensAt: Math.floor(Date.now() / 1000) - 60,
+      closesAt: null,
+    });
+    mockPartyListByElection.mockResolvedValueOnce([
+      { id: "party-1", electionId: "election-1", name: "Innovators", code: "INNOV" },
+    ]);
+
+    const response = await router.request("/elections/election-1/parties", { method: "GET" });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+    expect(mockPartyListByElection).not.toHaveBeenCalled();
+  });
+
+  it("keeps incomplete open-election parties visible to administrators", async () => {
+    const parties = [
+      { id: "party-1", electionId: "election-1", name: "Innovators", code: "INNOV" },
+    ];
+    mockElectionFindById.mockResolvedValueOnce({
+      id: "election-1",
+      status: "open",
+      opensAt: Math.floor(Date.now() / 1000) - 60,
+      closesAt: null,
+    });
+    mockPartyListByElection.mockResolvedValueOnce(parties);
+
+    const response = await router.request("/elections/election-1/parties", { method: "GET" });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(parties);
+    expect(mockPartyListByElection).toHaveBeenCalledWith(expect.anything(), "election-1");
+  });
+
   it("returns 422 when creating a party list with an invalid code", async () => {
     const response = await router.request("/elections/election-1/parties", {
       method: "POST",

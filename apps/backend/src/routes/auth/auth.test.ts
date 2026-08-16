@@ -65,13 +65,15 @@ vi.mock("@/config/db", () => ({
 }));
 
 // Mock the user account queries
-const { mockFindByStudentId } = vi.hoisted(() => ({
+const { mockFindByStudentId, mockUpdateAccount } = vi.hoisted(() => ({
   mockFindByStudentId: vi.fn(),
+  mockUpdateAccount: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/voter-account-store", () => ({
   voterAccountStore: {
     findByStudentId: mockFindByStudentId,
+    updateAccount: mockUpdateAccount,
     listForAdmin: vi.fn(),
     findById: vi.fn(),
     getAccountDeleteStatus: vi.fn(),
@@ -186,7 +188,13 @@ describe("auth Routes", () => {
     expect(body.message).toBe("User logged in successfully");
     expect(body.user.username).toBe("testuser");
     expect(mockFindByStudentId).toHaveBeenCalled();
+    expect(mockUpdateAccount).toHaveBeenCalledWith(expect.anything(), "test-user-id", {
+      lastLogin: expect.any(Number),
+    });
     expect(mockCreateSession).toHaveBeenCalled();
+    expect(mockUpdateAccount.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCreateSession.mock.invocationCallOrder[0],
+    );
   });
 
   it("bounds Turnstile verification with a 10-second timeout", async () => {

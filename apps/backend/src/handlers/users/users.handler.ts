@@ -204,6 +204,7 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
 
   const { firstName, lastName, email, username, password, studentId, course, yearLevel, role } =
     c.req.valid("json");
+  const normalizedEmail = email?.trim() || null;
 
   // Assertion: Only super admins can create admin/super_admin accounts.
   if (role !== "user" && creatorRole !== "super_admin") {
@@ -218,7 +219,7 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
       {
         firstName,
         lastName,
-        email,
+        email: normalizedEmail,
         username,
         password,
         studentId,
@@ -237,7 +238,7 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
         message: ERROR_MESSAGES.USER_CREATED_SUCCESSFULLY,
         user: {
           id: regResult.userId,
-          email,
+          email: normalizedEmail,
           username: regResult.username,
           role,
           studentId,

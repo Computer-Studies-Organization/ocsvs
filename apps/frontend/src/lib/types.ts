@@ -44,7 +44,8 @@ export interface TUsersData {
   deletedAt: number | null;
   createdAt: number;
   updatedAt: number;
-  lastLogin: number | null;
+  /** Unix timestamp initialized when the account is created. */
+  lastLogin: number;
 }
 
 export interface TLoginUser {

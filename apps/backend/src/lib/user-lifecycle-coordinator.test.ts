@@ -195,6 +195,12 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         sessionId: "sess-123",
         expiresAt: 9999,
       });
+      expect(mockUpdateAccount).toHaveBeenCalledWith(mockDb, "acc-123", {
+        lastLogin: expect.any(Number),
+      });
+      expect(mockUpdateAccount.mock.invocationCallOrder[0]).toBeLessThan(
+        mockCreateSessionFn.mock.invocationCallOrder[0],
+      );
       expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "student-123");
     });
 
@@ -312,6 +318,31 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         expect.objectContaining({ code: "INVALID_CREDENTIALS", statusCode: 401 }),
       );
       expect(mockRecordAttempt).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1");
+      expect(mockUpdateAccount).not.toHaveBeenCalled();
+      expect(mockCreateSessionFn).not.toHaveBeenCalled();
+    });
+
+    it("does not create a session when last-login persistence fails", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "hash-123",
+        deletedAt: null,
+      });
+      mockVerifyPassword.mockResolvedValueOnce(true);
+      mockUpdateAccount.mockRejectedValueOnce(new Error("database unavailable"));
+
+      await expect(
+        coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1"),
+      ).rejects.toThrow("database unavailable");
+
+      expect(mockUpdateAccount).toHaveBeenCalledWith(mockDb, "acc-123", {
+        lastLogin: expect.any(Number),
+      });
+      expect(mockCreateSessionFn).not.toHaveBeenCalled();
     });
 
     it("treats hashes unsupported by the Worker runtime as generic failed logins", async () => {
