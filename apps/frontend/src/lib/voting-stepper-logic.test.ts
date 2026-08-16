@@ -2,6 +2,7 @@ import type { TStepperPosition } from "./voting-stepper-logic";
 import { expect, test } from "vitest";
 import {
   allPositionsVoted,
+  clearSelection,
   createVotingState,
   getSelectedCount,
   getSelectedVotes,
@@ -60,6 +61,18 @@ test("selectCandidate can change an existing vote", () => {
   state = selectCandidate(state, "pos-1", "c1");
   state = selectCandidate(state, "pos-1", "c2");
   expect(state.selectedVotes["pos-1"]).toBe("c2");
+});
+
+test("clearSelection clears only the targeted position", () => {
+  let state = createVotingState(positions);
+  state = selectCandidate(state, "pos-1", "c1");
+  state = selectCandidate(state, "pos-2", "c3");
+
+  const next = clearSelection(state, "pos-1");
+
+  expect(next.selectedVotes["pos-1"]).toBeNull();
+  expect(next.selectedVotes["pos-2"]).toBe("c3");
+  expect(next.selectedVotes["pos-3"]).toBeNull();
 });
 
 test("goNext advances index", () => {

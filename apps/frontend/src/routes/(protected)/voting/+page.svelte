@@ -10,6 +10,7 @@
   } from '$lib/voting-page-state'
   import {
     allPositionsVoted,
+    clearSelection,
     getSelectedCount,
     getSelectedVotes,
     goNext,
@@ -26,7 +27,7 @@
   import { authStore } from '$lib/stores/auth.svelte'
   import { UserRole, type TPartyList, type TPosition, type TVotingCandidate, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
-  import { Calendar, CheckCircle, Flag, Info, Vote, Zap } from 'lucide-svelte'
+  import { Calendar, CheckCircle, Flag, Info, Vote, X, Zap } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
   import VotingCandidateCard from '$lib/components/ui/voting-candidate-card.svelte'
   import BallotReview from '$lib/components/ui/ballot-review.svelte'
@@ -93,6 +94,11 @@
   function selectAt(positionId: string, candidateId: string) {
     if (pageState.kind !== 'stepper') return
     pageState = withVoting(pageState, selectCandidate(pageState.voting, positionId, candidateId))
+  }
+
+  function clearAt(positionId: string) {
+    if (pageState.kind !== 'stepper') return
+    pageState = withVoting(pageState, clearSelection(pageState.voting, positionId))
   }
 
   function applyPartySlate(party: TPartyList) {
@@ -330,6 +336,18 @@
               />
             {/each}
           </div>
+          {#if pageState.voting.selectedVotes[currentPosition.id] !== null}
+            <div class='mt-4 flex justify-end'>
+              <button
+                type='button'
+                onclick={() => clearAt(currentPosition.id)}
+                aria-label="Clear selection for {currentPosition.name}"
+                class='min-h-11 inline-flex items-center gap-2 rounded-xl border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 transition-colors hover:border-rose-500/50 hover:text-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500/40 cursor-pointer'
+              >
+                <X size={14} /> Clear selection
+              </button>
+            </div>
+          {/if}
         </div>
       {/if}
     {:else}

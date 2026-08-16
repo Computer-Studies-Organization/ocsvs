@@ -34,6 +34,13 @@ export function selectCandidate(
   return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: candidateId } };
 }
 
+export function clearSelection(
+  state: TStepperVotingState,
+  positionId: string,
+): TStepperVotingState {
+  return { ...state, selectedVotes: { ...state.selectedVotes, [positionId]: null } };
+}
+
 export function selectPartySlate(
   state: TStepperVotingState,
   positions: TStepperPosition[],
