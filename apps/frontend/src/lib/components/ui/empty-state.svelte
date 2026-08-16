@@ -24,7 +24,7 @@
     <button
       type='button'
       onclick={oncta}
-      class='mt-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg hover:bg-sky-600 transition cursor-pointer'
+      class='mt-2 min-h-11 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg hover:bg-sky-600 transition cursor-pointer'
     >
       {cta}
     </button>

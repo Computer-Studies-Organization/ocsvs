@@ -40,7 +40,7 @@
     disabled={currentPositionIndex === 0 || isSubmitting}
     class="min-h-11 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2 font-mono text-xs uppercase tracking-wider text-slate-300 disabled:bg-slate-950/40 disabled:text-slate-700 disabled:border-slate-900/50 disabled:cursor-not-allowed hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
   >
-    <ArrowLeft size={16} /> Prev_Step
+    <ArrowLeft size={16} /> Previous
   </button>
   
   {#if !isReview}
@@ -64,7 +64,7 @@
       class:shadow-[0_0_12px_rgba(59,130,246,0.4)]={isCurrentSelected}
       class:scale-[1.02]={isCurrentSelected}
     >
-      Next_Step <ArrowRight size={16} />
+      Next <ArrowRight size={16} />
     </button>
   {:else}
     <!-- Submit button on Review step -->
@@ -83,7 +83,7 @@
       {#if isSubmitting}
         Submitting…
       {:else}
-        <GitMerge size={16} class="mr-0.5" /> Submit Ballot
+        <GitMerge size={16} class="mr-0.5" /> Submit ballot
       {/if}
     </button>
   {/if}

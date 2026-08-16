@@ -66,7 +66,7 @@
     type='button'
     onclick={() => openConfirm(t)}
     disabled={busy}
-    class='px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer {className}'
+    class='min-h-11 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer {className}'
     style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
   >
     Transition to {labels[t]}
@@ -89,7 +89,7 @@
       type='button'
       onclick={() => (open = false)}
       disabled={busy}
-      class='px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer'
+      class='min-h-11 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer'
       style='background: oklch(0.25 0.025 250); color: oklch(0.95 0.008 250)'
     >
       Cancel
@@ -98,7 +98,7 @@
       type='button'
       onclick={confirm}
       disabled={busy}
-      class='px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer'
+      class='min-h-11 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer'
       style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250)'
     >
       {busy ? 'Working…' : 'Confirm'}

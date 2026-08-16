@@ -26,6 +26,40 @@
   import { getCandidate } from "$lib/api/candidates";
   import SkeletonTable from "$lib/components/ui/skeleton-table.svelte";
 
+  const AUDIT_ACTION_LABELS: Record<string, string> = {
+    "election.create": "Election created",
+    "election.update": "Election updated",
+    "election.transition": "Election status changed",
+    "position.create": "Position created",
+    "position.update": "Position updated",
+    "position.delete": "Position deleted",
+    "candidate.create": "Candidate created",
+    "candidate.update": "Candidate updated",
+    "candidate.deactivate": "Candidate deactivated",
+    "party.create": "Party created",
+    "party.update": "Party updated",
+    "party.delete": "Party deleted",
+    "user.create": "User created",
+    "user.update": "User updated",
+    "user.bulk_import": "Users imported",
+    "user.soft_delete": "User archived",
+    "user.restore": "User restored",
+    "user.hard_delete": "User permanently deleted",
+    "user.unlock": "User unlocked",
+  };
+
+  function formatAuditAction(action: string): string {
+    const knownLabel = AUDIT_ACTION_LABELS[action];
+    if (knownLabel) return knownLabel;
+
+    const fallback = action
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+    return fallback || action;
+  }
+
   // Filter state (synced with URL search params)
   let actionFilter = $state(page.url.searchParams.get("action") ?? "");
   let targetTypeFilter = $state(
@@ -286,7 +320,7 @@
         <button
           type="button"
           onclick={() => isFilterExpanded = !isFilterExpanded}
-          class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}"
+          class="min-h-11 flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}"
         >
           <SlidersHorizontal size={14} class={activeFiltersCount > 0 ? 'text-sky-400' : 'text-slate-400'} />
           <span>Filters</span>
@@ -306,7 +340,7 @@
           <button
             type="button"
             onclick={() => { actionFilter = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Action: {actionFilter}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -317,7 +351,7 @@
           <button
             type="button"
             onclick={() => { targetTypeFilter = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Type: {targetTypeFilter}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -328,7 +362,7 @@
           <button
             type="button"
             onclick={() => { targetIdFilter = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Target: {targetIdFilter}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -339,7 +373,7 @@
           <button
             type="button"
             onclick={() => { actorFilter = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Actor: {actorFilter}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -350,7 +384,7 @@
           <button
             type="button"
             onclick={() => { sinceDate = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Since: {sinceDate}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -361,7 +395,7 @@
           <button
             type="button"
             onclick={() => { untilDate = ""; handleFilterChange(); }}
-            class="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
+            class="min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group"
           >
             <span>Until: {untilDate}</span>
             <X size={12} class="text-slate-500 group-hover:text-slate-300 transition" />
@@ -382,7 +416,7 @@
           {#if activeFiltersCount > 0}
             <button
               onclick={clearFilters}
-              class="text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+              class="min-h-11 text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
             >
               Clear Filters
             </button>
@@ -397,7 +431,7 @@
               id="filter-action"
               bind:value={actionFilter}
               onchange={handleFilterChange}
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
             >
               <option value="">All actions</option>
               {#each AUDIT_ACTIONS as action (action)}
@@ -413,7 +447,7 @@
               id="filter-target-type"
               bind:value={targetTypeFilter}
               onchange={handleFilterChange}
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
             >
               <option value="">All types</option>
               {#each AUDIT_TARGET_TYPES as type (type)}
@@ -431,7 +465,7 @@
               bind:value={targetIdFilter}
               onchange={handleFilterChange}
               placeholder="Filter by target..."
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
             />
           </div>
 
@@ -444,7 +478,7 @@
               bind:value={actorFilter}
               onchange={handleFilterChange}
               placeholder="Filter by actor..."
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
             />
           </div>
 
@@ -456,7 +490,7 @@
               type="date"
               bind:value={sinceDate}
               onchange={handleFilterChange}
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
             />
           </div>
 
@@ -468,7 +502,7 @@
               type="date"
               bind:value={untilDate}
               onchange={handleFilterChange}
-              class="w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
+              class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer"
             />
           </div>
         </div>
@@ -480,7 +514,7 @@
         <span class="text-sm font-semibold">{errorMsg}</span>
         <button
           onclick={() => errorMsg = ""}
-          class="p-1 rounded-lg hover:bg-red-500/10 text-red-400 transition cursor-pointer"
+          class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-red-500/10 text-red-400 transition cursor-pointer"
           aria-label="Dismiss error"
         >
           <X size={16} />
@@ -499,7 +533,7 @@
           {errorMsg}
         </div>
       {:else}
-        <div class="overflow-x-auto relative">
+        <div class="relative">
           {#if isLoading}
             <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] flex items-center justify-center z-10">
               <div class="rounded-xl bg-slate-900/80 border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 shadow-xl flex items-center gap-2">
@@ -508,6 +542,7 @@
               </div>
             </div>
           {/if}
+          <div class="hidden md:block overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-slate-800 bg-slate-950/50">
@@ -532,6 +567,7 @@
                   tabindex="0"
                   role="button"
                   aria-expanded={expandedId === entry.id}
+                  aria-label="{formatAuditAction(entry.action)} for {entry.targetType} {truncateId(entry.targetId)}"
                 >
                   <td class="px-4 py-3 text-slate-300">
                     {formatTimestamp(entry.createdAt)}
@@ -541,7 +577,7 @@
                   </td>
                   <td class="px-4 py-3">
                     <span class="inline-block rounded-full bg-blue-500/10 text-blue-400 px-2 py-0.5 text-[10px] font-bold">
-                      {entry.action}
+                      {formatAuditAction(entry.action)}
                     </span>
                   </td>
                   <td class="px-4 py-3">
@@ -643,6 +679,91 @@
           </table>
         </div>
 
+        <div class="md:hidden space-y-3 p-3">
+          {#each displayedItems as entry (entry.id)}
+            <article class="overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/40">
+              <button
+                type="button"
+                onclick={() => toggleExpand(entry)}
+                aria-expanded={expandedId === entry.id}
+                aria-controls={`audit-details-${entry.id}`}
+                aria-label={`${formatAuditAction(entry.action)} for ${entry.targetType} ${truncateId(entry.targetId)}`}
+                class="flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-slate-800/30"
+              >
+                <span class="min-w-0 flex-1">
+                  <span class="flex flex-wrap items-center gap-2">
+                    <span class="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-400">
+                      {formatAuditAction(entry.action)}
+                    </span>
+                    <span class="text-xs text-slate-500">{formatTimestamp(entry.createdAt)}</span>
+                  </span>
+                  <span class="mt-2 block truncate font-mono text-xs text-slate-300">
+                    {entry.targetType} · {truncateId(entry.targetId)}
+                  </span>
+                  <span class="mt-1 block truncate text-xs font-semibold text-slate-400">
+                    {entry.actorUsernameSnapshot}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={18}
+                  aria-hidden="true"
+                  class="shrink-0 text-slate-500 transition-transform {expandedId === entry.id ? 'rotate-180' : ''}"
+                />
+              </button>
+
+              {#if expandedId === entry.id}
+                <div id={`audit-details-${entry.id}`} class="space-y-3 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <div class="grid grid-cols-1 gap-3">
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Actor Account ID</span>
+                      <p class="mt-0.5 break-all font-mono text-xs text-slate-300">{entry.actorAccountIdSnapshot}</p>
+                    </div>
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Target ID</span>
+                      <p class="mt-0.5 break-all font-mono text-xs text-slate-300">{entry.targetId}</p>
+                    </div>
+                  </div>
+
+                  {#if entry.description}
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</span>
+                      <p class="mt-0.5 text-sm text-slate-300">{entry.description}</p>
+                    </div>
+                  {/if}
+
+                  {#if resolvingIds[`${entry.targetType}:${entry.targetId}`]}
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Resolved Target</span>
+                      <p class="mt-0.5 text-sm font-semibold text-slate-400">Resolving...</p>
+                    </div>
+                  {:else if resolvedNames[`${entry.targetType}:${entry.targetId}`] && resolvedNames[`${entry.targetType}:${entry.targetId}`] !== entry.targetId}
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Resolved Target</span>
+                      <p class="mt-0.5 text-sm font-semibold text-slate-100">{resolvedNames[`${entry.targetType}:${entry.targetId}`]}</p>
+                    </div>
+                  {/if}
+
+                  {#if getTargetLink(entry)}
+                    <a
+                      href={getTargetLink(entry)}
+                      class="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-sky-400 transition-colors hover:text-sky-300"
+                    >
+                      View {entry.targetType === "election" ? "Election" : "Resource"} →
+                      <ExternalLink size={12} />
+                    </a>
+                  {/if}
+                </div>
+              {/if}
+            </article>
+          {:else}
+            <div class="flex h-24 items-center justify-center text-sm text-slate-500">
+              <History size={28} class="mr-2 text-slate-600" />
+              No audit entries yet
+            </div>
+          {/each}
+        </div>
+        </div>
+
         <!-- Pagination -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-slate-800 px-4 py-3">
           <p class="text-xs text-slate-500">
@@ -657,7 +778,7 @@
                 bind:value={limitFilter}
                 onchange={handlePageSizeChange}
                 disabled={isLoading}
-                class="rounded-xl border-2 border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer disabled:opacity-30"
+                class="min-h-11 rounded-xl border-2 border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer disabled:opacity-30"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -668,7 +789,7 @@
               <button
                 disabled={pageIndex === 0 || isLoading}
                 onclick={handlePrev}
-                class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
+                class="min-h-11 flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
               >
                 <ChevronLeft size={14} />
                 Previous
@@ -676,7 +797,7 @@
               <button
                 disabled={!((pageIndex + 1) * limitFilter < fetchedItems.length || nextCursor) || isLoading}
                 onclick={handleNext}
-                class="flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
+                class="min-h-11 flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer"
               >
                 Next
                 <ChevronRight size={14} />

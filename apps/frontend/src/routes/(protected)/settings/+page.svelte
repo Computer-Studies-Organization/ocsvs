@@ -248,7 +248,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.currentPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showCurrent = !showCurrent} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showCurrent = !showCurrent} aria-label={showCurrent ? 'Hide current password' : 'Show current password'} aria-pressed={showCurrent} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showCurrent}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>
@@ -269,7 +269,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.newPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showNew = !showNew} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showNew = !showNew} aria-label={showNew ? 'Hide new password' : 'Show new password'} aria-pressed={showNew} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showNew}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>
@@ -290,7 +290,7 @@
               required
               class='w-full rounded-xl border-2 {passwordErrors.confirmPassword ? 'border-red-500' : 'border-slate-700'} bg-slate-950 px-4 py-3 pr-12 font-semibold text-slate-50 transition focus:border-violet-400 focus:outline-none'
             />
-            <button type='button' onclick={() => showConfirm = !showConfirm} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
+            <button type='button' onclick={() => showConfirm = !showConfirm} aria-label={showConfirm ? 'Hide confirmation password' : 'Show confirmation password'} aria-pressed={showConfirm} class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-50 cursor-pointer'>
               {#if showConfirm}<EyeOff size={20} />{:else}<Eye size={20} />{/if}
             </button>
           </div>

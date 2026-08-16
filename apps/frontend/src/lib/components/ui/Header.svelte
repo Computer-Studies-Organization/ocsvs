@@ -138,6 +138,7 @@
           <a
             href='/settings'
             title='Settings'
+            aria-label='Settings'
             class="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-lg transition hover:bg-slate-800 {isActive('/settings') ? (adminMode ? 'text-amber-400' : 'text-blue-400') : 'text-slate-400 hover:text-slate-200'}"
           >
             <Settings size={18} />
@@ -151,6 +152,7 @@
           <!-- Logout button -->
           <button
             onclick={handleLogout}
+            aria-label='Log out'
             class='min-h-11 min-w-11 flex items-center gap-1.5 rounded-lg border border-red-950 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 transition cursor-pointer'
           >
             <LogOut size={14} />
@@ -183,42 +185,42 @@
           <a
             href='/admin-dashboard'
             aria-current={page.url.pathname === '/admin-dashboard' ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {page.url.pathname === '/admin-dashboard' ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {page.url.pathname === '/admin-dashboard' ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Dashboard
           </a>
           <a
             href='/admin/users'
             aria-current={isActive('/admin/users') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/users') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/users') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Users
           </a>
           <a
             href='/admin/elections'
             aria-current={isActive('/admin/elections') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/elections') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/elections') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Elections
           </a>
           <a
             href='/admin/results'
             aria-current={isActive('/admin/results') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/results') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/results') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Results
           </a>
           <a
             href='/admin/audit-log'
             aria-current={isActive('/admin/audit-log') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/audit-log') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/admin/audit-log') ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Audit Log
           </a>
           <div class="h-px bg-slate-800 my-1"></div>
           <a
             href='/voting'
-            class='flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
+            class='flex min-h-11 items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition'
           >
             Exit Admin
           </a>
@@ -226,14 +228,14 @@
           <a
             href='/voting'
             aria-current={isActive('/voting') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/voting') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/voting') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Voting
           </a>
           <a
             href='/elections'
             aria-current={isActive('/elections') ? 'page' : undefined}
-            class="px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/elections') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
+            class="flex min-h-11 items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {isActive('/elections') ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'}"
           >
             Elections
           </a>
@@ -241,7 +243,7 @@
             <div class="h-px bg-slate-800 my-1"></div>
             <a
               href='/admin-dashboard'
-              class='flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition'
+              class='flex min-h-11 items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition'
             >
               <UserCheck size={14} />
               Admin Panel

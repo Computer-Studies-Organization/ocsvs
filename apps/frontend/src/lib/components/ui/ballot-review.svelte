@@ -80,7 +80,7 @@
           type="button"
           onclick={() => ongoToPosition(idx)}
           aria-label="Change selection for {pos.name}"
-          class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider cursor-pointer mt-2"
+          class="min-h-11 inline-flex items-center gap-1 rounded-lg px-2 font-mono text-[10px] uppercase tracking-wider cursor-pointer mt-2"
           class:text-blue-400={selectedCandidateId !== null}
           class:hover:text-blue-300={selectedCandidateId !== null}
           

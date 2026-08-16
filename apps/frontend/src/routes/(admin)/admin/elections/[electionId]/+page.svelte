@@ -116,6 +116,7 @@
             <button
               onclick={() => isMenuOpen = !isMenuOpen}
               type='button'
+              aria-label={isMenuOpen ? 'Close election actions' : 'Open election actions'}
               class='flex h-11 w-11 items-center justify-center rounded-xl transition cursor-pointer hover:bg-slate-800 text-slate-400 hover:text-slate-200 border'
               style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
             >
@@ -274,8 +275,9 @@
                   <button
                     type='button'
                     onclick={() => editingParty = party}
-                    class='p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200 shrink-0'
+                    aria-label="Edit {party.name} party list"
                     title='Edit Party'
+                    class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200 shrink-0'
                   >
                     <Edit size={16} />
                   </button>
@@ -339,9 +341,9 @@
                           e.stopPropagation()
                           openEdit(p)
                         }}
-                        class='rounded-lg p-1.5 transition-colors cursor-pointer hover:bg-slate-800'
+                        aria-label="Edit {p.name} position"
+                        class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors cursor-pointer hover:bg-slate-800'
                         style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
-                        title='Edit position'
                       >
                         <Edit size={16} />
                       </button>

@@ -88,7 +88,7 @@
       {#if candidate.manifesto && candidate.manifesto.length > 120}
         <button
           type="button"
-          class="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
+          class="min-h-11 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
           onclick={(e) => {
             e.stopPropagation();
             isExpanded = !isExpanded;

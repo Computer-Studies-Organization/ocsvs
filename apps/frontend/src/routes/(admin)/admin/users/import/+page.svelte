@@ -517,7 +517,7 @@
                             <td class="px-4 py-3 text-center">
                               <button
                                 onclick={() => deleteRecord(index)}
-                                class="rounded-lg bg-slate-950 border border-slate-800 p-2 text-slate-400 hover:text-rose-450 hover:border-rose-500/30 transition cursor-pointer"
+                                class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-slate-950 border border-slate-800 p-2 text-slate-400 hover:text-rose-450 hover:border-rose-500/30 transition cursor-pointer"
                                 title="Delete row"
                               >
                                 <Trash2 size={14} />

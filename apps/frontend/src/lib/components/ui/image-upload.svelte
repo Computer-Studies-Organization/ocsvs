@@ -125,7 +125,8 @@
           type="button"
           onclick={handleDelete}
           disabled={isUploading}
-          class="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600 disabled:opacity-50"
+          aria-label="Remove candidate photo"
+          class="absolute -right-2 -top-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-red-500 p-1 text-white hover:bg-red-600 disabled:opacity-50"
         >
           <X size={14} />
         </button>

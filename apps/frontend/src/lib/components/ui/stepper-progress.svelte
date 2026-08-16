@@ -29,7 +29,7 @@
   )
 
   const activePositionName = $derived(
-    isReview ? 'Review Ballot' : positions[currentPositionIndex]?.name || ''
+    isReview ? 'Review ballot' : positions[currentPositionIndex]?.name || ''
   )
 
   // Selection messages for each step
@@ -46,7 +46,7 @@
   <div class="flex items-center justify-between">
     <div class="flex flex-col">
       <span class="font-mono text-[10px] uppercase tracking-wider text-slate-500">
-        CSO_VOTE://step-{isReview ? 'review' : currentPositionIndex + 1}
+        {isReview ? 'Review ballot' : `Step ${currentPositionIndex + 1} of ${totalPositions}`}
       </span>
       <h3 class="text-sm font-bold text-slate-200">
         {activePositionName}

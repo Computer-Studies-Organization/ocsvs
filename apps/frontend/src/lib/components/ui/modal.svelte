@@ -119,7 +119,7 @@
         onclick={onclose}
         aria-label='Close modal'
         bind:this={closeBtn}
-        class='absolute right-4 top-4 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer'
+        class='absolute right-4 top-4 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer'
       >
         <X size={20} />
       </button>

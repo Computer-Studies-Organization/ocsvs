@@ -683,7 +683,7 @@
       <div class='hidden md:block'>
         <button
           onclick={() => showAddModal = true}
-          class='flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
+          class='flex min-h-11 items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
         >
           Add User
         </button>
@@ -699,7 +699,7 @@
           placeholder='Search name, student ID, username…'
           value={localSearch}
           oninput={handleSearchInput}
-          class='w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
+          class='min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-900 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-100 placeholder-slate-500 transition focus:border-sky-400 focus:outline-none'
         />
       </div>
 
@@ -708,7 +708,7 @@
         <button
           type='button'
           onclick={() => isFilterExpanded = !isFilterExpanded}
-          class='flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}'
+          class='min-h-11 flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer relative transition-all whitespace-nowrap {isFilterExpanded ? 'border-sky-500 bg-sky-950/20 shadow-[0_0_12px_rgba(14,165,233,0.15)] text-sky-200' : 'border-slate-700 bg-slate-900/50 hover:bg-slate-800'}'
         >
           <SlidersHorizontal size={14} class={activeFiltersCount > 0 ? 'text-sky-400' : 'text-slate-400'} />
           <span>Filters</span>
@@ -724,7 +724,7 @@
           <button
             type='button'
             onclick={() => showSortMenu = !showSortMenu}
-            class='w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
+            class='min-h-11 w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
           >
             <ArrowUpDown size={14} class='text-slate-400 shrink-0' />
             <span>Sort: <span class='text-slate-300'><span class='hidden sm:inline'>{SORTABLE_LABELS[sortKey]}</span><span class='inline sm:hidden'>{SORTABLE_LABELS_COMPACT[sortKey]}</span></span></span>
@@ -746,7 +746,7 @@
                     }
                     showSortMenu = false
                   }}
-                  class='w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition cursor-pointer {sortKey === key ? 'bg-sky-500/10 text-sky-300' : 'text-slate-200 hover:bg-slate-900'}'
+                  class='min-h-11 w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition cursor-pointer {sortKey === key ? 'bg-sky-500/10 text-sky-300' : 'text-slate-200 hover:bg-slate-900'}'
                 >
                   <span>{SORTABLE_LABELS[key]}</span>
                   {#if sortKey === key}
@@ -762,10 +762,10 @@
         <div class='h-6 w-px bg-slate-800 self-center shrink-0'></div>
 
         <!-- Archived Checkbox Button -->
-        <button
-          type='button'
-          onclick={() => updateFilters({ archived: !includeDeleted })}
-          class='flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
+          <button
+            type='button'
+            onclick={() => updateFilters({ archived: !includeDeleted })}
+          class='min-h-11 flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-100 transition cursor-pointer whitespace-nowrap'
         >
           <!-- Custom styled checkbox checkmark box -->
           <div class='flex h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0 items-center justify-center rounded border transition-colors {includeDeleted ? 'bg-sky-500 border-sky-400 text-white' : 'border-slate-600 bg-slate-950 text-transparent'}'>
@@ -785,7 +785,7 @@
           <button
             type='button'
             onclick={() => updateFilters({ search: '' })}
-            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+            class='min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
           >
             <span>Search: "{data.search}"</span>
             <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
@@ -796,7 +796,7 @@
           <button
             type='button'
             onclick={() => updateFilters({ course: '' })}
-            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+            class='min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
           >
             <span>Course: {data.course}</span>
             <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
@@ -807,7 +807,7 @@
           <button
             type='button'
             onclick={() => updateFilters({ yearLevel: '' })}
-            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+            class='min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
           >
             <span>Year: {data.yearLevel}</span>
             <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
@@ -818,7 +818,7 @@
           <button
             type='button'
             onclick={() => updateFilters({ role: '' })}
-            class='flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
+            class='min-h-11 flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/30 px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 cursor-pointer group'
           >
             <span>Role: {data.role === 'user' ? 'Voter' : data.role === 'admin' ? 'Admin' : 'Super Admin'}</span>
             <X size={12} class='text-slate-500 group-hover:text-slate-300 transition' />
@@ -839,7 +839,7 @@
           {#if activeFiltersCount > 0}
             <button 
               onclick={clearFilters}
-              class="text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+              class="min-h-11 text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
             >
               Clear Filters
             </button>
@@ -853,7 +853,7 @@
               id='filter-course'
               value={data.course}
               onchange={(e) => updateFilters({ course: e.currentTarget.value })}
-              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+              class='min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
             >
               <option value=''>All Courses</option>
               <option value='BSCS'>BSCS (BS Computer Science)</option>
@@ -868,7 +868,7 @@
               id='filter-yearLevel'
               value={data.yearLevel}
               onchange={(e) => updateFilters({ yearLevel: e.currentTarget.value })}
-              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+              class='min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
             >
               <option value=''>All Years</option>
               {#each YEAR_LEVEL_VALUES as y}
@@ -883,7 +883,7 @@
               id='filter-role'
               value={data.role}
               onchange={(e) => updateFilters({ role: e.currentTarget.value })}
-              class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
+              class='min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-100 transition focus:border-orange-500/80 focus:ring-2 focus:ring-amber-500/20 focus:outline-none cursor-pointer'
             >
               <option value=''>All Roles</option>
               <option value='user'>Voter</option>
@@ -907,14 +907,14 @@
           <thead>
             <tr class='border-b border-slate-800 bg-slate-950/50'>
               <th class='sticky left-0 z-10 bg-slate-950/80 px-4 py-3 text-left shadow-[1px_0_0_0_#334155]'>
-                <button onclick={() => toggleSort('studentId')} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
+                <button onclick={() => toggleSort('studentId')} class='min-h-11 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
                   {SORTABLE_LABELS['studentId']}
                   <ArrowUpDown size={12} />
                 </button>
               </th>
               {#each SORTABLE_KEYS.slice(1) as key (key)}
                 <th class='px-4 py-3 text-left'>
-                  <button onclick={() => toggleSort(key)} class='flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
+                  <button onclick={() => toggleSort(key)} class='min-h-11 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 cursor-pointer'>
                     {SORTABLE_LABELS[key]}
                     <ArrowUpDown size={12} />
                   </button>
@@ -948,7 +948,8 @@
                     type='button'
                     onclick={(e) => openDropdown(u, e)}
                     title='Actions'
-                    class='flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition cursor-pointer border border-slate-700/50'
+                    aria-label="Actions for {u.firstName} {u.lastName}"
+                    class='flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition cursor-pointer border border-slate-700/50'
                   >
                     <MoreHorizontal size={16} />
                   </button>
@@ -1002,13 +1003,15 @@
           <button
             disabled={currentPage === 1}
             onclick={() => updateFilters({ page: currentPage - 1 })}
-            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
+            aria-label='Previous page'
+            class='min-h-11 min-w-11 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
           >←</button>
           <span class='text-sm font-semibold text-slate-100'>{currentPage} / {pageCount}</span>
           <button
             disabled={currentPage >= pageCount}
             onclick={() => updateFilters({ page: currentPage + 1 })}
-            class='rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
+            aria-label='Next page'
+            class='min-h-11 min-w-11 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition disabled:opacity-30 hover:bg-slate-800 cursor-pointer'
           >→</button>
         </div>
       </div>
@@ -1059,21 +1062,21 @@
       <button
         type="button"
         onclick={() => activeTab = 'overview'}
-        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'overview' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+        class="min-h-11 flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'overview' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
       >
         Overview
       </button>
       <button
         type="button"
         onclick={() => activeTab = 'access'}
-        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'access' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+        class="min-h-11 flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'access' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
       >
         Access
       </button>
       <button
         type="button"
         onclick={() => activeTab = 'audit'}
-        class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'audit' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
+        class="min-h-11 flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer {activeTab === 'audit' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}"
       >
         Audit
       </button>
@@ -1168,7 +1171,7 @@
                       type="button"
                       disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
                       onclick={() => startMobileArchive(viewUser!)}
-                      class="w-full rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      class="min-h-11 w-full rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                     >
                       Archive User
                     </button>
@@ -1177,7 +1180,7 @@
                       type="button"
                       disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
                       onclick={() => startMobileRestore(viewUser!)}
-                      class="w-full rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      class="min-h-11 w-full rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                     >
                       Restore User
                     </button>
@@ -1187,7 +1190,7 @@
                     type="button"
                     disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
                     onclick={() => startMobileHardDelete(viewUser!)}
-                    class="w-full rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    class="min-h-11 w-full rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 py-2.5 text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Delete Permanently
                   </button>
@@ -1267,7 +1270,7 @@
               <button
                 type="button"
                 onclick={() => startMobileUnlock(viewUser!)}
-                class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-900 rounded-lg transition cursor-pointer"
+                class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-900 rounded-lg transition cursor-pointer"
               >
                 Unlock Account
               </button>
@@ -1275,7 +1278,7 @@
                 type="button"
                 disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
                 onclick={() => startMobileArchive(viewUser!)}
-                class="w-full text-left px-3 py-2 text-xs font-semibold text-orange-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
+                class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-orange-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
               >
                 Archive User
               </button>
@@ -1284,7 +1287,7 @@
                 type="button"
                 disabled={authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin')}
                 onclick={() => startMobileRestore(viewUser!)}
-                class="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
+                class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
               >
                 Restore User
               </button>
@@ -1293,7 +1296,7 @@
               type="button"
               disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
               onclick={() => startMobileHardDelete(viewUser!)}
-              class="w-full text-left px-3 py-2 text-xs font-semibold text-red-400 hover:bg-slate-900 rounded-lg transition border-t border-slate-900 mt-1 pt-2 disabled:opacity-50 cursor-pointer"
+              class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-red-400 hover:bg-slate-900 rounded-lg transition border-t border-slate-900 mt-1 pt-2 disabled:opacity-50 cursor-pointer"
             >
               Delete Permanently
             </button>
@@ -1327,11 +1330,11 @@
         <p class="text-sm {editMsg === 'Saved!' ? 'text-emerald-400' : 'text-red-400'}">{editMsg}</p>
       {/if}
       <div class='flex justify-end gap-2 pt-2'>
-        <button onclick={() => editUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+        <button onclick={() => editUser = null} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
         <button
           onclick={handleEditSave}
           disabled={isEditSaving}
-          class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
+          class='min-h-11 flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
         >
           {#if isEditSaving}<Loader class='animate-spin' size={14} />{/if}
           Save
@@ -1347,11 +1350,11 @@
   {#if archiveConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Are you sure you want to archive <span class='font-semibold text-slate-200'>{archiveConfirmUser.firstName} {archiveConfirmUser.lastName}</span>? They will no longer be able to log in.</p>
     <div class='flex gap-2 justify-end'>
-      <button onclick={() => archiveConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button onclick={() => archiveConfirmUser = null} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
       <button
         onclick={handleArchive}
         disabled={isActionLoading}
-        class='flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-60 cursor-pointer'
+        class='min-h-11 flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-60 cursor-pointer'
       >
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Archive
@@ -1366,11 +1369,11 @@
   {#if restoreConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Restore <span class='font-semibold text-slate-200'>{restoreConfirmUser.firstName} {restoreConfirmUser.lastName}</span> so they can log in again.</p>
     <div class='flex gap-2 justify-end'>
-      <button onclick={() => restoreConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button onclick={() => restoreConfirmUser = null} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
       <button
         onclick={handleRestore}
         disabled={isActionLoading}
-        class='flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60 cursor-pointer'
+        class='min-h-11 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60 cursor-pointer'
       >
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Restore
@@ -1385,11 +1388,11 @@
   {#if unlockConfirmUser}
     <p class='mb-4 text-sm text-slate-400'>Unlock the account for <span class='font-semibold text-slate-200'>{unlockConfirmUser.firstName} {unlockConfirmUser.lastName}</span> to reset their password lockout login attempts.</p>
     <div class='flex gap-2 justify-end'>
-      <button onclick={() => unlockConfirmUser = null} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button onclick={() => unlockConfirmUser = null} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
       <button
         onclick={handleUnlock}
         disabled={isActionLoading}
-        class='flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-500 disabled:opacity-60 cursor-pointer'
+        class='min-h-11 flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-500 disabled:opacity-60 cursor-pointer'
       >
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Unlock Account
@@ -1415,11 +1418,11 @@
       />
     </div>
     <div class='flex gap-2 justify-end'>
-      <button onclick={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+      <button onclick={() => { hardDeleteConfirmUser = null; hardDeleteConfirmText = '' }} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
       <button
         onclick={handleHardDelete}
         disabled={isActionLoading || hardDeleteConfirmText !== 'DELETE'}
-        class='flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60 cursor-pointer'
+        class='min-h-11 flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60 cursor-pointer'
       >
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Delete Permanently
@@ -1449,7 +1452,7 @@
         </div>
       </div>
       <div class='flex justify-end pt-2'>
-        <button onclick={closeAddModal} class='rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 cursor-pointer'>
+        <button onclick={closeAddModal} class='min-h-11 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 cursor-pointer'>
           Done
         </button>
       </div>
@@ -1584,7 +1587,9 @@
             <button
               type='button'
               onclick={() => addFormVisiblePassword = !addFormVisiblePassword}
-              class='absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-350 cursor-pointer'
+              aria-label={addFormVisiblePassword ? 'Hide password' : 'Show password'}
+              aria-pressed={addFormVisiblePassword}
+              class='absolute right-3 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 hover:text-slate-350 cursor-pointer'
             >
               {#if addFormVisiblePassword}
                 <EyeOff size={16} />
@@ -1596,7 +1601,7 @@
           <button
             type='button'
             onclick={generatePassword}
-            class='rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 cursor-pointer'
+            class='min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 cursor-pointer'
           >
             Generate
           </button>
@@ -1608,11 +1613,11 @@
       {/if}
 
       <div class='flex justify-end gap-2 pt-2'>
-        <button type='button' onclick={closeAddModal} class='rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
+        <button type='button' onclick={closeAddModal} class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'>Cancel</button>
         <button
           type='submit'
           disabled={isAddSaving}
-          class='flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
+          class='min-h-11 flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 disabled:opacity-60 cursor-pointer'
         >
           {#if isAddSaving}<Loader class='animate-spin' size={14} />{/if}
           Create
@@ -1636,7 +1641,7 @@
     <button
       type='button'
       onclick={() => { viewUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
-      class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-slate-200 hover:bg-slate-900 transition cursor-pointer'
+      class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-slate-200 hover:bg-slate-900 transition cursor-pointer'
     >
       <Eye size={14} class='text-slate-400' />
       <span>View Details</span>
@@ -1651,7 +1656,7 @@
         title={authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin') 
           ? 'Only super admins can restore admin accounts' 
           : 'Restore'}
-        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+        class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
       >
         <RotateCcw size={14} />
         <span>Restore</span>
@@ -1667,7 +1672,7 @@
           : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
           ? 'Only super admins can edit admin accounts' 
           : 'Edit'}
-        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-sky-400 hover:bg-sky-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+        class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-sky-400 hover:bg-sky-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
       >
         <Edit size={14} />
         <span>Edit Account</span>
@@ -1683,7 +1688,7 @@
           : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
           ? 'Only super admins can archive admin accounts' 
           : 'Archive'}
-        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-orange-400 hover:bg-orange-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+        class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-orange-400 hover:bg-orange-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
       >
         <Archive size={14} />
         <span>Archive</span>
@@ -1693,7 +1698,7 @@
       <button
         type='button'
         onclick={() => { unlockConfirmUser = activeDropdownUser; activeDropdownUserId = null; activeDropdownUser = null; }}
-        class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-teal-400 hover:bg-teal-500/10 transition cursor-pointer'
+        class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-teal-400 hover:bg-teal-500/10 transition cursor-pointer'
       >
         <Unlock size={14} />
         <span>Unlock Account</span>
@@ -1713,7 +1718,7 @@
         : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin')) 
         ? 'Only super admins can delete admin accounts' 
         : 'Delete Permanently'}
-      class='w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-red-400 hover:bg-red-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+      class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-red-400 hover:bg-red-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
     >
       <Trash2 size={14} />
       <span>Delete Permanently</span>
