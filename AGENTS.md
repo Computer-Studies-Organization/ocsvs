@@ -14,8 +14,8 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 | Lint all                               | `pnpm lint`                                                                                    |
 | Test all                               | `pnpm test`                                                                                    |
 | Test E2E                               | `cd apps/e2e && pnpm test`                                                                     |
-| Build all                              | `pnpm build`                                                                                   |
-| Backend only (cwd in `apps/backend`)   | `pnpm dev` / `pnpm build` / `pnpm test` / `pnpm lint` / `pnpm lint:fix`                        |
+| Build production frontend assets      | `pnpm build`                                                                                   |
+| Backend only (cwd in `apps/backend`)   | `pnpm dev` / `pnpm test` / `pnpm lint` / `pnpm lint:fix`                                       |
 | Frontend only (cwd in `apps/frontend`) | `pnpm dev` (port 3001) / `pnpm check` (typecheck) / `pnpm test` / `pnpm build`                 |
 | DB scripts (backend)                   | `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:push` / `pnpm db:studio` / `pnpm cf-typegen` |
 | Deploy backend                         | `pnpm deploy` (wrangler deploy --minify)                                                       |
@@ -31,16 +31,15 @@ ocsvs/
 ├── apps/
 │   ├── backend/        # @cso-voting/backend — Hono API on Cloudflare Workers (Turso / libSQL)
 │   └── frontend/       # @cso-voting/frontend — SvelteKit 2 + Svelte 5 (active frontend)
-├── packages/           # Reserved for shared code (currently empty — just .gitkeep)
 ├── docs/
 │   └── superpowers/    # Project documentation
 ├── scripts/            # Root-level scripts
 ├── .github/workflows/ci.yml  # CI: install → typecheck → lint → test → build
 ├── justfile            # Task runner (just) — delegates to pnpm scripts
-└── pnpm-workspace.yaml # Workspace: apps/* + packages/*
+└── pnpm-workspace.yaml # Workspace: apps/*
 ```
 
-The workspace is declared in `pnpm-workspace.yaml` (`apps/*` and `packages/*`).
+The workspace is declared in `pnpm-workspace.yaml` (`apps/*`).
 
 ## Task Runner — `justfile`
 

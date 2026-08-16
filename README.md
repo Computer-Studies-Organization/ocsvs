@@ -1,72 +1,23 @@
-# Computer Studies Organization's Voting System (OCSVS)
+# OCSVS
 
-A modern, secure, and transparent voting platform engineered for the Computer Studies Organization. Built with a focus on performance, reliability, and developer experience.
+The Computer Studies Organization's voting platform: a SvelteKit 2/Svelte 5 frontend backed by a Hono API on Cloudflare Workers and Turso/libSQL.
 
-## ✨ Tech Stack
+## Development
 
-### Frontend
-
-- **Framework:** SvelteKit 2 + Svelte 5
-- **Styling:** Tailwind 4
-- **Routing:** SvelteKit file-based routing
-
-### Backend
-
-- **Framework:** Hono (Cloudflare Workers)
-- **Database:** Cloudflare D1
-- **ORM:** Drizzle ORM
-- **Validation:** Zod
-
-### Monorepo
-
-- **Manager:** pnpm workspaces
-
-## 🚀 Getting Started
-
-New to the repo? See [ONBOARDING.md](./ONBOARDING.md) for setup, including Backblaze B2 bucket configuration.
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js**: >= 20.16.0 < 21 || >= 22.3.0
-- **pnpm**: >= 9.0.0
-
-### Installation
-
-Clone the repository and install dependencies:
+Requires Node.js 20.16–20.x or 22.3+ and pnpm 9+.
 
 ```bash
 pnpm install
-```
-
-### Development
-
-Start the development environment for both frontend and backend:
-
-```bash
 pnpm dev
 ```
 
-Or run individual services:
+The frontend runs on port 3001 and the Worker API on port 8787.
 
 ```bash
-# Frontend only
-pnpm dev:frontend
-
-# Backend only
-pnpm dev:backend
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
 ```
 
-## 📂 Project Structure
-
-- **apps/frontend**: The user interface application.
-- **apps/backend**: The backend API powered by Hono and Cloudflare Workers.
-- **packages/**: Shared logic and configurations.
-
-## 📝 Scripts
-
-- `pnpm build`: Build all applications.
-- `pnpm typecheck`: Run type checking across the monorepo.
-- `pnpm lint`: Lint code with ESLint.
-- `pnpm test`: Run tests with Vitest.
+See [ONBOARDING.md](./ONBOARDING.md) for environment setup, database commands, end-to-end tests, and deployment.

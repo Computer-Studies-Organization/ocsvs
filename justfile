@@ -45,17 +45,13 @@ test:
 test-e2e:
     pnpm test:e2e
 
-# Build all workspaces
+# Build production frontend assets
 build:
     pnpm build
 
 # Build frontend only
 build-fe:
     pnpm build:frontend
-
-# Build backend only
-build-be:
-    pnpm build:backend
 
 # Generate a new Drizzle migration from schema changes
 db-generate:

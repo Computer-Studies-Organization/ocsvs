@@ -115,7 +115,11 @@ https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/abc-123/def-4
 | `B2_APPLICATION_KEY_ID` | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth                               |
 | `B2_APPLICATION_KEY`    | At runtime for images | `.dev.vars` / `wrangler secret` | B2 auth                               |
 | `B2_BUCKET_NAME`        | Yes (for images)      | `wrangler.jsonc` `vars`         | Target bucket                         |
-| `PUBLIC_API_BASE_URL`   | Yes (frontend)        | apps/frontend `.env`            | Backend URL (`http://localhost:8787`) |
+| `PUBLIC_API_BASE_URL`   | Local development      | apps/frontend `.env`            | Backend URL; leave empty in production |
+| `PUBLIC_TURNSTILE_SITEKEY` | Yes                 | apps/frontend `.env`            | Turnstile site key                     |
+| `TURNSTILE_SECRET_KEY`  | Production             | `wrangler secret`               | Server-side Turnstile verification     |
+| `HMAC_SECRET`           | Production             | `wrangler secret`               | Base64 key for voter participation hashes |
+| `PREVIOUS_HMAC_SECRETS` | During key rotation    | `wrangler secret`               | Comma-separated retained HMAC keys     |
 
 > `*` Local SQLite (`file:./local.db`) typically does not need `TURSO_AUTH_TOKEN`.
 
@@ -143,7 +147,7 @@ pnpm lint
 # Test all
 pnpm test
 
-# Build all
+# Build production frontend assets
 pnpm build
 
 # Full quality gate
@@ -186,14 +190,48 @@ pnpm db:push       # Push schema without migration (dev only)
 pnpm db:studio     # Open Drizzle Studio
 ```
 
+### Local Seed Scripts
+
+Seed scripts refuse `NODE_ENV=production`; remote non-production databases also require `ALLOW_REMOTE_SEEDING=true`. Supply passwords through environment variables and never commit them:
+
+```bash
+TURSO_DATABASE_URL=file:./local.db SUPERADMIN_PASSWORD='<password>' pnpm db:seed-superadmin
+TURSO_DATABASE_URL=file:./local.db ADMIN_PASSWORD='<password>' pnpm db:seed-admin
+TURSO_DATABASE_URL=file:./local.db VOTER_PASSWORD='<password>' pnpm db:seed-voter
+```
+
+### Guarded Password Reset
+
+`db:reset-password` rehashes one account, clears its login lockout, and invalidates its sessions. It prompts without echoing in an interactive terminal; automation should inject `RESET_PASSWORD` from a secrets manager. Remote targets require explicit approval:
+
+```bash
+RESET_STUDENT_ID='C24-01-00001-BSC001' \
+ALLOW_REMOTE_PASSWORD_RESET=true NODE_ENV=production \
+pnpm db:reset-password
+```
+
 ## 9. Deployment
+
+Production is same-origin, so `PUBLIC_API_BASE_URL` must be empty and `PUBLIC_TURNSTILE_SITEKEY` must be a real site key:
 
 ```bash
 cd apps/backend
-pnpm deploy        # wrangler deploy --minify
+PUBLIC_API_BASE_URL= PUBLIC_TURNSTILE_SITEKEY='<real-site-key>' pnpm deploy
 ```
 
 The backend serves the built frontend from `../frontend/dist` as Cloudflare Assets with SPA fallback. Production releases use the protected workflow and runbook in [`docs/deployment/production-release.md`](./docs/deployment/production-release.md).
+
+### HMAC Secret Rotation
+
+`HMAC_SECRET` and every comma-separated value in `PREVIOUS_HMAC_SECRETS` must be standard base64 that decodes to at least 32 bytes. Generate a new key with `openssl rand -base64 32`.
+
+Earlier releases treated the secret as literal UTF-8. To preserve existing participation hashes, encode the old value's exact bytes without a trailing newline:
+
+```bash
+printf %s "$EXISTING_HMAC_SECRET" | base64 | tr -d '\n'
+```
+
+Use that output as `HMAC_SECRET`, or retain it in `PREVIOUS_HMAC_SECRETS` while installing a new current key. Keep every key used by election participation records that must remain enforceable; losing one can let a hard-deleted and recreated voter evade the durable hash check.
 
 ## 10. Troubleshooting Backblaze
 
