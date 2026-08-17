@@ -219,7 +219,7 @@ cd apps/backend
 PUBLIC_API_BASE_URL= PUBLIC_TURNSTILE_SITEKEY='<real-site-key>' pnpm deploy
 ```
 
-The backend serves the built frontend from `../frontend/dist` as Cloudflare Assets with SPA fallback. Production releases use the protected workflow and runbook in [`docs/deployment/production-release.md`](./docs/deployment/production-release.md).
+The backend serves the built frontend from `../frontend/dist` as Cloudflare Assets with SPA fallback. Production deploys are continuous via **Cloudflare Workers Builds**: every push and pull request gets a unique preview URL, and pushes to the production branch deploy to the stable production Worker. See the runbook in [`docs/deployment/production-release.md`](./docs/deployment/production-release.md).
 
 ### HMAC Secret Rotation
 

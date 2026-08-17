@@ -1,5 +1,5 @@
 const NAVIGATION_METHODS = new Set(["GET", "HEAD"]);
-const EXCLUDED_PATHS = new Set(["/docs", "/reference", "/health"]);
+const EXCLUDED_PATHS = new Set(["/docs", "/reference", "/health", "/health/ready"]);
 
 interface NavigationRequest {
   method: string;

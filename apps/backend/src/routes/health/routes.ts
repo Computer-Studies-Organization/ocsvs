@@ -6,6 +6,10 @@ const HealthResponseSchema = z.object({
   status: z.literal("ok"),
 });
 
+const ReadinessUnavailableSchema = z.object({
+  status: z.literal("unavailable"),
+});
+
 export const healthRoute = createRoute({
   method: "get",
   path: "/health",
@@ -13,5 +17,19 @@ export const healthRoute = createRoute({
   summary: "Check Worker availability",
   responses: {
     [httpStatusCodes.OK]: jsonContent(HealthResponseSchema, "Worker is healthy"),
+  },
+});
+
+export const readinessRoute = createRoute({
+  method: "get",
+  path: "/health/ready",
+  tags: ["Health"],
+  summary: "Check Worker dependencies",
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(HealthResponseSchema, "Worker dependencies are ready"),
+    [httpStatusCodes.SERVICE_UNAVAILABLE]: jsonContent(
+      ReadinessUnavailableSchema,
+      "A Worker dependency is unavailable",
+    ),
   },
 });

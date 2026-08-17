@@ -56,6 +56,8 @@ const onError: ErrorHandler = (err, c) => {
     return err.getResponse();
   }
 
+  c.var.logger.error({ err }, "Unhandled request error");
+
   // For all other errors, return a generic 500 response
   // You can customize this as needed
   const env = c.env?.NODE_ENV || process.env.NODE_ENV;

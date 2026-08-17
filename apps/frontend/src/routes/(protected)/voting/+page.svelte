@@ -24,6 +24,7 @@
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { formatTimestamp } from '$lib/utils'
   import { addToast } from '$lib/stores/toast.svelte'
+  import { captureException } from '$lib/telemetry'
   import { authStore } from '$lib/stores/auth.svelte'
   import { UserRole, type TPartyList, type TPosition, type TVotingCandidate, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
@@ -67,6 +68,7 @@
       await invalidate('app:voting')
     }
     catch (e) {
+      captureException(e)
       console.error('Failed to auto-refresh voting state', e)
     }
   }

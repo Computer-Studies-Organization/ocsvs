@@ -92,6 +92,30 @@ describe("production asset routing", () => {
     expect(assets.fetch).toHaveBeenCalledOnce();
   });
 
+  it("keeps browser navigation to readiness as a JSON response", async () => {
+    const assets = buildAssets();
+
+    const response = await app.request(
+      "https://cso-voting.example.workers.dev/health/ready",
+      {
+        headers: {
+          Accept: "text/html",
+          "Sec-Fetch-Mode": "navigate",
+        },
+      },
+      {
+        ASSETS: assets,
+        NODE_ENV: "test",
+        LOG_LEVEL: "silent",
+        TURSO_DATABASE_URL: "file::memory:",
+      } as any,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok" });
+    expect(assets.fetch).not.toHaveBeenCalled();
+  });
+
   it("serves the SPA before the overlapping election API routes on navigation", async () => {
     const assets = buildAssets();
 

@@ -8,6 +8,7 @@ export const NOT_FOUND = 404;
 export const NOT_MODIFIED = 304;
 export const OK = 200;
 export const PAYLOAD_TOO_LARGE = 413;
+export const SERVICE_UNAVAILABLE = 503;
 export const TOO_MANY_REQUESTS = 429;
 export const UNAUTHORIZED = 401;
 export const UNPROCESSABLE_ENTITY = 422;

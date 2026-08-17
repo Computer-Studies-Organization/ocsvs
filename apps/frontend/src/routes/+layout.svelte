@@ -5,28 +5,45 @@
   import { navigating } from '$app/stores'
   import ToastContainer from '$lib/components/ui/toast-container.svelte'
   import { installViewportTracking } from '$lib/keyboard-viewport'
+  import { captureException } from '$lib/telemetry'
   import '../app.css'
 
   const { children } = $props()
+  let authBootstrapError = $state(false)
 
   onMount(() => installViewportTracking())
 
-  onMount(async () => {
+  async function initializeAuth() {
+    authBootstrapError = false
+    authStore.set({ user: null, loading: true })
     try {
       const user = await me()
       authStore.set({ user, loading: false })
     }
-    catch {
+    catch (error) {
+      captureException(error)
+      console.error('Failed to initialize session', error)
       authStore.set({ user: null, loading: false })
+      authBootstrapError = true
     }
-  })
+  }
+
+  onMount(() => { void initializeAuth() })
 </script>
 
 {#if $navigating}
   <div class="nav-progress-bar" aria-hidden="true"></div>
 {/if}
 
-{@render children()}
+{#if authBootstrapError}
+  <main class="auth-bootstrap-error" role="alert">
+    <h1>We couldn't verify your session</h1>
+    <p>Check your connection and try again.</p>
+    <button type="button" onclick={() => { void initializeAuth() }}>Retry</button>
+  </main>
+{:else}
+  {@render children()}
+{/if}
 <ToastContainer />
 
 <style>
@@ -46,6 +63,23 @@
     box-shadow: 0 0 8px oklch(0.65 0.20 280 / 0.5);
     transform-origin: left;
     animation: progress 8s cubic-bezier(0.1, 0.8, 0.1, 1) forwards;
+  }
+
+  .auth-bootstrap-error {
+    display: grid;
+    min-height: 60vh;
+    place-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .auth-bootstrap-error button {
+    justify-self: center;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: oklch(0.55 0.15 250);
+    color: white;
   }
 
   @keyframes progress {
