@@ -14,6 +14,7 @@
     "clean": "pnpm -r clean",
     "dev:frontend": "pnpm --filter @cso-voting/frontend dev",
     "dev:backend": "pnpm --filter @cso-voting/backend dev",
+    "dev:offline": "node scripts/dev-offline.mjs",
     "build:frontend": "pnpm --filter @cso-voting/frontend build"
   },
   "engines": {

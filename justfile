@@ -22,6 +22,10 @@ dev-fe:
 dev-be:
     pnpm dev:backend
 
+# Run both apps against the local Turso dev server without external services
+dev-offline:
+    pnpm dev:offline
+
 # Run typecheck, lint, and test (matches CI order)
 check: typecheck lint test
 

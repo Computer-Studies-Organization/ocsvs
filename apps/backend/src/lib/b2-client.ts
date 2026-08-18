@@ -389,8 +389,6 @@ export class InMemoryImageStorage implements ImageStorage {
       this.files.delete(previous.key);
       this.files.delete(previous.url);
     }
-    this.files.delete(baseUrl);
-
     const stored = { key, url, data: buffer, type: file.type, name: file.name };
     this.files.set(key, stored);
     this.files.set(url, stored);
