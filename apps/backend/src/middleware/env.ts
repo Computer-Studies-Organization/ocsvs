@@ -32,6 +32,7 @@ import { z } from "zod";
  * - TURSO_DATABASE_URL: Must be a non-empty string (supports libSQL URLs, local file paths, or :memory:)
  *
  * Optional variables:
+ * - OFFLINE_DEV: Enables the explicit local-only development profile (defaults to false)
  * - TURSO_AUTH_TOKEN: Optional authorization token for Turso
  * - B2_APPLICATION_KEY_ID: Optional Backblaze B2 application key ID (required at runtime for image endpoints)
  * - B2_APPLICATION_KEY: Optional Backblaze B2 application key (required at runtime for image endpoints)
@@ -49,6 +50,11 @@ const EnvSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     TURSO_DATABASE_URL: z.string().min(1),
+    OFFLINE_DEV: z.preprocess((val) => {
+      if (val === "true" || val === true) return true;
+      if (val === "false" || val === false) return false;
+      return val;
+    }, z.boolean().default(false)),
     TURSO_AUTH_TOKEN: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
     B2_APPLICATION_KEY_ID: z.preprocess(
       (val) => (val === "" ? undefined : val),
@@ -87,6 +93,20 @@ const EnvSchema = z
     }, z.array(z.string()).optional().default([])),
   })
   .superRefine((data, ctx) => {
+    if (data.OFFLINE_DEV && data.NODE_ENV === "production") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "OFFLINE_DEV is not allowed in production",
+        path: ["OFFLINE_DEV"],
+      });
+    }
+    if (data.OFFLINE_DEV && !isLocalDatabaseUrl(data.TURSO_DATABASE_URL)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "OFFLINE_DEV requires a local TURSO_DATABASE_URL",
+        path: ["TURSO_DATABASE_URL"],
+      });
+    }
     if (data.NODE_ENV === "production" && !data.TURNSTILE_SECRET_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -148,6 +168,18 @@ export function isValidSecret(secret: string): boolean {
   try {
     decodeHmacSecret(secret);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+export function isLocalDatabaseUrl(url: string): boolean {
+  if (url === ":memory:" || url.startsWith("file:")) return true;
+
+  try {
+    return LOCAL_DATABASE_HOSTS.has(new URL(url).hostname);
   } catch {
     return false;
   }

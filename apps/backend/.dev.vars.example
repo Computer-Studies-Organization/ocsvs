@@ -3,6 +3,7 @@
 
 NODE_ENV=development
 LOG_LEVEL=debug
+OFFLINE_DEV=false
 
 # Backblaze B2 (Candidate avatar storage)
 B2_APPLICATION_KEY_ID=your_b2_key_id
@@ -11,6 +12,11 @@ B2_APPLICATION_KEY=your_b2_key
 # Database (Turso / libSQL)
 TURSO_DATABASE_URL=file:./local.db
 TURSO_AUTH_TOKEN=
+
+# Offline Worker development uses the local Turso HTTP server instead:
+#   OFFLINE_DEV=true
+#   TURSO_DATABASE_URL=http://127.0.0.1:8080
+#   TURSO_AUTH_TOKEN=offline-local-token
 
 # Base64-encoded pepper for deterministic voter participation HMAC hashes.
 # Generate a new key using: openssl rand -base64 32

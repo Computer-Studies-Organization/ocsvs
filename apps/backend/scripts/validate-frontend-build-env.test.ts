@@ -23,6 +23,7 @@ describe("validateFrontendBuildEnv", () => {
       validateFrontendBuildEnv({
         apiBaseUrl: "http://localhost:8787",
         turnstileSitekey: "real-sitekey",
+        offlineDev: false,
       }),
     ).toThrow("PUBLIC_API_BASE_URL must be empty");
   });
@@ -32,6 +33,7 @@ describe("validateFrontendBuildEnv", () => {
       validateFrontendBuildEnv({
         apiBaseUrl: "",
         turnstileSitekey: "1x00000000000000000000AA",
+        offlineDev: false,
       }),
     ).toThrow("PUBLIC_TURNSTILE_SITEKEY");
   });
@@ -41,8 +43,19 @@ describe("validateFrontendBuildEnv", () => {
       validateFrontendBuildEnv({
         apiBaseUrl: "",
         turnstileSitekey: "real-sitekey",
+        offlineDev: false,
       }),
     ).not.toThrow();
+  });
+
+  it("rejects an offline frontend build for production", () => {
+    expect(() =>
+      validateFrontendBuildEnv({
+        apiBaseUrl: "",
+        turnstileSitekey: "real-sitekey",
+        offlineDev: true,
+      }),
+    ).toThrow("PUBLIC_OFFLINE_DEV is not allowed in production builds");
   });
 
   it("validates values loaded from the frontend env files when process env omits them", () => {
@@ -76,6 +89,7 @@ describe("validateFrontendBuildEnv", () => {
       expect(buildEnv).toEqual({
         apiBaseUrl: "",
         turnstileSitekey: "real-sitekey",
+        offlineDev: false,
       });
       expect(() => validateFrontendBuildEnv(buildEnv)).not.toThrow();
     } finally {

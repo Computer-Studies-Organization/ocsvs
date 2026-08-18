@@ -65,6 +65,35 @@
         },
       ],
     },
+    "offline": {
+      "assets": {
+        "directory": "../frontend/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "404-page",
+        "run_worker_first": true,
+      },
+      "secrets": {
+        "required": [],
+      },
+      "vars": {
+        "NODE_ENV": "development",
+        "LOG_LEVEL": "debug",
+        "OFFLINE_DEV": "true",
+        "TURSO_DATABASE_URL": "http://127.0.0.1:8080",
+        "TURSO_AUTH_TOKEN": "offline-local-token",
+        "HMAC_SECRET": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "B2_BUCKET_NAME": "cso-voting-candidates",
+        "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
+        "B2_PUBLIC_ACCESS": "false",
+      },
+      "ratelimits": [
+        {
+          "name": "LOGIN_IP_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 30, "period": 60 },
+        },
+      ],
+    },
   },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 }

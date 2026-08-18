@@ -1,18 +1,6 @@
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+import { isLocalDatabaseUrl } from "../src/middleware/env";
+
 type SeedEnvironment = Readonly<Record<string, string | undefined>>;
-
-function isLocalDatabaseUrl(url: string): boolean {
-  if (url === ":memory:" || url.startsWith("file:")) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(url);
-    return LOCAL_DATABASE_HOSTS.has(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Returns a database URL only when seeding is explicitly safe for the target.

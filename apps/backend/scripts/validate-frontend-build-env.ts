@@ -9,6 +9,7 @@ export const DUMMY_TURNSTILE_SITEKEY = "1x00000000000000000000AA";
 export interface FrontendBuildEnv {
   apiBaseUrl: string;
   turnstileSitekey: string;
+  offlineDev: boolean;
 }
 
 interface LoadFrontendBuildEnvOptions {
@@ -46,10 +47,19 @@ export function loadFrontendBuildEnv({
   return {
     apiBaseUrl: resolvedEnv.PUBLIC_API_BASE_URL ?? "",
     turnstileSitekey: resolvedEnv.PUBLIC_TURNSTILE_SITEKEY ?? "",
+    offlineDev: resolvedEnv.PUBLIC_OFFLINE_DEV === "true",
   };
 }
 
-export function validateFrontendBuildEnv({ apiBaseUrl, turnstileSitekey }: FrontendBuildEnv): void {
+export function validateFrontendBuildEnv({
+  apiBaseUrl,
+  turnstileSitekey,
+  offlineDev = false,
+}: FrontendBuildEnv): void {
+  if (offlineDev) {
+    throw new Error("PUBLIC_OFFLINE_DEV is not allowed in production builds");
+  }
+
   if (apiBaseUrl !== "") {
     throw new Error("PUBLIC_API_BASE_URL must be empty for same-origin production builds");
   }
