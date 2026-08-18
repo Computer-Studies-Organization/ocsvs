@@ -11,6 +11,10 @@ vi.mock("@/lib/create-app", async (importOriginal) => {
       const app = new OpenAPIHono({ strict: false });
       // Inject logger so handlers that access c.var.logger don't throw
       app.use("*", async (c: any, next: any) => {
+        c.env ??= {};
+        if (!c.env.NODE_ENV) {
+          Object.assign(c.env, { NODE_ENV: "test", TURNSTILE_SECRET_KEY: "test-secret" });
+        }
         c.set("logger", mockLogger);
         await next();
       });
@@ -505,6 +509,78 @@ describe("auth Routes", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as any;
     expect(body.message).toBe("Verification service temporarily unavailable");
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
+  });
+
+  it("logs in offline without a Turnstile token or network request", async () => {
+    mockFindByStudentId.mockResolvedValue({
+      id: "test-user-id",
+      email: "test@example.com",
+      username: "testuser",
+      role: "user",
+      password_hash: "hashed-password",
+      deletedAt: null,
+    });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockCreateSession.mockResolvedValue({
+      id: "session-id",
+      expiresAt: Date.now() + 86400000,
+    });
+
+    const res = await router.request(
+      "/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: "C23-01-1234-CSA001",
+          password: "password123",
+        }),
+      },
+      { NODE_ENV: "development", OFFLINE_DEV: true },
+    );
+
+    expect(res.status).toBe(200);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an online login without a Turnstile token before fetching", async () => {
+    const res = await router.request(
+      "/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: "C23-01-1234-CSA001",
+          password: "password123",
+        }),
+      },
+      { NODE_ENV: "development", TURNSTILE_SECRET_KEY: "test-secret" },
+    );
+
+    expect(res.status).toBe(400);
+    expect((await res.json()) as any).toMatchObject({
+      message: "Security verification failed. Please try again.",
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not allow offline bypass in production", async () => {
+    const res = await router.request(
+      "/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: "C23-01-1234-CSA001",
+          password: "password123",
+        }),
+      },
+      { NODE_ENV: "production", OFFLINE_DEV: true },
+    );
+
+    expect(res.status).toBe(500);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(mockFindByStudentId).not.toHaveBeenCalled();
   });
 });

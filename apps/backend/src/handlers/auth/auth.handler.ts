@@ -20,56 +20,65 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   c.var.logger.info({ studentNumber: maskStudentId(studentNumber) }, "Login attempt");
 
-  let secretKey = c.env?.TURNSTILE_SECRET_KEY;
-  if (!secretKey) {
-    if (c.env?.NODE_ENV === "production") {
-      c.var.logger.error("TURNSTILE_SECRET_KEY is not configured in production");
+  const offlineDev = String(c.env?.OFFLINE_DEV) === "true" && c.env?.NODE_ENV !== "production";
+
+  if (!offlineDev) {
+    const secretKey = c.env?.TURNSTILE_SECRET_KEY;
+    if (!secretKey) {
+      c.var.logger.error("TURNSTILE_SECRET_KEY is not configured");
       return c.json(
         { message: ERROR_MESSAGES.VERIFICATION_SERVICE_UNAVAILABLE },
         httpStatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
-    secretKey = "1x0000000000000000000000000000000AA";
-  }
-  try {
-    const bodyParams = new URLSearchParams({
-      secret: secretKey,
-      response: turnstileToken,
-    });
-    const isLocalhostIp =
-      !clientIp ||
-      clientIp === "unknown" ||
-      clientIp === "::1" ||
-      clientIp === "localhost" ||
-      clientIp.startsWith("127.");
 
-    if (!isLocalhostIp) {
-      bodyParams.append("remoteip", clientIp);
-    }
-
-    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      signal: AbortSignal.timeout(10_000),
-      body: bodyParams,
-    });
-    const result = (await response.json()) as { success: boolean; "error-codes"?: string[] };
-    if (!result.success) {
-      c.var.logger.warn(
-        { ip: clientIp, studentNumber: maskStudentId(studentNumber), turnstileResult: result },
-        "Turnstile verification failed",
-      );
+    if (!turnstileToken?.trim()) {
       return c.json(
         { message: ERROR_MESSAGES.SECURITY_VERIFICATION_FAILED },
         httpStatusCodes.BAD_REQUEST,
       );
     }
-  } catch (err) {
-    c.var.logger.error(err, "Turnstile service verification error");
-    return c.json(
-      { message: ERROR_MESSAGES.VERIFICATION_SERVICE_UNAVAILABLE },
-      httpStatusCodes.INTERNAL_SERVER_ERROR,
-    );
+
+    try {
+      const bodyParams = new URLSearchParams({
+        secret: secretKey,
+        response: turnstileToken,
+      });
+      const isLocalhostIp =
+        !clientIp ||
+        clientIp === "unknown" ||
+        clientIp === "::1" ||
+        clientIp === "localhost" ||
+        clientIp.startsWith("127.");
+
+      if (!isLocalhostIp) {
+        bodyParams.append("remoteip", clientIp);
+      }
+
+      const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        signal: AbortSignal.timeout(10_000),
+        body: bodyParams,
+      });
+      const result = (await response.json()) as { success: boolean; "error-codes"?: string[] };
+      if (!result.success) {
+        c.var.logger.warn(
+          { ip: clientIp, studentNumber: maskStudentId(studentNumber), turnstileResult: result },
+          "Turnstile verification failed",
+        );
+        return c.json(
+          { message: ERROR_MESSAGES.SECURITY_VERIFICATION_FAILED },
+          httpStatusCodes.BAD_REQUEST,
+        );
+      }
+    } catch (err) {
+      c.var.logger.error(err, "Turnstile service verification error");
+      return c.json(
+        { message: ERROR_MESSAGES.VERIFICATION_SERVICE_UNAVAILABLE },
+        httpStatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   try {

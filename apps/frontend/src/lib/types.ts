@@ -51,7 +51,7 @@ export interface TUsersData {
 export interface TLoginUser {
   studentNumber: string;
   password: string;
-  turnstileToken: string;
+  turnstileToken?: string;
 }
 
 export interface TCandidate {

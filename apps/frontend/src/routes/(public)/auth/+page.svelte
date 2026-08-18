@@ -1,7 +1,7 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
   import { login } from '$lib/api/auth'
-  import { PUBLIC_TURNSTILE_SITEKEY } from '$env/static/public'
+  import { PUBLIC_OFFLINE_DEV, PUBLIC_TURNSTILE_SITEKEY } from '$env/static/public'
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
   import { authStore } from '$lib/stores/auth.svelte'
@@ -22,6 +22,7 @@
   let turnstileToken = $state('')
   let turnstileWidgetId = $state<string | null>(null)
   let container = $state<HTMLElement | null>(null)
+  const offlineDev = PUBLIC_OFFLINE_DEV === 'true'
 
   // Login form state
   const loginData = $state({
@@ -33,10 +34,12 @@
   const isLoginValid = $derived(
     loginData.studentNumber.trim().length > 0 && 
     loginData.password.trim().length > 0 && 
-    turnstileToken.trim().length > 0
+    (offlineDev || turnstileToken.trim().length > 0)
   )
 
   onMount(() => {
+    if (offlineDev) return
+
     let checkTurnstile: ReturnType<typeof setInterval> | null = null;
     let attempts = 0;
     const maxAttempts = 100; // 10 seconds
@@ -101,7 +104,7 @@
       const userData = await login({
         studentNumber: loginData.studentNumber,
         password: loginData.password,
-        turnstileToken,
+        ...(offlineDev ? {} : { turnstileToken }),
       })
       appCache.invalidate()
       authStore.set({ user: userData, loading: false })
@@ -114,7 +117,7 @@
     }
     catch (err: any) {
       message = err.message || 'Login failed'
-      if (turnstileWidgetId && (window as any).turnstile) {
+      if (!offlineDev && turnstileWidgetId && (window as any).turnstile) {
         (window as any).turnstile.reset(turnstileWidgetId);
         turnstileToken = '';
       }
@@ -126,7 +129,9 @@
 </script>
 
 <svelte:head>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  {#if !offlineDev}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  {/if}
 </svelte:head>
 
 <div class='min-h-[100dvh] w-full flex flex-col lg:flex-row bg-slate-950 text-slate-100'>
@@ -217,9 +222,11 @@
           </div>
         </div>
 
-        <div class="flex justify-center py-2">
-          <div bind:this={container}></div>
-        </div>
+        {#if !offlineDev}
+          <div class="flex justify-center py-2">
+            <div bind:this={container}></div>
+          </div>
+        {/if}
 
         <button
           type='submit'

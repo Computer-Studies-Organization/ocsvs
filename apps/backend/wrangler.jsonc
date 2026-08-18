@@ -55,6 +55,7 @@
         "B2_BUCKET_NAME": "cso-voting-candidates",
         "B2_PUBLIC_BASE_URL": "https://f003.backblazeb2.com/file",
         "B2_PUBLIC_ACCESS": "false",
+        "TURNSTILE_SECRET_KEY": "1x0000000000000000000000000000000AA",
         "HMAC_SECRET": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       },
       "ratelimits": [
