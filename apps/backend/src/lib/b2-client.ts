@@ -16,6 +16,46 @@ const MAGIC_BYTES: Readonly<
   "image/png": [[0x89, 0x50, 0x4e, 0x47]],
 };
 
+export function validateMagicBytes(
+  buffer: Buffer,
+  declaredType: string,
+): { valid: boolean; error?: string } {
+  if (declaredType === "image/webp") {
+    if (buffer.length < 12) {
+      return {
+        valid: false,
+        error: `File content does not match declared type ${declaredType}`,
+      };
+    }
+    const isRiff =
+      buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+    const isWebp =
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    if (!isRiff || !isWebp) {
+      return {
+        valid: false,
+        error: `File content does not match declared type ${declaredType}`,
+      };
+    }
+    return { valid: true };
+  }
+
+  const expected = MAGIC_BYTES[declaredType as keyof typeof MAGIC_BYTES];
+  if (!expected) {
+    return { valid: false, error: `Unsupported file type: ${declaredType}` };
+  }
+
+  const matches = expected.some((sig) => sig.every((byte, i) => buffer[i] === byte));
+  if (!matches) {
+    return {
+      valid: false,
+      error: `File content does not match declared type ${declaredType}`,
+    };
+  }
+
+  return { valid: true };
+}
+
 export interface B2Config {
   applicationKeyId: string;
   applicationKey: string;
@@ -105,40 +145,7 @@ export class B2Client {
    * magic bytes (file signatures). Catches spoofed Content-Type headers.
    */
   validateMagicBytes(buffer: Buffer, declaredType: string): { valid: boolean; error?: string } {
-    if (declaredType === "image/webp") {
-      if (buffer.length < 12) {
-        return {
-          valid: false,
-          error: `File content does not match declared type ${declaredType}`,
-        };
-      }
-      const isRiff =
-        buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
-      const isWebp =
-        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
-      if (!isRiff || !isWebp) {
-        return {
-          valid: false,
-          error: `File content does not match declared type ${declaredType}`,
-        };
-      }
-      return { valid: true };
-    }
-
-    const expected = MAGIC_BYTES[declaredType as keyof typeof MAGIC_BYTES];
-    if (!expected) {
-      return { valid: false, error: `Unsupported file type: ${declaredType}` };
-    }
-
-    const matches = expected.some((sig) => sig.every((byte, i) => buffer[i] === byte));
-    if (!matches) {
-      return {
-        valid: false,
-        error: `File content does not match declared type ${declaredType}`,
-      };
-    }
-
-    return { valid: true };
+    return validateMagicBytes(buffer, declaredType);
   }
 
   async uploadImage(
@@ -220,6 +227,13 @@ export function resolveCandidateImageUrl(
   requestUrl: string,
 ): string | null {
   if (!imageUrl) return null;
+  if (imageUrl.startsWith("/candidates/")) {
+    try {
+      return new URL(imageUrl, requestUrl).href;
+    } catch {
+      return imageUrl;
+    }
+  }
   const b2BucketName = env.B2_BUCKET_NAME;
   const publicAccess = env.B2_PUBLIC_ACCESS === "true" || env.B2_PUBLIC_ACCESS === true;
   if (publicAccess || !b2BucketName) return imageUrl;
@@ -342,7 +356,10 @@ export class B2ImageStorage implements ImageStorage {
 }
 
 export class InMemoryImageStorage implements ImageStorage {
-  private files = new Map<string, { data: Buffer; type: string; name: string }>();
+  private files = new Map<
+    string,
+    { key: string; url: string; data: Buffer; type: string; name: string }
+  >();
 
   async upload(candidateId: string, file: File): Promise<UploadResult> {
     if (!ALLOWED_TYPES.includes(file.type as any)) {
@@ -356,14 +373,7 @@ export class InMemoryImageStorage implements ImageStorage {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    // Create a temporary B2Client instance to use its validation logic locally
-    const validator = new B2Client({
-      applicationKeyId: "mock",
-      applicationKey: "mock",
-      bucketName: "mock",
-      publicBaseUrl: "https://mock.b2.com",
-    });
-    const magicCheck = validator.validateMagicBytes(buffer, file.type);
+    const magicCheck = validateMagicBytes(buffer, file.type);
     if (!magicCheck.valid) {
       throw new ImageValidationError(magicCheck.error || "Unsupported media type");
     }
@@ -372,20 +382,36 @@ export class InMemoryImageStorage implements ImageStorage {
     const parts = file.name.split(".");
     const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
     const key = `candidates/${candidateId}/${uuid}.${ext}`;
-    const url = `https://mock.b2.com/mock-bucket/${key}`;
+    const baseUrl = `/candidates/${candidateId}/image`;
+    const url = `${baseUrl}?v=${uuid}`;
+    const previous = this.files.get(baseUrl);
+    if (previous) {
+      this.files.delete(previous.key);
+      this.files.delete(previous.url);
+    }
+    this.files.delete(baseUrl);
 
-    this.files.set(key, { data: buffer, type: file.type, name: file.name });
+    const stored = { key, url, data: buffer, type: file.type, name: file.name };
+    this.files.set(key, stored);
+    this.files.set(url, stored);
+    this.files.set(baseUrl, stored);
     return { url, key };
   }
 
   async delete(imageUrl: string): Promise<void> {
     const key = this.parseKeyFromUrl(imageUrl);
-    this.files.delete(key);
+    const file = this.files.get(imageUrl) ?? this.files.get(key);
+    if (file) {
+      this.files.delete(file.key);
+      this.files.delete(file.url);
+      const baseUrl = file.url.split("?", 1)[0];
+      if (this.files.get(baseUrl) === file) this.files.delete(baseUrl);
+    }
   }
 
   async download(imageUrl: string): Promise<DownloadedImage> {
     const key = this.parseKeyFromUrl(imageUrl);
-    const file = this.files.get(key);
+    const file = this.files.get(imageUrl) ?? this.files.get(key);
     if (!file) {
       throw new Error(`File not found: ${key}`);
     }
@@ -412,18 +438,21 @@ let b2ImageStorageInstance: B2ImageStorage | null = null;
 
 export function getImageStorage(env: {
   NODE_ENV?: string;
+  OFFLINE_DEV?: boolean | string;
   B2_APPLICATION_KEY_ID?: string;
   B2_APPLICATION_KEY?: string;
   B2_BUCKET_NAME?: string;
   B2_PUBLIC_BASE_URL?: string;
 }): ImageStorage {
+  const offlineDev =
+    env.NODE_ENV !== "production" && (env.OFFLINE_DEV === true || env.OFFLINE_DEV === "true");
   const hasCredentials =
     env.B2_APPLICATION_KEY_ID &&
     env.B2_APPLICATION_KEY &&
     env.B2_BUCKET_NAME &&
     env.B2_PUBLIC_BASE_URL;
 
-  if (!hasCredentials) {
+  if (offlineDev || !hasCredentials) {
     if (env.NODE_ENV === "production") {
       throw new Error("Missing required Backblaze B2 environment variables in production");
     }

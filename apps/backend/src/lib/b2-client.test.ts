@@ -7,11 +7,14 @@ import {
   InMemoryImageStorage,
   B2ImageStorage,
   _resetImageStorageForTest,
+  resolveCandidateImageUrl,
 } from "./b2-client";
 
+const { mockB2Constructor } = vi.hoisted(() => ({ mockB2Constructor: vi.fn() }));
+
 // Mock the B2 SDK
-vi.mock("backblaze-b2", () => ({
-  default: vi.fn().mockImplementation(() => ({
+vi.mock("backblaze-b2", () => {
+  mockB2Constructor.mockImplementation(() => ({
     authorize: vi.fn().mockResolvedValue({ data: {} }),
     listBuckets: vi.fn().mockResolvedValue({
       data: {
@@ -30,13 +33,15 @@ vi.mock("backblaze-b2", () => ({
       },
     }),
     deleteFileVersion: vi.fn().mockResolvedValue({ data: {} }),
-  })),
-}));
+  }));
+  return { default: mockB2Constructor };
+});
 
 describe("B2Client", () => {
   let client: B2Client;
 
   beforeEach(() => {
+    mockB2Constructor.mockClear();
     client = new B2Client({
       applicationKeyId: "test-key-id",
       applicationKey: "test-key",
@@ -164,6 +169,67 @@ describe("getImageStorage", () => {
   it("should return B2ImageStorage when all credentials are provided", () => {
     const storage = getImageStorage(validConfig);
     expect(storage).toBeInstanceOf(B2ImageStorage);
+  });
+
+  it("should force in-memory storage in offline development", () => {
+    _resetImageStorageForTest();
+    mockB2Constructor.mockClear();
+    const storage = getImageStorage({ ...validConfig, OFFLINE_DEV: true });
+    expect(storage).toBeInstanceOf(InMemoryImageStorage);
+    expect(mockB2Constructor).not.toHaveBeenCalled();
+  });
+
+  it("should expose offline uploads through the local candidate image route", async () => {
+    const storage = getImageStorage({ ...validConfig, OFFLINE_DEV: true });
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "image.jpg", {
+      type: "image/jpeg",
+    });
+
+    const uploaded = await storage.upload("candidate-123", file);
+
+    expect(uploaded.url).toMatch(/^\/candidates\/candidate-123\/image\?v=[0-9a-f-]+$/);
+    await expect(storage.download(uploaded.url)).resolves.toMatchObject({
+      contentType: "image/jpeg",
+    });
+    await expect(storage.delete(uploaded.url)).resolves.toBeUndefined();
+    await expect(storage.download(uploaded.url)).rejects.toThrow("File not found");
+  });
+
+  it("should version local image URLs when replacing an upload", async () => {
+    const storage = new InMemoryImageStorage();
+    const first = await storage.upload(
+      "candidate-123",
+      new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "first.jpg", {
+        type: "image/jpeg",
+      }),
+    );
+    const second = await storage.upload(
+      "candidate-123",
+      new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "second.png", {
+        type: "image/png",
+      }),
+    );
+
+    expect(second.url).not.toBe(first.url);
+    await expect(storage.download(first.url)).rejects.toThrow("File not found");
+    await expect(storage.download(second.url)).resolves.toMatchObject({
+      contentType: "image/png",
+    });
+  });
+
+  it("should resolve local candidate image URLs to the API origin", () => {
+    expect(
+      resolveCandidateImageUrl(
+        "/candidates/candidate-123/image?v=version",
+        "candidate-123",
+        {
+          B2_BUCKET_NAME: "bucket",
+          B2_PUBLIC_ACCESS: false,
+          B2_PUBLIC_BASE_URL: "https://b2.example/file",
+        },
+        "http://localhost:8787/candidates/candidate-123",
+      ),
+    ).toBe("http://localhost:8787/candidates/candidate-123/image?v=version");
   });
 
   it("should return InMemoryImageStorage when credentials are missing in non-production", () => {
