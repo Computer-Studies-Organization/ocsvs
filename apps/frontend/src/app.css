@@ -14,8 +14,15 @@ html {
   /* Non-standard Tailwind shade used across forms, cards, and tables */
   --color-slate-850: oklch(0.222 0.016 270);
 
-  /* Type family. Loaded via app.html; referenced by utilities. */
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Type family. Prefer an installed font, then Google Fonts, then system monospace. */
+  --font-mono:
+    "JetBrains Mono Local", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Local";
+  src: local("JetBrains Mono"), local("JetBrains Mono Regular"), local("JetBrainsMono-Regular");
 }
 
 @utility no-scrollbar {
