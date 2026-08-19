@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/offline-test";
 import { TEST_USERS } from "../../fixtures/db-setup";
 
 test.describe("Authentication - Login Page", () => {
@@ -8,6 +8,13 @@ test.describe("Authentication - Login Page", () => {
     await expect(page.locator("#studentNumber")).toBeVisible();
     await expect(page.locator("#password")).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
+  });
+
+  test("offline login omits Turnstile and keeps the form usable", async ({ page }) => {
+    await page.goto("/auth");
+    await expect(page.locator('script[src*="challenges.cloudflare.com"]')).toHaveCount(0);
+    await expect(page.locator("#studentNumber")).toBeEditable();
+    await expect(page.locator("#password")).toBeEditable();
   });
 
   test("backend login API validates incorrect credentials", async ({ request }) => {

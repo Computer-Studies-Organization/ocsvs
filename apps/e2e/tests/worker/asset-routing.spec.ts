@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures/offline-test";
 
 test.describe("Worker asset routing", () => {
   test("serves the SPA shell and health endpoint from one origin", async ({ page, request }) => {

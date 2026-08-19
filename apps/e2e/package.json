@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "export PUBLIC_API_BASE_URL=http://localhost:8787 PUBLIC_TURNSTILE_SITEKEY=1x00000000000000000000AA && pnpm --dir ../frontend build && playwright test",
+    "test": "export OFFLINE_DEV=true TURSO_DATABASE_URL=http://127.0.0.1:8080 TURSO_AUTH_TOKEN=offline-local-token PUBLIC_API_BASE_URL= PUBLIC_OFFLINE_DEV=true PUBLIC_SENTRY_DSN= && pnpm --dir ../frontend build && playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"
   },

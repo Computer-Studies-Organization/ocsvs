@@ -6,7 +6,44 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, "../../backend/.env") });
+export const OFFLINE_DATABASE_URL = "http://127.0.0.1:8080";
+export const OFFLINE_DATABASE_TOKEN = "offline-local-token";
+
+if (process.env.OFFLINE_DEV === "false") {
+  dotenv.config({ path: path.join(__dirname, "../../backend/.env") });
+}
+
+function getDatabaseUrl(): string {
+  const offline = process.env.OFFLINE_DEV !== "false";
+  const dbUrl = process.env.TURSO_DATABASE_URL?.trim() || OFFLINE_DATABASE_URL;
+
+  if (offline) {
+    try {
+      const parsed = new URL(dbUrl);
+      const isLocal =
+        parsed.protocol === "http:" &&
+        parsed.port === "8080" &&
+        ["localhost", "127.0.0.1", "[::1]", "::1"].includes(parsed.hostname);
+      if (!isLocal) throw new Error();
+    } catch {
+      throw new Error(
+        `Offline E2E requires a local HTTP database at ${OFFLINE_DATABASE_URL}; refusing ${dbUrl}`,
+      );
+    }
+  }
+
+  return dbUrl;
+}
+
+export function createTestDatabaseClient() {
+  const url = getDatabaseUrl();
+  return createClient({
+    url,
+    authToken:
+      process.env.TURSO_AUTH_TOKEN ||
+      (process.env.OFFLINE_DEV !== "false" ? OFFLINE_DATABASE_TOKEN : undefined),
+  });
+}
 
 const ITERATIONS = 100_000;
 const KEY_LENGTH = 256;
@@ -83,12 +120,14 @@ export const TEST_USERS = {
   },
 };
 
+export const DRAFT_CANDIDATE = {
+  electionId: "e2e-draft-election-id",
+  positionId: "e2e-draft-position-president",
+  candidateId: "e2e-draft-candidate-id",
+};
+
 export async function seedTestUsers() {
-  const dbUrl = process.env.TURSO_DATABASE_URL || "file:local.db";
-  const client = createClient({
-    url: dbUrl,
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+  const client = createTestDatabaseClient();
 
   const now = Math.floor(Date.now() / 1000);
 
@@ -133,11 +172,7 @@ export async function seedTestUsers() {
 }
 
 export async function seedActiveElection() {
-  const dbUrl = process.env.TURSO_DATABASE_URL || "file:local.db";
-  const client = createClient({
-    url: dbUrl,
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+  const client = createTestDatabaseClient();
 
   const now = Math.floor(Date.now() / 1000);
   const electionId = "e2e-open-election-id";
@@ -150,91 +185,96 @@ export async function seedActiveElection() {
   // Ensure user fixture accounts exist first
   await seedTestUsers();
 
-  const existing = await client.execute({
-    sql: "SELECT id FROM elections WHERE id = ? OR status = ?",
-    args: [electionId, "open"],
+  await client.execute({
+    sql: "UPDATE elections SET status = 'closed' WHERE status = 'open' AND id != ?",
+    args: [electionId],
+  });
+  await client.execute({
+    sql: "DELETE FROM votes WHERE user_id = ?",
+    args: [TEST_USERS.votedVoter.userId],
   });
 
-  if (existing.rows.length === 0) {
-    await client.batch([
-      {
-        sql: `INSERT INTO elections (id, name, description, status, opens_at, closes_at, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          electionId,
-          "E2E Active Student Council Election",
-          "Active election created for Playwright E2E UI testing",
-          "open",
-          now - 3600,
-          now + 86400,
-          now,
-          now,
-        ],
-      },
-      {
-        sql: `INSERT INTO positions (id, election_id, name, display_order, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [posPresId, electionId, "President", 1, now, now],
-      },
-      {
-        sql: `INSERT INTO positions (id, election_id, name, display_order, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [posVpId, electionId, "Vice President", 2, now, now],
-      },
-      {
-        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        args: [
-          candPres1Id,
-          "Alice President",
-          TEST_USERS.admin.accountId,
-          posPresId,
-          "Better campus facilities and student welfare",
-          now,
-          now,
-        ],
-      },
-      {
-        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        args: [
-          candPres2Id,
-          "Bob President",
-          TEST_USERS.voter.accountId,
-          posPresId,
-          "Technology-driven campus initiatives",
-          now,
-          now,
-        ],
-      },
-      {
-        sql: `INSERT INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        args: [
-          candVp1Id,
-          "Charlie VP",
-          TEST_USERS.admin.accountId,
-          posVpId,
-          "Unity, transparency, and action",
-          now,
-          now,
-        ],
-      },
-      {
-        sql: `INSERT INTO votes (id, user_id, candidate_id, position_id, election_id, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          "e2e-vote-votedvoter-pres",
-          TEST_USERS.votedVoter.userId,
-          candPres1Id,
-          posPresId,
-          electionId,
-          now,
-          now,
-        ],
-      },
-    ]);
-  }
+  await client.batch([
+    {
+      sql: `INSERT OR IGNORE INTO elections (id, name, description, status, opens_at, closes_at, created_at, updated_at)
+            VALUES (?, ?, ?, 'open', ?, ?, ?, ?)`,
+      args: [
+        electionId,
+        "E2E Active Student Council Election",
+        "Active election created for Playwright E2E UI testing",
+        now - 3600,
+        now + 86400,
+        now,
+        now,
+      ],
+    },
+    {
+      sql: "UPDATE elections SET status = 'open', opens_at = ?, closes_at = ?, updated_at = ? WHERE id = ?",
+      args: [now - 3600, now + 86400, now, electionId],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO positions (id, election_id, name, display_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [posPresId, electionId, "President", 1, now, now],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO positions (id, election_id, name, display_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [posVpId, electionId, "Vice President", 2, now, now],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      args: [
+        candPres1Id,
+        "Alice President",
+        TEST_USERS.admin.accountId,
+        posPresId,
+        "Better campus facilities and student welfare",
+        now,
+        now,
+      ],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      args: [
+        candPres2Id,
+        "Bob President",
+        TEST_USERS.voter.accountId,
+        posPresId,
+        "Technology-driven campus initiatives",
+        now,
+        now,
+      ],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      args: [
+        candVp1Id,
+        "Charlie VP",
+        TEST_USERS.admin.accountId,
+        posVpId,
+        "Unity, transparency, and action",
+        now,
+        now,
+      ],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO votes (id, user_id, candidate_id, position_id, election_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "e2e-vote-votedvoter-pres",
+        TEST_USERS.votedVoter.userId,
+        candPres1Id,
+        posPresId,
+        electionId,
+        now,
+        now,
+      ],
+    },
+  ]);
 
   // Ensure votedVoter has a vote in whichever election is currently open
   const openElection = await client.execute({
@@ -275,13 +315,55 @@ export async function seedActiveElection() {
 }
 
 export async function resetVoterVotes() {
-  const dbUrl = process.env.TURSO_DATABASE_URL || "file:local.db";
-  const client = createClient({
-    url: dbUrl,
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+  const client = createTestDatabaseClient();
   await client.execute({
     sql: "DELETE FROM votes WHERE user_id = ?",
     args: [TEST_USERS.voter.userId],
   });
+}
+
+export async function seedDraftCandidate() {
+  const client = createTestDatabaseClient();
+  const now = Math.floor(Date.now() / 1000);
+
+  await client.batch([
+    {
+      sql: `INSERT OR IGNORE INTO elections (id, name, description, status, created_at, updated_at)
+            VALUES (?, ?, ?, 'draft', ?, ?)`,
+      args: [
+        DRAFT_CANDIDATE.electionId,
+        "E2E Draft Candidate Election",
+        "Draft election used for candidate image E2E coverage",
+        now,
+        now,
+      ],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO positions (id, election_id, name, display_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [DRAFT_CANDIDATE.positionId, DRAFT_CANDIDATE.electionId, "President", 1, now, now],
+    },
+    {
+      sql: `INSERT OR IGNORE INTO candidates
+            (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      args: [
+        DRAFT_CANDIDATE.candidateId,
+        "E2E Image Candidate",
+        TEST_USERS.admin.accountId,
+        DRAFT_CANDIDATE.positionId,
+        "Candidate image storage coverage",
+        now,
+        now,
+      ],
+    },
+    {
+      sql: "UPDATE elections SET status = 'draft', updated_at = ? WHERE id = ?",
+      args: [now, DRAFT_CANDIDATE.electionId],
+    },
+    {
+      sql: "UPDATE candidates SET is_active = 1, image_url = NULL, updated_at = ? WHERE id = ?",
+      args: [now, DRAFT_CANDIDATE.candidateId],
+    },
+  ]);
 }

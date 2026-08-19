@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/offline-test";
 import { TEST_USERS } from "../../fixtures/db-setup";
 import { LoginPage } from "../../fixtures/page-objects/LoginPage";
 
@@ -96,7 +96,7 @@ test.describe("Admin Audit Log Interactivity & Pagination UI", () => {
     // 3. Verify page structure and initial table has our mock item
     const table = page.locator("table");
     await expect(table).toBeVisible();
-    await expect(page.locator("text=election.create")).toBeVisible();
+    await expect(page.getByText("Election created", { exact: true }).first()).toBeVisible();
 
     // 4. Test row expansion (toggle detail row)
     const firstRow = page.locator("tbody tr").first();
@@ -106,9 +106,11 @@ test.describe("Admin Audit Log Interactivity & Pagination UI", () => {
     await firstRow.click();
 
     // Verify expanded details panel/div is visible
-    const detailsPanel = page.locator("text=Actor Account ID");
+    const detailsPanel = page.locator("tbody tr").nth(1).getByText("Actor Account ID");
     await expect(detailsPanel).toBeVisible();
-    await expect(page.locator("text=test-actor-account-id-1")).toBeVisible();
+    await expect(
+      page.locator("tbody tr").nth(1).getByText("test-actor-account-id-1", { exact: true }),
+    ).toBeVisible();
 
     // Click it again to collapse details
     await firstRow.click();
@@ -124,8 +126,8 @@ test.describe("Admin Audit Log Interactivity & Pagination UI", () => {
     });
     await page.locator("#filter-action").selectOption("election.create");
     await filteredRequest;
-    await expect(page.locator("tbody")).toContainText("election.create");
-    await expect(page.locator("tbody")).not.toContainText("user.create");
+    await expect(page.locator("tbody")).toContainText("Election created");
+    await expect(page.locator("tbody")).not.toContainText("User created");
 
     const pageSizeSelect = page.locator("#page-size-select");
     await expect(pageSizeSelect).toBeVisible();
@@ -186,9 +188,9 @@ test.describe("Admin Audit Log Interactivity & Pagination UI", () => {
     );
     await nextButton.click();
     await cursorRequest;
-    await expect(page.getByText("audit-row-100")).toBeVisible();
+    await expect(page.getByText("audit-row-100").first()).toBeVisible();
 
     await nextButton.click();
-    await expect(page.getByText("audit-row-120")).toBeVisible();
+    await expect(page.getByText("audit-row-120").first()).toBeVisible();
   });
 });

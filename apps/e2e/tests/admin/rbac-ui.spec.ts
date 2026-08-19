@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/offline-test";
 import { TEST_USERS } from "../../fixtures/db-setup";
 import { LoginPage } from "../../fixtures/page-objects/LoginPage";
 

@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const offlineDatabaseUrl = "http://127.0.0.1:8080";
+const offline = process.env.OFFLINE_DEV !== "false";
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -50,9 +53,20 @@ export default defineConfig({
       : []),
   ],
   webServer: [
+    ...(offline
+      ? [
+          {
+            command: "turso dev --db-file ../../apps/backend/local.db --port 8080",
+            url: `${offlineDatabaseUrl}/health`,
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
+          },
+        ]
+      : []),
     {
-      command:
-        "pnpm --filter @cso-voting/backend exec wrangler dev --env test --var TURSO_DATABASE_URL:http://127.0.0.1:8080 --port 8787",
+      command: offline
+        ? "pnpm --filter @cso-voting/backend e2e:worker:offline"
+        : "pnpm --filter @cso-voting/backend exec wrangler dev --env test --var TURSO_DATABASE_URL:http://127.0.0.1:8080 --port 8787",
       url: "http://localhost:8787/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
