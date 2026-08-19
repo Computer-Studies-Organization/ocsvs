@@ -14,7 +14,7 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 | Lint all                               | `pnpm lint`                                                                                    |
 | Test all                               | `pnpm test`                                                                                    |
 | Test E2E                               | `cd apps/e2e && pnpm test`                                                                     |
-| Build production frontend assets      | `pnpm build`                                                                                   |
+| Build production frontend assets       | `pnpm build`                                                                                   |
 | Backend only (cwd in `apps/backend`)   | `pnpm dev` / `pnpm test` / `pnpm lint` / `pnpm lint:fix`                                       |
 | Frontend only (cwd in `apps/frontend`) | `pnpm dev` (port 3001) / `pnpm check` (typecheck) / `pnpm test` / `pnpm build`                 |
 | DB scripts (backend)                   | `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:push` / `pnpm db:studio` / `pnpm cf-typegen` |
@@ -475,7 +475,6 @@ src/
 - **Session cookie**: Same as backend conventions (HttpOnly, SameSite=Lax).
 - **`CacheEntry.fetch()` never rejects.** On a failed fetch it resolves `null` and records the message in `entry.error` (see `cache-entry.svelte.ts`); the promise is never rejected. So `await entry.fetch()` never throws, and any `.catch()`/try-catch around it is unreachable. The correct consumer pattern is `const result = await entry.fetch(); if (result) { /* use result */ } else { usersError = entry.error ?? 'Failed to load' }`. `add-candidate-modal.svelte`'s `loadUsers()` is the reference example — do NOT rely on try/catch to surface cache load failures.
 - **`/users` pagination is capped at `limit=100`** (backend `ListUsersQuerySchema.max(100)`). `fetchUsers` in `lib/api/users.ts` defaults to `limit: 100`. The backend OpenAPI hook returns **422** for `limit > 100` before the repository is queried, so a higher request limit silently fails the whole list call rather than truncating — keep admin user-list requests at 100.
-
 
 ## E2E Testing (`apps/e2e`)
 

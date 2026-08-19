@@ -27,13 +27,14 @@ credentials.csv
 
 # DB
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 
 # Playwright
 .auth/
 playwright-report/
 test-results/
-
 
 
 

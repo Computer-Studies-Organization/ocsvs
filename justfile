@@ -14,6 +14,10 @@ install:
 dev:
     pnpm dev
 
+# Run both apps against the local Turso dev server without external services for offline dev
+dev-offline:
+    pnpm dev:offline
+
 # Run frontend only (SvelteKit on port 3001)
 dev-fe:
     pnpm dev:frontend
@@ -21,10 +25,6 @@ dev-fe:
 # Run backend only (wrangler dev on port 8787)
 dev-be:
     pnpm dev:backend
-
-# Run both apps against the local Turso dev server without external services
-dev-offline:
-    pnpm dev:offline
 
 # Run typecheck, lint, and test (matches CI order)
 check: typecheck lint test
