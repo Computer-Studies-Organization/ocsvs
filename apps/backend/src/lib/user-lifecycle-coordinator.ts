@@ -163,6 +163,13 @@ function generateVoterUsername(
   return username;
 }
 
+async function assertElectorateMutable(db: DbClient): Promise<void> {
+  // ponytail: application-level freeze; add a persisted election roster if concurrent admin writes matter.
+  if (await electionRepo.findOpen(db)) {
+    throw new UserLifecycleError("ELECTION_IS_OPEN", 400, ERROR_MESSAGES.ELECTION_IS_OPEN);
+  }
+}
+
 export class UserLifecycleCoordinator {
   private generateRandomPassword(): string {
     const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -182,6 +189,10 @@ export class UserLifecycleCoordinator {
     input: RegisterUserInput,
     auditContext?: RegisterAuditContext,
   ): Promise<{ accountId: string; userId: string; username: string }> {
+    if (!input.role || input.role === "user") {
+      await assertElectorateMutable(db);
+    }
+
     // Resolve username and handle generation if not provided
     let username = input.username;
     if (!username || !username.trim()) {
@@ -238,29 +249,35 @@ export class UserLifecycleCoordinator {
     const userId = crypto.randomUUID();
 
     try {
-      await voterAccountStore.create(
-        db,
-        {
-          accountId,
-          userId,
-          username,
-          email: input.email && input.email.trim() ? input.email : null,
-          passwordHash,
-          studentId: input.studentId,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          course: input.course,
-          yearLevel: input.yearLevel,
-          role: input.role,
-        },
-        auditContext && {
-          action: "user.create",
-          targetType: "user",
-          targetId: userId,
-          ...auditContext,
-          description: `Created user account: ${username} (${input.studentId})`,
-        },
-      );
+      await db.transaction(async (tx) => {
+        if (!input.role || input.role === "user") {
+          await assertElectorateMutable(tx);
+        }
+
+        await voterAccountStore.create(
+          tx,
+          {
+            accountId,
+            userId,
+            username,
+            email: input.email && input.email.trim() ? input.email : null,
+            passwordHash,
+            studentId: input.studentId,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            course: input.course,
+            yearLevel: input.yearLevel,
+            role: input.role,
+          },
+          auditContext && {
+            action: "user.create",
+            targetType: "user",
+            targetId: userId,
+            ...auditContext,
+            description: `Created user account: ${username} (${input.studentId})`,
+          },
+        );
+      });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new UserLifecycleError("USER_ALREADY_EXISTS", 409);
@@ -284,6 +301,8 @@ export class UserLifecycleCoordinator {
     if (records.length === 0) {
       return { imported: [], skipped: [] };
     }
+
+    await assertElectorateMutable(db);
 
     // 2. Fetch existing student IDs
     const studentIdsToCheck = records.map((r) => r.studentId);
@@ -388,6 +407,8 @@ export class UserLifecycleCoordinator {
     if (importPayload.length > 0) {
       try {
         await db.transaction(async (tx) => {
+          await assertElectorateMutable(tx);
+
           // Batch insert accounts
           const accountValues = importPayload.map((item) => ({
             id: item.accountId,
@@ -565,6 +586,9 @@ export class UserLifecycleCoordinator {
       }
 
       // 5. Invalidate sessions and soft delete
+      if (user.role === "user") {
+        await assertElectorateMutable(tx);
+      }
       await voterAccountStore.softDelete(tx, user.accountId);
       await tx.delete(sessions).where(eq(sessions.accountId, user.accountId)).run();
 
@@ -603,6 +627,9 @@ export class UserLifecycleCoordinator {
       }
 
       // 4. Restore
+      if (user.role === "user") {
+        await assertElectorateMutable(tx);
+      }
       await voterAccountStore.restore(tx, user.accountId);
 
       await auditLogRepo.insert(tx, {
@@ -654,15 +681,8 @@ export class UserLifecycleCoordinator {
         throw new UserLifecycleError("USER_IS_CANDIDATE", 400);
       }
 
-      // 6. Open election check: cannot delete users while an election is open
-      const openElection = await electionRepo.findOpen(tx);
-      if (openElection) {
-        throw new UserLifecycleError(
-          "ELECTION_IS_OPEN",
-          400,
-          "Cannot delete users while an election is open",
-        );
-      }
+      // 6. Preserve the existing ban on permanent deletion during an open election.
+      await assertElectorateMutable(tx);
 
       // 7. Hard deletion
       const details = await voterAccountStore.findById(tx, userId);

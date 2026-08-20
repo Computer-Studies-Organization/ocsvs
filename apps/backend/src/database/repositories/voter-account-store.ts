@@ -101,7 +101,7 @@ export const voterAccountStore = {
 
   /** Create account + user atomically */
   async create(
-    db: Database,
+    db: DbClient,
     data: {
       accountId: string;
       userId?: string;
@@ -134,20 +134,24 @@ export const voterAccountStore = {
       yearLevel: data.yearLevel,
     });
 
-    if (auditEntry) {
-      await db.batch([
-        accountInsert,
-        userInsert,
-        db.insert(auditLog).values({
+    const auditInsert = auditEntry
+      ? db.insert(auditLog).values({
           id: crypto.randomUUID(),
           createdAt: Math.floor(Date.now() / 1000),
           ...auditEntry,
-        }),
-      ]);
+        })
+      : null;
+
+    if ("batch" in db && typeof db.batch === "function") {
+      await db.batch(
+        auditInsert ? [accountInsert, userInsert, auditInsert] : [accountInsert, userInsert],
+      );
       return;
     }
 
-    await db.batch([accountInsert, userInsert]);
+    await accountInsert.run();
+    await userInsert.run();
+    await auditInsert?.run();
   },
 
   /** Update account fields */

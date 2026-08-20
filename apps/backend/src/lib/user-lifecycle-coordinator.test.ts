@@ -123,6 +123,7 @@ vi.mock("@/database/repositories/audit-log.repository", () => ({
 }));
 
 import { UserLifecycleCoordinator, UserLifecycleError } from "./user-lifecycle-coordinator";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 // Mock DB
 const mockDbAll = vi.fn();
@@ -370,6 +371,74 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
   });
 
   describe("register", () => {
+    it("rejects voter creation while an election is open", async () => {
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+
+      await expect(
+        coordinator.register(mockDb, {
+          firstName: "John",
+          lastName: "Doe",
+          studentId: "student-123",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          username: "johndoe",
+        }),
+      ).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        statusCode: 400,
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockAccountCreate).not.toHaveBeenCalled();
+    });
+
+    it("rechecks the electorate freeze atomically before creating a voter", async () => {
+      mockFindOpenElection
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: "newly-opened-election" });
+      mockAccountExists.mockResolvedValueOnce(false);
+      mockDbGet.mockResolvedValueOnce(null);
+      mockHashPassword.mockResolvedValueOnce("hashed-password");
+
+      await expect(
+        coordinator.register(mockDb, {
+          firstName: "John",
+          lastName: "Doe",
+          studentId: "student-123",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          username: "johndoe",
+        }),
+      ).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        statusCode: 400,
+      });
+
+      expect(mockFindOpenElection).toHaveBeenCalledTimes(2);
+      expect(mockAccountCreate).not.toHaveBeenCalled();
+    });
+
+    it("allows admin account creation while an election is open", async () => {
+      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+      mockAccountExists.mockResolvedValueOnce(false);
+      mockDbGet.mockResolvedValueOnce(null);
+      mockHashPassword.mockResolvedValueOnce("hashed-password");
+
+      await coordinator.register(mockDb, {
+        firstName: "Admin",
+        lastName: "User",
+        studentId: "admin-123",
+        course: "BSCS",
+        yearLevel: "1st Year",
+        username: "admin.user",
+        role: "admin",
+      });
+
+      expect(mockAccountCreate).toHaveBeenCalled();
+      expect(mockFindOpenElection).not.toHaveBeenCalled();
+      mockFindOpenElection.mockResolvedValue(null);
+    });
+
     it("successfully registers a user", async () => {
       mockAccountExists.mockResolvedValueOnce(false);
       mockDbGet.mockResolvedValueOnce(null); // student id check
@@ -600,6 +669,38 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockAuditLoggerInsert).toHaveBeenCalled();
     });
 
+    it("rejects archiving a voter while an election is open", async () => {
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "acc-123",
+        role: "user",
+        deletedAt: null,
+      });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+
+      await expect(coordinator.softDelete(mockDb, "user-123", actor)).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockAccountSoftDelete).not.toHaveBeenCalled();
+    });
+
+    it("allows archiving an admin while an election is open", async () => {
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "acc-123",
+        role: "admin",
+        deletedAt: null,
+      });
+      mockCountActiveAdminsAndSuperAdmins.mockResolvedValueOnce(2);
+      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+
+      await coordinator.softDelete(mockDb, "user-123", actor);
+
+      expect(mockAccountSoftDelete).toHaveBeenCalledWith(expect.anything(), "acc-123");
+      expect(mockFindOpenElection).not.toHaveBeenCalled();
+      mockFindOpenElection.mockResolvedValue(null);
+    });
+
     it("throws CANNOT_DELETE_SELF if actor matches target", async () => {
       mockGetAccountDeleteStatus.mockResolvedValueOnce({
         accountId: "admin-1",
@@ -640,6 +741,37 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
 
       expect(mockAccountRestore).toHaveBeenCalledWith(expect.anything(), "acc-123");
     });
+
+    it("rejects restoring a voter while an election is open", async () => {
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "acc-123",
+        role: "user",
+        deletedAt: 1234567890,
+      });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+
+      await expect(coordinator.restore(mockDb, "user-123", actor)).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockAccountRestore).not.toHaveBeenCalled();
+    });
+
+    it("allows restoring an admin while an election is open", async () => {
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "acc-123",
+        role: "admin",
+        deletedAt: 1234567890,
+      });
+      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+
+      await coordinator.restore(mockDb, "user-123", actor);
+
+      expect(mockAccountRestore).toHaveBeenCalledWith(expect.anything(), "acc-123");
+      expect(mockFindOpenElection).not.toHaveBeenCalled();
+      mockFindOpenElection.mockResolvedValue(null);
+    });
   });
 
   describe("hardDelete", () => {
@@ -671,10 +803,55 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         expect.objectContaining({ code: "USER_IS_CANDIDATE", statusCode: 400 }),
       );
     });
+
+    it("rejects hard deletion of a voter while an election is open", async () => {
+      mockGetAccountDeleteStatus.mockResolvedValueOnce({
+        accountId: "acc-123",
+        role: "user",
+        deletedAt: null,
+      });
+      mockIsCandidate.mockResolvedValueOnce(false);
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+
+      await expect(coordinator.hardDelete(mockDb, "user-123", actor)).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockAccountHardDelete).not.toHaveBeenCalled();
+    });
   });
 
   describe("bulkImport", () => {
     const actor = { id: "admin-1", username: "admin", role: "super_admin" as const };
+
+    it("rejects voter import while an election is open", async () => {
+      mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
+      mockDbAll.mockResolvedValueOnce([]); // existing usernames check
+      mockHashPassword.mockResolvedValue("hashed-pwd");
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+
+      await expect(
+        coordinator.bulkImport(
+          mockDb,
+          [
+            {
+              studentId: "stud-1",
+              firstName: "Alice",
+              lastName: "Smith",
+              course: "BSCS",
+              yearLevel: "1st Year",
+            },
+          ],
+          actor,
+        ),
+      ).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockDbInsert).not.toHaveBeenCalled();
+    });
 
     it("performs bulk import in batch inserts", async () => {
       mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
