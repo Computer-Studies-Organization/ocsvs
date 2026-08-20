@@ -10,3 +10,14 @@ const TRANSITIONS: ReadonlyArray<readonly [TElectionStatus, TElectionStatus]> = 
 export function canTransition(from: TElectionStatus, to: TElectionStatus): boolean {
   return TRANSITIONS.some(([f, t]) => f === from && t === to);
 }
+
+export function toLocalDateTime(timestamp: number | null): string {
+  if (timestamp === null) return "";
+  const date = new Date(timestamp * 1000);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+export function fromLocalDateTime(value: string): number | null {
+  const milliseconds = new Date(value).getTime();
+  return Number.isFinite(milliseconds) ? Math.floor(milliseconds / 1000) : null;
+}
