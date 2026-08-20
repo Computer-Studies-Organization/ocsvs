@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { and, eq, gte } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loginAttempts } from "@/database/schema";
 
@@ -24,18 +24,39 @@ vi.mock("@/config/db", () => ({ createDb: () => ({ db: mockDb }) }));
 import { loginAttemptRepo } from "./login-attempt.repository";
 
 beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.useRealTimers());
 
 describe("loginAttemptRepo.getRecentAttempts", () => {
-  it("returns rows from the select chain", async () => {
+  it("returns attempts for only the given identifier and IP address", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-20T00:00:00Z"));
     chain.all.mockReturnValueOnce([{ attemptedAt: 100 }, { attemptedAt: 200 }]);
-    const rows = await loginAttemptRepo.getRecentAttempts(mockDb as any, "C23-01-1234-CSA001", 900);
+
+    const rows = await loginAttemptRepo.getRecentAttempts(
+      mockDb as any,
+      "C23-01-1234-CSA001",
+      "1.2.3.4",
+      900,
+    );
+
     expect(rows).toHaveLength(2);
-    expect(mockDb.select).toHaveBeenCalledTimes(1);
+    expect(chain.where).toHaveBeenCalledWith(
+      and(
+        eq(loginAttempts.identifier, "C23-01-1234-CSA001"),
+        eq(loginAttempts.ipAddress, "1.2.3.4"),
+        gte(loginAttempts.attemptedAt, Math.floor(Date.now() / 1000) - 900),
+      ),
+    );
   });
 
   it("returns an empty array when no attempts exist", async () => {
     chain.all.mockReturnValueOnce([]);
-    const rows = await loginAttemptRepo.getRecentAttempts(mockDb as any, "C23-01-1234-CSA001", 900);
+    const rows = await loginAttemptRepo.getRecentAttempts(
+      mockDb as any,
+      "C23-01-1234-CSA001",
+      "1.2.3.4",
+      900,
+    );
     expect(rows).toEqual([]);
   });
 });

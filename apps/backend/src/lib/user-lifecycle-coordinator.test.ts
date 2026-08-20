@@ -299,6 +299,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(thrownError.statusCode).toBe(429);
       expect(thrownError.retryAfter).toBeGreaterThan(0);
       expect(thrownError.retryAfter).toBeLessThanOrEqual(900);
+      expect(mockGetRecentAttempts).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1", 900);
     });
 
     it("throws INVALID_CREDENTIALS and records failure on password mismatch", async () => {

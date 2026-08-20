@@ -713,7 +713,7 @@ export class UserLifecycleCoordinator {
 
     // 1. Lockout window checks
     await loginAttemptRepo.deleteExpiredAttempts(db, studentNumber, 900);
-    const attemptsList = await loginAttemptRepo.getRecentAttempts(db, studentNumber, 900);
+    const attemptsList = await loginAttemptRepo.getRecentAttempts(db, studentNumber, clientIp, 900);
     const attempts = attemptsList.length;
 
     if (attempts >= 5) {

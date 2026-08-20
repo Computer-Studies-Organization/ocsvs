@@ -8,6 +8,7 @@ export const loginAttemptRepo = {
   async getRecentAttempts(
     db: DbClient,
     identifier: string,
+    ipAddress: string,
     windowSeconds: number,
   ): Promise<Pick<LoginAttemptRow, "attemptedAt">[]> {
     const threshold = Math.floor(Date.now() / 1000) - windowSeconds;
@@ -15,7 +16,11 @@ export const loginAttemptRepo = {
       .select({ attemptedAt: loginAttempts.attemptedAt })
       .from(loginAttempts)
       .where(
-        and(eq(loginAttempts.identifier, identifier), gte(loginAttempts.attemptedAt, threshold)),
+        and(
+          eq(loginAttempts.identifier, identifier),
+          eq(loginAttempts.ipAddress, ipAddress),
+          gte(loginAttempts.attemptedAt, threshold),
+        ),
       )
       .orderBy(loginAttempts.attemptedAt)
       .all();

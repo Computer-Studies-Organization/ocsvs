@@ -83,6 +83,27 @@ This is separate from schema migrations. It is irreversible except by restoring 
 
 If any verification fails, stop the release and restore the recorded backup. Do not rerun with a different `HMAC_SECRET` or attempt to reconstruct cleared voter links manually.
 
+## Election-Day Login Recovery
+
+Failed-login limits apply to each student-number/client-IP pair, alongside the global per-IP limiter and Turnstile. One remote source cannot lock the voter out from a different network.
+
+When a voter reports HTTP 429 during an election:
+
+1. Verify the voter's identity using the organization's approved process.
+2. In **Voter Management**, find the voter and select **Unlock**, or send `POST /users/{userId}/unlock` as an Admin or Super Admin.
+3. Confirm the `user.unlock` audit entry exists for that voter.
+4. Ask the voter to retry from the same network with a fresh Turnstile challenge.
+5. If HTTP 429 remains, honor `Retry-After`: the global per-IP limiter may still be active for that shared network.
+
+Do not disable Turnstile, weaken the global IP limit, or delete database rows manually. Verify this path before election day with:
+
+```bash
+pnpm --filter @cso-voting/backend exec vitest run \
+  src/database/repositories/login-attempt.repository.test.ts \
+  src/lib/user-lifecycle-coordinator.test.ts \
+  src/routes/users/users.test.ts
+```
+
 ## Rollback
 
 For a bad deployment, roll back to the last known-good build in the Worker's build/deployment history in the Cloudflare dashboard, or with Wrangler from the backend package:
