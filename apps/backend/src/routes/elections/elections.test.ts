@@ -495,6 +495,25 @@ describe("elections routes", () => {
       );
     });
 
+    it("returns 409 when reopening a closed election that has ballots", async () => {
+      mockFindById.mockResolvedValue(
+        makeElection({ status: "closed", opensAt: 1738000000, closesAt: 1738604800 }),
+      );
+      mockCountPositions.mockResolvedValue(2);
+      mockDb.get.mockResolvedValueOnce({ id: "ballot-1" });
+
+      const res = await router.request(`/elections/${electionId}/transitions`, {
+        method: "POST",
+        body: JSON.stringify({ to: "draft" }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_HAS_BALLOTS);
+      expect(mockUpdateStatus).not.toHaveBeenCalled();
+    });
+
     it("returns 409 when updateStatus returns false (concurrent race)", async () => {
       mockFindById.mockResolvedValue(makeElection({ status: "draft" }));
       mockCountPositions.mockResolvedValue(2);

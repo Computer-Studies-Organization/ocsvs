@@ -19,6 +19,7 @@ export const ERROR_MESSAGES = {
 
   // Conflict errors
   ANOTHER_ELECTION_IS_OPEN: "Another election is currently open. Close it first.",
+  ELECTION_IS_OPEN: "Cannot modify voter accounts while an election is open",
   CANDIDATE_ALREADY_EXISTS: "Candidate already exists for this position",
   PARTY_ALREADY_HAS_CANDIDATE_FOR_POSITION:
     "This party already has an active candidate for this position",
@@ -31,6 +32,7 @@ export const ERROR_MESSAGES = {
   ELECTION_NOT_OPEN: "This election is not currently open for voting",
   ELECTION_TRANSITION_CONFLICT:
     "Election status changed by a concurrent request. Please try again.",
+  ELECTION_HAS_BALLOTS: "Cannot reopen an election after ballots have been cast",
   INVALID_TRANSITION: "Invalid status transition for this election",
   POSITION_HAS_CANDIDATES: "Cannot delete a position that has candidates",
   USER_ALREADY_EXISTS: "User already exists",

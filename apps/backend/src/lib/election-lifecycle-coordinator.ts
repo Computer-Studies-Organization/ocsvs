@@ -1,9 +1,11 @@
 import type { DbClient } from "@/database/repositories/database.type";
 import type { TElectionStatus } from "@/database/schema";
 import type { ElectionRow } from "@/database/repositories/election.repository";
+import { ballotSnapshots, votes } from "@/database/schema";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
+import { eq } from "drizzle-orm";
 import {
   assertTransition,
   getEffectiveElectionStatus,
@@ -184,6 +186,24 @@ export const ElectionLifecycleCoordinator = {
         positionCount,
         positionsWithActiveCandidates,
       );
+
+      if (fromStatus === "closed" && toStatus === "draft") {
+        const ballotSnapshot = await tx
+          .select({ id: ballotSnapshots.id })
+          .from(ballotSnapshots)
+          .where(eq(ballotSnapshots.electionId, electionId))
+          .get();
+        const legacyVote = ballotSnapshot
+          ? null
+          : await tx
+              .select({ id: votes.id })
+              .from(votes)
+              .where(eq(votes.electionId, electionId))
+              .get();
+        if (ballotSnapshot || legacyVote) {
+          throw new TransitionError("ELECTION_HAS_BALLOTS", 409);
+        }
+      }
 
       // 6. Update Status
       try {

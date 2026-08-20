@@ -16,6 +16,7 @@ export type TransitionErrorCode =
   | "ELECTION_NOT_FOUND"
   | "ANOTHER_ELECTION_IS_OPEN"
   | "ELECTION_TRANSITION_CONFLICT"
+  | "ELECTION_HAS_BALLOTS"
   | "ELECTION_NOT_IN_DRAFT";
 
 export class TransitionError extends Error {

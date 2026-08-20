@@ -45,6 +45,10 @@ vi.mock("@/database/repositories/audit-log.repository", () => ({
 }));
 
 const mockDb: any = {
+  select: vi.fn().mockReturnThis(),
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  get: vi.fn(),
   transaction: vi.fn(async (cb) => await cb(mockDb)),
 };
 
@@ -350,6 +354,47 @@ describe("ElectionLifecycleCoordinator", () => {
           closesAt: null,
         }),
       );
+    });
+
+    it("throws ELECTION_HAS_BALLOTS when reopening an election with a ballot", async () => {
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "closed",
+        opensAt: 1700000000,
+        closesAt: 1700003600,
+      });
+      mockCountPositions.mockResolvedValueOnce(3);
+      mockDb.get.mockResolvedValueOnce({ id: "ballot-1" });
+
+      await expect(
+        ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+          to: "draft",
+          actor: { id: "admin-id", username: "admin" },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_HAS_BALLOTS", status: 409 }));
+
+      expect(mockUpdateStatus).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("also rejects reopening when a legacy vote has no ballot snapshot", async () => {
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "closed",
+        opensAt: 1700000000,
+        closesAt: 1700003600,
+      });
+      mockCountPositions.mockResolvedValueOnce(3);
+      mockDb.get.mockResolvedValueOnce(undefined).mockResolvedValueOnce({ id: "vote-1" });
+
+      await expect(
+        ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+          to: "draft",
+          actor: { id: "admin-id", username: "admin" },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_HAS_BALLOTS", status: 409 }));
+
+      expect(mockUpdateStatus).not.toHaveBeenCalled();
     });
   });
 });
