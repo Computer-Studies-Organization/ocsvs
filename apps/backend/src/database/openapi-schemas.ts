@@ -44,60 +44,6 @@ export const UserApiSchema = z.object({
   }),
 });
 
-export const AccountSchema = z.object({
-  createdAt: z.number().int().openapi({
-    description: "Creation timestamp",
-    example: 1738000000,
-  }),
-  updatedAt: z.number().int().openapi({
-    description: "Last update timestamp",
-    example: 1738000000,
-  }),
-  lastLogin: z.number().int().openapi({
-    description: "Last login timestamp",
-    example: 1738000000,
-  }),
-  id: z.string().openapi({
-    description: "Account ID",
-    example: "acc_456def",
-  }),
-  role: z.string().openapi({
-    description: "User role (admin, user, etc.)",
-    example: "user",
-  }),
-  username: z.string().openapi({
-    description: "Username",
-    example: "johndoe",
-  }),
-  email: z.string().email().openapi({
-    description: "Email address",
-    example: "john.doe@example.com",
-  }),
-  passwordHash: z.string().openapi({
-    description: "Password hash (not exposed in API responses)",
-    example: "hash_abc123",
-  }),
-});
-
-export const SessionSchema = z.object({
-  id: z.string().openapi({
-    description: "Session ID",
-    example: "sess_789ghi",
-  }),
-  accountId: z.string().openapi({
-    description: "Associated account ID",
-    example: "acc_456def",
-  }),
-  expiresAt: z.number().int().openapi({
-    description: "Session expiration timestamp",
-    example: 1738086400,
-  }),
-  createdAt: z.number().int().openapi({
-    description: "Creation timestamp",
-    example: 1738000000,
-  }),
-});
-
 export const CandidateSchema = z.object({
   createdAt: z.number().int().openapi({
     description: "Creation timestamp",
@@ -151,38 +97,6 @@ export const AdminCandidateSchema = CandidateSchema.extend({
 
 export const CandidateReadSchema = z.union([AdminCandidateSchema, CandidateSchema]);
 
-export const VoteSchema = z.object({
-  createdAt: z.number().int().openapi({
-    description: "Creation timestamp",
-    example: 1738000000,
-  }),
-  updatedAt: z.number().int().openapi({
-    description: "Last update timestamp",
-    example: 1738000000,
-  }),
-  id: z.string().openapi({
-    description: "Vote ID",
-    example: "vote_201mno",
-  }),
-  userId: z.string().openapi({
-    description: "User who cast the vote",
-    example: "user_123abc",
-  }),
-  candidateId: z.string().openapi({
-    description: "Candidate who received the vote",
-    example: "cand_101jkl",
-  }),
-  positionId: z.string().openapi({
-    description: "Position (FK into positions.id) the vote was cast for",
-    example: "pos_101jkl",
-  }),
-  electionId: z.string().openapi({
-    description: "Election (FK into elections.id) the vote was cast in",
-    example: "elec_202mno",
-  }),
-});
-
-// Type aliases for convenience - use these in route definitions
 /** Extended schema for admin-facing user endpoints (GET /users, GET /users/:id).
  * Mirrors the AdminView interface returned by voterAccountStore.findById / listForAdmin.
  */
@@ -209,11 +123,7 @@ export const AdminUserApiSchema = UserApiSchema.extend({
   }),
 });
 
-export const UserOpenApiSchema = UserApiSchema;
-export const SelectAccountSchema = AccountSchema;
-export const SelectSessionSchema = SessionSchema;
 export const SelectCandidateSchema = AdminCandidateSchema;
-export const SelectVoteSchema = VoteSchema;
 
 export const BallotCandidateSchema = CandidateSchema.pick({
   id: true,
@@ -322,8 +232,6 @@ export const PartyListSchema = z.object({
     example: "#3B82F6",
   }),
 });
-export const SelectPartyListSchema = PartyListSchema;
-
 export const CreatePartyListBodySchema = z
   .object({
     name: z.string().min(1).max(200).openapi({
@@ -567,7 +475,7 @@ export const VotingStateSchema = z.object({
 //
 // Schema name is `AuditLogEntrySchema` (not `AuditLogEntry`) to avoid colliding
 // with the `AuditLogEntry` *interface* the repository exports as the insert
-// payload shape. The inferred TS alias is `AuditLogEntryT` for the same reason.
+// payload shape.
 // `.openapi("Name")` on the outer schema registers it under `components.schemas`
 // in the generated OpenAPI doc, mirroring the convention used by every other
 // schema in this file (e.g. `CreateElectionBodySchema.openapi("CreateElectionBody")`).
@@ -611,7 +519,6 @@ export const AuditLogEntrySchema = z
     }),
   })
   .openapi("AuditLogEntrySchema");
-export type AuditLogEntryT = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditLogListResponse = z
   .object({
@@ -678,7 +585,6 @@ export const AdminStatsSchema = z
     }),
   })
   .openapi("AdminStats");
-export type AdminStatsT = z.infer<typeof AdminStatsSchema>;
 
 export const TooManyRequestsSchema = z
   .object({

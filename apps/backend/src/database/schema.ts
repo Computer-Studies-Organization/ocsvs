@@ -1,7 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { desc, sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { createSelectSchema } from "drizzle-zod";
 
 export const ROLES = z.enum(["user", "admin", "super_admin"]);
 
@@ -292,13 +291,3 @@ export const loginAttempts = sqliteTable(
     ),
   ],
 );
-
-export const DbSelectUserSchema = createSelectSchema(users);
-export const SelectAccountSchema = createSelectSchema(accounts);
-export const SelectSessionSchema = createSelectSchema(sessions);
-export const SelectElectionSchema = createSelectSchema(elections);
-export const SelectPositionSchema = createSelectSchema(positions);
-export const SelectPartyListSchema = createSelectSchema(partyLists);
-export const SelectCandidateSchema = createSelectSchema(candidates);
-export const SelectVoteSchema = createSelectSchema(votes);
-export const SelectBallotSnapshotSchema = createSelectSchema(ballotSnapshots);

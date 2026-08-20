@@ -22,12 +22,12 @@ export const requireAuth = createMiddleware<AppBindings>(async (c, next) => {
   const result = await getSessionAccount(db, sessionId);
 
   if (!result) {
-    return c.json({ message: "Session expired or invalid" }, 401);
+    return c.json({ message: ERROR_MESSAGES.SESSION_EXPIRED }, 401);
   }
 
   const roleResult = ROLES.safeParse(result.account.role);
   if (!roleResult.success) {
-    return c.json({ message: "Session expired or invalid" }, 401);
+    return c.json({ message: ERROR_MESSAGES.SESSION_EXPIRED }, 401);
   }
 
   // Store auth user in request context using a simple key

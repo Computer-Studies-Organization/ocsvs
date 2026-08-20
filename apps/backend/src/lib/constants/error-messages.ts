@@ -16,7 +16,6 @@ export const ERROR_MESSAGES = {
   PARTY_LIST_NOT_FOUND: "Party list not found",
   POSITION_NOT_FOUND: "Position not found",
   USER_NOT_FOUND: "User not found",
-  VOTE_NOT_FOUND: "No votes found for this user",
 
   // Conflict errors
   ANOTHER_ELECTION_IS_OPEN: "Another election is currently open. Close it first.",
@@ -45,7 +44,6 @@ export const ERROR_MESSAGES = {
   CANNOT_RESTORE_ADMIN: "Only super admins can restore admin accounts",
   CANNOT_UPDATE_ADMIN: "Only super admins can update admin accounts",
   USER_IS_CANDIDATE: "Cannot delete a user who is a candidate",
-  CONFIRMATION_REQUIRED: "Confirmation is required. Please type DELETE to confirm.",
   USER_ALREADY_ARCHIVED: "User is already archived",
 
   // Validation errors
@@ -55,13 +53,11 @@ export const ERROR_MESSAGES = {
   INVALID_CANDIDATE: "Invalid candidate",
   INCOMPLETE_BALLOT: "You must select a candidate for every position",
   INVALID_TRANSITION_BODY: "opensAt and closesAt are required and closesAt must be after opensAt",
-  CANDIDATE_INACTIVE: "Candidate is not active",
   NO_IMAGE_PROVIDED: "No image file provided",
   PAYLOAD_TOO_LARGE: "Request body too large",
   UNSUPPORTED_MEDIA_TYPE: "Unsupported media type",
   DUPLICATE_POSITION_VOTE: "Cannot vote for multiple candidates in the same position",
   CURRENT_PASSWORD_INCORRECT: "Current password is incorrect",
-  PASSWORD_TOO_SHORT: "Password must be at least 8 characters",
   RATE_LIMITED_IP: "Too many requests. Please try again later.",
   RATE_LIMITED_ACCOUNT: "Too many failed login attempts. Please try again later.",
   SECURITY_VERIFICATION_FAILED: "Security verification failed. Please try again.",
@@ -83,9 +79,7 @@ export const ERROR_MESSAGES = {
   POSITION_CREATED_SUCCESSFULLY: "Position created successfully",
   POSITION_DELETED_SUCCESSFULLY: "Position deleted successfully",
   POSITION_UPDATED_SUCCESSFULLY: "Position updated successfully",
-  RESULTS_FETCHED_SUCCESSFULLY: "Results fetched successfully",
   USER_CREATED_SUCCESSFULLY: "User created successfully",
-  USER_REGISTERED_SUCCESSFULLY: "User registered successfully",
   USER_LOGGED_IN_SUCCESSFULLY: "User logged in successfully",
   LOGGED_OUT_SUCCESSFULLY: "Logged out successfully",
   VOTE_SUBMITTED_SUCCESSFULLY: "Vote submitted successfully",

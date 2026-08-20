@@ -7,7 +7,7 @@ import {
   UpdateElectionBodySchema,
 } from "@/database/openapi-schemas";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import createErrorSchema from "@/middleware/utils/create-error-schema";
+import validationErrorSchema from "@/middleware/utils/create-error-schema";
 import jsonContent from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -41,10 +41,7 @@ export const createElectionRoute = createRoute({
       ERROR_MESSAGES.ELECTION_CREATED_SUCCESSFULLY,
     ),
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorSchema, ERROR_MESSAGES.FORBIDDEN),
-    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-      createErrorSchema(CreateElectionBodySchema),
-      "Validation failed",
-    ),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
   },
 });
 
@@ -86,10 +83,7 @@ export const updateElectionRoute = createRoute({
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorSchema, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorSchema, "Election not found"),
     [httpStatusCodes.CONFLICT]: jsonContent(ErrorSchema, "Election not in draft or closed"),
-    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-      createErrorSchema(UpdateElectionBodySchema),
-      "Validation failed",
-    ),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
   },
 });
 

@@ -12,7 +12,6 @@ import {
   UserApiSchema,
 } from "./openapi-schemas";
 import {
-  DbSelectUserSchema,
   auditLog,
   candidates,
   elections,
@@ -25,12 +24,11 @@ import {
 } from "./schema";
 
 describe("user schema exports", () => {
-  it("uses distinct names for database and API user schemas", () => {
-    expect(DbSelectUserSchema).toBeDefined();
+  it("exposes the API user schema", () => {
     expect(UserApiSchema).toBeDefined();
   });
 
-  it("keeps integer storage in the database schema and does not leak hasVoted into the API", () => {
+  it("does not leak hasVoted into the API user schema", () => {
     const baseUser = {
       createdAt: 1,
       updatedAt: 1,
@@ -42,11 +40,6 @@ describe("user schema exports", () => {
       yearLevel: "3rd Year",
       course: "BSCS",
     };
-
-    // DB select: only the persisted integer columns; no hasVoted in DB or API
-    const dbRow = DbSelectUserSchema.parse(baseUser);
-    expect(dbRow).toEqual(baseUser);
-    expect((dbRow as { hasVoted?: unknown }).hasVoted).toBeUndefined();
 
     // API schema: also has no hasVoted (votes table is the source of truth)
     const apiRow = UserApiSchema.parse(baseUser);

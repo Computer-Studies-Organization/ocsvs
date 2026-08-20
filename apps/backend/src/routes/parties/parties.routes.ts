@@ -5,7 +5,7 @@ import {
   UpdatePartyListBodySchema,
 } from "@/database/openapi-schemas";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
-import createErrorSchema from "@/middleware/utils/create-error-schema";
+import validationErrorSchema from "@/middleware/utils/create-error-schema";
 import jsonContent from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -50,10 +50,7 @@ export const createPartyListRoute = createRoute({
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_FOUND),
     [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, PartyConflictDescription),
-    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-      createErrorSchema(CreatePartyListBodySchema),
-      "Validation failed",
-    ),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
   },
 });
 
@@ -74,10 +71,7 @@ export const updatePartyListRoute = createRoute({
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.PARTY_LIST_NOT_FOUND),
     [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, PartyConflictDescription),
-    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
-      createErrorSchema(UpdatePartyListBodySchema),
-      "Validation failed",
-    ),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
   },
 });
 

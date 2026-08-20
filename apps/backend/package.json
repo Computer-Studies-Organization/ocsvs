@@ -33,7 +33,6 @@
     "backblaze-b2": "^1.7.1",
     "bad-words": "^4.0.0",
     "drizzle-orm": "^0.45.2",
-    "drizzle-zod": "^0.8.3",
     "hono": "^4.12.27",
     "hono-pino": "^0.8.0",
     "pino": "^9.14.0",

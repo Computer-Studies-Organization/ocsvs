@@ -19,16 +19,6 @@ export interface TUserData {
   };
 }
 
-export interface TUser {
-  studentId: string;
-  accountId: string;
-  firstName: string;
-  lastName: string;
-  yearLevel: TYearLevel;
-  course: TCourse;
-  email?: string;
-}
-
 export interface TUsersData {
   id: string;
   accountId: string;
@@ -78,27 +68,6 @@ export type TPartyList = {
   createdAt: number;
   updatedAt: number;
 };
-
-export interface TVote {
-  user_id: string;
-  candidate_id: string;
-}
-
-export interface TVoteRequest {
-  votes: Array<{ candidateId: string }>;
-}
-
-export interface TVoteResponse {
-  id: string;
-  userId: string;
-  candidateId: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface TVoteStatus {
-  votes: TVoteResponse[];
-}
 
 export interface TVoteCount {
   candidateId: string;
@@ -179,12 +148,6 @@ export type TResults = Array<{
     percentage: number;
   }>;
 }>;
-
-export type TTransition = {
-  to: TElectionStatus;
-  opensAt?: number;
-  closesAt?: number;
-};
 
 export type TNextDraft = {
   id: string;

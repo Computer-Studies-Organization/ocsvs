@@ -65,7 +65,7 @@ Run `just` with no args to list all recipes.
 - **Runtime:** Cloudflare Workers via Wrangler 4.x (`wrangler.jsonc`)
 - **Framework:** Hono 4 with `@hono/zod-openapi` for OpenAPI 3.0 generation
 - **DB:** [Turso](https://turso.tech) (libSQL) accessed via `@libsql/client` + `drizzle-orm/libsql`; migrations live in `src/database/migrations/`
-- **ORM:** Drizzle ORM 0.44 + `drizzle-zod` for select schemas
+- **ORM:** Drizzle ORM 0.45.2
 - **Validation:** Zod (and Zod from `@hono/zod-openapi`)
 - **Logging:** Pino via `hono-pino` (pretty in dev, JSON in prod)
 - **Auth:** Session cookies (`session_id`), PBKDF2-SHA256 password hashing (Web Crypto API; 100k iterations in Cloudflare Workers; 600k is for Node/local compatibility only; 16-byte salt, 256-bit key, versioned stored format `pbkdf2-sha256$<iterations>$<salt>$<hash>` with legacy 2-field hashes verified at 100k and rehashed on login)
