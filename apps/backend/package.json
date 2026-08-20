@@ -24,6 +24,7 @@
     "db:seed-superadmin": "tsx scripts/seed-superadmin.ts",
     "db:seed-voter": "tsx scripts/seed-voter.ts",
     "db:reset-password": "tsx scripts/reset-password.ts",
+    "db:anonymize-votes": "tsx scripts/anonymize-votes.ts",
     "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {

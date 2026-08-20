@@ -58,6 +58,31 @@ The deploy command never applies migrations. Apply them explicitly **before** pu
 
 5. Verify the schema, then push to the production branch to deploy.
 
+## Legacy Vote Anonymization (One-Time, Manual)
+
+This is separate from schema migrations. It is irreversible except by restoring a database backup, so preserve this order:
+
+1. Deploy the anonymous ballot writer and verify both `/health` and `/health/ready` before modifying legacy rows.
+2. Confirm `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and `HMAC_SECRET` target production. `HMAC_SECRET` must match the deployed Worker and must not be rotated during the backfill.
+3. Create a fresh Turso backup/PITR recovery point and record its identifier in the release ticket.
+4. Preview the affected rows:
+
+   ```bash
+   cd apps/backend
+   pnpm db:anonymize-votes
+   ```
+
+5. Record the reported vote-row and voter/election-pair counts, then apply:
+
+   ```bash
+   pnpm db:anonymize-votes -- --apply
+   ```
+
+6. Rerun `pnpm db:anonymize-votes` and require `Would anonymize 0 vote row(s) across 0 voter/election pair(s).`
+7. Verify candidate tallies and turnout match the pre-apply values, linked `votes.user_id` values are gone, and HMAC participation rows exist.
+
+If any verification fails, stop the release and restore the recorded backup. Do not rerun with a different `HMAC_SECRET` or attempt to reconstruct cleared voter links manually.
+
 ## Rollback
 
 For a bad deployment, roll back to the last known-good build in the Worker's build/deployment history in the Cloudflare dashboard, or with Wrangler from the backend package:
