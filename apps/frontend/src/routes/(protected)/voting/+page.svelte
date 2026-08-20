@@ -3,6 +3,7 @@
   import { submitElectionVotes } from '$lib/api/votes'
   import { invalidate } from '$app/navigation'
   import { appCache } from '$lib/cache'
+  import { submitVoteWithReconciliation } from '$lib/vote-submission'
   import {
     deriveVotingPageState,
     preserveVotingState,
@@ -75,12 +76,17 @@
 
   async function submit() {
     if (pageState.kind !== 'stepper') return
+    const electionId = pageState.election.id
+    const votes = getSelectedVotes(pageState.voting)
     isSubmitting = true
     runtimeError = null
     try {
-      await submitElectionVotes(pageState.election.id, getSelectedVotes(pageState.voting))
-      await appCache.get('votingState', { includeBallot: true }).fetch(true)
-      appCache.invalidate({ params: { electionId: pageState.election.id } })
+      await submitVoteWithReconciliation(
+        electionId,
+        () => submitElectionVotes(electionId, votes),
+        () => appCache.get('votingState', { includeBallot: true }).fetch(true),
+      )
+      appCache.invalidate({ params: { electionId } })
       await invalidate('app:voting')
       addToast('success', 'Vote submitted')
     }
