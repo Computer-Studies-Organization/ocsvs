@@ -16,7 +16,7 @@ export function pickEmptyCardVariant(state: TVotingState): TEmptyCardVariant {
 export function hasVotedIn(state: TVotingState, electionId: string | null | undefined): boolean {
   if (!electionId) return false;
   if (state.myVotes.electionId !== electionId) return false;
-  return state.myVotes.votes.length > 0;
+  return state.myVotes.hasVoted;
 }
 
 export type TVotingPageState =

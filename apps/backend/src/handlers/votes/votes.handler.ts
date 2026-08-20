@@ -15,7 +15,11 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { positions } from "@/database/schema";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
-import { ballotCaster } from "@/lib/ballot-caster";
+import {
+  ballotCaster,
+  hasVoterParticipated,
+  normalizePreviousHmacSecrets,
+} from "@/lib/ballot-caster";
 
 export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => {
   const { electionId, votes: voteItems } = c.req.valid("json");
@@ -29,17 +33,7 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
     );
   }
 
-  const previousSecretsRaw = (c.env as any)?.PREVIOUS_HMAC_SECRETS;
-  const previousHmacSecrets = previousSecretsRaw
-    ? typeof previousSecretsRaw === "string"
-      ? previousSecretsRaw
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : Array.isArray(previousSecretsRaw)
-        ? previousSecretsRaw
-        : []
-    : [];
+  const previousHmacSecrets = normalizePreviousHmacSecrets(c.env?.PREVIOUS_HMAC_SECRETS);
 
   const result = await ballotCaster.cast(db, {
     accountId: authUser.id,
@@ -56,7 +50,6 @@ export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => 
   return c.json(
     {
       message: ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY,
-      votes: result.data.votes,
     },
     httpStatusCodes.OK,
   );
@@ -70,24 +63,27 @@ export const getMyVotes: AppRouteHandler<typeof getMyVotesRoute> = async (c) => 
   const user = await voterAccountStore.findByAccountId(db, authUser.id);
 
   if (!user) {
-    return c.json({ electionId: null, votes: [] }, httpStatusCodes.OK);
+    return c.json({ electionId: null, hasVoted: false }, httpStatusCodes.OK);
   }
 
   // Source of truth: the current open election. If none is open, the user has
   // no "current" votes to return.
   const current = await electionRepo.findCurrentlyOpen(db);
   if (!current) {
-    return c.json({ electionId: null, votes: [] }, httpStatusCodes.OK);
+    return c.json({ electionId: null, hasVoted: false }, httpStatusCodes.OK);
   }
 
-  const rows = await voteRepo.findByUserAndElection(db, user.id, current.id);
   return c.json(
     {
       electionId: current.id,
-      votes: rows.map((r) => ({
-        candidateId: r.candidateId,
-        positionId: r.positionId,
-      })),
+      hasVoted: await hasVoterParticipated(
+        db,
+        current.id,
+        user.studentId,
+        c.env?.HMAC_SECRET,
+        normalizePreviousHmacSecrets(c.env?.PREVIOUS_HMAC_SECRETS),
+        user.id,
+      ),
     },
     httpStatusCodes.OK,
   );

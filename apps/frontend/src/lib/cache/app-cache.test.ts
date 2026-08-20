@@ -62,8 +62,8 @@ describe("AppCache", () => {
   });
 
   it("refetches voting state after an authentication cache boundary", async () => {
-    const firstState = { myVotes: { electionId: "e1", votes: [{ candidateId: "a" }] } };
-    const secondState = { myVotes: { electionId: "e1", votes: [] } };
+    const firstState = { myVotes: { electionId: "e1", hasVoted: true } };
+    const secondState = { myVotes: { electionId: "e1", hasVoted: false } };
     vi.mocked(mockApi.getVotingState)
       .mockResolvedValueOnce(firstState as any)
       .mockResolvedValueOnce(secondState as any);

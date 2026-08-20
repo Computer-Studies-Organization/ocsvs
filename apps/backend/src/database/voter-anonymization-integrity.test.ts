@@ -8,7 +8,6 @@ import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
-import { voteRepo } from "@/database/repositories/votes.repository";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { DrizzleBallotCaster } from "@/lib/ballot-caster";
 import { userLifecycleCoordinator } from "@/lib/user-lifecycle-coordinator";
@@ -107,6 +106,18 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       closesAt: now + 3600,
     });
 
+    const voterRegistration = await userLifecycleCoordinator.register(db, {
+      firstName: "Bob",
+      lastName: "Jones",
+      email: "bob@cso.org",
+      username: "bobjones",
+      password: "StrongPassword123!",
+      studentId: "S24-2222",
+      course: "BSCS",
+      yearLevel: "2nd Year",
+      role: "user",
+    });
+
     // Transition election to 'open' status
     await electionRepo.updateStatus(db, electionId, {
       existingStatus: "draft",
@@ -156,19 +167,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       .get();
     expect(initialTurnout?.count ?? 0).toBe(0);
 
-    // 4. Step 2: Register/log in as a new student voter, cast a ballot, and verify turnout increases by +1
-    const voterRegistration = await userLifecycleCoordinator.register(db, {
-      firstName: "Bob",
-      lastName: "Jones",
-      email: "bob@cso.org",
-      username: "bobjones",
-      password: "StrongPassword123!",
-      studentId: "S24-2222",
-      course: "BSCS",
-      yearLevel: "2nd Year",
-      role: "user",
-    });
-
+    // 4. Step 2: Cast a ballot and verify turnout increases by +1
     const ballotCaster = new DrizzleBallotCaster();
     const castResult = await ballotCaster.cast(db, {
       accountId: voterRegistration.accountId,
@@ -192,12 +191,17 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       .get();
     expect(postVoteTurnout?.count).toBe(1);
 
-    // Verify user has cast a vote in the votes table
+    // New ballots are anonymous in the votes table; participation is tracked
+    // separately by the keyed voter_election_participation row.
     const dbUser = await voterAccountStore.findByAccountId(db, voterRegistration.accountId);
     expect(dbUser).toBeDefined();
-    const userVotes = await voteRepo.findByUserAndElection(db, dbUser!.id, electionId);
-    expect(userVotes).toHaveLength(1);
-    expect(userVotes[0].userId).toBe(dbUser!.id);
+    const newVoteRows = await db
+      .select()
+      .from(schema.votes)
+      .where(eq(schema.votes.electionId, electionId))
+      .all();
+    expect(newVoteRows).toHaveLength(1);
+    expect(newVoteRows[0].userId).toBeNull();
 
     // 5. Step 3: Log in as Super Admin and perform a Hard Delete on that student voter account
     const superAdminActor = {
@@ -503,6 +507,19 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       opensAt: now - 60,
       closesAt: now + 3600,
     });
+
+    const studentId = "2026-8888";
+    const voterReg = await userLifecycleCoordinator.register(db, {
+      username: "voter_durable",
+      email: "voter_durable@cso.org",
+      password: "password123",
+      studentId,
+      firstName: "Voter",
+      lastName: "Durable",
+      course: "BSCS",
+      yearLevel: "1st Year",
+    });
+
     await db
       .update(schema.elections)
       .set({ status: "open" })
@@ -536,20 +553,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       manifesto: "Test manifesto",
     });
 
-    // 1. Register voter
-    const studentId = "2026-8888";
-    const voterReg = await userLifecycleCoordinator.register(db, {
-      username: "voter_durable",
-      email: "voter_durable@cso.org",
-      password: "password123",
-      studentId,
-      firstName: "Voter",
-      lastName: "Durable",
-      course: "BSCS",
-      yearLevel: "1st Year",
-    });
-
-    // 2. Cast initial vote
+    // 1. Cast initial vote
     const caster = new DrizzleBallotCaster();
     const voteRes = await caster.cast(db, {
       accountId: voterReg.accountId,
@@ -573,14 +577,7 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     const voter = await voterAccountStore.findByAccountId(db, voterReg.accountId);
     await userLifecycleCoordinator.hardDelete(db, voter!.id, superAdminActor);
 
-    // Re-open election
-    await db
-      .update(schema.elections)
-      .set({ status: "open" })
-      .where(eq(schema.elections.id, electionId))
-      .run();
-
-    // 4. Re-import/re-register the student with the exact same studentId (creates new account/user ID)
+    // 4. Re-import/re-register while voting is closed (creates a new account/user ID)
     const reimportedVoter = await userLifecycleCoordinator.register(db, {
       username: "voter_durable_reimported",
       email: "voter_durable_reimported@cso.org",
@@ -593,6 +590,13 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     });
 
     expect(reimportedVoter.accountId).not.toBe(voterReg.accountId);
+
+    // Re-open election after the electorate is finalized.
+    await db
+      .update(schema.elections)
+      .set({ status: "open" })
+      .where(eq(schema.elections.id, electionId))
+      .run();
 
     // 5. Attempting to recast ballot with new account/user ID must fail
     const recastRes = await caster.cast(db, {

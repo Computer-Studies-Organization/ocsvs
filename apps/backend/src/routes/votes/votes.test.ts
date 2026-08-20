@@ -80,12 +80,9 @@ const {
   mockListWithVoteCount,
   mockGetForAdminView,
   mockFindByAccountId,
-  mockExistsForUser,
-  mockExistsForUserInElection,
-  mockFindByUserId,
-  mockFindByUserAndElection,
   mockCountByCandidateId,
   mockFindCurrentlyOpen,
+  mockHasVoterParticipated,
   mockListByElection,
   mockFindElectionById,
   mockFindLatestClosedOrExpiredOpen,
@@ -96,12 +93,9 @@ const {
   mockListWithVoteCount: vi.fn(),
   mockGetForAdminView: vi.fn(),
   mockFindByAccountId: vi.fn(),
-  mockExistsForUser: vi.fn(),
-  mockExistsForUserInElection: vi.fn(),
-  mockFindByUserId: vi.fn(),
-  mockFindByUserAndElection: vi.fn(),
   mockCountByCandidateId: vi.fn(),
   mockFindCurrentlyOpen: vi.fn(),
+  mockHasVoterParticipated: vi.fn(),
   mockListByElection: vi.fn(),
   mockFindElectionById: vi.fn(),
   mockFindLatestClosedOrExpiredOpen: vi.fn(),
@@ -113,6 +107,8 @@ vi.mock("@/lib/ballot-caster", () => ({
   ballotCaster: {
     cast: mockCast,
   },
+  hasVoterParticipated: mockHasVoterParticipated,
+  normalizePreviousHmacSecrets: () => [],
 }));
 
 vi.mock("@/database/repositories/candidates.repository", () => ({
@@ -133,13 +129,7 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
 
 vi.mock("@/database/repositories/votes.repository", () => ({
   voteRepo: {
-    findByUserId: mockFindByUserId,
-    findByUserAndElection: mockFindByUserAndElection,
-    existsForUser: mockExistsForUser,
-    existsForUserInElection: mockExistsForUserInElection,
     countByCandidateId: mockCountByCandidateId,
-    insertMany: vi.fn(),
-    deleteByUserId: vi.fn(),
   },
 }));
 
@@ -171,8 +161,6 @@ describe("votes Routes (repository)", () => {
   const testPositionId1 = "test-position-id-1";
   const testPositionId2 = "test-position-id-2";
   const testElectionId = "test-election-id";
-  const testVoteId1 = "test-vote-id-1";
-  const testVoteId2 = "test-vote-id-2";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -181,12 +169,9 @@ describe("votes Routes (repository)", () => {
     mockListWithVoteCount.mockReset();
     mockGetForAdminView.mockReset();
     mockFindByAccountId.mockReset();
-    mockExistsForUser.mockReset();
-    mockExistsForUserInElection.mockReset();
-    mockFindByUserId.mockReset();
-    mockFindByUserAndElection.mockReset();
     mockCountByCandidateId.mockReset();
     mockFindCurrentlyOpen.mockReset();
+    mockHasVoterParticipated.mockReset();
     mockListByElection.mockReset();
     mockFindElectionById.mockReset();
     mockCast.mockReset();
@@ -323,31 +308,7 @@ describe("votes Routes (repository)", () => {
 
     it("should successfully submit votes for multiple candidates", async () => {
       setUser();
-      mockCast.mockResolvedValue({
-        success: true,
-        data: {
-          votes: [
-            {
-              id: testVoteId1,
-              userId: testUserId,
-              candidateId: testCandidateId1,
-              positionId: testPositionId1,
-              electionId: testElectionId,
-              createdAt: Math.floor(Date.now() / 1000),
-              updatedAt: Math.floor(Date.now() / 1000),
-            },
-            {
-              id: testVoteId2,
-              userId: testUserId,
-              candidateId: testCandidateId2,
-              positionId: testPositionId2,
-              electionId: testElectionId,
-              createdAt: Math.floor(Date.now() / 1000),
-              updatedAt: Math.floor(Date.now() / 1000),
-            },
-          ],
-        },
-      });
+      mockCast.mockResolvedValue({ success: true });
 
       const res = await router.request(
         "/votes",
@@ -370,7 +331,8 @@ describe("votes Routes (repository)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.VOTE_SUBMITTED_SUCCESSFULLY);
-      expect(json.votes).toHaveLength(2);
+      expect(json).not.toHaveProperty("votes");
+      expect(json).not.toHaveProperty("userId");
       expect(mockCast).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
@@ -585,36 +547,36 @@ describe("votes Routes (repository)", () => {
   });
 
   describe("gET /votes/me - getMyVotes", () => {
-    it("returns vote picks for the current open election", async () => {
+    it("returns only participation status for the current open election", async () => {
       setUser();
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
+        studentId: "2024-0001",
       });
       mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
-      mockFindByUserAndElection.mockResolvedValue([
-        {
-          id: testVoteId1,
-          userId: testUserId,
-          candidateId: testCandidateId1,
-          positionId: testPositionId1,
-          electionId: testElectionId,
-          createdAt: 1000,
-          updatedAt: 1000,
-        },
-      ]);
+      mockHasVoterParticipated.mockResolvedValue(true);
 
-      const res = await router.request("/votes/me", { method: "GET" });
+      const res = await router.request(
+        "/votes/me",
+        { method: "GET" },
+        { HMAC_SECRET: "test-secret" },
+      );
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
-      expect(json.electionId).toBe(testElectionId);
-      expect(json.votes).toHaveLength(1);
-      expect(json.votes[0]).toEqual({
-        candidateId: testCandidateId1,
-        positionId: testPositionId1,
-      });
+      expect(json).toEqual({ electionId: testElectionId, hasVoted: true });
+      expect(json).not.toHaveProperty("votes");
+      expect(json).not.toHaveProperty("userId");
       expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
+      expect(mockHasVoterParticipated).toHaveBeenCalledWith(
+        mockDb,
+        testElectionId,
+        "2024-0001",
+        "test-secret",
+        [],
+        testUserId,
+      );
     });
 
     it("returns empty votes when there is no open election", async () => {
@@ -629,7 +591,7 @@ describe("votes Routes (repository)", () => {
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
-      expect(json).toEqual({ electionId: null, votes: [] });
+      expect(json).toEqual({ electionId: null, hasVoted: false });
       expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
     });
 
@@ -641,8 +603,7 @@ describe("votes Routes (repository)", () => {
       const res = await router.request("/votes/me", { method: "GET" });
 
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ electionId: null, votes: [] });
-      expect(mockFindByUserAndElection).not.toHaveBeenCalled();
+      expect(await res.json()).toEqual({ electionId: null, hasVoted: false });
     });
 
     it("returns empty votes when user has not voted in the current election", async () => {
@@ -650,16 +611,22 @@ describe("votes Routes (repository)", () => {
       mockFindByAccountId.mockResolvedValue({
         id: testUserId,
         accountId: testUserAccountId,
+        studentId: "2024-0001",
       });
       mockFindCurrentlyOpen.mockResolvedValue({ id: testElectionId });
-      mockFindByUserAndElection.mockResolvedValue([]);
+      mockHasVoterParticipated.mockResolvedValue(false);
 
-      const res = await router.request("/votes/me", { method: "GET" });
+      const res = await router.request(
+        "/votes/me",
+        { method: "GET" },
+        { HMAC_SECRET: "test-secret" },
+      );
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.electionId).toBe(testElectionId);
-      expect(json.votes).toEqual([]);
+      expect(json.hasVoted).toBe(false);
+      expect(json).not.toHaveProperty("votes");
       expect(mockFindCurrentlyOpen).toHaveBeenCalledWith(mockDb);
     });
 
@@ -671,7 +638,7 @@ describe("votes Routes (repository)", () => {
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
-      expect(json).toEqual({ electionId: null, votes: [] });
+      expect(json).toEqual({ electionId: null, hasVoted: false });
     });
   });
 

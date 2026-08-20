@@ -165,7 +165,7 @@ export type TLastClosed = {
 
 export type TMyVotes = {
   electionId: string | null;
-  votes: Array<{ candidateId: string; positionId: string }>;
+  hasVoted: boolean;
 };
 
 export type TVotingBallot = {

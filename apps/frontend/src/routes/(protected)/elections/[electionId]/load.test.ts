@@ -79,7 +79,7 @@ describe("election detail loader", () => {
                   closesAt: now + 5400,
                 },
                 lastClosed: null,
-                myVotes: { electionId: null, votes: [] },
+                myVotes: { electionId: null, hasVoted: false },
               }
             : [],
       ),

@@ -1,5 +1,5 @@
 import type { BatchItem } from "drizzle-orm/batch";
-import type { Database } from "@/database/repositories/database.type";
+import type { Database, DbClient } from "@/database/repositories/database.type";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { electionRepo } from "@/database/repositories/election.repository";
@@ -10,6 +10,8 @@ import { ballotSnapshots, voterElectionParticipation, votes } from "@/database/s
 import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 import { decodeHmacSecret } from "@/middleware/env";
+
+export const PARTICIPATION_TIMESTAMP_SENTINEL = 0;
 
 export async function computeLegacyVoterHash(
   electionId: string,
@@ -50,6 +52,59 @@ export async function computeVoterHash(
   const hashArray = Array.from(new Uint8Array(signature));
   const hexHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   return `v1:${hexHash}`;
+}
+
+export async function computeVoterParticipationHashes(
+  electionId: string,
+  studentId: string | undefined,
+  hmacSecret: string,
+  previousHmacSecrets: string[] = [],
+): Promise<string[]> {
+  const hashes = [await computeVoterHash(electionId, studentId, hmacSecret)];
+  hashes.push(
+    ...(await Promise.all(
+      previousHmacSecrets.map((secret) => computeVoterHash(electionId, studentId, secret)),
+    )),
+  );
+  // Keep matching pre-HMAC participation rows until their records naturally age out.
+  hashes.push(await computeLegacyVoterHash(electionId, studentId));
+  return hashes;
+}
+
+export function normalizePreviousHmacSecrets(raw: unknown): string[] {
+  if (typeof raw === "string")
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  return Array.isArray(raw)
+    ? raw.filter((secret): secret is string => typeof secret === "string")
+    : [];
+}
+
+export async function hasVoterParticipated(
+  db: DbClient,
+  electionId: string,
+  studentId: string | undefined,
+  hmacSecret: string | undefined,
+  previousHmacSecrets: string[] = [],
+  legacyUserId?: string,
+): Promise<boolean> {
+  const hasLegacyLink = legacyUserId
+    ? voteRepo.existsForUserInElection(db, legacyUserId, electionId)
+    : Promise.resolve(false);
+  if (!hmacSecret || !studentId?.trim()) return hasLegacyLink;
+  const hashes = await computeVoterParticipationHashes(
+    electionId,
+    studentId,
+    hmacSecret,
+    previousHmacSecrets,
+  );
+  const [hasParticipation, legacyLink] = await Promise.all([
+    voteRepo.hasVoterHashParticipated(db, electionId, hashes),
+    hasLegacyLink,
+  ]);
+  return hasParticipation || legacyLink;
 }
 
 export interface BallotSelection {
@@ -175,39 +230,25 @@ export class DrizzleBallotCaster {
         };
       }
 
-      // 3. Double-voting check (by user.id AND by durable voterHash)
-      const currentHash =
-        user.studentId && user.studentId.trim()
-          ? await computeVoterHash(input.electionId, user.studentId, input.hmacSecret)
-          : null;
-      const legacyHash =
-        user.studentId && user.studentId.trim()
-          ? await computeLegacyVoterHash(input.electionId, user.studentId)
-          : null;
-
-      const previousHashes =
-        user.studentId && user.studentId.trim() && input.previousHmacSecrets
-          ? await Promise.all(
-              input.previousHmacSecrets.map((secret) =>
-                computeVoterHash(input.electionId, user.studentId, secret),
-              ),
-            )
-          : [];
-
-      const hashesToCheck = [
-        ...(currentHash ? [currentHash] : []),
-        ...previousHashes,
-        ...(legacyHash ? [legacyHash] : []),
-      ];
-
-      const [hasVoted, hasParticipated] = await Promise.all([
+      // 3. New ballots use durable participation; the legacy link guard remains
+      // until the operator backfill has converted old rows.
+      const hashesToCheck = user.studentId?.trim()
+        ? await computeVoterParticipationHashes(
+            input.electionId,
+            user.studentId,
+            input.hmacSecret,
+            input.previousHmacSecrets,
+          )
+        : [];
+      const [hasLegacyLink, hasParticipated] = await Promise.all([
+        // Compatibility guard until the operator backfill has converted legacy links.
         voteRepo.existsForUserInElection(db, user.id, input.electionId),
         hashesToCheck.length > 0
           ? voteRepo.hasVoterHashParticipated(db, input.electionId, hashesToCheck)
           : Promise.resolve(false),
       ]);
 
-      if (hasVoted || hasParticipated) {
+      if (hasLegacyLink || hasParticipated) {
         return {
           success: false,
           error: {
@@ -302,10 +343,22 @@ export class DrizzleBallotCaster {
         }
       }
 
+      if (!user.studentId?.trim()) {
+        return {
+          success: false,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: ERROR_MESSAGES.USER_NOT_FOUND,
+            status: httpStatusCodes.BAD_REQUEST,
+          },
+        };
+      }
+
       // 8. Atomic transaction
       const recordsToInsert = input.selections.map((sel) => ({
         id: crypto.randomUUID(),
-        userId: user.id,
+        // Legacy nullable column retained for compatibility; new ballots are anonymous at write time.
+        userId: null,
         candidateId: sel.candidateId,
         positionId: sel.positionId,
         electionId: input.electionId,
@@ -324,13 +377,15 @@ export class DrizzleBallotCaster {
           db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
         ];
 
+        const currentHash = hashesToCheck[0];
         if (currentHash) {
           batchStatements.push(
             db.insert(voterElectionParticipation).values({
               id: crypto.randomUUID(),
               electionId: input.electionId,
               voterHash: currentHash,
-              createdAt: now,
+              // Never persist ballot timing beside an identity-derived hash.
+              createdAt: PARTICIPATION_TIMESTAMP_SENTINEL,
             }),
           );
         }

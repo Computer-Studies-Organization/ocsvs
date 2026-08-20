@@ -9,8 +9,8 @@ import { partyListRepo, type PartyListRow } from "@/database/repositories/party-
 import { positionRepo, type PositionRow } from "@/database/repositories/position.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
-import { voteRepo } from "@/database/repositories/votes.repository";
 import { isElectionCurrentlyOpen } from "@/lib/election-lifecycle";
+import { hasVoterParticipated } from "@/lib/ballot-caster";
 
 export interface NextDraft {
   id: string;
@@ -28,7 +28,7 @@ export interface LastClosed {
 
 export interface MyVotes {
   electionId: string | null;
-  votes: Array<{ candidateId: string; positionId: string }>;
+  hasVoted: boolean;
 }
 
 export interface VotingBallot {
@@ -47,6 +47,8 @@ export interface VotingState {
 
 export interface GetVotingStateOptions {
   includeBallot?: boolean;
+  hmacSecret?: string;
+  previousHmacSecrets?: string[];
 }
 
 // ponytail: one-entry per-isolate cache; move to shared KV/Cache API if isolate misses matter.
@@ -138,7 +140,13 @@ export async function getVotingState(
 
   const [ballot, myVotes] = await Promise.all([
     includeBallot && open ? getBallotForOpen(db, open.id) : Promise.resolve(null),
-    getMyVotesForOpen(db, accountId, open?.id ?? null),
+    getMyVotesForOpen(
+      db,
+      accountId,
+      open?.id ?? null,
+      options.hmacSecret,
+      options.previousHmacSecrets,
+    ),
   ]);
 
   return { open, nextDraft, lastClosed, ballot, myVotes };
@@ -158,20 +166,25 @@ async function getMyVotesForOpen(
   db: DbClient,
   accountId: string,
   openId: string | null,
+  hmacSecret?: string,
+  previousHmacSecrets?: string[],
 ): Promise<MyVotes> {
   if (!openId) {
-    return { electionId: null, votes: [] };
+    return { electionId: null, hasVoted: false };
   }
   const user = await voterAccountStore.findByAccountId(db, accountId);
   if (!user) {
-    return { electionId: openId, votes: [] };
+    return { electionId: openId, hasVoted: false };
   }
-  const rows = await voteRepo.findByUserAndElection(db, user.id, openId);
   return {
     electionId: openId,
-    votes: rows.map((r) => ({
-      candidateId: r.candidateId,
-      positionId: r.positionId,
-    })),
+    hasVoted: await hasVoterParticipated(
+      db,
+      openId,
+      user.studentId,
+      hmacSecret,
+      previousHmacSecrets,
+      user.id,
+    ),
   };
 }

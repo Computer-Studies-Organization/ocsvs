@@ -79,7 +79,7 @@ describe("GET /elections/state", () => {
       nextDraft: null,
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
@@ -88,7 +88,7 @@ describe("GET /elections/state", () => {
     expect(body.open).toEqual(open);
     expect(body.nextDraft).toBeNull();
     expect(body.lastClosed).toBeNull();
-    expect(body.myVotes).toEqual({ electionId: null, votes: [] });
+    expect(body.myVotes).toEqual({ electionId: null, hasVoted: false });
   });
 
   it("passes includeBallot=true to the state query", async () => {
@@ -98,13 +98,17 @@ describe("GET /elections/state", () => {
       nextDraft: null,
       lastClosed: null,
       ballot,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state?includeBallot=true", { method: "GET" });
 
     expect(res.status).toBe(200);
-    expect(getState).toHaveBeenCalledWith({}, "acc-1", { includeBallot: true });
+    expect(getState).toHaveBeenCalledWith({}, "acc-1", {
+      includeBallot: true,
+      hmacSecret: undefined,
+      previousHmacSecrets: [],
+    });
     const body = (await res.json()) as VotingState;
     expect(body.ballot).toEqual(ballot);
   });
@@ -115,7 +119,7 @@ describe("GET /elections/state", () => {
       nextDraft: { id: "d1", name: "Fall", opensAt: 100, closesAt: 200 },
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
@@ -143,7 +147,7 @@ describe("GET /elections/state", () => {
         ],
       },
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
@@ -163,7 +167,7 @@ describe("GET /elections/state", () => {
         results: [],
       },
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
@@ -178,7 +182,7 @@ describe("GET /elections/state", () => {
       nextDraft: null,
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
@@ -188,26 +192,30 @@ describe("GET /elections/state", () => {
       nextDraft: null,
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
   });
 
-  it("returns the requesting user's votes in myVotes when called with their account id", async () => {
+  it("returns only the requesting user's participation status", async () => {
     TEST_USER = { id: "acc-7", email: "u@e.com", username: "u", role: "user" };
     getState.mockResolvedValue({
       open: null,
       nextDraft: null,
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: "e-voted", votes: [{ candidateId: "c1", positionId: "p1" }] },
+      myVotes: { electionId: "e-voted", hasVoted: true },
     });
 
     const res = await router.request("/elections/state", { method: "GET" });
     const body = (await res.json()) as VotingState;
     expect(body.myVotes).toEqual({
       electionId: "e-voted",
-      votes: [{ candidateId: "c1", positionId: "p1" }],
+      hasVoted: true,
     });
-    expect(getState).toHaveBeenCalledWith({}, "acc-7", { includeBallot: false });
+    expect(getState).toHaveBeenCalledWith({}, "acc-7", {
+      includeBallot: false,
+      hmacSecret: undefined,
+      previousHmacSecrets: [],
+    });
   });
 });

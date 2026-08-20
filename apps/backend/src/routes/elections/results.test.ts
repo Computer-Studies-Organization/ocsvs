@@ -2,6 +2,15 @@ import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import router from "./index";
 
+const { mockHasVoterParticipated } = vi.hoisted(() => ({
+  mockHasVoterParticipated: vi.fn(),
+}));
+
+vi.mock("@/lib/ballot-caster", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ballot-caster")>();
+  return { ...actual, hasVoterParticipated: mockHasVoterParticipated };
+});
+
 let TEST_USER = {
   id: "test-user-id",
   email: "test@example.com",
@@ -57,14 +66,11 @@ vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
-const { mockGetResults, mockFindById, mockFindByAccountId, mockFindByUserAndElection } = vi.hoisted(
-  () => ({
-    mockGetResults: vi.fn(),
-    mockFindById: vi.fn(),
-    mockFindByAccountId: vi.fn(),
-    mockFindByUserAndElection: vi.fn(),
-  }),
-);
+const { mockGetResults, mockFindById, mockFindByAccountId } = vi.hoisted(() => ({
+  mockGetResults: vi.fn(),
+  mockFindById: vi.fn(),
+  mockFindByAccountId: vi.fn(),
+}));
 
 vi.mock("@/database/queries/election.queries", () => ({
   electionQueries: {
@@ -87,12 +93,6 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
   },
 }));
 
-vi.mock("@/database/repositories/votes.repository", () => ({
-  voteRepo: {
-    findByUserAndElection: mockFindByUserAndElection,
-  },
-}));
-
 const electionId = "elec-001";
 
 describe("election results route", () => {
@@ -102,7 +102,8 @@ describe("election results route", () => {
     mockGetResults.mockReset();
     mockFindById.mockReset();
     mockFindByAccountId.mockReset();
-    mockFindByUserAndElection.mockReset();
+    mockHasVoterParticipated.mockReset();
+    mockHasVoterParticipated.mockResolvedValue(false);
     TEST_USER = {
       id: "test-user-id",
       email: "test@example.com",
@@ -147,8 +148,8 @@ describe("election results route", () => {
 
     it("returns 403 when election is open and user has not voted", async () => {
       mockFindById.mockResolvedValue({ id: electionId, status: "open" });
-      mockFindByAccountId.mockResolvedValue({ id: "student-user-id" });
-      mockFindByUserAndElection.mockResolvedValue([]); // No votes cast
+      mockFindByAccountId.mockResolvedValue({ id: "student-user-id", studentId: "2024-0001" });
+      mockHasVoterParticipated.mockResolvedValue(false);
 
       const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
       expect(res.status).toBe(403);
@@ -156,8 +157,8 @@ describe("election results route", () => {
 
     it("returns 200 with results when election is open and user has voted", async () => {
       mockFindById.mockResolvedValue({ id: electionId, status: "open" });
-      mockFindByAccountId.mockResolvedValue({ id: "student-user-id" });
-      mockFindByUserAndElection.mockResolvedValue([{ candidateId: "cand-1" }]); // Voted
+      mockFindByAccountId.mockResolvedValue({ id: "student-user-id", studentId: "2024-0001" });
+      mockHasVoterParticipated.mockResolvedValue(true);
       mockGetResults.mockResolvedValue(results);
 
       const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
@@ -186,7 +187,6 @@ describe("election results route", () => {
 
       const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
       expect(res.status).toBe(200);
-      expect(mockFindByUserAndElection).not.toHaveBeenCalled();
     });
   });
 });

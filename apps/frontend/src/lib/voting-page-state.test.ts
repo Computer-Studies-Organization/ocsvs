@@ -15,7 +15,7 @@ const base: TVotingState = {
   nextDraft: null,
   lastClosed: null,
   ballot: null,
-  myVotes: { electionId: null, votes: [] },
+  myVotes: { electionId: null, hasVoted: false },
 };
 
 test("pickEmptyCardVariant returns 'next-draft' when only nextDraft is present", () => {
@@ -47,7 +47,7 @@ test("pickEmptyCardVariant returns 'none' when neither nextDraft nor lastClosed 
   expect(pickEmptyCardVariant(base)).toBe("none");
 });
 
-test("hasVotedIn returns true when myVotes match the open election and have at least one vote", () => {
+test("hasVotedIn returns true when participation matches the open election", () => {
   const state: TVotingState = {
     ...base,
     open: {
@@ -60,7 +60,7 @@ test("hasVotedIn returns true when myVotes match the open election and have at l
       createdAt: 1,
       updatedAt: 1,
     },
-    myVotes: { electionId: "e1", votes: [{ candidateId: "c1", positionId: "p1" }] },
+    myVotes: { electionId: "e1", hasVoted: true },
   };
   expect(hasVotedIn(state, "e1")).toBe(true);
 });
@@ -78,7 +78,7 @@ test("hasVotedIn returns false when myVotes are for a different election", () =>
       createdAt: 1,
       updatedAt: 1,
     },
-    myVotes: { electionId: "e0", votes: [{ candidateId: "c1", positionId: "p1" }] },
+    myVotes: { electionId: "e0", hasVoted: true },
   };
   expect(hasVotedIn(state, "e1")).toBe(false);
 });
@@ -107,12 +107,12 @@ const apiStateWithOpen: TVotingState = {
   nextDraft: null,
   lastClosed: null,
   ballot: null,
-  myVotes: { electionId: null, votes: [] },
+  myVotes: { electionId: null, hasVoted: false },
 };
 
 const apiStateVoted: TVotingState = {
   ...apiStateWithOpen,
-  myVotes: { electionId: "e1", votes: [{ candidateId: "c1", positionId: "p1" }] },
+  myVotes: { electionId: "e1", hasVoted: true },
 };
 
 const samplePositions: TPosition[] = [
@@ -169,7 +169,7 @@ test("deriveVotingPageState returns empty/next-draft when only nextDraft is pres
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
     lastClosed: null,
     ballot: null,
-    myVotes: { electionId: null, votes: [] },
+    myVotes: { electionId: null, hasVoted: false },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
   expect(result.kind).toBe("empty");
@@ -186,7 +186,7 @@ test("deriveVotingPageState returns empty/last-closed when only lastClosed is pr
     nextDraft: null,
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
     ballot: null,
-    myVotes: { electionId: null, votes: [] },
+    myVotes: { electionId: null, hasVoted: false },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
   expect(result.kind).toBe("empty");
@@ -200,7 +200,7 @@ test("deriveVotingPageState returns empty/both when nextDraft and lastClosed are
     nextDraft: { id: "d1", name: "Fall", opensAt: 1, closesAt: 2 },
     lastClosed: { id: "c1", name: "Spring", closesAt: 1, results: [] },
     ballot: null,
-    myVotes: { electionId: null, votes: [] },
+    myVotes: { electionId: null, hasVoted: false },
   };
   const result = deriveVotingPageState({ ...emptyInput, apiState });
   expect(result.kind).toBe("empty");
@@ -327,7 +327,7 @@ test("hasVotedIn returns false when there are no votes", () => {
       createdAt: 1,
       updatedAt: 1,
     },
-    myVotes: { electionId: null, votes: [] },
+    myVotes: { electionId: null, hasVoted: false },
   };
   expect(hasVotedIn(state, "e1")).toBe(false);
 });
@@ -345,7 +345,7 @@ test("hasVotedIn returns false when electionId is null", () => {
       createdAt: 1,
       updatedAt: 1,
     },
-    myVotes: { electionId: "e1", votes: [] },
+    myVotes: { electionId: "e1", hasVoted: false },
   };
   expect(hasVotedIn(state, "e1")).toBe(false);
 });

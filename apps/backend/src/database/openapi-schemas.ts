@@ -446,12 +446,7 @@ export const LastClosedSchema = z.object({
 
 export const MyVotesSchema = z.object({
   electionId: z.string().nullable(),
-  votes: z.array(
-    z.object({
-      candidateId: z.string(),
-      positionId: z.string(),
-    }),
-  ),
+  hasVoted: z.boolean(),
 });
 
 export const VotingStateSchema = z.object({

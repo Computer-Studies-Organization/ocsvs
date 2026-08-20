@@ -3,6 +3,7 @@ import type { votingStateRoute } from "@/routes/elections/voting-state.routes";
 import { createDb } from "@/config/db";
 import { getVotingState } from "@/database/queries/voting-state.queries";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
+import { normalizePreviousHmacSecrets } from "@/lib/ballot-caster";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -14,7 +15,11 @@ export const getVotingStateHandler: AppRouteHandler<typeof votingStateRoute> = a
 
   const { db } = createDb(c);
   const { includeBallot } = c.req.valid("query");
-  const state = await getVotingState(db, account.id, { includeBallot });
+  const state = await getVotingState(db, account.id, {
+    includeBallot,
+    hmacSecret: c.env?.HMAC_SECRET,
+    previousHmacSecrets: normalizePreviousHmacSecrets(c.env?.PREVIOUS_HMAC_SECRETS),
+  });
   const ballot = state.ballot
     ? {
         ...state.ballot,

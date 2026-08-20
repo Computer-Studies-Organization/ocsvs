@@ -38,7 +38,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
       .fetch(false, { fetch });
   } else if (effectiveElection.status === "open") {
     hasVoted =
-      votingState?.myVotes.electionId === params.electionId && votingState.myVotes.votes.length > 0;
+      votingState?.myVotes.electionId === params.electionId && votingState.myVotes.hasVoted;
     if (hasVoted) {
       results = await appCache
         .get("results", { electionId: params.electionId })

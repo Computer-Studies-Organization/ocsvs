@@ -4,9 +4,9 @@ import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
-import { voteRepo } from "@/database/repositories/votes.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { getEffectiveElectionStatus } from "@/lib/election-lifecycle";
+import { hasVoterParticipated, normalizePreviousHmacSecrets } from "@/lib/ballot-caster";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResultsRoute> = async (
@@ -36,8 +36,15 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
     if (!studentUser) {
       return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
     }
-    const votes = await voteRepo.findByUserAndElection(db, studentUser.id, id);
-    if (votes.length === 0) {
+    const hasVoted = await hasVoterParticipated(
+      db,
+      id,
+      studentUser.studentId,
+      c.env?.HMAC_SECRET,
+      normalizePreviousHmacSecrets(c.env?.PREVIOUS_HMAC_SECRETS),
+      studentUser.id,
+    );
+    if (!hasVoted) {
       return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
     }
   }

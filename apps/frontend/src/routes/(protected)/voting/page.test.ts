@@ -25,7 +25,7 @@ describe("voting page loader", () => {
             open: { id: "election-1" },
             nextDraft: null,
             lastClosed: null,
-            myVotes: { electionId: "election-1", votes: [] },
+            myVotes: { electionId: "election-1", hasVoted: false },
             ballot: {
               positions: [{ id: "position-1" }],
               candidates: [{ id: "candidate-1" }],
@@ -75,7 +75,7 @@ describe("voting page loader", () => {
       open: { id: "election-1" },
       nextDraft: null,
       lastClosed: null,
-      myVotes: { electionId: "election-1", votes: [] },
+      myVotes: { electionId: "election-1", hasVoted: false },
       ballot: null,
     };
     mockCacheGet.mockReturnValue({

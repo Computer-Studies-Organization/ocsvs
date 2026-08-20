@@ -141,10 +141,10 @@ export const partyLists = sqliteTable(
 // on `candidates.position_id`, `votes.position_id`, and `votes.election_id`
 // prevents orphaned references. The unique indexes
 // (`votes_user_position_election_unique_idx` and
-// `votes_user_candidate_unique_idx`) provide additional integrity guarantees.
-// Note that when users are hard deleted, votes.user_id is SET NULL, which
-// bypasses these unique index constraints in SQLite, allowing multiple anonymized
-// votes to coexist without collision.
+// `votes_user_candidate_unique_idx`) are retained for legacy rows only. The
+// nullable user_id column is kept for mixed-version migration compatibility;
+// new ballots always write NULL and use voter_election_participation for the
+// one-ballot-per-voter invariant.
 export const candidates = sqliteTable(
   "candidates",
   {
@@ -191,6 +191,7 @@ export const votes = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
     id: text("id").primaryKey(),
+    // Legacy account link. Never populate this for newly cast ballots.
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     candidateId: text("candidate_id")
       .notNull()
@@ -243,6 +244,7 @@ export const voterElectionParticipation = sqliteTable(
       .notNull()
       .references(() => elections.id, { onDelete: "restrict" }),
     voterHash: text("voter_hash").notNull(),
+    // Writers store the privacy sentinel 0; exact ballot timing can correlate hashes to selections.
     createdAt: integer("created_at")
       .notNull()
       .default(sql`(unixepoch())`),

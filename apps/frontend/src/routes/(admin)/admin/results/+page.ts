@@ -15,7 +15,7 @@ export const load: PageLoad = async ({ url, fetch }) => {
     open: null,
     nextDraft: null,
     lastClosed: null,
-    myVotes: { electionId: null, votes: [] },
+    myVotes: { electionId: null, hasVoted: false },
   };
 
   const filtered = electionList.filter((e) => e.status !== "draft");

@@ -23,33 +23,17 @@ export const submitVoteSchema = z.object({
   votes: z.array(VoteItemSchema).min(1).max(MAX_BALLOT_SELECTIONS),
 });
 
-export const VoteResponseSchema = z.object({
-  id: z.string(),
-  userId: z.string().nullable(),
-  candidateId: z.string(),
-  positionId: z.string(),
-  electionId: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-});
-
 export const SubmitVoteResponseSchema = z.object({
   message: z.string(),
-  votes: z.array(VoteResponseSchema),
 });
 
-/** Response for /votes/me: the voter's picks for the current open election. */
+/** Response for /votes/me: only whether the voter participated in the current election. */
 export const VoteStatusSchema = z.object({
   electionId: z.string().nullable().openapi({
     description: "Current open election ID, or null if none is open",
     example: "elec_202mno",
   }),
-  votes: z.array(
-    z.object({
-      candidateId: z.string(),
-      positionId: z.string(),
-    }),
-  ),
+  hasVoted: z.boolean(),
 });
 
 export const VoteCountSchema = z.object({
@@ -144,7 +128,10 @@ export const getMyVotesRoute = createRoute({
   path: "/votes/me",
   security: [{ sessionAuth: [] }],
   responses: {
-    [httpStatusCodes.OK]: jsonContent(VoteStatusSchema, "My votes for the current open election"),
+    [httpStatusCodes.OK]: jsonContent(
+      VoteStatusSchema,
+      "Whether the voter has participated in the current open election",
+    ),
     [httpStatusCodes.UNAUTHORIZED]: jsonContent(
       z.object({
         message: z.string(),

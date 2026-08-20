@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ballotCaster, computeVoterHash, computeLegacyVoterHash } from "./ballot-caster";
+import {
+  ballotCaster,
+  computeLegacyVoterHash,
+  computeVoterHash,
+  hasVoterParticipated,
+} from "./ballot-caster";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
 const {
@@ -9,7 +14,6 @@ const {
   mockHasVoterHashParticipated,
   mockFindActiveByIds,
   mockListByElection,
-  mockFindByUserAndElection,
 } = vi.hoisted(() => ({
   mockFindByAccountId: vi.fn(),
   mockFindElectionById: vi.fn(),
@@ -17,7 +21,6 @@ const {
   mockHasVoterHashParticipated: vi.fn().mockResolvedValue(false),
   mockFindActiveByIds: vi.fn(),
   mockListByElection: vi.fn(),
-  mockFindByUserAndElection: vi.fn(),
 }));
 
 vi.mock("@/database/repositories/voter-account-store", () => ({
@@ -36,7 +39,6 @@ vi.mock("@/database/repositories/votes.repository", () => ({
   voteRepo: {
     existsForUserInElection: mockExistsForUserInElection,
     hasVoterHashParticipated: mockHasVoterHashParticipated,
-    findByUserAndElection: mockFindByUserAndElection,
   },
 }));
 
@@ -71,9 +73,10 @@ describe("DrizzleBallotCaster", () => {
     mockFindByAccountId.mockReset();
     mockFindElectionById.mockReset();
     mockExistsForUserInElection.mockReset();
+    mockHasVoterHashParticipated.mockReset();
+    mockHasVoterHashParticipated.mockResolvedValue(false);
     mockFindActiveByIds.mockReset();
     mockListByElection.mockReset();
-    mockFindByUserAndElection.mockReset();
   });
 
   it("should fail with USER_NOT_FOUND when user is missing", async () => {
@@ -152,7 +155,8 @@ describe("DrizzleBallotCaster", () => {
       opensAt: now - 3600,
       closesAt: now + 3600,
     });
-    mockExistsForUserInElection.mockResolvedValue(true);
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
+    mockHasVoterHashParticipated.mockResolvedValue(true);
     const result = await ballotCaster.cast(mockDb, {
       accountId,
       electionId,
@@ -163,48 +167,6 @@ describe("DrizzleBallotCaster", () => {
     if (!result.success) {
       expect(result.error.code).toBe("VOTE_ALREADY_CAST");
       expect(result.error.message).toBe(ERROR_MESSAGES.VOTE_ALREADY_CAST);
-    }
-  });
-
-  it("should run user-vote and participation checks concurrently", async () => {
-    let releaseUserVoteCheck!: (value: boolean) => void;
-    const userVoteCheck = new Promise<boolean>((resolve) => {
-      releaseUserVoteCheck = resolve;
-    });
-    let participationCheckStarted = false;
-
-    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
-    mockFindElectionById.mockResolvedValue({
-      id: electionId,
-      status: "open",
-      opensAt: now - 3600,
-      closesAt: now + 3600,
-    });
-    mockExistsForUserInElection.mockReturnValue(userVoteCheck);
-    mockHasVoterHashParticipated.mockImplementation(async () => {
-      participationCheckStarted = true;
-      return false;
-    });
-    mockFindActiveByIds.mockResolvedValue(
-      new Map([[candidateId, { id: candidateId, positionId }]]),
-    );
-    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
-    mockFindByUserAndElection.mockResolvedValue([]);
-
-    const castPromise = ballotCaster.cast(mockDb, {
-      accountId,
-      electionId,
-      selections: [{ candidateId, positionId }],
-      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
-    });
-
-    try {
-      await vi.waitFor(() => {
-        expect(participationCheckStarted).toBe(true);
-      });
-    } finally {
-      releaseUserVoteCheck(false);
-      await castPromise.catch(() => undefined);
     }
   });
 
@@ -400,7 +362,7 @@ describe("DrizzleBallotCaster", () => {
   });
 
   it("should successfully cast votes when all conditions are satisfied", async () => {
-    mockFindByAccountId.mockResolvedValue({ id: userId });
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
     mockFindElectionById.mockResolvedValue({
       id: electionId,
       status: "open",
@@ -424,7 +386,7 @@ describe("DrizzleBallotCaster", () => {
     if (result.success) {
       expect(result.data.votes).toHaveLength(1);
       expect(result.data.votes[0]).toMatchObject({
-        userId,
+        userId: null,
         candidateId,
         positionId,
         electionId,
@@ -432,8 +394,41 @@ describe("DrizzleBallotCaster", () => {
         updatedAt: expect.any(Number),
       });
       expect(result.data.votes[0].id).toEqual(expect.any(String));
+      expect(mockDb.values.mock.calls[0][0][0].userId).toBeNull();
+      expect(mockDb.values.mock.calls[2][0].createdAt).toBe(0);
     }
-    expect(mockFindByUserAndElection).not.toHaveBeenCalled();
+  });
+
+  it("should reject a blank studentId before writing anonymous votes", async () => {
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "   " });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "USER_NOT_FOUND",
+        message: ERROR_MESSAGES.USER_NOT_FOUND,
+        status: 400,
+      },
+    });
+    expect(mockDb.batch).not.toHaveBeenCalled();
   });
 
   it("should fail with internal error when hmacSecret is missing or too short during cast", async () => {
@@ -570,9 +565,6 @@ describe("DrizzleBallotCaster", () => {
       new Map([[candidateId, { id: candidateId, positionId }]]),
     );
     mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
-    mockFindByUserAndElection.mockResolvedValue([
-      { id: "vote-1", userId, candidateId, positionId, electionId },
-    ]);
 
     // DB has no participating rows matching
     mockHasVoterHashParticipated.mockResolvedValue(false);
@@ -654,5 +646,23 @@ describe("computeLegacyVoterHash", () => {
     const hashA = await computeLegacyVoterHash("election-1", "2024-0001");
     const hashB = await computeLegacyVoterHash("election-1", "2024-0002");
     expect(hashA).not.toBe(hashB);
+  });
+});
+
+describe("hasVoterParticipated", () => {
+  it("falls back to a legacy linked vote until the anonymization backfill runs", async () => {
+    mockHasVoterHashParticipated.mockResolvedValue(false);
+    mockExistsForUserInElection.mockResolvedValue(true);
+
+    await expect(
+      hasVoterParticipated(
+        mockDb,
+        "election-1",
+        "2024-0001",
+        "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
+        [],
+        "user-1",
+      ),
+    ).resolves.toBe(true);
   });
 });

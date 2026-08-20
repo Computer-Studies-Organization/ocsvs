@@ -361,7 +361,8 @@ interface VotingState {
   open: ElectionRow | null; // Current open election (if any)
   nextDraft: { id; name; opensAt; closesAt } | null; // Earliest upcoming draft
   lastClosed: { id; name; closesAt; results } | null; // Latest closed with results
-  myVotes: { electionId; votes: Array<{ candidateId; positionId }> }; // User's votes in current open election
+  ballot: { positions; parties; candidates } | null; // Included when includeBallot=true
+  myVotes: { electionId: string | null; hasVoted: boolean }; // Participation only; never selections
 }
 ```
 

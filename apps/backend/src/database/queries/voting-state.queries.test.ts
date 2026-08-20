@@ -5,8 +5,11 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { partyListRepo } from "@/database/repositories/party-list.repository";
 import { positionRepo } from "@/database/repositories/position.repository";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
-import { voteRepo } from "@/database/repositories/votes.repository";
 import { getVotingState } from "./voting-state.queries";
+
+const { mockHasVoterParticipated } = vi.hoisted(() => ({
+  mockHasVoterParticipated: vi.fn(),
+}));
 
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
@@ -30,8 +33,8 @@ vi.mock("@/database/queries/election.queries", () => ({
 vi.mock("@/database/repositories/voter-account-store", () => ({
   voterAccountStore: { findByAccountId: vi.fn() },
 }));
-vi.mock("@/database/repositories/votes.repository", () => ({
-  voteRepo: { findByUserAndElection: vi.fn() },
+vi.mock("@/lib/ballot-caster", () => ({
+  hasVoterParticipated: mockHasVoterParticipated,
 }));
 
 const db = {} as any;
@@ -48,7 +51,8 @@ beforeEach(() => {
   vi.mocked(partyListRepo.listByElection).mockReset();
   vi.mocked(positionRepo.listByElection).mockReset();
   vi.mocked(voterAccountStore.findByAccountId).mockReset();
-  vi.mocked(voteRepo.findByUserAndElection).mockReset();
+  mockHasVoterParticipated.mockReset();
+  mockHasVoterParticipated.mockResolvedValue(false);
 });
 
 describe("getVotingState", () => {
@@ -64,10 +68,10 @@ describe("getVotingState", () => {
       nextDraft: null,
       lastClosed: null,
       ballot: null,
-      myVotes: { electionId: null, votes: [] },
+      myVotes: { electionId: null, hasVoted: false },
     });
     expect(voterAccountStore.findByAccountId).not.toHaveBeenCalled();
-    expect(voteRepo.findByUserAndElection).not.toHaveBeenCalled();
+    expect(mockHasVoterParticipated).not.toHaveBeenCalled();
   });
 
   it("returns the open election when one exists", async () => {
@@ -86,7 +90,6 @@ describe("getVotingState", () => {
     vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
     vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
     vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(mockUser);
-    vi.mocked(voteRepo.findByUserAndElection).mockResolvedValue([]);
 
     const result = await getVotingState(db, accountId);
 
@@ -334,19 +337,27 @@ describe("getVotingState", () => {
     vi.mocked(electionRepo.findOpen).mockResolvedValue(openRow as any);
     vi.mocked(electionRepo.findEarliestDraft).mockResolvedValue(null);
     vi.mocked(electionRepo.findLatestClosed).mockResolvedValue(null);
-    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue(mockUser);
-    vi.mocked(voteRepo.findByUserAndElection).mockResolvedValue([
-      { candidateId: "c1", positionId: "p1" },
-    ] as any);
+    vi.mocked(voterAccountStore.findByAccountId).mockResolvedValue({
+      ...mockUser,
+      studentId: "2024-0001",
+    });
+    mockHasVoterParticipated.mockResolvedValue(true);
 
-    const result = await getVotingState(db, accountId);
+    const result = await getVotingState(db, accountId, { hmacSecret: "test-secret" });
 
     expect(result.myVotes).toEqual({
       electionId: "e-open",
-      votes: [{ candidateId: "c1", positionId: "p1" }],
+      hasVoted: true,
     });
     expect(voterAccountStore.findByAccountId).toHaveBeenCalledWith(db, accountId);
-    expect(voteRepo.findByUserAndElection).toHaveBeenCalledWith(db, "user-1", "e-open");
+    expect(mockHasVoterParticipated).toHaveBeenCalledWith(
+      db,
+      "e-open",
+      "2024-0001",
+      "test-secret",
+      undefined,
+      "user-1",
+    );
   });
 
   it("returns empty myVotes when there is no open election even if the account has a user row", async () => {
@@ -356,7 +367,7 @@ describe("getVotingState", () => {
 
     const result = await getVotingState(db, accountId);
 
-    expect(result.myVotes).toEqual({ electionId: null, votes: [] });
+    expect(result.myVotes).toEqual({ electionId: null, hasVoted: false });
     expect(voterAccountStore.findByAccountId).not.toHaveBeenCalled();
   });
 
@@ -379,8 +390,8 @@ describe("getVotingState", () => {
 
     const result = await getVotingState(db, accountId);
 
-    expect(result.myVotes).toEqual({ electionId: "e-open", votes: [] });
-    expect(voteRepo.findByUserAndElection).not.toHaveBeenCalled();
+    expect(result.myVotes).toEqual({ electionId: "e-open", hasVoted: false });
+    expect(mockHasVoterParticipated).not.toHaveBeenCalled();
   });
 
   it("virtualizes open election to nextDraft when it has not started yet", async () => {
@@ -431,7 +442,7 @@ describe("getVotingState", () => {
     expect(result.open).toBeNull();
     expect(result.nextDraft).toBeNull();
     expect(result.lastClosed).toBeNull();
-    expect(result.myVotes).toEqual({ electionId: null, votes: [] });
+    expect(result.myVotes).toEqual({ electionId: null, hasVoted: false });
   });
 
   it("virtualizes open election to lastClosed when it has already ended", async () => {
