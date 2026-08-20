@@ -286,6 +286,6 @@ Use that output as `HMAC_SECRET`, or retain it in `PREVIOUS_HMAC_SECRETS` while 
 ## 13. Next Steps After Setup
 
 1. Run `pnpm test` — all suites should pass.
-2. Start the dev servers: `pnpm dev`.
+2. Start the dev servers: `pnpm dev` or `just dev`/`just dev-offline`.
 3. In the admin UI, open any candidate management page and upload an image.
 4. Verify the image renders in the voting ballot and candidate card.
