@@ -7,6 +7,7 @@ vi.mock("./client", () => ({ apiFetch: mockApiFetch }));
 import {
   IMPORT_USERS_BATCH_SIZE,
   fetchUsers,
+  importUsers,
   importUsersInBatches,
   type ImportUsersResponse,
 } from "./users";
@@ -23,6 +24,25 @@ it("sends the selected role to the users endpoint", async () => {
   await fetchUsers({ page: 1, limit: 25, role: "admin" });
 
   expect(mockApiFetch).toHaveBeenCalledWith(expect.stringContaining("role=admin"), undefined);
+});
+
+it("submits users to the import endpoint", async () => {
+  const users = [
+    {
+      studentId: "C25-01-10001-MAN121",
+      firstName: "Alice",
+      lastName: "Smith",
+      course: "BSCS",
+      yearLevel: "1st Year",
+    },
+  ];
+
+  await importUsers({ users });
+
+  expect(mockApiFetch).toHaveBeenCalledWith("/users/import", {
+    method: "POST",
+    body: JSON.stringify({ users }),
+  });
 });
 
 it("submits 300-record batches sequentially and keeps earlier results when a later batch fails", async () => {
