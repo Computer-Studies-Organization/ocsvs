@@ -20,6 +20,7 @@
     SlidersHorizontal,
     Trash2,
     Unlock,
+    Upload,
     X,
   } from 'lucide-svelte'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -680,11 +681,19 @@
         <h1 class='text-2xl font-black text-slate-50 sm:text-3xl'>User Management</h1>
         <p class='mt-1 text-xs text-slate-500'>Manage registered voters and administrators</p>
       </div>
-      <div class='hidden md:block'>
+      <div class='flex items-center gap-3'>
+        <a
+          href='/admin/users/import'
+          class='flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 shadow-sm hover:border-slate-600 hover:bg-slate-800 hover:text-white transition'
+        >
+          <Upload size={16} />
+          Import Students
+        </a>
         <button
           onclick={() => showAddModal = true}
-          class='flex min-h-11 items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
+          class='hidden md:flex min-h-11 items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
         >
+          <Plus size={16} />
           Add User
         </button>
       </div>

@@ -34,4 +34,9 @@ describe("admin users actions", () => {
     expect(pageSource).toContain("pt-6 pb-24 md:pb-6");
     expect(pageSource).toContain("md:hidden fixed bottom-6 right-6");
   });
+
+  it("exposes a link to the student bulk import page", () => {
+    expect(pageSource).toContain("href='/admin/users/import'");
+    expect(pageSource).toContain("Import Students");
+  });
 });
