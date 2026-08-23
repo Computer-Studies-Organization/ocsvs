@@ -583,4 +583,23 @@ describe("auth Routes", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(mockFindByStudentId).not.toHaveBeenCalled();
   });
+
+  it("does not allow offline bypass in staging", async () => {
+    const res = await router.request(
+      "/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentNumber: "C23-01-1234-CSA001",
+          password: "password123",
+        }),
+      },
+      { NODE_ENV: "staging", OFFLINE_DEV: true, TURNSTILE_SECRET_KEY: "test-secret" },
+    );
+
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(mockFindByStudentId).not.toHaveBeenCalled();
+  });
 });

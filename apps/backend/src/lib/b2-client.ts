@@ -442,8 +442,8 @@ export function getImageStorage(env: {
   B2_BUCKET_NAME?: string;
   B2_PUBLIC_BASE_URL?: string;
 }): ImageStorage {
-  const offlineDev =
-    env.NODE_ENV !== "production" && (env.OFFLINE_DEV === true || env.OFFLINE_DEV === "true");
+  const isProdOrStaging = env.NODE_ENV === "production" || env.NODE_ENV === "staging";
+  const offlineDev = !isProdOrStaging && (env.OFFLINE_DEV === true || env.OFFLINE_DEV === "true");
   const hasCredentials =
     env.B2_APPLICATION_KEY_ID &&
     env.B2_APPLICATION_KEY &&
@@ -451,8 +451,8 @@ export function getImageStorage(env: {
     env.B2_PUBLIC_BASE_URL;
 
   if (offlineDev || !hasCredentials) {
-    if (env.NODE_ENV === "production") {
-      throw new Error("Missing required Backblaze B2 environment variables in production");
+    if (isProdOrStaging) {
+      throw new Error(`Missing required Backblaze B2 environment variables in ${env.NODE_ENV}`);
     }
     if (!localImageStorageInstance) {
       localImageStorageInstance = new InMemoryImageStorage();

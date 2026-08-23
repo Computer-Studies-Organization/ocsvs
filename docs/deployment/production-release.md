@@ -40,6 +40,29 @@ wrangler secret put B2_APPLICATION_KEY_ID
 wrangler secret put B2_APPLICATION_KEY
 ```
 
+Staging requires all six bindings in `wrangler.jsonc`. Use a staging Turso database, HMAC secret, a real staging Turnstile secret, and a B2 key restricted to `cso-voting-candidates-staging`:
+
+```bash
+cd apps/backend
+wrangler secret put TURSO_DATABASE_URL --env staging
+wrangler secret put TURSO_AUTH_TOKEN --env staging
+wrangler secret put TURNSTILE_SECRET_KEY --env staging
+wrangler secret put HMAC_SECRET --env staging
+wrangler secret put B2_APPLICATION_KEY_ID --env staging
+wrangler secret put B2_APPLICATION_KEY --env staging
+```
+
+Do not reuse production B2 or Turnstile credentials for staging.
+
+## Staging deployment
+
+Use the dedicated script so the frontend build-environment preflight runs before the staging Worker is deployed. Configure a separate real Turnstile site key and secret for staging; never use Cloudflare's test credentials on a reachable Worker.
+
+```bash
+cd apps/backend
+PUBLIC_API_BASE_URL= PUBLIC_OFFLINE_DEV=false PUBLIC_TURNSTILE_SITEKEY='<staging-site-key>' pnpm deploy:staging
+```
+
 Preview deployments currently share the Worker's bindings, secrets, and Turso database. The deployed Worker is treated as **pre-production** and contains no real student data, so keeping PR previews enabled is an accepted temporary risk while all data remains synthetic. Do not use previews for real student data, load tests, or destructive tests. Before the first real-data import or production cutover, isolate preview resources or disable non-production branch builds.
 
 ## Migrations (Manual)

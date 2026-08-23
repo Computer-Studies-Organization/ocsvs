@@ -22,8 +22,10 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
  * enforces types/coercions; the repo additionally clamps `limit` and decodes
  * the cursor. Empty filters produce an unfiltered newest-first listing.
  *
- * Admin-only: the in-handler role guard mirrors the pattern in
- * `apps/backend/src/handlers/elections/elections.handler.ts`.
+ * Admin-only: access is enforced at the route-definition seam by the
+ * `withAdmin(...)` wrapper in `@/routes/audit-log/index.ts`, not in this
+ * handler. Prefix middleware is avoided here because of the Workers runtime
+ * prefix-match bug documented at `apps/backend/src/routes/elections/index.ts:50`.
  */
 export const listAuditLog: AppRouteHandler<typeof listAuditLogRoute> = async (c) => {
   const filters = c.req.valid("query");

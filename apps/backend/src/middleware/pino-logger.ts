@@ -38,7 +38,9 @@ function logger() {
         {
           level: c.env.LOG_LEVEL || "info",
         },
-        c.env.NODE_ENV === "production" ? undefined : PinoPretty.PinoPretty(),
+        c.env.NODE_ENV === "production" || c.env.NODE_ENV === "staging"
+          ? undefined
+          : PinoPretty.PinoPretty(),
       )),
     http: {
       reqId: () => crypto.randomUUID(),

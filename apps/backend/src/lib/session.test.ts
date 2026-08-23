@@ -176,6 +176,18 @@ describe("session utilities", () => {
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
     });
 
+    it("should include Secure attribute in staging even when request protocol is plain HTTP", () => {
+      const c = {
+        header: vi.fn(),
+        env: { NODE_ENV: "staging" },
+        req: { url: "http://localhost:8787/api/auth/login" },
+      } as any;
+
+      setSessionCookie(c, "test-session-id", 1234567890);
+
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+    });
+
     it("should omit Secure attribute in development over plain HTTP", () => {
       const c = {
         header: vi.fn(),

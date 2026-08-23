@@ -44,7 +44,7 @@ import { z } from "zod";
  */
 const EnvSchema = z
   .object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: z.enum(["development", "test", "staging", "production"]).default("development"),
     PORT: z.coerce.number().default(3000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
@@ -93,10 +93,12 @@ const EnvSchema = z
     }, z.array(z.string()).optional().default([])),
   })
   .superRefine((data, ctx) => {
-    if (data.OFFLINE_DEV && data.NODE_ENV === "production") {
+    const isLiveEnv = data.NODE_ENV === "production" || data.NODE_ENV === "staging";
+
+    if (data.OFFLINE_DEV && isLiveEnv) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "OFFLINE_DEV is not allowed in production",
+        message: `OFFLINE_DEV is not allowed in ${data.NODE_ENV}`,
         path: ["OFFLINE_DEV"],
       });
     }
@@ -107,17 +109,17 @@ const EnvSchema = z
         path: ["TURSO_DATABASE_URL"],
       });
     }
-    if (data.NODE_ENV === "production" && !data.TURNSTILE_SECRET_KEY) {
+    if (isLiveEnv && !data.TURNSTILE_SECRET_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "TURNSTILE_SECRET_KEY is required in production",
+        message: `TURNSTILE_SECRET_KEY is required in ${data.NODE_ENV}`,
         path: ["TURNSTILE_SECRET_KEY"],
       });
     }
-    if (data.NODE_ENV === "production" && !data.HMAC_SECRET) {
+    if (isLiveEnv && !data.HMAC_SECRET) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "HMAC_SECRET is required in production",
+        message: `HMAC_SECRET is required in ${data.NODE_ENV}`,
         path: ["HMAC_SECRET"],
       });
     }

@@ -85,9 +85,9 @@ export async function deleteSession(db: Database, sessionId: string): Promise<vo
  */
 export function setSessionCookie(c: Context, sessionId: string, expiresAt: number): void {
   const expires = new Date(expiresAt * 1000);
-  const isProduction = c.env?.NODE_ENV === "production";
+  const isProductionOrStaging = c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = isProduction || isHttps;
+  const isSecure = isProductionOrStaging || isHttps;
 
   c.header(
     "Set-Cookie",
@@ -99,9 +99,9 @@ export function setSessionCookie(c: Context, sessionId: string, expiresAt: numbe
  * Clears the session cookie.
  */
 export function clearSessionCookie(c: Context): void {
-  const isProduction = c.env?.NODE_ENV === "production";
+  const isProductionOrStaging = c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = isProduction || isHttps;
+  const isSecure = isProductionOrStaging || isHttps;
 
   c.header(
     "Set-Cookie",

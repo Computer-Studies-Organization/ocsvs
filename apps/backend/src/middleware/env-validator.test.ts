@@ -119,4 +119,17 @@ describe("envValidator middleware", () => {
     const body = (await res.json()) as any;
     expect(body.ok).toBe(true);
   });
+
+  it("passes validation when TURNSTILE_SECRET_KEY and HMAC_SECRET are provided in staging", async () => {
+    const { app } = buildApp();
+    const res = await app.request("/test", { method: "GET" }, {
+      NODE_ENV: "staging",
+      TURSO_DATABASE_URL: "libsql://staging.db",
+      TURNSTILE_SECRET_KEY: "secret-key",
+      HMAC_SECRET: "c2VjcmV0LWtleS0zMi1jaGFyYWN0ZXJzLW1pbmltdW0tcGVwcGVy",
+    } as any);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.ok).toBe(true);
+  });
 });

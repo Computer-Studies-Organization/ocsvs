@@ -20,7 +20,10 @@ export const login: AppRouteHandler<typeof loginRoute> = async (c) => {
 
   c.var.logger.info({ studentNumber: maskStudentId(studentNumber) }, "Login attempt");
 
-  const offlineDev = String(c.env?.OFFLINE_DEV) === "true" && c.env?.NODE_ENV !== "production";
+  const offlineDev =
+    String(c.env?.OFFLINE_DEV) === "true" &&
+    c.env?.NODE_ENV !== "production" &&
+    c.env?.NODE_ENV !== "staging";
 
   if (!offlineDev) {
     const secretKey = c.env?.TURNSTILE_SECRET_KEY;

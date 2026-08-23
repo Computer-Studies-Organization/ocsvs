@@ -247,6 +247,16 @@ describe("getImageStorage", () => {
     ).toThrow("Missing required Backblaze B2 environment variables in production");
   });
 
+  it("should throw an error when credentials are missing in staging", () => {
+    expect(() =>
+      getImageStorage({
+        ...validConfig,
+        B2_APPLICATION_KEY: undefined,
+        NODE_ENV: "staging",
+      }),
+    ).toThrow("Missing required Backblaze B2 environment variables in staging");
+  });
+
   it("should return the same InMemoryImageStorage instance across calls in non-production", () => {
     // Singleton: dev uploads must persist between requests within the same process.
     const cfg = { ...validConfig, B2_APPLICATION_KEY: undefined };

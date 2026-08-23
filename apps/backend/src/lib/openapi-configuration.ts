@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory";
 import packageJSON from "../../package.json";
 
 const hideProductionDocumentation = createMiddleware<AppBindings>(async (c, next) => {
-  if (c.env.NODE_ENV === "production") {
+  if (c.env.NODE_ENV === "production" || c.env.NODE_ENV === "staging") {
     return c.notFound();
   }
 

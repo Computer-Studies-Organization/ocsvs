@@ -91,7 +91,7 @@ B2_APPLICATION_KEY=your-key
 EOF
 ```
 
-`wrangler dev` automatically loads `.dev.vars`. The bucket name is already set in `wrangler.jsonc` under `vars` as `B2_BUCKET_NAME = "cso-voting-candidates"`.
+`wrangler dev` automatically loads `.dev.vars`. Production uses `B2_BUCKET_NAME = "cso-voting-candidates"`; staging uses the separate `cso-voting-candidates-staging` bucket.
 
 #### Production (Cloudflare Workers)
 
@@ -100,6 +100,18 @@ cd apps/backend
 wrangler secret put B2_APPLICATION_KEY_ID
 wrangler secret put B2_APPLICATION_KEY
 ```
+
+#### Staging (Cloudflare Workers)
+
+Create a separate B2 application key restricted to `cso-voting-candidates-staging`, then set it on the staging Worker:
+
+```bash
+cd apps/backend
+wrangler secret put B2_APPLICATION_KEY_ID --env staging
+wrangler secret put B2_APPLICATION_KEY --env staging
+```
+
+Do not reuse production B2 credentials for staging.
 
 Do **not** commit `.dev.vars` or real secrets. They are gitignored.
 

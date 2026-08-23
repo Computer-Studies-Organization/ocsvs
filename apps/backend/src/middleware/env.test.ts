@@ -58,4 +58,16 @@ describe("runtime environment module", () => {
       }),
     ).toThrow("OFFLINE_DEV is not allowed in production");
   });
+
+  it("rejects offline development in staging", () => {
+    expect(() =>
+      parseEnv({
+        NODE_ENV: "staging",
+        OFFLINE_DEV: true,
+        TURSO_DATABASE_URL: "http://127.0.0.1:8080",
+        TURNSTILE_SECRET_KEY: "secret",
+        HMAC_SECRET: "c2VjcmV0LWtleS0zMi1jaGFyYWN0ZXJzLW1pbmltdW0tcGVwcGVy",
+      }),
+    ).toThrow("OFFLINE_DEV is not allowed in staging");
+  });
 });
