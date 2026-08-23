@@ -143,6 +143,8 @@ function getBaseUsername(firstName: string, lastName: string, studentId: string)
   return base.length >= 3 ? base : studentId.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+const USERNAME_LOOKUP_GROUP_SIZE = 90;
+
 /**
  * Helper to generate unique usernames during bulk import.
  */
@@ -322,17 +324,18 @@ export class UserLifecycleCoordinator {
         ),
       ),
     ];
-    const prefixConditions = batchBaseUsernames.map((b) => like(accounts.username, `${b}%`));
-    const existingAccounts =
-      prefixConditions.length > 0
-        ? await db
-            .select({ username: accounts.username })
-            .from(accounts)
-            .where(or(...prefixConditions))
-            .all()
-        : [];
-
-    const existingUsernamesSet = new Set(existingAccounts.map((a) => a.username));
+    const existingUsernamesSet = new Set<string>();
+    for (let i = 0; i < batchBaseUsernames.length; i += USERNAME_LOOKUP_GROUP_SIZE) {
+      const prefixConditions = batchBaseUsernames
+        .slice(i, i + USERNAME_LOOKUP_GROUP_SIZE)
+        .map((b) => like(accounts.username, `${b}%`));
+      const existingAccounts = await db
+        .select({ username: accounts.username })
+        .from(accounts)
+        .where(or(...prefixConditions))
+        .all();
+      for (const account of existingAccounts) existingUsernamesSet.add(account.username);
+    }
 
     const imported: {
       studentId: string;

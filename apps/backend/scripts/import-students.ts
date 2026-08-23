@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import { eq } from "drizzle-orm";
 import { accounts, users, auditLog } from "../src/database/schema";
 import type { AuditAction } from "../src/lib/constants/audit-actions";
+import { isAdminRole } from "../src/lib/election-visibility";
 import { hashPassword, verifyPassword } from "../src/lib/password";
 import "dotenv/config";
 
@@ -28,6 +29,195 @@ export interface StudentRecord {
 interface PlannedStudentImport {
   student: StudentRecord;
   username: string;
+}
+
+interface PdfTextPage {
+  text: string;
+}
+
+interface SplitEnrollmentRow {
+  middleName: string | null;
+  course: string;
+  yearLevel: string;
+}
+
+const SPLIT_ROSTER_ID = /C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
+const STUDENT_ID = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/;
+const SUPPORTED_COURSES = new Set(["BSCS", "BSIT", "WADT"]);
+
+function toYearLevel(rawLevel: string): string | null {
+  switch (rawLevel.toUpperCase()) {
+    case "1ST":
+      return "1st Year";
+    case "2ND":
+      return "2nd Year";
+    case "3RD":
+      return "3rd Year";
+    case "4TH":
+      return "4th Year";
+    default:
+      return null;
+  }
+}
+
+function tableCells(line: string): string[] {
+  return line
+    .split("\t")
+    .map((cell) => cell.trim())
+    .filter(Boolean);
+}
+
+function isIdentityPage(text: string): boolean {
+  return text.includes("Student No.") && text.includes("Last Name") && text.includes("First Name");
+}
+
+function isEnrollmentPage(text: string): boolean {
+  return (
+    text.includes("M.i.") &&
+    text.includes("Course") &&
+    text.includes("Level") &&
+    text.includes("Type")
+  );
+}
+
+function isIdentityRowStart(cells: string[]): boolean {
+  const firstCell = cells[0] ?? "";
+  return (
+    (/^\d+$/.test(firstCell) || /^\d+\s+C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}\b/.test(firstCell)) &&
+    cells.some((cell) => SPLIT_ROSTER_ID.test(cell))
+  );
+}
+
+function collectIdentityRows(pages: PdfTextPage[]): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] | null = null;
+
+  for (const page of pages) {
+    for (const line of page.text.split("\n")) {
+      const cells = tableCells(line);
+      if (cells.length === 0 || cells.includes("Student No.")) continue;
+
+      if (isIdentityRowStart(cells)) {
+        if (currentRow) rows.push(currentRow);
+        currentRow = cells;
+      } else if (currentRow) {
+        currentRow.push(...cells);
+      }
+    }
+  }
+
+  if (currentRow) rows.push(currentRow);
+  return rows;
+}
+
+function collectEnrollmentRows(pages: PdfTextPage[]): SplitEnrollmentRow[] {
+  const rows: SplitEnrollmentRow[] = [];
+
+  for (const page of pages) {
+    for (const line of page.text.split("\n")) {
+      const cells = tableCells(line);
+      if (cells.length === 0 || cells.includes("Course")) continue;
+
+      const [rawMiddleName, rawCourse, rawLevel, rawStatus] = cells;
+      const yearLevel = rawLevel ? toYearLevel(rawLevel) : null;
+      if (
+        !rawMiddleName ||
+        !/^[A-Z]+$/i.test(rawCourse ?? "") ||
+        !yearLevel ||
+        !/^(NEW|TRANSFEREE)$/i.test(rawStatus ?? "")
+      ) {
+        throw new Error("Split roster enrollment row is malformed.");
+      }
+
+      rows.push({
+        middleName: rawMiddleName === "-" ? null : rawMiddleName,
+        course: rawCourse.toUpperCase(),
+        yearLevel,
+      });
+    }
+  }
+
+  return rows;
+}
+
+function parseSplitIdentityRow(
+  cells: string[],
+): Pick<StudentRecord, "studentId" | "lastName" | "firstName"> {
+  const idIndex = cells.findIndex((cell) => SPLIT_ROSTER_ID.test(cell));
+  const idMatch = idIndex >= 0 ? SPLIT_ROSTER_ID.exec(cells[idIndex]) : null;
+  const studentId = idMatch?.[0];
+  if (!studentId || !STUDENT_ID.test(studentId)) {
+    throw new Error("Split roster has an invalid student ID for a supported-course row.");
+  }
+
+  const nameCells = [
+    cells[idIndex].slice((idMatch.index ?? 0) + studentId.length).trim(),
+    ...cells.slice(idIndex + 1),
+  ].filter(Boolean);
+
+  while (nameCells.length > 0) {
+    const numericPrefix = /^(\d+)(?:\s+|$)/.exec(nameCells[0]);
+    if (!numericPrefix) break;
+
+    const remaining = nameCells[0].slice(numericPrefix[0].length).trim();
+    if (remaining) {
+      nameCells[0] = remaining;
+      break;
+    }
+    nameCells.shift();
+  }
+
+  const [lastName, ...firstNameParts] = nameCells;
+  const firstName = firstNameParts.join(" ");
+  if (!lastName || !firstName) {
+    throw new Error("Split roster identity row is malformed.");
+  }
+
+  return { studentId, lastName, firstName };
+}
+
+export function parseSplitRosterPages(pages: PdfTextPage[]): StudentRecord[] | null {
+  const firstEnrollmentPage = pages.findIndex((page) => isEnrollmentPage(page.text));
+  const hasIdentityPages = pages.some((page) => isIdentityPage(page.text));
+
+  if (firstEnrollmentPage === -1 && !hasIdentityPages) return null;
+  if (firstEnrollmentPage <= 0 || !hasIdentityPages) {
+    throw new Error("Split roster columns cannot be aligned.");
+  }
+
+  const identityPages = pages.slice(0, firstEnrollmentPage);
+  const enrollmentPages = pages.slice(firstEnrollmentPage);
+  if (
+    !identityPages.every((page) => isIdentityPage(page.text)) ||
+    !enrollmentPages.every((page) => isEnrollmentPage(page.text))
+  ) {
+    throw new Error("Split roster columns cannot be aligned.");
+  }
+
+  const identityRows = collectIdentityRows(identityPages);
+  const enrollmentRows = collectEnrollmentRows(enrollmentPages);
+  if (
+    identityRows.length === 0 ||
+    identityRows.length !== enrollmentRows.length ||
+    identityRows.some((row, index) => Number.parseInt(row[0] ?? "", 10) !== index + 1)
+  ) {
+    throw new Error("Split roster columns cannot be aligned.");
+  }
+
+  const records: StudentRecord[] = [];
+  for (const [index, enrollment] of enrollmentRows.entries()) {
+    // ponytail: no row key survives this PDF layout; require equal streams, use CSV/XLSX if its order changes.
+    if (!SUPPORTED_COURSES.has(enrollment.course)) continue;
+
+    records.push({
+      ...parseSplitIdentityRow(identityRows[index]),
+      middleName: enrollment.middleName,
+      course: enrollment.course,
+      yearLevel: enrollment.yearLevel,
+    });
+  }
+
+  return records;
 }
 
 export function parseStudentText(text: string): StudentRecord[] {
@@ -66,7 +256,7 @@ export function parseStudentText(text: string): StudentRecord[] {
           break;
         }
 
-        if (nextLine.toLowerCase().includes("bscs")) {
+        if (/\b(BSCS|BSIT|WADT)\b/i.test(nextLine)) {
           courseInfoLine = nextLine;
           break;
         } else {
@@ -77,9 +267,10 @@ export function parseStudentText(text: string): StudentRecord[] {
 
       // Parse the course info line
       // e.g. "KIM ROSALES \t BSCS 1ST OLD \t PAYMENT \t   "
-      const bscsIndex = courseInfoLine.toLowerCase().indexOf("bscs");
-      if (bscsIndex !== -1) {
-        const namePartOnCourseLine = courseInfoLine.substring(0, bscsIndex).trim();
+      const courseMatch = /\b(BSCS|BSIT|WADT)\b/i.exec(courseInfoLine);
+      if (courseMatch) {
+        const courseIndex = courseMatch.index;
+        const namePartOnCourseLine = courseInfoLine.substring(0, courseIndex).trim();
         nameParts.push(namePartOnCourseLine);
 
         // Reconstruct full name
@@ -122,17 +313,11 @@ export function parseStudentText(text: string): StudentRecord[] {
 
         // Extract remaining fields from courseInfoLine
         // e.g. "BSCS 1ST OLD \t PAYMENT ..."
-        const afterBscs = courseInfoLine.substring(bscsIndex).replace(/\s+/g, " ").trim();
-        const partsAfterBscs = afterBscs.split(" ");
-        const course = partsAfterBscs[0] || "BSCS";
-        const rawLevel = partsAfterBscs[1] || "1ST";
-
-        // Map rawLevel to friendly year_level
-        let yearLevel = "1st Year";
-        if (rawLevel.toUpperCase() === "1ST") yearLevel = "1st Year";
-        else if (rawLevel.toUpperCase() === "2ND") yearLevel = "2nd Year";
-        else if (rawLevel.toUpperCase() === "3RD") yearLevel = "3rd Year";
-        else if (rawLevel.toUpperCase() === "4TH") yearLevel = "4th Year";
+        const afterCourse = courseInfoLine.substring(courseIndex).replace(/\s+/g, " ").trim();
+        const partsAfterCourse = afterCourse.split(" ");
+        const course = courseMatch[1].toUpperCase();
+        const rawLevel = partsAfterCourse[1] || "1ST";
+        const yearLevel = toYearLevel(rawLevel) ?? "1st Year";
 
         records.push({
           studentId,
@@ -173,6 +358,10 @@ export function generatePassword(): string {
     password += chars[randomIndex];
   }
   return password;
+}
+
+export function escapeCsvCell(value: string): string {
+  return `"${value.replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
 }
 
 function generateUsername(
@@ -337,7 +526,7 @@ export async function authenticateAdmin(db: any): Promise<{ id: string; username
     process.exit(1);
   }
 
-  if (adminAccount.role !== "admin") {
+  if (!isAdminRole(adminAccount.role)) {
     console.error("Error: Access denied. The specified account is not an admin.");
     process.exit(1);
   }
@@ -378,9 +567,9 @@ async function main() {
 
   try {
     const parser = new pdf.PDFParse({ data: dataBuffer });
-    const textResult = await parser.getText();
+    const textResult = await parser.getText({ cellThreshold: 2 });
 
-    const students = parseStudentText(textResult.text);
+    const students = parseSplitRosterPages(textResult.pages) ?? parseStudentText(textResult.text);
     console.log(`Parsed ${students.length} student records from PDF.`);
 
     if (students.length === 0) {
@@ -480,7 +669,17 @@ async function main() {
       });
 
       csvRows.push(
-        `"${student.studentId}","${username}","${plainPassword}","${student.firstName}","${student.lastName}","${student.course}","${student.yearLevel}"`,
+        [
+          student.studentId,
+          username,
+          plainPassword,
+          student.firstName,
+          student.lastName,
+          student.course,
+          student.yearLevel,
+        ]
+          .map(escapeCsvCell)
+          .join(","),
       );
       createdCount++;
     }

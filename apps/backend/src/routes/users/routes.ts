@@ -237,7 +237,7 @@ export const ImportUsersBodySchema = z
     users: z
       .array(
         z.object({
-          studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/),
+          studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/),
           firstName: z.string().min(1),
           lastName: z.string().min(1),
           course: z.enum(IMPORT_COURSES),
@@ -350,7 +350,7 @@ export const createUserBodySchema = z
     password: z.string().min(8),
     studentId: z
       .string()
-      .regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
+      .regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
     course: z.enum(IMPORT_COURSES),
     yearLevel: z.enum(IMPORT_YEAR_LEVELS),
     role: z.enum(["user", "admin", "super_admin"]).optional().default("user"),

@@ -11,4 +11,12 @@ describe("bulk import mobile layout", () => {
     expect(pageSource).toContain("p-6 text-center");
     expect(pageSource).toContain("overflow-x-auto");
   });
+
+  it("neutralizes spreadsheet formulas in credentials CSV exports", () => {
+    expect(pageSource).toContain('replace(/^[=+\\-@\\t\\r]/, "\'$&")');
+  });
+
+  it("uses unique keys for repeated skipped IDs", () => {
+    expect(pageSource).toContain("{#each skippedList as skip, idx (idx)}");
+  });
 });

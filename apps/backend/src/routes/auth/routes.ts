@@ -6,7 +6,7 @@ import * as httpStatusCodes from "@/openapi/http-status-codes";
 export const loginSchema = z.object({
   studentNumber: z
     .string()
-    .regex(/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
+    .regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
   password: z.string(),
   turnstileToken: z.string().optional().openapi({
     description: "Cloudflare Turnstile token for client-side bot verification",

@@ -883,6 +883,26 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockDbInsert).toHaveBeenCalledTimes(2); // exactly 1 for accounts, 1 for users
     });
 
+    it("bounds username conflict lookups for imports with many distinct bases", async () => {
+      mockDbAll.mockResolvedValue([]);
+      mockHashPassword.mockResolvedValue("hashed-pwd");
+
+      const records = Array.from({ length: 91 }, (_, index) => ({
+        studentId: `stud-${index}`,
+        firstName: `Student${index}`,
+        lastName: "Lastname",
+        course: "BSCS",
+        yearLevel: "1st Year",
+      }));
+
+      const result = await coordinator.bulkImport(mockDb, records, actor);
+
+      expect(result.imported).toHaveLength(records.length);
+      expect(result.skipped).toHaveLength(0);
+      expect(mockDbAll).toHaveBeenCalledTimes(3); // student IDs plus two 90-base username lookups
+      expect(mockDbInsert).toHaveBeenCalledTimes(2);
+    });
+
     it("skips records with profanity and preserves the validation message", async () => {
       mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
       mockDbAll.mockResolvedValueOnce([]); // existing usernames check

@@ -64,6 +64,14 @@ export interface ImportedUser {
   password: string;
 }
 
+export interface ImportUser {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  course: string;
+  yearLevel: string;
+}
+
 export interface SkippedUser {
   studentId: string;
   reason: string;
@@ -75,16 +83,21 @@ export interface ImportUsersResponse {
   skipped: SkippedUser[];
 }
 
-export async function importUsers(data: {
-  users: {
-    studentId: string;
-    firstName: string;
-    lastName: string;
-    course: string;
-    yearLevel: string;
-  }[];
-}): Promise<ImportUsersResponse> {
+export const IMPORT_USERS_BATCH_SIZE = 300;
+
+export async function importUsers(data: { users: ImportUser[] }): Promise<ImportUsersResponse> {
   return apiFetch("/users/import", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function importUsersInBatches(
+  users: ImportUser[],
+  onBatchResult: (result: ImportUsersResponse) => void,
+): Promise<void> {
+  for (let start = 0; start < users.length; start += IMPORT_USERS_BATCH_SIZE) {
+    onBatchResult(
+      await importUsers({ users: users.slice(start, start + IMPORT_USERS_BATCH_SIZE) }),
+    );
+  }
 }
 
 export async function hardDeleteUser(

@@ -619,7 +619,7 @@ describe("users Routes", () => {
               yearLevel: "1st Year",
             },
             {
-              studentId: "C25-01-10002-MAN121",
+              studentId: "C26-01-114512-MAN121",
               firstName: "Bob",
               lastName: "Jones",
               course: "BSIT",
@@ -645,7 +645,7 @@ describe("users Routes", () => {
       );
       expect(body.imported[1]).toEqual(
         expect.objectContaining({
-          studentId: "C25-01-10002-MAN121",
+          studentId: "C26-01-114512-MAN121",
           fullName: "BOB JONES",
           username: "bob.jones",
           password: expect.any(String),

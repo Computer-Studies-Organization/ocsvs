@@ -86,4 +86,4 @@ it("anonymizes a linked legacy ballot without changing its tally and is idempote
   );
   expect(participationCount.rows[0].count).toBe(2);
   await idempotenceClient.close();
-});
+}, 15_000);

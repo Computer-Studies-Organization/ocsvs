@@ -3,7 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  escapeCsvCell,
   generatePassword,
+  parseSplitRosterPages,
   parseStudentText,
   planStudentImports,
   writeCredentialsCsv,
@@ -92,6 +94,124 @@ describe("parseStudentText", () => {
       yearLevel: "3rd Year",
     });
   });
+
+  it("keeps split roster rows aligned across page groups", () => {
+    const pages = [
+      {
+        text: [
+          "#\tStudent No.\tUSN\tLast Name\tFirst Name",
+          "1 C26-01-114512-MAN121 26001042600 IGNORED\tSTUDENT",
+          "2\tC26-01-15049-MAN121\t26001042601 ALAGBAN\tJONNA MAE",
+        ].join("\n"),
+      },
+      {
+        text: [
+          "#\tStudent No.\tUSN\tLast Name\tFirst Name",
+          "3\tC26-01-15158-MAN121\t00281495\tHASIM\tHADJALA",
+          "4\tC26-01-14564-MAN121 0900062210",
+          "0 SUELLO\tAARON",
+        ].join("\n"),
+      },
+      {
+        text: ["M.i.\tCourse\tLevel\tType\tContact #", "AUXTERO\tBSA\t1ST\tNEW"].join("\n"),
+      },
+      {
+        text: [
+          "M.i.\tCourse\tLevel\tType\tContact #",
+          "ABELLA\tBSIT\t1ST\tNEW",
+          "-\tBSCS\t2ND\tTRANSFEREE",
+          "SANTOS\tWADT\t3RD\tNEW",
+        ].join("\n"),
+      },
+    ];
+
+    expect(parseSplitRosterPages(pages)).toEqual([
+      {
+        studentId: "C26-01-15049-MAN121",
+        lastName: "ALAGBAN",
+        firstName: "JONNA MAE",
+        middleName: "ABELLA",
+        course: "BSIT",
+        yearLevel: "1st Year",
+      },
+      {
+        studentId: "C26-01-15158-MAN121",
+        lastName: "HASIM",
+        firstName: "HADJALA",
+        middleName: null,
+        course: "BSCS",
+        yearLevel: "2nd Year",
+      },
+      {
+        studentId: "C26-01-14564-MAN121",
+        lastName: "SUELLO",
+        firstName: "AARON",
+        middleName: "SANTOS",
+        course: "WADT",
+        yearLevel: "3rd Year",
+      },
+    ]);
+  });
+
+  it("accepts six-digit IDs for supported courses", () => {
+    expect(
+      parseSplitRosterPages([
+        {
+          text: [
+            "#\tStudent No.\tUSN\tLast Name\tFirst Name",
+            "1\tC26-01-114512-MAN121\tSIX\tDIGITS",
+          ].join("\n"),
+        },
+        {
+          text: ["M.i.\tCourse\tLevel\tType\tContact #", "-\tBSIT\t1ST\tNEW"].join("\n"),
+        },
+      ]),
+    ).toEqual([
+      {
+        studentId: "C26-01-114512-MAN121",
+        lastName: "SIX",
+        firstName: "DIGITS",
+        middleName: null,
+        course: "BSIT",
+        yearLevel: "1st Year",
+      },
+    ]);
+  });
+
+  it("rejects incomplete split rosters and leaves legacy layouts alone", () => {
+    expect(parseSplitRosterPages([{ text: "ACLC College" }])).toBeNull();
+    expect(() =>
+      parseSplitRosterPages([
+        {
+          text: [
+            "#\tStudent No.\tUSN\tLast Name\tFirst Name",
+            "1\tC26-01-15049-MAN121\tALAGBAN\tJONNA MAE",
+          ].join("\n"),
+        },
+        {
+          text: [
+            "M.i.\tCourse\tLevel\tType\tContact #",
+            "ABELLA\tBSIT\t1ST\tNEW",
+            "SANTOS\tBSCS\t1ST\tNEW",
+          ].join("\n"),
+        },
+      ]),
+    ).toThrow("Split roster columns cannot be aligned.");
+
+    expect(() =>
+      parseSplitRosterPages([
+        {
+          text: [
+            "#\tStudent No.\tUSN\tLast Name\tFirst Name",
+            "2\tC26-01-15049-MAN121\tALAGBAN\tJONNA MAE",
+          ].join("\n"),
+        },
+        {
+          text: ["M.i.\tCourse\tLevel\tType\tContact #", "ABELLA\tBSIT\t1ST\tNEW"].join("\n"),
+        },
+      ]),
+    ).toThrow("Split roster columns cannot be aligned.");
+  });
 });
 
 describe("generatePassword", () => {
@@ -138,6 +258,12 @@ describe("planStudentImports", () => {
 });
 
 describe("writeCredentialsCsv", () => {
+  it("escapes formulas and quotes in CSV cells", () => {
+    expect(escapeCsvCell('=HYPERLINK("https://example.com")')).toBe(
+      `"'=HYPERLINK(""https://example.com"")"`,
+    );
+  });
+
   it("does not write plaintext credentials during dry-run", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "import-students-"));
     tempDirs.push(dir);
@@ -202,6 +328,31 @@ describe("authenticateAdmin", () => {
     expect(result).toEqual({ id: "admin-uuid", username: "admin_user" });
     expect(mockGet).toHaveBeenCalled();
     expect(verifyPassword).toHaveBeenCalledWith("secretpassword", "hashed-pw");
+    expect(mockExit).not.toHaveBeenCalled();
+  });
+
+  it("authenticates a super admin", async () => {
+    process.env.ADMIN_IDENTIFIER = "super_admin";
+    process.env.ADMIN_PASSWORD = "secretpassword";
+
+    vi.mocked(verifyPassword).mockResolvedValue(true);
+
+    const mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      get: vi.fn().mockReturnValue({
+        id: "super-admin-uuid",
+        username: "super_admin",
+        passwordHash: "hashed-pw",
+        role: "super_admin",
+      }),
+    };
+
+    await expect(authenticateAdmin(mockDb)).resolves.toEqual({
+      id: "super-admin-uuid",
+      username: "super_admin",
+    });
     expect(mockExit).not.toHaveBeenCalled();
   });
 

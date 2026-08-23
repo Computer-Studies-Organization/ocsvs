@@ -181,7 +181,7 @@ describe("auth Routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        studentNumber: "C23-01-1234-CSA001",
+        studentNumber: "C26-01-114512-MAN121",
         password: "password123",
         turnstileToken: "mock-token",
       }),

@@ -21,7 +21,7 @@ const SUPERADMIN = {
   userId: crypto.randomUUID(),
   username: "superadmin",
   email: "superadmin@cso.dev",
-  studentId: "C24-01-99999-SAD001", // SAD001 matches regex ^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$
+  studentId: "C24-01-99999-SAD001", // SAD001 matches regex ^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$
   firstName: "Super",
   lastName: "Admin",
   course: "BSCS",

@@ -170,7 +170,7 @@
   async function handleAddSave(e?: SubmitEvent) {
     if (e) e.preventDefault()
 
-    const studentIdRegex = /^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/
+    const studentIdRegex = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/
     if (!studentIdRegex.test(addForm.studentId)) {
       addMsg = 'Invalid Student ID format (should be CXX-XX-XXXX-XXX123)'
       return

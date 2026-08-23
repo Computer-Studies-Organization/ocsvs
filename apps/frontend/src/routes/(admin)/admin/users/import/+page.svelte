@@ -1,7 +1,7 @@
 <script lang="ts">
   import { parseRosterPdf } from "$lib/utils/pdf-parser";
   import { addToast } from "$lib/stores/toast.svelte";
-  import { importUsers } from "$lib/api/users";
+  import { importUsersInBatches } from "$lib/api/users";
   import { 
     ArrowLeft, 
     Upload, 
@@ -32,7 +32,6 @@
 
   const COURSES = ["BSCS", "BSIT", "WADT"];
   const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-
   // States
   let step = $state(1); // 1: Upload, 2: Preview, 3: Credentials
   let records = $state<PreviewRecord[]>([]);
@@ -45,6 +44,7 @@
   // Import results
   let importedList = $state<{ studentId: string; fullName: string; username: string; password: string }[]>([]);
   let skippedList = $state<{ studentId: string; reason: string }[]>([]);
+  let importFailure = $state<string | null>(null);
 
   // Validation
   function getRecordError(rec: PreviewRecord): string | null {
@@ -54,7 +54,7 @@
     if (!rec.studentId.trim()) {
       return "Student ID is required";
     }
-    if (!/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/.test(rec.studentId.trim())) {
+    if (!/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/.test(rec.studentId.trim())) {
       return "Invalid ID format (expected e.g. C25-01-10306-MAN121)";
     }
     if (!rec.firstName.trim()) {
@@ -168,6 +168,9 @@
     }
 
     isImporting = true;
+    importedList = [];
+    skippedList = [];
+    importFailure = null;
     try {
       const payload = records.map(r => ({
         studentId: r.studentId.trim(),
@@ -177,9 +180,10 @@
         yearLevel: r.yearLevel,
       }));
 
-      const res = await importUsers({ users: payload });
-      importedList = res.imported || [];
-      skippedList = res.skipped || [];
+      await importUsersInBatches(payload, (res) => {
+        importedList = [...importedList, ...(res.imported || [])];
+        skippedList = [...skippedList, ...(res.skipped || [])];
+      });
 
       if (importedList.length > 0) {
         addToast("success", `Successfully imported ${importedList.length} voters.`);
@@ -189,9 +193,17 @@
       }
 
       step = 3;
-      activeTab = "imported";
+      activeTab = importedList.length > 0 ? "imported" : "skipped";
     } catch (err: any) {
-      addToast("error", "Error submitting import: " + err.message);
+      const message = "Error submitting import: " + err.message;
+      if (importedList.length > 0 || skippedList.length > 0) {
+        importFailure = message;
+        activeTab = importedList.length > 0 ? "imported" : "skipped";
+        step = 3;
+        addToast("error", `${message} Successful batch results are available below.`);
+      } else {
+        addToast("error", message);
+      }
     } finally {
       isImporting = false;
     }
@@ -208,7 +220,7 @@
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+      ...rows.map(row => row.map(val => `"${String(val).replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -446,7 +458,7 @@
                                 oninput={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 placeholder="e.g. C25-01-10306-MAN121"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
-                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d{4,5}-[A-Z]{3}\d{3}$/.test(record.studentId.trim())) 
+                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/.test(record.studentId.trim()))
                                     ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50' 
                                     : 'border-slate-800 focus:border-amber-500 focus:outline-none'}"
                               />
@@ -584,13 +596,16 @@
                   <CheckCircle size={20} />
                 </div>
                 <div class="space-y-1">
-                  <h3 class="font-extrabold text-emerald-400 text-lg">Import Complete</h3>
+                  <h3 class="font-extrabold text-emerald-400 text-lg">{importFailure ? "Import Partially Complete" : "Import Complete"}</h3>
                   <p class="text-sm text-slate-400 leading-relaxed">
                     Successfully registered <span class="font-bold text-slate-100">{importedList.length}</span> new voters. 
                     {#if skippedList.length > 0}
                       <span class="font-semibold text-rose-400 ml-1">{skippedList.length} records were skipped due to existing records.</span>
                     {/if}
                   </p>
+                  {#if importFailure}
+                    <p class="text-sm text-amber-300 leading-relaxed">{importFailure} Credentials from successful batches are available below.</p>
+                  {/if}
                 </div>
               </div>
 
@@ -679,7 +694,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {#each skippedList as skip, idx (skip.studentId)}
+                        {#each skippedList as skip, idx (idx)}
                           <tr class="border-b border-slate-800/60 transition hover:bg-slate-850/30">
                             <td class="px-4 py-3 text-center text-slate-500 font-semibold">{idx + 1}</td>
                             <td class="px-4 py-3 font-semibold text-rose-400">{skip.studentId}</td>
