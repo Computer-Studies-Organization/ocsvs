@@ -8,12 +8,17 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Install everything                     | `pnpm install`                                                                                 |
 | Dev (both apps, parallel)              | `pnpm dev` or `just dev`                                                                       |
+| Dev offline (no external services)     | `pnpm dev:offline` or `just dev-offline`                                                        |
 | Dev frontend only                      | `pnpm dev:frontend` (port 3001)                                                                |
 | Dev backend only                       | `pnpm dev:backend` (port 8787 via wrangler)                                                    |
 | Typecheck all                          | `pnpm typecheck`                                                                               |
 | Lint all                               | `pnpm lint`                                                                                    |
 | Test all                               | `pnpm test`                                                                                    |
-| Test E2E                               | `cd apps/e2e && pnpm test`                                                                     |
+| Test one backend file                  | `pnpm --filter @cso-voting/backend exec vitest run src/lib/session.test.ts`                     |
+| Test one frontend file                 | `pnpm --filter @cso-voting/frontend exec vitest run src/lib/routeGuards.test.ts`                |
+| Test one case by name                  | `… exec vitest run -t "substring of the test name"`                                             |
+| Test E2E                               | `pnpm test:e2e` (offline stack) or `cd apps/e2e && pnpm test`                                   |
+| Test one E2E spec                      | `pnpm --filter @cso-voting/e2e exec playwright test tests/voter/voting-flow.spec.ts`            |
 | Build production frontend assets       | `pnpm build`                                                                                   |
 | Backend only (cwd in `apps/backend`)   | `pnpm dev` / `pnpm test` / `pnpm lint` / `pnpm lint:fix`                                       |
 | Frontend only (cwd in `apps/frontend`) | `pnpm dev` (port 3001) / `pnpm check` (typecheck) / `pnpm test` / `pnpm build`                 |
@@ -21,6 +26,8 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 | Deploy backend                         | `pnpm deploy` (wrangler deploy --minify)                                                       |
 | Full quality check                     | `just check` (typecheck → lint → test)                                                         |
 | Lint auto-fix all                      | `just lint-fix`                                                                                |
+
+> Backend `pnpm test` is bare `vitest` (watch mode); the root `pnpm test` uses `vitest run`. Backend vitest enforces 80% coverage thresholds for statements, branches, functions, and lines (`apps/backend/vitest.config.ts`).
 
 > The `justfile` at root provides shorthand recipes (`just dev`, `just check`, `just lint-fix`, `just db-generate`, etc.) wrapping the pnpm commands.
 
@@ -30,16 +37,23 @@ Computer Studies Organization's voting platform. Monorepo: SvelteKit 2/Svelte 5 
 ocsvs/
 ├── apps/
 │   ├── backend/        # @cso-voting/backend — Hono API on Cloudflare Workers (Turso / libSQL)
-│   └── frontend/       # @cso-voting/frontend — SvelteKit 2 + Svelte 5 (active frontend)
+│   ├── frontend/       # @cso-voting/frontend — SvelteKit 2 + Svelte 5 (active frontend)
+│   └── e2e/            # @cso-voting/e2e — Playwright suite (offline stack)
 ├── docs/
-│   └── superpowers/    # Project documentation
-├── scripts/            # Root-level scripts
-├── .github/workflows/ci.yml  # CI: install → typecheck → lint → test → build
+│   ├── adr/            # Accepted / proposed architecture decision records
+│   ├── deployment/     # production-release.md runbook
+│   └── superpowers/    # Dated implementation plans (plans/) and design docs (specs/)
+├── openspec/           # Spec-driven workflow: specs/ (source of truth) + changes/
+├── scripts/            # Root-level scripts (dev-offline.mjs)
+├── .github/workflows/  # ci.yml (verify + e2e jobs), release.yml
 ├── justfile            # Task runner (just) — delegates to pnpm scripts
+├── CONTEXT.md          # Module ownership / seam decisions
+├── UBIQUITOUS_LANGUAGE.md  # Canonical domain vocabulary
+├── ONBOARDING.md       # Fresh-clone setup, offline dev, B2, env vars, secrets rotation
 └── pnpm-workspace.yaml # Workspace: apps/*
 ```
 
-The workspace is declared in `pnpm-workspace.yaml` (`apps/*`).
+The workspace is declared in `pnpm-workspace.yaml` (`apps/*`). `packages/` exists but is empty and is not part of the workspace globs.
 
 ## Task Runner — `justfile`
 
@@ -71,6 +85,7 @@ Run `just` with no args to list all recipes.
 - **Auth:** Session cookies (`session_id`), PBKDF2-SHA256 password hashing (Web Crypto API; 100k iterations in Cloudflare Workers; 600k is for Node/local compatibility only; 16-byte salt, 256-bit key, versioned stored format `pbkdf2-sha256$<iterations>$<salt>$<hash>` with legacy 2-field hashes verified at 100k and rehashed on login)
 - **Object storage:** Backblaze B2 for candidate images (via `backblaze-b2` SDK; upload, download, delete with magic-byte validation)
 - **OpenAPI UI:** Scalar at `GET /reference`; raw spec at `GET /docs`
+- **Health:** `GET /health` returns `{ status: "ok" }` with no DB or session access; `GET /readiness` runs `SELECT 1` and returns 503 on failure. Both are used as Playwright `webServer` readiness probes.
 - **Tests:** Vitest 3
 - **Lint:** `oxlint` (with `oxfmt --check` for formatting)
 - **Path alias:** `@/*` → `src/*` (see `tsconfig.json` and `vitest.config.ts`)
@@ -84,6 +99,7 @@ src/
 ├── config/db/index.ts        # createDb(c) returns { db } using @libsql/client (Turso)
 ├── database/
 │   ├── schema.ts             # Drizzle table defs + select schemas
+│   ├── voter-anonymization-integrity.test.ts # Guards the anonymous-ballot invariants
 │   ├── schema-names.test.ts  # Invariant test for schema/API drift
 │   ├── migrations/           # Generated SQL migrations (versioned)
 │   ├── openapi-schemas.ts    # OpenAPI-flavored Zod schemas (booleans, examples)
@@ -93,7 +109,7 @@ src/
 │   │   ├── database.type.ts  # DbClient and Database type aliases
 │   │   ├── election.repository.ts
 │   │   ├── login-attempt.repository.ts   # Failed login tracking for lockout
-│   │   ├── party-list.repository.ts      # Party list CRUD (in progress)
+│   │   ├── party-list.repository.ts      # Party list CRUD
 │   │   ├── position.repository.ts
 │   │   ├── voter-account-store.ts        # Account + user join queries
 │   │   └── votes.repository.ts
@@ -106,7 +122,7 @@ src/
 │   ├── auth/                 # Register, login, logout, me
 │   ├── candidates/           # CRUD + image upload/delete (B2 storage)
 │   ├── elections/            # Election CRUD, positions, transitions, results, voting-state
-│   ├── parties/              # Party list CRUD (in progress)
+│   ├── parties/              # Party list CRUD
 │   ├── profile/              # User profile + password updates
 │   ├── users/                # Admin user management (soft/hard delete, restore, unlock)
 │   └── votes/                # Vote submission + results
@@ -116,7 +132,8 @@ src/
 │   ├── auth/                 # /register, /login, /logout, /me
 │   ├── candidates/           # /candidates CRUD (admin-gated writes)
 │   ├── elections/            # /elections (CRUD), /elections/current, /elections/state, /elections/:id/transitions, /elections/:id/results, /elections/:id/positions
-│   ├── parties/              # /elections/:id/parties (in progress)
+│   ├── health/               # /health (public), /readiness (touches DB)
+│   ├── parties/              # /elections/:id/parties
 │   ├── profile/              # /me/profile, /me/password
 │   ├── users/                # /users (admin-only)
 │   ├── votes/                # /votes, /votes/me, /votes/results, /votes/candidates/:id/count
@@ -126,6 +143,7 @@ src/
 │   ├── b2-client.ts          # Backblaze B2 client (upload/download/delete candidate images)
 │   ├── create-app.ts         # OpenAPIHono factory + middleware chain + createTestApp helper
 │   ├── election-lifecycle.ts # Election state machine (draft→open→closed→archived) with TransitionError
+│   ├── election-visibility.ts # findVisibleElection / isAdminRole — hides effective-draft elections from voters
 │   ├── session.ts            # Session CRUD + cookie helpers (session_id, 7-day TTL)
 │   ├── password.ts           # hashPassword / verifyPassword (PBKDF2 via Web Crypto)
 │   ├── profanity.ts          # bad-words wrapper, used in profile updates
@@ -133,6 +151,7 @@ src/
 │   ├── candidate-lifecycle-coordinator.ts   # Candidate CRUD + avatar + audit
 │   ├── election-lifecycle-coordinator.ts    # Election CRUD + transitions + audit
 │   ├── position-lifecycle-coordinator.ts    # Position CRUD + audit
+│   ├── party-lifecycle-coordinator.ts       # Party list CRUD + audit
 │   ├── user-lifecycle-coordinator.ts        # User CRUD + auth + bulk import + audit
 │   ├── constants/            # Centralized ERROR_MESSAGES, AUDIT_ACTIONS
 │   ├── types/                # AppBindings, AppOpenAPI, AppRouteHandler
@@ -155,6 +174,10 @@ src/
 │   ├── seed-superadmin.ts    # Seed super_admin account
 │   ├── seed-voter.ts         # Seed test voter account
 │   ├── import-students.ts    # Bulk import students from PDF/CSV
+│   ├── reset-password.ts     # Guarded single-account password reset + lockout clear + session purge
+│   ├── anonymize-votes.ts    # One-time migration: strip user_id from legacy identified votes
+│   ├── offline-migrate.ts    # Apply migrations to the local turso dev server
+│   ├── validate-frontend-build-env.ts # Pre-deploy guard, run by `pnpm deploy`
 │   ├── verify-pragma-fk.ts   # PRAGMA foreign_keys verification (local)
 │   ├── verify-migration-fk.ts # Migration FK behaviour (local)
 │   ├── verify-turso-fk.ts    # PRAGMA + enforcement on live Turso
@@ -166,7 +189,7 @@ src/
 ### Request Lifecycle
 
 1. `createApp()` (`src/lib/create-app.ts:13`) sets up an `OpenAPIHono<AppBindings>` with: pino logger → CORS (`http://localhost:3001` only, `credentials: true`) → CSRF same-origin validation → security headers → emoji favicon → notFound/onError. Env is read from `c.env` (Worker bindings).
-2. Per-resource routers are mounted at `/` in `app.ts`. Each router applies its own `requireAuth`/`requireAdmin` middleware before `openapi(route, handler)`.
+2. `src/app.ts` prepends a navigation-request interceptor: for document requests (see `middleware/utils/navigation.ts`) it rewrites the path to `/` and serves the SPA shell from the `ASSETS` binding, falling through to the API only on a 404. Per-resource routers are then mounted at `/`. Each router applies its own `requireAuth`/`requireAdmin` middleware before `openapi(route, handler)`.
 3. Handlers use `c.req.valid('json' | 'query' | 'param')` (Zod-validated by the route's schema + `defaultHook` returning 422 on failure).
 4. Database access: `const { db } = createDb(c)` (libSQL client from `c.env`) → call `electionRepo.*`, `voteRepo.*`, etc. A fresh `createClient` is constructed per request (acceptable for libSQL HTTP transport).
 5. Auth: `requireAuth` reads the `session_id` cookie → joins `sessions` + `accounts` in Turso → sets `c.set('authUser', { id, email, username, role })`. 401 on missing/expired.
@@ -181,11 +204,11 @@ src/
 - **Unique-constraint handling** uses `isUniqueConstraintError()` (string-matches "UNIQUE constraint failed"). Registration has a pre-check _and_ this fallback to cover race conditions.
 - **Timestamps:** all stored as integer Unix seconds via `unixepoch()` default. Handlers compute `Math.floor(Date.now() / 1000)` when setting timestamps manually.
 - **Soft delete:** `accounts` use `deletedAt` integer (filtered via `isNull`); `candidates` use `isActive` 0/1.
-- **Vote integrity:** unique indexes on `(userId, candidateId)` and `(userId, positionId, electionId)` enforce one-vote-per-position-per-election. Voting status is derived from `votes` table — no `hasVoted` flag on users.
-- **Election model:** `elections` and `positions` are first-class tables. `elections_one_open_idx` is a partial unique index `WHERE status = 'open'` — at most one open election at a time. Positions are per-election, ordered by `displayOrder`.
+- **Vote integrity:** new ballots are anonymous — `votes.userId` is always `NULL`, so the unique indexes on `(userId, candidateId)` and `(userId, positionId, electionId)` only constrain legacy rows. One-ballot-per-voter is enforced by the `voter_election_participation` unique index. See [Ballot Anonymity](#ballot-anonymity) before touching anything vote-related.
+- **Election model:** `elections` and `positions` are first-class tables. `idx_elections_one_open` is a partial unique index `WHERE status = 'open'` — at most one election may be *stored* as open. Stored status is not the same as effective status: authorization and visibility must go through `getEffectiveElectionStatus`. Positions are per-election, ordered by `displayOrder`.
 - **Error/success messages** must come from `lib/constants/error-messages.ts` (see `lib/constants/README.md`). Don't inline ad-hoc strings.
 - **Boolean query params** must use the `booleanQuery` helper from `lib/validation/boolean-query.ts` (Zod `z.coerce.boolean()` only treats empty string as false).
-- **Auth checks:** Admin routes enforce authorization at the route definition seam via `withAdmin(...)` or route-level `requireAdmin` middleware. Any new admin mutation handler added to a router should be wrapped with `withAdmin(handler)` at the `router.openapi(...)` call site.
+- **Auth checks:** Admin routes enforce authorization at the route definition seam via `withAdmin(...)` or route-level `requireAdmin` middleware. Any new admin mutation handler added to a router should be wrapped with `withAdmin(handler)` at the `router.openapi(...)` call site. Both helpers accept `admin` and `super_admin` — see [Roles](#roles); never hand-roll a bare `role !== "admin"` check.
 - **Hono `strict: false`** is set on the router so trailing slashes don't 404.
 - **CORS** is hardcoded to `http://localhost:3001` with `credentials: true`. If you change the frontend dev port, update `lib/create-app.ts:27`.
 - **CSRF** (`middleware/csrf.ts`, wired in `createApp`) rejects `POST/PUT/PATCH/DELETE` requests whose Origin (Referer as fallback) is neither the request's own origin, the dev frontend origin, nor an origin in the `ALLOWED_ORIGINS` binding (comma-separated env var, validated in `middleware/env.ts`). Requests without a parseable origin are rejected. Set `ALLOWED_ORIGINS` to your production origin(s) in `wrangler.jsonc` `vars` (or via secret/CI env) before deploy.
@@ -197,7 +220,10 @@ Domain operations that span multiple repositories and must be atomic are encapsu
 - `candidate-lifecycle-coordinator.ts` — create, update, deactivate, uploadAvatar, deleteAvatar
 - `election-lifecycle-coordinator.ts` — create, updateMetadata, transition
 - `position-lifecycle-coordinator.ts` — create, update, delete
+- `party-lifecycle-coordinator.ts` — create, update, delete
 - `user-lifecycle-coordinator.ts` — register, bulkImport, update, softDelete, restore, hardDelete, authenticate, logout, unlock
+
+Position, party, and candidate coordinators all gate mutations on the shared `isElectionEditable` policy from `lib/election-lifecycle.ts` rather than re-deriving "is this election still a draft" themselves.
 
 **Pattern:** Coordinators accept a `DbClient` (transaction handle) and `ActorInfo` (admin snapshot), perform validation + mutation + audit log insert inside a single transaction. They export typed error classes (`CandidateLifecycleError`, `PositionLifecycleError`, `UserLifecycleError`, `TransitionError`) with HTTP status codes. Handlers delegate to coordinators rather than calling repos directly.
 
@@ -207,9 +233,9 @@ Domain operations that span multiple repositories and must be atomic are encapsu
 
 The backend uses **Cloudflare Rate Limiting** bindings for login protection. See `src/middleware/rate-limit.ts`:
 
-- `createIpRateLimiter("LOGIN_IP_LIMITER")` — middleware that checks `c.env.LOGIN_IP_LIMITER.limit({ key: clientIp })`.
-- The binding must be configured in `wrangler.jsonc` under `[[unsafe.bindings]]` with `type: "ratelimit"`.
-- `RATE_LIMIT_PERIOD_SECONDS` must match the `period` field in the wrangler ratelimit config.
+- `createIpRateLimiter("LOGIN_IP_LIMITER")` — middleware that checks `c.env.LOGIN_IP_LIMITER.limit({ key: clientIp })`, keyed on `CF-Connecting-IP` (falling back to `"unknown"`).
+- The binding is configured as a top-level `"ratelimits"` array in `wrangler.jsonc`, and repeated per named environment (`staging`, `test`, `offline`) — each entry needs `name`, `namespace_id`, and `simple: { limit, period }`.
+- `RATE_LIMIT_PERIOD_SECONDS` in `rate-limit.ts` must match the `period` field in that config, or the `Retry-After` header will lie.
 - Returns 429 with `Retry-After` header when exceeded.
 
 ### Login Attempt Tracking
@@ -224,16 +250,37 @@ Failed login attempts are tracked in the `login_attempts` table (via `login-atte
 
 `GET /admin/stats` (`routes/admin-stats/routes.ts`, handler in `handlers/admin-stats/admin-stats.handler.ts`) returns aggregated dashboard data: voter count, election count, active election with turnout percentage, and last 5 audit log entries.
 
-### Party Lists (in progress)
+### Party Lists
 
-A new feature for organizing candidates into parties within an election. Currently staged but not yet fully wired:
+Candidates can be organised into parties within an election. The feature is wired end to end:
 
-- `database/repositories/party-list.repository.ts` — CRUD operations for the `party_lists` table
-- `handlers/parties/parties.handler.ts` — Route handlers for party list management
-- `routes/parties/parties.routes.ts` — OpenAPI route definitions
-- `routes/parties/index.ts` — Router mounting
-- Candidates can be assigned to a party via the `partyId` foreign key on the `candidates` table
-- New audit actions: `party.create`, `party.update`, `party.delete` (add to `audit-actions.ts` when feature ships)
+- `database/repositories/party-list.repository.ts` — CRUD for the `party_lists` table
+- `lib/party-lifecycle-coordinator.ts` — atomic mutations + audit logging, gated on `isElectionEditable`
+- `handlers/parties/parties.handler.ts`, `routes/parties/` — handlers and OpenAPI route defs, mounted in `app.ts`
+- Candidates reference a party via the nullable `partyId` FK on `candidates`
+- `party_lists` has case-insensitive unique indexes on `(electionId, name)` and `(electionId, code)` (both `COLLATE NOCASE`), so party names and codes can't collide within one election
+- `candidates` has a partial unique index `idx_candidates_active_party_position` over `WHERE is_active = 1 AND party_id IS NOT NULL` — one active candidate per party per position
+
+### Roles
+
+Three tiers, defined as `UserRole` in `lib/user-lifecycle-coordinator.ts` and validated by the `ROLES` Zod enum in `schema.ts`: `user` | `admin` | `super_admin`.
+
+- `requireAuth` rejects a session whose stored role fails `ROLES.safeParse` (401), so an unknown role can never reach a handler.
+- `requireAdmin` and `withAdmin` both accept `admin` **and** `super_admin`. Never write a bare `role !== "admin"` check.
+- Escalation rule: acting on an account that is itself `admin` or `super_admin` requires the actor to be `super_admin`. `user-lifecycle-coordinator.ts` enforces this on update, softDelete, restore, and hardDelete.
+
+### Ballot Anonymity
+
+New ballots are anonymous at write time. This constraint shapes four tables and is the easiest thing in the codebase to break by accident. Source: `lib/ballot-caster.ts`, guarded by `database/voter-anonymization-integrity.test.ts`.
+
+- **`votes.userId` is always `NULL` for newly cast ballots.** The column survives only for legacy rows (`onDelete: 'set null'`). Never populate it. The `votes_user_*_unique_idx` indexes are therefore vestigial for new data.
+- **Double-voting is prevented by `voter_election_participation`** — one row per (election, voter), keyed by `voterHash`: an HMAC-SHA256 of `voter-hash:<electionId>:<studentId>` peppered with `HMAC_SECRET`, prefixed `v1:`. The unique index `idx_voter_election_participation_unique` is the real guard, and it survives an account hard-delete followed by re-import.
+- **Participation rows store `createdAt = PARTICIPATION_TIMESTAMP_SENTINEL` (0) deliberately.** Real ballot timing stored beside an identity-derived hash would let an operator correlate a hash back to selections. Don't "fix" this to a real timestamp.
+- **`ballot_snapshots`** holds one user-less row per cast ballot, so turnout stays accurate after anonymisation.
+- **Reads expose participation as a boolean only** — `myVotes: { electionId, hasVoted }`. Never surface a voter's selections back to them or to an admin.
+- **Key rotation:** `computeVoterParticipationHashes` checks the current `HMAC_SECRET`, every entry in `PREVIOUS_HMAC_SECRETS`, and the pre-HMAC legacy SHA-256 form (`computeLegacyVoterHash`). Secrets must be standard base64 decoding to ≥32 bytes. Retiring a secret that participation rows still depend on re-opens the double-vote hole — see the rotation notes in `ONBOARDING.md`.
+- The legacy `voteRepo.existsForUserInElection` link check runs alongside the hash check until the operator backfill (`scripts/anonymize-votes.ts`) has converted old identified rows.
+- Vote inserts, the ballot snapshot, and the participation row go in a single `db.batch([...])` so they cannot diverge.
 
 ### Auth & Sessions
 
@@ -243,7 +290,7 @@ A new feature for organizing candidates into parties within an election. Current
 - The session lookup joins `accounts` and filters out soft-deleted accounts (`isNull(accounts.deletedAt)`).
 - Login is by **student number + password** (`studentId`, not username or email). Register accepts email optionally.
 - On successful login, password hashes stored in the legacy `salt$hash` format (or any versioned hash that does not match the current 100k Worker policy) are rehashed with the current policy (see `needsRehash` in `lib/password.ts`). The dummy hash used for non-existent/locked accounts is also current-cost.
-- Voting status is derived from the `votes` table (not stored on account/user).
+- Voting participation is derived from `voter_election_participation` (an HMAC of the student id), not from a flag on the account/user and no longer from a `userId` link on `votes`. See [Ballot Anonymity](#ballot-anonymity).
 
 ### Database
 
@@ -254,8 +301,7 @@ A new feature for organizing candidates into parties within an election. Current
 
 ### Foreign keys & migrations
 
-- **libsql and Turso default `PRAGMA foreign_keys = ON`** (verified empirically — see `apps/backend/scripts/verify-turso-fk.ts`). Do **not** issue `PRAGMA foreign_keys = ON` in `src/config/db`; it's already on. The `onDelete: '…'` declarations in `schema.ts` ARE enforced at runtime.
-- **Important caveat about `schema.ts` comments:** The file contains a NOTE comment (lines 100-110) stating that `onDelete: 'restrict'` on `positions`, `candidates`, and `votes` tables end up as `NO ACTION` because SQLite's `ALTER TABLE ADD COLUMN ... REFERENCES` cannot express `ON DELETE`. This comment was written when `PRAGMA foreign_keys` was thought to be OFF. With the current `PRAGMA foreign_keys = ON` default, the `NO ACTION` FKs **are** enforced (behaving as RESTRICT for non-deferred constraints). The comment is outdated — trust the actual runtime behaviour.
+- **libsql and Turso default `PRAGMA foreign_keys = ON`** (verified empirically — see `apps/backend/scripts/verify-turso-fk.ts`). Do **not** issue `PRAGMA foreign_keys = ON` in `src/config/db`; it's already on. The `onDelete: '…'` declarations in `schema.ts` ARE enforced at runtime, and the NOTE comment above `candidates` in `schema.ts` now says so correctly (it also records that the `votes` unique indexes are legacy-only). Earlier revisions of that comment claimed FKs degraded to `NO ACTION`; if you find a copy of that wording anywhere, it is out of date.
 - **Drizzle silently drops `ON DELETE` / `ON UPDATE` from SQLite `ALTER TABLE ADD COLUMN`** (tracked as [drizzle-orm#5619](https://github.com/drizzle-team/drizzle-orm/issues/5619)).
 - **Future migrations that `ADD` a `NOT NULL` column (with or without `REFERENCES`) to a POPULATED table will fail** with `Cannot add a NOT NULL column with default value NULL`. Two safe patterns:
   - **Table-recreation:** `CREATE new … → copy rows → DROP old → ALTER TABLE new RENAME TO old`. Always works.
@@ -268,8 +314,10 @@ A new feature for organizing candidates into parties within an election. Current
 
 Defined in `src/lib/election-lifecycle.ts`:
 
-- **State machine:** `draft → open → closed → archived` (archived is terminal). Also allows `closed → draft` (reopen for editing).
-- **Assertion logic:** `assertTransition(from, to, body, positionCount)` validates transitions and throws `TransitionError` (with HTTP status code) for invalid transitions, missing position count on `draft→open`, or missing/invalid `opensAt/closesAt` timestamps.
+- **State machine:** `draft → open → closed → archived` (archived is terminal). Also allows `closed → draft` (reopen for editing), but the coordinator refuses it with `ELECTION_HAS_BALLOTS` (409) once a `ballot_snapshots` row or a legacy vote exists for that election — cast ballots are final.
+- **Effective vs stored status:** `getEffectiveElectionStatus(election, now)` downgrades a stored `open` row to `draft` before `opensAt` and to `closed` after `closesAt` (and to `draft` if either timestamp is null). **Authorization and visibility decisions must use the effective status, never `election.status` directly.** `isElectionCurrentlyOpen` is the boolean form; `lib/election-visibility.ts`'s `findVisibleElection` applies it to hide effective-draft elections from non-admins.
+- **Editability:** `isElectionEditable` is the single source of truth for "may configuration change" (draft only). Position, party, and candidate coordinators consume it.
+- **Assertion logic:** `assertTransition(from, to, body, positionCount, positionsWithActiveCandidates)` validates transitions and throws `TransitionError` (with HTTP status code). `draft → open` additionally requires: at least one position, **every** position to have an active candidate (`ELECTION_HAS_POSITION_WITHOUT_CANDIDATE`), and numeric `opensAt`/`closesAt` with `closesAt > opensAt`.
 - **Transitions** are requested via `POST /elections/:id/transitions` with `{ to, opensAt?, closesAt? }`.
 
 ### Audit log
@@ -285,7 +333,7 @@ Table `audit_log` (`schema.ts:160`):
 | `id`                        | text PK (uuid)         | Row identifier (`crypto.randomUUID()`)                      |
 | `created_at`                | integer (unix seconds) | When the action happened (`unixepoch()` default)            |
 | `action`                    | text                   | Dotted enum (see vocabulary below)                          |
-| `target_type`               | text                   | One of `election` / `position` / `candidate` / `user`       |
+| `target_type`               | text                   | One of `election` / `position` / `candidate` / `party` / `user` |
 | `target_id`                 | text                   | UUID of the affected resource                               |
 | `actor_account_id_snapshot` | text                   | Denormalised `accounts.id` of the actor at write time       |
 | `actor_username_snapshot`   | text                   | Denormalised `accounts.username` of the actor at write time |
@@ -302,7 +350,7 @@ Invariant test: `apps/backend/src/database/schema-names.test.ts` (`describe("aud
 
 #### Action vocabulary
 
-16 actions, organised by resource. Source of truth: `apps/backend/src/lib/constants/audit-actions.ts` — `AUDIT_ACTIONS` (Zod enum) is the same validator used by the write path (`auditLogRepo.insert`) and the read filter (`GET /audit-log?action=…`).
+19 actions, organised by resource. Source of truth: `apps/backend/src/lib/constants/audit-actions.ts` — `AUDIT_ACTIONS` (Zod enum) is the same validator used by the write path (`auditLogRepo.insert`) and the read filter (`GET /audit-log?action=…`). `TARGET_TYPES` is the companion enum for `target_type`.
 
 ```
 election.create          — admin creates a new election
@@ -314,6 +362,9 @@ position.delete          — admin removes a position from an election
 candidate.create         — admin adds a candidate to a position
 candidate.update         — admin modifies a candidate (name, description, image)
 candidate.deactivate     — admin soft-deletes a candidate (sets isActive=0)
+party.create             — admin creates a party list in an election
+party.update             — admin modifies a party list (name, code, colour)
+party.delete             — admin removes a party list from an election
 user.create              — admin creates a single user account
 user.update              — admin modifies a user's account fields
 user.bulk_import         — admin bulk imports voter accounts
@@ -333,10 +384,7 @@ user.unlock              — admin resets a voter account lockout status
 | `GET`  | `/candidates/:id/audit`                      | Entries whose target is this candidate.                                                                                                                                                                                              |
 | `GET`  | `/users/:id/audit`                           | Entries whose target is this user.                                                                                                                                                                                                   |
 
-All five endpoints are admin-only. Auth uses the in-handler `c.var.authUser?.role !== "admin"` guard (mirroring the elections handler pattern). Two reasons for in-handler rather than middleware:
-
-- Hono's typed `.openapi(routeDef, middleware, handler)` overloads don't accept this 3-arg shape cleanly (TS2345).
-- `router.use("/audit-log/*", requireAdmin)` hits the Workers runtime prefix-match bug documented at `routes/elections/index.ts:50`.
+All five endpoints are admin-only, enforced at the route-definition seam by wrapping each handler in `withAdmin(...)` (see `routes/audit-log/index.ts`). Prefix middleware (`router.use("/audit-log/*", requireAdmin)`) is deliberately **not** used here — it hits the Workers runtime prefix-match bug documented at `routes/elections/index.ts:50`.
 
 #### Convention: writing audit rows from new admin handlers
 
@@ -378,7 +426,8 @@ This is the primary endpoint the frontend uses to determine what to display on t
   - Tests build a `createMockDb()` builder (chainable `select/insert/update/delete`) and assert via `expect(mockDb.insert).toHaveBeenCalledWith(...)`.
   - Hono router is invoked directly with `router.request('/path', { method, headers, body })` (no real server).
 - **Lifecycle coordinators** have their own test files (e.g. `candidate-lifecycle-coordinator.test.ts`) that test transaction behavior with mocked DB.
-- **Always run the test suite after schema/handler changes** — DB-level invariants in `schema-names.test.ts` catch schema/API drift.
+- **Always run the test suite after schema/handler changes** — DB-level invariants in `schema-names.test.ts` catch schema/API drift, and `database/voter-anonymization-integrity.test.ts` catches regressions in the anonymous-ballot invariants.
+- **Coverage thresholds** are set to 80% (statements, branches, functions, lines) in `apps/backend/vitest.config.ts`.
 
 ### Things to be careful about
 
@@ -399,7 +448,7 @@ This is the primary endpoint the frontend uses to determine what to display on t
 - **Routing:** SvelteKit file-based routing with layout groups `(public)`, `(protected)`, `(admin)`
 - **Data:** SvelteKit `fetch` with cookie-based auth (session cookie `session_id`)
 - **UI:** Tailwind 4 via `@tailwindcss/vite` plugin; `lucide-svelte` (icons)
-- **Auth:** Session cookie based, with `authStore` writable store
+- **Auth:** Session cookie based, with an `authStore` runes class (not a Svelte store contract)
 - **Build output:** Built as static SPA via `@sveltejs/adapter-static` (outputs to `dist/`)
 - **Typecheck:** `svelte-check` (via `pnpm check`)
 - **Tests:** Vitest 3 (`pnpm test` runs `vitest run`; tests in `src/lib/**/*.test.ts`)
@@ -412,23 +461,30 @@ src/
 ├── routes/                   # SvelteKit file-based routes
 │   ├── +layout.svelte        # Root layout — initializes auth from /me
 │   ├── (public)/             # Public area (login/register)
-│   │   └── auth/             #   login, register pages
+│   │   └── auth/             #   login, register page
 │   ├── (protected)/          # Authenticated area
 │   │   ├── voting/           #   Voting page
+│   │   ├── elections/        #   Election list + [electionId] detail (voter view)
 │   │   ├── results/          #   Election results
 │   │   └── settings/         #   Profile/password settings
 │   └── (admin)/              # Admin area
 │       ├── admin/            #   Election management
-│       │   └── elections/    #     CRUD, positions, transitions
-│       └── admin-dashboard/  #   Dashboard + results viewing
+│       │   ├── elections/    #     CRUD, positions/[positionId], candidates/[candidateId]
+│       │   ├── users/        #     User management + users/import
+│       │   ├── results/      #     Results viewing
+│       │   └── audit-log/    #     Audit log viewer
+│       └── admin-dashboard/  #   Dashboard
 ├── lib/
-│   ├── stores/auth.ts        # Auth state: { user, loading }
+│   ├── stores/auth.svelte.ts # Auth state: runes class exposing { user, loading } getters + set()
+│   ├── stores/toast.svelte.ts # Toast notifications
 │   ├── api/                  # Fetch-based API wrappers
 │   │   ├── client.ts        # apiFetch() with ApiError
 │   │   ├── auth.ts          # login/register/logout/me
+│   │   ├── admin-stats.ts   # Dashboard stats (admin-only)
 │   │   ├── audit-log.ts     # Audit log API (admin-only)
 │   │   ├── elections.ts     # Election CRUD, transitions, positions
 │   │   ├── candidates.ts    # Candidate list/create/update
+│   │   ├── parties.ts       # Party list CRUD
 │   │   ├── votes.ts         # Vote submission + results
 │   │   ├── users.ts         # User management (admin)
 │   │   ├── positions.ts     # Position CRUD
@@ -440,13 +496,17 @@ src/
 │   │   └── api-client.ts    # ApiClientAdapter interface (typed fetchers per resource)
 │   ├── types.ts              # Type definitions
 │   ├── routeGuards.ts        # Pure redirect decision functions
-│   ├── userRegistration.ts   # Registration validation + mutation helpers
+│   ├── adminUsers.ts         # Admin user-list state + mutation helpers
 │   ├── election-lifecycle-client.ts # Client-side election state helpers
 │   ├── voting-page-state.ts  # Voting page state machine
 │   ├── voting-stepper-logic.ts # Voting stepper logic
-│   ├── vote-count-utils.ts   # Vote count formatting
+│   ├── vote-submission.ts    # Ballot submission + interrupted-submit reconciliation
+│   ├── keyboard-viewport.ts  # Mobile keyboard/viewport handling
+│   ├── telemetry.ts          # Client error telemetry (Sentry)
 │   ├── mutation-feedback-utils.ts # Error extraction helpers
-│   └── components/ui/        # Reusable UI components (Header, candidate-card, modal, skeleton-*, etc.)
+│   ├── validation/           # Per-resource client-side validators (candidate, election, party-code, position, profile)
+│   ├── utils/pdf-parser.ts   # Client-side PDF parsing for voter import
+│   └── components/           # `ui/` reusable components + `admin/` admin-only components
 ├── app.html                  # HTML shell (references favicon.svg)
 ├── app.css                   # Global styles (Tailwind)
 └── app.d.ts                  # Global type declarations
@@ -463,16 +523,16 @@ src/
 
 ### Testing
 
-- Uses **Vitest** (`pnpm test` runs `vitest run`).
-- Test files are in `src/lib/**/*.test.ts` alongside their modules (e.g. `routeGuards.test.ts`, `userRegistration.test.ts`, `voting-page-state.test.ts`, `voting-stepper-logic.test.ts`, `vote-count-utils.test.ts`, `adminUsers.test.ts`).
+- Uses **Vitest** (`pnpm test` runs `vitest run`). There is no `test` block in `vite.config.ts`, so Vitest's default include picks up every `*.test.ts` under `src/`.
+- Test files sit alongside their modules — both in `src/lib/**` (e.g. `routeGuards.test.ts`, `adminUsers.test.ts`, `voting-page-state.test.ts`, `voting-stepper-logic.test.ts`, `vote-submission.test.ts`, `cache/*.test.ts`, `api/*.test.ts`) and next to routes as `src/routes/**/page.test.ts` / `load.test.ts`.
 - Typecheck runs via `svelte-check` (`pnpm check`), not `tsc`.
 
 ### Things to be careful about
 
-- **`PUBLIC_API_BASE_URL`** env variable must be set to `http://localhost:8787` in `.env`.
+- **`PUBLIC_API_BASE_URL`** must be `http://localhost:8787` in `apps/frontend/.env` for local dev, and **empty in production** — the deployed Worker serves the frontend same-origin. `pnpm deploy` runs `scripts/validate-frontend-build-env.ts` to enforce this before shipping.
 - **Port 3001** — frontend dev server runs on port 3001 (configured in `package.json` as `vite dev --port 3001`). CORS on the backend allows `http://localhost:3001`.
 - **Favicon reference** in `app.html` points to `favicon.svg` (ensure the file exists in `static/`).
-- **`@sveltejs/adapter-static`** with SPA fallback (`fallback: "404.html"`). The backend serves this output as Cloudflare Assets in production.
+- **`@sveltejs/adapter-static`** with SPA fallback `fallback: "index.html"` (see `svelte.config.js`; `pages`/`assets` both output to `dist`). The backend serves this output as Cloudflare Assets in production.
 - **Session cookie**: Same as backend conventions (HttpOnly, SameSite=Lax).
 - **`CacheEntry.fetch()` never rejects.** On a failed fetch it resolves `null` and records the message in `entry.error` (see `cache-entry.svelte.ts`); the promise is never rejected. So `await entry.fetch()` never throws, and any `.catch()`/try-catch around it is unreachable. The correct consumer pattern is `const result = await entry.fetch(); if (result) { /* use result */ } else { usersError = entry.error ?? 'Failed to load' }`. `add-candidate-modal.svelte`'s `loadUsers()` is the reference example — do NOT rely on try/catch to surface cache load failures.
 - **`/users` pagination is capped at `limit=100`** (backend `ListUsersQuerySchema.max(100)`). `fetchUsers` in `lib/api/users.ts` defaults to `limit: 100`. The backend OpenAPI hook returns **422** for `limit > 100` before the repository is queried, so a higher request limit silently fails the whole list call rather than truncating — keep admin user-list requests at 100.
@@ -487,44 +547,66 @@ src/
 
 ### Running E2E Tests
 
+Run from the repo root so the offline environment is set up for you:
+
 ```bash
-cd apps/e2e
-pnpm test           # Run all tests (starts backend + frontend automatically)
-pnpm test:ui        # Run with Playwright UI
-pnpm test:headed    # Run in headed mode (visible browser)
+pnpm test:e2e       # sets OFFLINE_DEV + local Turso URL, builds the frontend, then runs playwright
 ```
+
+Or from `apps/e2e`:
+
+```bash
+pnpm test           # same as above (the env is exported by the package script)
+pnpm test:ui        # Playwright UI — expects servers/build already in place
+pnpm test:headed    # headed mode (visible browser)
+
+# One spec, or the database-free Worker asset smoke test
+pnpm exec playwright test tests/voter/voting-flow.spec.ts
+pnpm exec playwright test tests/worker/asset-routing.spec.ts --project=worker-smoke
+```
+
+The suite is offline-only: it shares `apps/backend/local.db` with offline dev, applies offline migrations before seeding, builds the frontend with `PUBLIC_OFFLINE_DEV=true`, and fails on non-local browser requests. **Never** hand it remote Turso credentials. `worker-smoke` is the only project that doesn't need the database server.
 
 ### Architecture
 
 ```
 apps/e2e/
-├── playwright.config.ts     # Config: auto-starts backend (8787) + frontend (3001)
+├── playwright.config.ts     # Projects + webServer (turso dev :8080 offline, Worker :8787)
 ├── fixtures/
-│   ├── db-setup.ts          # Seeds TEST_USERS and active election
+│   ├── db-setup.ts          # Seeds TEST_USERS and an active election
+│   ├── offline-test.ts      # Offline test fixture — fails the test on non-local requests
 │   └── page-objects/        # Page Object Models for clean test abstractions
 │       ├── LoginPage.ts
 │       ├── VotingPage.ts
 │       └── AdminElectionsPage.ts
 └── tests/
-    ├── global-setup.ts      # Seeds test DB
+    ├── global-setup.ts      # Seeds test DB (runs as the `setup` project)
     ├── auth/                # Login, session management
     ├── voter/               # Voting flow, UI interactions
-    └── admin/               # Election lifecycle, RBAC, user archiving
+    ├── admin/               # Election lifecycle, RBAC, user archiving, audit log, candidate images
+    └── worker/              # Asset-routing smoke test (no DB required)
 ```
 
 ### Conventions
 
-- **Global setup** (`tests/global-setup.ts`) runs first and seeds the database with test users and an active election.
+- **Tests run against the Worker on `http://localhost:8787`**, not a separate frontend dev server. The Worker serves the pre-built frontend from `../frontend/dist` as Cloudflare Assets, so E2E exercises the same same-origin topology as production. `baseURL` and the `Origin` header both default to `:8787` (override with `E2E_BASE_URL` / `E2E_ORIGIN`).
+- **`webServer`** starts `turso dev` on :8080 (offline only) and the Worker on :8787, each gated on a `GET /health` probe. It does **not** start `vite dev` — the frontend is built ahead of time by the package script. `reuseExistingServer: !process.env.CI` lets you reuse locally running servers.
+- **Projects, not a `globalSetup` hook:** `setup` (runs `global-setup.ts`) is declared as a project that `chromium` (and firefox/webkit) depend on. `worker-smoke` matches `worker/*.spec.ts` and has no setup dependency, which is why it runs without a database.
+- **Serial execution** (`fullyParallel: false`, `workers: 1`), `retries: 2` in CI, `forbidOnly` in CI. `FULL_MATRIX=true` adds firefox + webkit.
 - **Page Objects** in `fixtures/page-objects/` encapsulate selectors and interactions.
-- **`webServer` config** in `playwright.config.ts` auto-starts both apps; `reuseExistingServer: !process.env.CI` allows reusing running dev servers locally.
-- **Serial execution** by default (`fullyParallel: false`, `workers: 1`). Enable `FULL_MATRIX=true` for cross-browser testing (firefox, webkit).
-- **Tests run against the real frontend** (port 3001), not the backend directly.
 
 ## Cross-Cutting
 
-### CI (`.github/workflows/ci.yml`)
+### CI (`.github/workflows/`)
 
-Triggers on PR and push to `main`. Runs on Node 22 with pnpm. Steps: install (frozen lockfile) → typecheck → lint → test → build. Use this order locally before pushing.
+`ci.yml` triggers on PR and push to `main`, Node 22 + pnpm, two jobs:
+
+- **verify** — install (frozen lockfile) → copy `.env.example` files → typecheck → lint → test → build. Run this order locally before pushing (`just check` covers the middle three).
+- **e2e** — installs the chromium Playwright browser and the Turso CLI, points `.env` at `http://127.0.0.1:8080`, then runs `pnpm test:e2e`. `FULL_MATRIX` is enabled only on `main`, so firefox/webkit run on merge but not on PRs. The Playwright report uploads as an artifact on both pass and fail.
+
+Both jobs copy `apps/frontend/.env.example` and `apps/backend/.env.example` into place — if you add a required env var, update those examples or CI breaks.
+
+`release.yml` is separate. Production deploys themselves are continuous via **Cloudflare Workers Builds**, not this workflow: each push and PR gets a preview URL, and pushes to the production branch deploy the stable Worker. See `docs/deployment/production-release.md`.
 
 ### Linting
 
@@ -543,7 +625,15 @@ Required for Turso connectivity (set in `.dev.vars` for local wrangler, or as `w
 - `TURSO_DATABASE_URL` — libSQL connection URL (e.g. `libsql://your-db.turso.io` for remote, `file:./local.db` for local SQLite)
 - `TURSO_AUTH_TOKEN` — Turso auth token (only required for remote)
 
-`NODE_ENV`, `LOG_LEVEL`, `TURSO_DATABASE_URL` are set in `wrangler.jsonc` `vars` for dev. `TURSO_AUTH_TOKEN` must be a secret in production.
+`NODE_ENV`, `LOG_LEVEL`, `TURSO_DATABASE_URL` are set in `wrangler.jsonc` `vars` for dev. Production **secrets** — never `vars` — are `TURSO_AUTH_TOKEN`, `B2_APPLICATION_KEY_ID`, `B2_APPLICATION_KEY`, `TURNSTILE_SECRET_KEY`, `HMAC_SECRET`, and `PREVIOUS_HMAC_SECRETS` (during rotation). `ALLOWED_ORIGINS` must list the production origin(s) for CSRF. The full variable table, including the `PUBLIC_*` frontend vars, lives in `ONBOARDING.md` §6.
+
+`wrangler.jsonc` defines named environments beyond the default: `staging`, `test` (used by `pnpm dev:backend`), and `offline`. Each repeats its own `assets`, `vars`, and `ratelimits` blocks — a binding added to the default environment is **not** inherited, so add it to every environment you care about and re-run `pnpm cf-typegen`.
+
+### Offline Development
+
+Offline mode is explicit and refuses remote database URLs. `pnpm dev:offline` (`scripts/dev-offline.mjs`) starts or reuses `turso dev --db-file apps/backend/local.db --port 8080`, applies offline migrations, runs the Worker under `--env offline`, and builds the frontend with `PUBLIC_OFFLINE_DEV=true`. Turnstile is skipped, Sentry stays disabled, and candidate images are held in Worker process memory — they vanish on restart. The `OFFLINE_DEV` flag is read by `middleware/env.ts`, `lib/b2-client.ts`, and the auth handler.
+
+Seed scripts refuse `NODE_ENV=production`; remote non-production targets additionally require `ALLOW_REMOTE_SEEDING=true`, and `db:reset-password` requires `ALLOW_REMOTE_PASSWORD_RESET=true`. Pass passwords via env vars, never on the command line in a shared shell.
 
 ### Naming & Style
 

@@ -120,6 +120,13 @@
       "when": 1786547997095,
       "tag": "0016_needy_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1787530407157,
+      "tag": "0017_vote_window_guard",
+      "breakpoints": true
     }
   ]
 }

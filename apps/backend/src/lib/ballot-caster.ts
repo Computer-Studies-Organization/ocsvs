@@ -369,9 +369,10 @@ export class DrizzleBallotCaster {
       if (recordsToInsert.length > 0) {
         const snapshotId = crypto.randomUUID();
         // NOTE: The ballot_snapshots and voter_election_participation inserts are kept atomic
-        // with the votes insert inside db.batch. The voter_election_participation unique constraint
-        // (idx_voter_election_participation_unique) enforces durable double-vote prevention even
-        // across user hard-deletes.
+        // with the votes insert inside db.batch. The votes_require_open_election trigger also
+        // enforces the election window at the write boundary. The voter_election_participation
+        // unique constraint (idx_voter_election_participation_unique) enforces durable
+        // double-vote prevention even across user hard-deletes.
         const batchStatements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
           db.insert(votes).values(recordsToInsert),
           db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
@@ -398,6 +399,16 @@ export class DrizzleBallotCaster {
         data: { votes: recordsToInsert },
       };
     } catch (err) {
+      if (err instanceof Error && err.message.includes("ELECTION_NOT_OPEN")) {
+        return {
+          success: false,
+          error: {
+            code: "ELECTION_NOT_OPEN",
+            message: ERROR_MESSAGES.ELECTION_NOT_OPEN,
+            status: httpStatusCodes.CONFLICT,
+          },
+        };
+      }
       if (isUniqueConstraintError(err)) {
         return {
           success: false,

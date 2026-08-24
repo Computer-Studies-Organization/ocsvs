@@ -14,6 +14,14 @@ The deep persistence module responsible for all database interactions and multi-
 
 Election configuration is editable only while the election is in `draft` status. The Election lifecycle module owns this policy through `isElectionEditable`; Position, Party, and Candidate lifecycle coordinators retain their resource-specific transactions and error handling while using that shared policy.
 
+### Results Visibility
+
+The policy that determines which audience may view an election's tallies at each lifecycle state. It is separate from eligibility to cast a ballot.
+
+### Ballot Completeness
+
+A ballot with exactly one selection for every position in its election. A permitted abstention or none-of-the-above choice is a selection, not an omitted position.
+
 ### Candidate Persistence
 
 Candidate behavior intentionally remains split across a few modules with distinct ownership:

@@ -399,6 +399,38 @@ describe("DrizzleBallotCaster", () => {
     }
   });
 
+  it("returns ELECTION_NOT_OPEN when the write-time guard rejects the ballot", async () => {
+    mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "2024-0001" });
+    mockFindElectionById.mockResolvedValue({
+      id: electionId,
+      status: "open",
+      opensAt: now - 3600,
+      closesAt: now + 3600,
+    });
+    mockExistsForUserInElection.mockResolvedValue(false);
+    mockFindActiveByIds.mockResolvedValue(
+      new Map([[candidateId, { id: candidateId, positionId }]]),
+    );
+    mockListByElection.mockResolvedValue([{ id: positionId, electionId }]);
+    mockDb.batch.mockRejectedValueOnce(new Error("SQLITE_CONSTRAINT_TRIGGER: ELECTION_NOT_OPEN"));
+
+    const result = await ballotCaster.cast(mockDb, {
+      accountId,
+      electionId,
+      selections: [{ candidateId, positionId }],
+      hmacSecret: "dGVzdC1zZWNyZXQta2V5LTMyLWNoYXJhY3RlcnMtbWluaW11bQ==",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: {
+        code: "ELECTION_NOT_OPEN",
+        message: ERROR_MESSAGES.ELECTION_NOT_OPEN,
+        status: 409,
+      },
+    });
+  });
+
   it("should reject a blank studentId before writing anonymous votes", async () => {
     mockFindByAccountId.mockResolvedValue({ id: userId, studentId: "   " });
     mockFindElectionById.mockResolvedValue({
