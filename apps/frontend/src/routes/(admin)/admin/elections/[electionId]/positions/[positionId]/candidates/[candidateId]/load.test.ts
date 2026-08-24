@@ -16,7 +16,7 @@ vi.mock("$lib/api/parties", () => ({
 vi.mock("$lib/cache", () => ({
   appCache: {
     get: vi.fn((key: string) => ({
-      fetch: vi.fn().mockImplementation(async () => {
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
         if (key === "election") {
           return { id: "election-1", name: "CSO Election", status: "draft" };
         }

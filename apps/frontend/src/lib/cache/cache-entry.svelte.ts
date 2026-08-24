@@ -21,6 +21,7 @@ export class CacheEntry<T> {
 
   private fetcher: (options?: { fetch?: typeof fetch }) => Promise<T>;
   private inflight: Promise<T | null> | null = null;
+  private failure: unknown = null;
   // Bumped on every invalidate() (and every new fetch). .then/.catch handlers
   // capture the value at fetch-start and discard their result if invalidate()
   // has since bumped the counter — preventing stale fetches from re-populating
@@ -39,6 +40,7 @@ export class CacheEntry<T> {
     const myEpoch = ++this.epoch;
     this.loading = true;
     this.error = null;
+    this.failure = null;
 
     this.inflight = this.fetcher(options)
       .then((result) => {
@@ -48,6 +50,7 @@ export class CacheEntry<T> {
       })
       .catch((err) => {
         if (myEpoch !== this.epoch) return null;
+        this.failure = err;
         this.error = err?.message ?? "Unknown error";
         return null;
       })
@@ -58,6 +61,13 @@ export class CacheEntry<T> {
       });
 
     return this.inflight;
+  }
+
+  /** Use in route loads where a failed request must not look like missing data. */
+  async fetchOrThrow(force = false, options?: { fetch?: typeof fetch }): Promise<T> {
+    const result = await this.fetch(force, options);
+    if (result !== null) return result;
+    throw this.failure ?? new Error(this.error ?? "Failed to fetch data");
   }
 
   /**
@@ -72,5 +82,6 @@ export class CacheEntry<T> {
     this.data = null;
     this.loading = false;
     this.inflight = null;
+    this.failure = null;
   }
 }

@@ -30,6 +30,16 @@ test("CacheEntry.fetch captures error message and returns null", async () => {
   expect(entry.loading).toBe(false);
 });
 
+test("CacheEntry.fetchOrThrow preserves the original failure", async () => {
+  const failure = new Error("Service unavailable");
+  const entry = new CacheEntry<number>(async () => {
+    throw failure;
+  });
+
+  await expect(entry.fetchOrThrow()).rejects.toBe(failure);
+  expect(entry.error).toBe("Service unavailable");
+});
+
 test("CacheEntry.fetch uses fallback message when error has no message", async () => {
   const entry = new CacheEntry<number>(async () => {
     throw "plain string thrown";

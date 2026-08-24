@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "$lib/api/client";
 
 const { mockCacheGet } = vi.hoisted(() => ({
   mockCacheGet: vi.fn(),
@@ -29,7 +30,7 @@ describe("election detail loader", () => {
     };
 
     mockCacheGet.mockImplementation((resource: string) => ({
-      fetch: vi
+      fetchOrThrow: vi
         .fn()
         .mockResolvedValue(
           resource === "election"
@@ -66,7 +67,7 @@ describe("election detail loader", () => {
     };
 
     mockCacheGet.mockImplementation((resource: string) => ({
-      fetch: vi.fn().mockResolvedValue(
+      fetchOrThrow: vi.fn().mockResolvedValue(
         resource === "election"
           ? election
           : resource === "votingState"
@@ -94,5 +95,32 @@ describe("election detail loader", () => {
     expect(result.election.status).toBe("draft");
     expect(result.results).toBeNull();
     expect(mockCacheGet).not.toHaveBeenCalledWith("results", { electionId: "e1" });
+  });
+
+  it("propagates an election service failure instead of rendering a false 404", async () => {
+    const failure = new ApiError(503, "Service unavailable");
+    mockCacheGet.mockReturnValue({ fetchOrThrow: vi.fn().mockRejectedValue(failure) });
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toBe(failure);
+  });
+
+  it("keeps a missing election as a 404", async () => {
+    mockCacheGet.mockReturnValue({
+      fetchOrThrow: vi.fn().mockRejectedValue(new ApiError(404, "Election not found")),
+    });
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

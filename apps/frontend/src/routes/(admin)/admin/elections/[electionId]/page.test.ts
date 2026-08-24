@@ -46,7 +46,7 @@ describe("admin election loader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCacheGet.mockImplementation((resource: string) => ({
-      fetch: vi.fn().mockImplementation(async () => {
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
         if (resource === "election") return election;
         if (resource === "partyLists") return mockListPartyLists();
         return [];
