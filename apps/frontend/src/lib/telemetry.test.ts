@@ -3,6 +3,9 @@ import { expect, it, vi } from "vitest";
 const { mockInit } = vi.hoisted(() => ({
   mockInit: vi.fn(),
 }));
+const { mockCaptureException } = vi.hoisted(() => ({
+  mockCaptureException: vi.fn(),
+}));
 
 vi.mock("$app/environment", () => ({ browser: true }));
 vi.mock("$env/static/public", () => ({
@@ -10,15 +13,21 @@ vi.mock("$env/static/public", () => ({
 }));
 vi.mock("@sentry/browser", () => ({
   init: mockInit,
-  captureException: vi.fn(),
+  captureException: mockCaptureException,
 }));
 
-import "./telemetry";
+import { captureException } from "./telemetry";
 
-it("initializes Sentry with the configured public DSN", () => {
+it("initializes Sentry asynchronously and forwards captured errors", async () => {
+  captureException(new Error("before load"));
+
+  await vi.dynamicImportSettled();
+
+  expect(mockInit).toHaveBeenCalledTimes(1);
   expect(mockInit).toHaveBeenCalledWith({
     dsn: "https://sentinel.example/123",
     environment: "test",
     sendDefaultPii: false,
   });
+  expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error));
 });
