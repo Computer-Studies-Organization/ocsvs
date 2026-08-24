@@ -1,4 +1,6 @@
+import { browser } from "$app/environment";
 import { PUBLIC_API_BASE_URL } from "$env/static/public";
+import { authStore } from "$lib/stores/auth.svelte";
 
 // Production assets and the API are served by the same Cloudflare Worker.
 // Keep the configurable base URL for local development, but never bake a
@@ -17,10 +19,11 @@ export class ApiError extends Error {
 
 export interface ApiFetchOptions extends RequestInit {
   fetch?: typeof fetch;
+  skipAuthStateReset?: boolean;
 }
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const { fetch: customFetch, ...fetchOptions } = options;
+  const { fetch: customFetch, skipAuthStateReset, ...fetchOptions } = options;
   const url = `${API_BASE_URL}${path}`;
   const fetchFn = customFetch || fetch;
   const headers = new Headers(fetchOptions.headers);
@@ -36,6 +39,9 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ message: response.statusText }));
+    if (response.status === 401 && browser && !skipAuthStateReset) {
+      authStore.set({ user: null, loading: false });
+    }
     throw new ApiError(response.status, body.message ?? response.statusText);
   }
 

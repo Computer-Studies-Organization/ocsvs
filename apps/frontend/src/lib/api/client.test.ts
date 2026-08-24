@@ -1,6 +1,10 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { authStore } from "$lib/stores/auth.svelte";
+import { type TUserData, UserRole } from "$lib/types";
 
 import { ApiError, apiFetch } from "./client";
+
+vi.mock("$app/environment", () => ({ browser: true }));
 
 // ---------- helpers ----------
 
@@ -14,6 +18,9 @@ interface CapturedRequest {
 let lastRequest: CapturedRequest | null = null;
 
 const originalFetch = globalThis.fetch;
+const signedInUser: TUserData = {
+  user: { id: "user-1", email: "voter@example.com", username: "voter", role: UserRole.USER },
+};
 
 /** Install a fetch stub; the most recent (url, init) pair is exposed via `lastRequest`. */
 function stubFetch(handler: FetchHandler): void {
@@ -31,9 +38,14 @@ function jsonResponse(status: number, body: unknown, statusText?: string): Respo
   });
 }
 
+beforeEach(() => {
+  authStore.set({ user: signedInUser, loading: false });
+});
+
 afterEach(() => {
   globalThis.fetch = originalFetch;
   lastRequest = null;
+  authStore.set({ user: null, loading: true });
 });
 
 // ---------- tests ----------
@@ -61,6 +73,28 @@ test("apiFetch throws ApiError with body's message on non-2xx", async () => {
     (err: unknown) =>
       err instanceof ApiError && err.status === 400 && err.message === "Invalid input",
   );
+});
+
+test("apiFetch clears browser auth state on an unexpected 401", async () => {
+  stubFetch(async () => jsonResponse(401, { message: "Session expired" }));
+
+  await expect(() => apiFetch("/elections")).rejects.toBeInstanceOf(ApiError);
+
+  expect(authStore.user).toBeNull();
+  expect(authStore.loading).toBe(false);
+});
+
+test("apiFetch preserves auth state when the caller handles a 401", async () => {
+  stubFetch(async () => jsonResponse(401, { message: "Unauthorized" }));
+
+  await expect(() => apiFetch("/me", { skipAuthStateReset: true })).rejects.toBeInstanceOf(
+    ApiError,
+  );
+
+  expect(authStore.user).toEqual(signedInUser.user);
+  expect(
+    (lastRequest?.init as RequestInit & { skipAuthStateReset?: boolean })?.skipAuthStateReset,
+  ).toBeUndefined();
 });
 
 test("apiFetch falls back to statusText when error body has no message field", async () => {
