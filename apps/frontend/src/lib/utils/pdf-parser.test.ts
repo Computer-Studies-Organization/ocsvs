@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLines, parseSplitRosterPages } from "./pdf-parser";
+import { parseLegacyRosterPages, parseLines, parseSplitRosterPages } from "./pdf-parser";
 
 describe("pdf-parser parseLines", () => {
   it("should parse split student IDs spanning 3 lines", () => {
@@ -71,6 +71,36 @@ describe("pdf-parser parseLines", () => {
       hasParseError: false,
       parseErrorMessage: undefined,
     });
+  });
+
+  it("should ignore leading row numbers in legacy roster rows", () => {
+    const result = parseLegacyRosterPages([
+      [
+        ["464 C25-01-10919-MAN121", "BABATUAN", "BRANDON", "ROMERO", "BSCS", "2ND", "OLD"],
+        ["465 C24-01-8877-MAN121", "GODORNES", "JAY SHAN", "DEGAMO", "BSCS", "2ND", "OLD"],
+      ],
+    ]);
+
+    expect(result).toEqual([
+      {
+        studentId: "C25-01-10919-MAN121",
+        lastName: "BABATUAN",
+        firstName: "BRANDON ROMERO",
+        course: "BSCS",
+        yearLevel: "2nd Year",
+        hasParseError: false,
+        parseErrorMessage: undefined,
+      },
+      {
+        studentId: "C24-01-8877-MAN121",
+        lastName: "GODORNES",
+        firstName: "JAY SHAN DEGAMO",
+        course: "BSCS",
+        yearLevel: "2nd Year",
+        hasParseError: false,
+        parseErrorMessage: undefined,
+      },
+    ]);
   });
 
   it("should parse split roster pages without shifting supported rows", () => {

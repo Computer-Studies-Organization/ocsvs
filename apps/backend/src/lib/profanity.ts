@@ -1,6 +1,6 @@
 import { Filter } from "bad-words";
 
-const filter = new Filter();
+const filter = new Filter({ exclude: ["god"] });
 
 // ponytail: return only validation message; callers choose response or skip behavior.
 export function validateProfanity(text: string, fieldName: string): string | null {

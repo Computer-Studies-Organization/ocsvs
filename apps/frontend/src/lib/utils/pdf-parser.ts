@@ -237,6 +237,56 @@ export function parseSplitRosterPages(pages: string[][][]): ParsedStudentRecord[
   return records;
 }
 
+export function parseLegacyRosterPages(pages: string[][][]): ParsedStudentRecord[] | null {
+  const rows = pages.flat();
+  if (!rows.some((row) => row.some((cell) => SPLIT_ROSTER_ID.test(cell)))) return null;
+
+  const records: ParsedStudentRecord[] = [];
+  for (const row of rows) {
+    const idCell = row.find((cell) => SPLIT_ROSTER_ID.test(cell));
+    const studentId = idCell ? SPLIT_ROSTER_ID.exec(idCell)?.[0] : undefined;
+    if (!studentId) continue;
+
+    let courseIndex = -1;
+    let courseMatch: RegExpExecArray | null = null;
+    for (let index = 1; index < row.length; index++) {
+      const match = /(?:BSCS|BSIT|WADT)$/i.exec(row[index]);
+      if (match) {
+        courseIndex = index;
+        courseMatch = match;
+        break;
+      }
+    }
+    if (courseIndex === -1 || !courseMatch) continue;
+
+    const [lastName = "", ...firstNameParts] = row
+      .slice(1, courseIndex)
+      .concat(row[courseIndex].slice(0, courseMatch.index).trim())
+      .filter(Boolean)
+      .filter((cell) => cell !== "-");
+    const rawLevel = row[courseIndex + 1] ?? "";
+    const parsedYearLevel = toYearLevel(rawLevel);
+    const parseErrorMessage =
+      !lastName || firstNameParts.length === 0
+        ? "Legacy roster name fields are malformed."
+        : !parsedYearLevel
+          ? `Unparseable year level: "${rawLevel}". Defaulted to 1st Year.`
+          : undefined;
+
+    records.push({
+      studentId,
+      lastName,
+      firstName: firstNameParts.join(" "),
+      course: courseMatch[0].toUpperCase(),
+      yearLevel: parsedYearLevel ?? "1st Year",
+      hasParseError: Boolean(parseErrorMessage),
+      parseErrorMessage,
+    });
+  }
+
+  return records;
+}
+
 export async function parseRosterPdf(file: File): Promise<ParsedStudentRecord[]> {
   // 1. Dynamic import of pdfjs; worker is served from local origin via Vite ?url import
   const pdfjs = (await import("pdfjs-dist")) as any;
@@ -261,6 +311,9 @@ export async function parseRosterPdf(file: File): Promise<ParsedStudentRecord[]>
 
   const splitRecords = parseSplitRosterPages(pages);
   if (splitRecords) return splitRecords;
+
+  const legacyRecords = parseLegacyRosterPages(pages);
+  if (legacyRecords) return legacyRecords;
 
   const lines = fullText.split("\n").map((l) => l.trim());
   return parseLines(lines);
