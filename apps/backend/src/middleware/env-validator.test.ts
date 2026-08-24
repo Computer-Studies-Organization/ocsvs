@@ -46,7 +46,7 @@ describe("envValidator middleware", () => {
       TURSO_DATABASE_URL: "libsql://local.db",
     } as any);
     expect(res.status).toBe(500);
-    expect(await res.json()).toMatchObject({ message: expect.stringContaining("NODE_ENV") });
+    expect(await res.json()).toEqual({ message: "Internal server error" });
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
@@ -57,8 +57,7 @@ describe("envValidator middleware", () => {
       // TURSO_DATABASE_URL is missing
     } as any);
     expect(res.status).toBe(500);
-    const body = (await res.json()) as any;
-    expect(body.message).toContain("TURSO_DATABASE_URL");
+    expect(await res.json()).toEqual({ message: "Internal server error" });
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
@@ -71,8 +70,7 @@ describe("envValidator middleware", () => {
       // TURNSTILE_SECRET_KEY is missing
     } as any);
     expect(res.status).toBe(500);
-    const body = (await res.json()) as any;
-    expect(body.message).toContain("TURNSTILE_SECRET_KEY");
+    expect(await res.json()).toEqual({ message: "Internal server error" });
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
@@ -85,8 +83,7 @@ describe("envValidator middleware", () => {
       // HMAC_SECRET is missing
     } as any);
     expect(res.status).toBe(500);
-    const body = (await res.json()) as any;
-    expect(body.message).toContain("HMAC_SECRET");
+    expect(await res.json()).toEqual({ message: "Internal server error" });
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
@@ -100,10 +97,7 @@ describe("envValidator middleware", () => {
       HMAC_SECRET: shortBase64Secret,
     } as any);
     expect(res.status).toBe(500);
-    const body = (await res.json()) as any;
-    expect(body.message).toContain(
-      "HMAC_SECRET must be valid base64 and decode to at least 32 bytes",
-    );
+    expect(await res.json()).toEqual({ message: "Internal server error" });
     expect(mockLogger.error).toHaveBeenCalled();
   });
 

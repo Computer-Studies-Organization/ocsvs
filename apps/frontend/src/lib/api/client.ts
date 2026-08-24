@@ -40,7 +40,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ message: response.statusText }));
     if (response.status === 401 && browser && !skipAuthStateReset) {
-      authStore.set({ user: null, loading: false });
+      authStore.logout();
     }
     throw new ApiError(response.status, body.message ?? response.statusText);
   }

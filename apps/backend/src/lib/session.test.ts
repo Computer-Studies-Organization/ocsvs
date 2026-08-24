@@ -162,6 +162,13 @@ describe("session utilities", () => {
       setSessionCookie(c, "test-session-id", 1234567890);
 
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith(
+        "Set-Cookie",
+        expect.stringContaining("__Host-session_id=test-session-id"),
+      );
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("session_id=;"), {
+        append: true,
+      });
     });
 
     it("should include Secure attribute in production even when request protocol is plain HTTP", () => {
@@ -228,6 +235,13 @@ describe("session utilities", () => {
       clearSessionCookie(c);
 
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith(
+        "Set-Cookie",
+        expect.stringContaining("__Host-session_id=;"),
+      );
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("session_id=;"), {
+        append: true,
+      });
     });
   });
 
@@ -263,6 +277,17 @@ describe("session utilities", () => {
 
       const sessionId = getSessionIdFromCookie(c);
       expect(sessionId).toBeUndefined();
+    });
+
+    it("should only read the __Host- cookie in production", () => {
+      const mockReq = {
+        header: vi
+          .fn()
+          .mockReturnValue("session_id=legacy-session-id; __Host-session_id=host-session-id"),
+      };
+      const c = { req: mockReq, env: { NODE_ENV: "production" } } as any;
+
+      expect(getSessionIdFromCookie(c)).toBe("host-session-id");
     });
 
     it("should return undefined if req is missing from context", () => {

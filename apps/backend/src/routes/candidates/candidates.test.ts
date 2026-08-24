@@ -154,7 +154,7 @@ vi.mock("@/lib/b2-client", async () => {
         if (magicCheck && magicCheck.valid === false) {
           throw new ImageValidationError(magicCheck.error || "Invalid file content");
         }
-        return mockUploadImage(candidateId, buffer, file.type, file.name);
+        return mockUploadImage(candidateId, buffer, file.type);
       },
       async delete(imageUrl: string) {
         const key = imageUrl.includes("/candidates/")
@@ -816,12 +816,7 @@ describe("candidate Routes (repository)", () => {
 
       expect(res.status).toBe(200);
       expect(mockValidateFile).toHaveBeenCalled();
-      expect(mockUploadImage).toHaveBeenCalledWith(
-        candidateId,
-        expect.any(Buffer),
-        "image/png",
-        "image.png",
-      );
+      expect(mockUploadImage).toHaveBeenCalledWith(candidateId, expect.any(Buffer), "image/png");
       expect(mockUpdateImageUrl).toHaveBeenCalledWith(
         expect.anything(),
         candidateId,

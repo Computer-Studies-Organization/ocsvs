@@ -81,7 +81,7 @@ describe("B2Client", () => {
 
   it("should upload file and return URL", async () => {
     const file = Buffer.from("test image data");
-    const result = await client.uploadImage("candidate-123", file, "image/jpeg", "test.jpg");
+    const result = await client.uploadImage("candidate-123", file, "image/jpeg");
 
     expect(result).toHaveProperty("url");
     expect(result).toHaveProperty("key");
@@ -91,23 +91,23 @@ describe("B2Client", () => {
 
   it("should use UUID-based keys to avoid collisions", async () => {
     const file = Buffer.from("test image data");
-    const result1 = await client.uploadImage("candidate-123", file, "image/jpeg", "a.jpg");
-    const result2 = await client.uploadImage("candidate-123", file, "image/jpeg", "a.jpg");
+    const result1 = await client.uploadImage("candidate-123", file, "image/jpeg");
+    const result2 = await client.uploadImage("candidate-123", file, "image/jpeg");
 
     expect(result1.key).not.toBe(result2.key);
     expect(result1.key).toContain("candidates/candidate-123/");
     expect(result2.key).toContain("candidates/candidate-123/");
   });
 
-  it("should preserve extension from filename", async () => {
+  it("should derive extension from MIME type", async () => {
     const file = Buffer.from("test image data");
-    const result = await client.uploadImage("candidate-123", file, "image/png", "photo.png");
+    const result = await client.uploadImage("candidate-123", file, "image/png");
     expect(result.key).toMatch(/\.png$/);
   });
 
   it("should default to jpg when no extension", async () => {
     const file = Buffer.from("test image data");
-    const result = await client.uploadImage("candidate-123", file, "image/jpeg", "noext");
+    const result = await client.uploadImage("candidate-123", file, "image/jpeg");
     expect(result.key).toMatch(/\.jpg$/);
   });
 
@@ -193,6 +193,19 @@ describe("getImageStorage", () => {
     });
     await expect(storage.delete(uploaded.url)).resolves.toBeUndefined();
     await expect(storage.download(uploaded.url)).rejects.toThrow("File not found");
+  });
+
+  it("should derive local storage extension from MIME type", async () => {
+    const storage = new InMemoryImageStorage();
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "avatar.html",
+      { type: "image/png" },
+    );
+
+    const uploaded = await storage.upload("candidate-123", file);
+
+    expect(uploaded.key).toMatch(/\.png$/);
   });
 
   it("should version local image URLs when replacing an upload", async () => {

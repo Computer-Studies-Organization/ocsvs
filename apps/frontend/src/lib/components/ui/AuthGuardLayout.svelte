@@ -2,6 +2,7 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
   import Spinner from '$lib/components/ui/spinner.svelte'
+  import { appCache } from '$lib/cache'
   import { authStore } from '$lib/stores/auth.svelte'
   import Header from '$lib/components/ui/Header.svelte'
 
@@ -20,6 +21,7 @@
 
   $effect(() => {
     if (!loading && redirect) {
+      appCache.invalidate()
       goto(redirect, { replaceState: true })
     }
   })

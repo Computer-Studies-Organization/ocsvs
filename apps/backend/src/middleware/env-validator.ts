@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from "hono";
+import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { parseEnv } from "./env";
 
 /**
@@ -26,7 +27,7 @@ export function envValidator(): MiddlewareHandler {
       log.error({ error: err.message }, "Environment validation failed");
       return c.json(
         {
-          message: err.message,
+          message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         },
         500,
       );

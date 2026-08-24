@@ -92,7 +92,7 @@
       if (!result.sessionRotated) {
         addToast('info', result.message)
         appCache.invalidate()
-        authStore.set({ user: null, loading: false })
+        authStore.logout()
         goto('/auth', { replaceState: true })
         return
       }

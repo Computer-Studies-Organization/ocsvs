@@ -1,6 +1,5 @@
 <script lang='ts'>
   import { page } from '$app/state'
-  import { goto } from '$app/navigation'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
   import { logout } from '$lib/api/auth'
@@ -26,8 +25,7 @@
     }
     finally {
       appCache.invalidate()
-      authStore.set({ user: null, loading: false })
-      goto('/auth', { replaceState: true })
+      authStore.logout()
     }
   }
 

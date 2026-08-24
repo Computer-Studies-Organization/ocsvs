@@ -4,7 +4,29 @@ import { accounts, sessions } from "@/database/schema";
 import type { Database } from "@/database/repositories/database.type";
 
 const SESSION_DURATION_DAYS = 7;
-const COOKIE_NAME = "session_id";
+const LEGACY_COOKIE_NAME = "session_id";
+const HOST_COOKIE_NAME = "__Host-session_id";
+const EXPIRED_COOKIE_DATE = "Thu, 01 Jan 1970 00:00:00 GMT";
+
+function usesHostCookie(c: Context): boolean {
+  return c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
+}
+
+function getCookieName(c: Context): string {
+  return usesHostCookie(c) ? HOST_COOKIE_NAME : LEGACY_COOKIE_NAME;
+}
+
+function serializeCookie(name: string, value: string, expires: string, secure: boolean): string {
+  return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}${secure ? "; Secure" : ""}`;
+}
+
+function setCookieHeader(c: Context, value: string, append = false): void {
+  if (append) {
+    c.header("Set-Cookie", value, { append: true });
+  } else {
+    c.header("Set-Cookie", value);
+  }
+}
 
 export interface SessionData {
   id: string;
@@ -85,28 +107,36 @@ export async function deleteSession(db: Database, sessionId: string): Promise<vo
  */
 export function setSessionCookie(c: Context, sessionId: string, expiresAt: number): void {
   const expires = new Date(expiresAt * 1000);
-  const isProductionOrStaging = c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = isProductionOrStaging || isHttps;
+  const isSecure = usesHostCookie(c) || isHttps;
 
-  c.header(
-    "Set-Cookie",
-    `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}${isSecure ? "; Secure" : ""}`,
-  );
+  setCookieHeader(c, serializeCookie(getCookieName(c), sessionId, expires.toUTCString(), isSecure));
+
+  if (usesHostCookie(c)) {
+    setCookieHeader(
+      c,
+      serializeCookie(LEGACY_COOKIE_NAME, "", EXPIRED_COOKIE_DATE, isSecure),
+      true,
+    );
+  }
 }
 
 /**
  * Clears the session cookie.
  */
 export function clearSessionCookie(c: Context): void {
-  const isProductionOrStaging = c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
   const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = isProductionOrStaging || isHttps;
+  const isSecure = usesHostCookie(c) || isHttps;
 
-  c.header(
-    "Set-Cookie",
-    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? "; Secure" : ""}`,
-  );
+  setCookieHeader(c, serializeCookie(getCookieName(c), "", EXPIRED_COOKIE_DATE, isSecure));
+
+  if (usesHostCookie(c)) {
+    setCookieHeader(
+      c,
+      serializeCookie(LEGACY_COOKIE_NAME, "", EXPIRED_COOKIE_DATE, isSecure),
+      true,
+    );
+  }
 }
 
 /**
@@ -117,7 +147,9 @@ export function getSessionIdFromCookie(c: Context): string | undefined {
   if (!cookieHeader) return undefined;
 
   const cookies = cookieHeader.split(";").map((c) => c.trim());
-  const sessionCookie = cookies.find((c) => c.startsWith(`${COOKIE_NAME}=`));
+  const cookieName = getCookieName(c);
+  const prefix = `${cookieName}=`;
+  const sessionCookie = cookies.find((cookie) => cookie.startsWith(prefix));
 
-  return sessionCookie?.split("=")[1];
+  return sessionCookie?.slice(prefix.length);
 }

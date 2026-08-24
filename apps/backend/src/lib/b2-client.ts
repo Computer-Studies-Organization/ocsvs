@@ -4,6 +4,16 @@ export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+const MIME_EXTENSION_MAP: Record<(typeof ALLOWED_TYPES)[number], string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function extensionForMimeType(contentType: string): string {
+  return MIME_EXTENSION_MAP[contentType as (typeof ALLOWED_TYPES)[number]] ?? "jpg";
+}
+
 export type ImageValidationErrorCode = "FILE_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE";
 type FileValidationResult =
   | { valid: true; code?: undefined; error?: undefined }
@@ -113,9 +123,8 @@ export class B2Client {
     }
   }
 
-  private generateKey(candidateId: string, filename: string): string {
-    const parts = filename.split(".");
-    const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
+  private generateKey(candidateId: string, contentType: string): string {
+    const ext = extensionForMimeType(contentType);
     const uuid = crypto.randomUUID();
     return `candidates/${candidateId}/${uuid}.${ext}`;
   }
@@ -148,15 +157,10 @@ export class B2Client {
     return validateMagicBytes(buffer, declaredType);
   }
 
-  async uploadImage(
-    candidateId: string,
-    file: Buffer,
-    contentType: string,
-    filename: string,
-  ): Promise<UploadResult> {
+  async uploadImage(candidateId: string, file: Buffer, contentType: string): Promise<UploadResult> {
     await this.ensureAuthorized();
 
-    const key = this.generateKey(candidateId, filename);
+    const key = this.generateKey(candidateId, contentType);
 
     const uploadUrl = await this.b2.getUploadUrl({
       bucketId: this.bucketId!,
@@ -329,7 +333,7 @@ export class B2ImageStorage implements ImageStorage {
       throw new ImageValidationError(magicCheck.error || "Unsupported media type");
     }
 
-    return this.client.uploadImage(candidateId, buffer, file.type, file.name);
+    return this.client.uploadImage(candidateId, buffer, file.type);
   }
 
   async delete(imageUrl: string): Promise<void> {
@@ -356,10 +360,7 @@ export class B2ImageStorage implements ImageStorage {
 }
 
 export class InMemoryImageStorage implements ImageStorage {
-  private files = new Map<
-    string,
-    { key: string; url: string; data: Buffer; type: string; name: string }
-  >();
+  private files = new Map<string, { key: string; url: string; data: Buffer; type: string }>();
 
   async upload(candidateId: string, file: File): Promise<UploadResult> {
     if (!ALLOWED_TYPES.includes(file.type as any)) {
@@ -379,8 +380,7 @@ export class InMemoryImageStorage implements ImageStorage {
     }
 
     const uuid = crypto.randomUUID();
-    const parts = file.name.split(".");
-    const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
+    const ext = extensionForMimeType(file.type);
     const key = `candidates/${candidateId}/${uuid}.${ext}`;
     const baseUrl = `/candidates/${candidateId}/image`;
     const url = `${baseUrl}?v=${uuid}`;
@@ -389,7 +389,7 @@ export class InMemoryImageStorage implements ImageStorage {
       this.files.delete(previous.key);
       this.files.delete(previous.url);
     }
-    const stored = { key, url, data: buffer, type: file.type, name: file.name };
+    const stored = { key, url, data: buffer, type: file.type };
     this.files.set(key, stored);
     this.files.set(url, stored);
     this.files.set(baseUrl, stored);
