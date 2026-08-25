@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
-import type { TElection, TPartyList } from "$lib/types";
+import type { TCandidate, TElection, TPartyList, TPosition } from "$lib/types";
 import Page from "./+page.svelte";
 import { load } from "./+page";
 
@@ -42,6 +42,48 @@ const party: TPartyList = {
   updatedAt: 1,
 };
 
+const position: TPosition = {
+  id: "position-1",
+  electionId: "election-1",
+  name: "President",
+  displayOrder: 1,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
+const partyCandidates: TCandidate[] = [
+  {
+    id: "candidate-1",
+    fullName: "Ada Candidate",
+    accountId: "account-1",
+    positionId: position.id,
+    partyId: party.id,
+    manifesto: "",
+    isActive: 1,
+    imageUrl: null,
+  },
+  {
+    id: "candidate-2",
+    fullName: "Inactive Candidate",
+    accountId: "account-2",
+    positionId: position.id,
+    partyId: party.id,
+    manifesto: "",
+    isActive: 0,
+    imageUrl: null,
+  },
+  {
+    id: "candidate-3",
+    fullName: "Other Party Candidate",
+    accountId: "account-3",
+    positionId: position.id,
+    partyId: "party-2",
+    manifesto: "",
+    isActive: 1,
+    imageUrl: null,
+  },
+];
+
 describe("admin election loader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,6 +120,39 @@ describe("admin election party controls", () => {
 
     expect(body).toContain("Add Party List");
     expect(body).toContain('title="Edit Party"');
+  });
+
+  it("shows the assigned candidate roster with position and inactive status", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election,
+          positions: [position],
+          partyLists: [party],
+          candidates: partyCandidates,
+        },
+      },
+    });
+
+    expect(body).toContain("<details");
+    expect(body).toContain("2 candidates");
+    expect(body).toContain("Ada Candidate");
+    expect(body).toContain("Inactive Candidate");
+    expect(body).toContain("President");
+    expect(body).toContain("Inactive");
+    expect(body).not.toContain("Other Party Candidate");
+    expect(body).toContain(
+      "/admin/elections/election-1/positions/position-1/candidates/candidate-1",
+    );
+    expect(body).toContain('title="Edit Party"');
+  });
+
+  it("shows an empty roster message when a party has no candidates", () => {
+    const { body } = render(Page, {
+      props: { data: { election, positions: [position], partyLists: [party], candidates: [] } },
+    });
+
+    expect(body).toContain("No candidates assigned to this party list yet.");
   });
 
   it.each(nonDraftStatuses)(

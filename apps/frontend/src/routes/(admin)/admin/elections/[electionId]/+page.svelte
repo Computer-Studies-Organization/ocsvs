@@ -255,34 +255,72 @@
         {:else}
           <div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
             {#each partyLists as party (party.id)}
-              <div
-                class='flex items-center justify-between p-3.5 rounded-xl border transition hover:border-slate-700/80'
+              {@const partyCandidates = candidates.filter((candidate) => candidate.partyId === party.id)}
+              <article
+                class='overflow-hidden rounded-xl border transition hover:border-slate-700/80'
                 style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
               >
-                <div class='flex items-center gap-3 min-w-0'>
-                  <span
-                    class='w-3.5 h-3.5 rounded-full shrink-0'
-                    style='background-color: {party.color || '#3B82F6'}'
-                  ></span>
-                  <div class='min-w-0'>
-                    <p class='font-bold text-sm text-slate-100 truncate'>{party.name}</p>
-                    <span class='inline-block text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-sky-400 max-w-full truncate'>
-                      {party.code}
-                    </span>
-                  </div>
+                <div class='flex items-start gap-2 p-3.5'>
+                  <details class='min-w-0 flex-1'>
+                    <summary class='min-h-11 cursor-pointer rounded-lg px-1 py-2 text-left transition hover:bg-slate-900/50'>
+                      <span class='flex items-center gap-3'>
+                        <span
+                          class='h-3.5 w-3.5 shrink-0 rounded-full'
+                          style='background-color: {party.color || '#3B82F6'}'
+                        ></span>
+                        <span class='min-w-0 flex-1'>
+                          <span class='block truncate text-sm font-bold text-slate-100'>{party.name}</span>
+                          <span class='inline-block max-w-full truncate rounded bg-slate-800 px-1.5 py-0.5 text-xs font-mono font-bold text-sky-400'>
+                            {party.code}
+                          </span>
+                        </span>
+                        <span class='shrink-0 text-xs' style='color: oklch(0.60 0.015 250)'>
+                          {partyCandidates.length} {partyCandidates.length === 1 ? 'candidate' : 'candidates'}
+                        </span>
+                      </span>
+                    </summary>
+
+                    <div class='mt-3 border-t pt-3' style='border-color: oklch(0.25 0.025 250)'>
+                      {#if partyCandidates.length === 0}
+                        <p class='px-1 text-xs italic' style='color: oklch(0.60 0.015 250)'>No candidates assigned to this party list yet.</p>
+                      {:else}
+                        <ul class='space-y-2'>
+                          {#each partyCandidates as candidate (candidate.id)}
+                            {@const position = positions.find((item) => item.id === candidate.positionId)}
+                            <li>
+                              <a
+                                href={`/admin/elections/${election.id}/positions/${candidate.positionId}/candidates/${candidate.id}`}
+                                class='flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2 transition hover:border-sky-500/40 hover:bg-slate-900/60'
+                                style='border-color: oklch(0.25 0.025 250)'
+                              >
+                                <span class='min-w-0'>
+                                  <span class='block truncate text-sm font-semibold text-slate-100'>{candidate.fullName}</span>
+                                  <span class='block truncate text-xs' style='color: oklch(0.60 0.015 250)'>{position?.name ?? 'Unknown position'}</span>
+                                </span>
+                                {#if candidate.isActive === 0}
+                                  <span class='shrink-0 text-[10px] font-bold uppercase tracking-wider' style='color: oklch(0.60 0.015 250)'>Inactive</span>
+                                {/if}
+                              </a>
+                            </li>
+                          {/each}
+                        </ul>
+                      {/if}
+                    </div>
+                  </details>
+
+                  {#if election.status === 'draft'}
+                    <button
+                      type='button'
+                      onclick={() => editingParty = party}
+                      aria-label="Edit {party.name} party list"
+                      title='Edit Party'
+                      class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200 shrink-0'
+                    >
+                      <Edit size={16} />
+                    </button>
+                  {/if}
                 </div>
-                {#if election.status === 'draft'}
-                  <button
-                    type='button'
-                    onclick={() => editingParty = party}
-                    aria-label="Edit {party.name} party list"
-                    title='Edit Party'
-                    class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200 shrink-0'
-                  >
-                    <Edit size={16} />
-                  </button>
-                {/if}
-              </div>
+              </article>
             {/each}
           </div>
         {/if}
