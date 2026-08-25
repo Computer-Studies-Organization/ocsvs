@@ -72,8 +72,8 @@
         </a>
       </div>
 
-      <!-- Main Navigation Links (Slightly left of center) -->
-      <nav aria-label={adminMode ? 'Admin navigation' : 'Voter navigation'} class='hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2 -ml-16 xl:-ml-24'>
+      <!-- Main Navigation Links -->
+      <nav aria-label={adminMode ? 'Admin navigation' : 'Voter navigation'} class='hidden lg:flex items-center gap-1'>
         {#if adminMode}
           <a
             href='/admin-dashboard'
@@ -152,7 +152,7 @@
             {/if}
 
             <!-- User Indicator -->
-            <span class='inline-flex items-center text-xs font-medium text-slate-400 px-2 py-1'>
+            <span class='inline-flex max-w-16 truncate items-center text-xs font-medium text-slate-400 px-2 py-1 xl:max-w-32'>
               {authStore.user.username}
             </span>
 
