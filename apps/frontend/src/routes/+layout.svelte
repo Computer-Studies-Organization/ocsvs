@@ -28,7 +28,27 @@
     }
   }
 
-  onMount(() => { void initializeAuth() })
+  onMount(() => {
+    let pageWasHidden = false
+
+    const handlePageHide = () => {
+      pageWasHidden = true
+    }
+    const handlePageShow = () => {
+      if (!pageWasHidden) return
+      pageWasHidden = false
+      void initializeAuth()
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('pageshow', handlePageShow)
+    void initializeAuth()
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('pageshow', handlePageShow)
+    }
+  })
 </script>
 
 {#if $navigating}

@@ -6,19 +6,38 @@ const LOGOUT_CHANNEL_NAME = "ocsvs-auth";
 class AuthStore {
   private _user = $state<TUserData | null>(null);
   private _loading = $state<boolean>(true);
-  private readonly logoutChannel: BroadcastChannel | null;
+  private logoutChannel: BroadcastChannel | null = null;
 
   constructor() {
-    this.logoutChannel =
-      browser && typeof window !== "undefined" && typeof BroadcastChannel !== "undefined"
-        ? new BroadcastChannel(LOGOUT_CHANNEL_NAME)
-        : null;
+    this.initChannel();
 
-    this.logoutChannel?.addEventListener("message", (event) => {
-      if (event.data === "logout") {
-        this.set({ user: null, loading: false });
-      }
-    });
+    if (browser && typeof window !== "undefined") {
+      window.addEventListener("pagehide", () => {
+        this.closeChannel();
+      });
+      window.addEventListener("pageshow", () => {
+        this.initChannel();
+      });
+    }
+  }
+
+  private initChannel() {
+    if (this.logoutChannel) return;
+    if (browser && typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      this.logoutChannel = new BroadcastChannel(LOGOUT_CHANNEL_NAME);
+      this.logoutChannel.addEventListener("message", (event) => {
+        if (event.data === "logout") {
+          this.set({ user: null, loading: false });
+        }
+      });
+    }
+  }
+
+  private closeChannel() {
+    if (this.logoutChannel) {
+      this.logoutChannel.close();
+      this.logoutChannel = null;
+    }
   }
 
   get user() {
