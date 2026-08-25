@@ -2,6 +2,7 @@
   import { onDestroy, tick } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { createCandidate } from '$lib/api/candidates'
+  import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -31,12 +32,12 @@
   let userSearch = $state('')
   let userResults = $state<TUsersData[]>([])
   let selectedUser = $state<TUsersData | null>(null)
+  const createAccountId = $derived(selectedUser?.accountId ?? '')
+  const createFullName = $derived(selectedUser ? [selectedUser.firstName, selectedUser.lastName].join(' ').trim() : '')
   let userSearchLoading = $state(false)
   let userSearchError = $state('')
   let userResultsOpen = $state(false)
   let activeUserIndex = $state(-1)
-  let createAccountId = $state('')
-  let createFullName = $state('')
   let createPartyId = $state('')
   let createManifesto = $state('')
   let createBusy = $state(false)
@@ -45,6 +46,7 @@
   let searchTimeout: ReturnType<typeof setTimeout> | undefined
   let searchRequestId = 0
   let userSearchInput: HTMLInputElement | undefined = $state()
+  let userSearchContainer: HTMLDivElement | undefined = $state()
 
   function handleUserSearchInput(e: Event) {
     const value = (e.currentTarget as HTMLInputElement).value
@@ -68,36 +70,46 @@
   }
 
   async function searchUsers(query: string, requestId: number) {
-    const usersEntry = appCache.get('users', {
-      page: 1,
-      limit: 20,
-      search: query,
-      includeDeleted: false,
-    })
-    const result = await usersEntry.fetch()
+    try {
+      const result = await fetchUsers({
+        page: 1,
+        limit: 20,
+        search: query,
+        includeDeleted: false,
+      })
 
-    if (requestId !== searchRequestId || userSearch.trim() !== query) return
+      if (requestId !== searchRequestId || userSearch.trim() !== query) return
 
-    userSearchLoading = false
-    if (result) {
+      userSearchLoading = false
       userResults = result.data
-      return
-    }
+    } catch (err: unknown) {
+      if (requestId !== searchRequestId || userSearch.trim() !== query) return
 
-    userResults = []
-    userSearchError = usersEntry.error ?? 'Failed to search users'
+      userSearchLoading = false
+      userResults = []
+      userSearchError = extractErrorMessage(err, 'Failed to search users')
+    }
+  }
+
+  function closeUserResults() {
+    if (!userResultsOpen) return
+    userResultsOpen = false
+    activeUserIndex = -1
+  }
+
+  function handleUserSearchFocusOut(e: FocusEvent) {
+    const nextTarget = e.relatedTarget
+    if (!(nextTarget instanceof Node) || !userSearchContainer?.contains(nextTarget)) closeUserResults()
+  }
+
+  function handleUserSearchOutsidePointerDown(e: PointerEvent) {
+    const target = e.target
+    if (!(target instanceof Node) || !userSearchContainer?.contains(target)) closeUserResults()
   }
 
   function handleUserSelect(user: TUsersData) {
+    ++searchRequestId
     selectedUser = user
-    createAccountId = user.accountId
-    createFullName = `${user.firstName} ${user.lastName}`.trim()
-    userSearch = ''
-    userResults = []
-    userResultsOpen = false
-    userSearchLoading = false
-    userSearchError = ''
-    activeUserIndex = -1
     if (createErrors.user) createErrors.user = ''
   }
 
@@ -105,8 +117,6 @@
     ++searchRequestId
     if (searchTimeout) clearTimeout(searchTimeout)
     selectedUser = null
-    createAccountId = ''
-    createFullName = ''
     userSearch = ''
     userResults = []
     userResultsOpen = false
@@ -117,9 +127,10 @@
   }
 
   function handleUserSearchKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      userResultsOpen = false
-      activeUserIndex = -1
+    if (e.key === 'Escape' && userResultsOpen) {
+      e.preventDefault()
+      e.stopPropagation()
+      closeUserResults()
       return
     }
 
@@ -185,6 +196,8 @@
   }
 </script>
 
+<svelte:window onpointerdown={handleUserSearchOutsidePointerDown} />
+
 <Modal open={true} onclose={handleClose} presentation="sheet">
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add candidate</h2>
 
@@ -215,7 +228,11 @@
         <label for="candidate-user-search" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
           User
         </label>
-        <div class="relative">
+        <div
+          class="relative"
+          bind:this={userSearchContainer}
+          onfocusout={handleUserSearchFocusOut}
+        >
           <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             id="candidate-user-search"

@@ -21,7 +21,10 @@ describe("add candidate user picker", () => {
 
   it("keeps identity selection separate from visible search text", () => {
     expect(modalSource).toContain("selectedUser = user");
-    expect(modalSource).toContain("createAccountId = user.accountId");
+    expect(modalSource).toContain(
+      "const createAccountId = $derived(selectedUser?.accountId ?? '')",
+    );
+    expect(modalSource).toContain("const createFullName = $derived(selectedUser ?");
     expect(modalSource).toContain("accountId: createAccountId");
     expect(modalSource).toContain("function clearUserSelection()");
     expect(modalSource).toContain("getCandidateUserLabel(selectedUser)");
