@@ -1,6 +1,6 @@
 import type { AuditLogEntry } from "./audit-log.repository";
 import type { Database, DbClient } from "./database.type";
-import { and, count, desc, eq, isNull, like, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { accounts, auditLog, sessions, users } from "@/database/schema";
 
 // --- Context-specific return types ---
@@ -63,6 +63,10 @@ export interface DeleteStatus {
   accountId: string;
   deletedAt: number | null;
   role: string;
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
 /**
@@ -373,13 +377,14 @@ export const voterAccountStore = {
     const search = opts.search?.trim();
 
     if (search) {
+      const likePattern = `%${escapeLikePattern(search)}%`;
       conditions.push(
         or(
-          like(users.firstName, `%${search}%`),
-          like(users.lastName, `%${search}%`),
-          like(sql`${users.firstName} || ' ' || ${users.lastName}`, `%${search}%`),
-          like(users.studentId, `%${search}%`),
-          like(accounts.username, `%${search}%`),
+          sql`${users.firstName} LIKE ${likePattern} ESCAPE '\\'`,
+          sql`${users.lastName} LIKE ${likePattern} ESCAPE '\\'`,
+          sql`(${users.firstName} || ' ' || ${users.lastName}) LIKE ${likePattern} ESCAPE '\\'`,
+          sql`${users.studentId} LIKE ${likePattern} ESCAPE '\\'`,
+          sql`${accounts.username} LIKE ${likePattern} ESCAPE '\\'`,
         ),
       );
     }

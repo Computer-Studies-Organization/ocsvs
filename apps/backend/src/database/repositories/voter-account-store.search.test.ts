@@ -49,6 +49,16 @@ describe("voterAccountStore.listForAdmin search", () => {
           updatedAt: 1,
           lastLogin: 1,
         },
+        {
+          id: "literal-account",
+          username: "literal_user",
+          email: "literal@example.com",
+          password_hash: "hash",
+          role: "user",
+          createdAt: 1,
+          updatedAt: 1,
+          lastLogin: 1,
+        },
       ])
       .run();
     await db
@@ -71,6 +81,17 @@ describe("voterAccountStore.listForAdmin search", () => {
           studentId: "C23-01-9999-MAN121",
           firstName: "Carl Jerome",
           lastName: "Archived",
+          yearLevel: "3rd Year",
+          course: "BSCS",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        {
+          id: "literal-user",
+          accountId: "literal-account",
+          studentId: "LITERAL-100%",
+          firstName: "A%lice",
+          lastName: "Under_score",
           yearLevel: "3rd Year",
           course: "BSCS",
           createdAt: 1,
@@ -107,5 +128,11 @@ describe("voterAccountStore.listForAdmin search", () => {
       includeDeleted: true,
     });
     expect(includeArchived.data.map((user) => user.id)).toEqual(["archived-user"]);
+
+    const percent = await voterAccountStore.listForAdmin(db, { search: "%" });
+    expect(percent.data.map((user) => user.id)).toEqual(["literal-user"]);
+
+    const underscore = await voterAccountStore.listForAdmin(db, { search: "_" });
+    expect(underscore.data.map((user) => user.id)).toEqual(["literal-user"]);
   });
 });
