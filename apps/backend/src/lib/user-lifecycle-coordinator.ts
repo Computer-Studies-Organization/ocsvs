@@ -165,9 +165,9 @@ function generateVoterUsername(
   return username;
 }
 
-async function assertElectorateMutable(db: DbClient): Promise<void> {
+export async function assertElectorateMutable(db: DbClient): Promise<void> {
   // ponytail: application-level freeze; add a persisted election roster if concurrent admin writes matter.
-  if (await electionRepo.findOpen(db)) {
+  if (await electionRepo.findCurrentlyOpen(db)) {
     throw new UserLifecycleError("ELECTION_IS_OPEN", 400, ERROR_MESSAGES.ELECTION_IS_OPEN);
   }
 }

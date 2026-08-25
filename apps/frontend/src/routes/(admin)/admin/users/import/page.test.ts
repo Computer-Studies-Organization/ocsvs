@@ -21,6 +21,13 @@ describe("bulk import mobile layout", () => {
     expect(pageSource).toContain("If the file didn't download, use Download CSV below.");
   });
 
+  it("accepts CSV roster files and blocks imports with parse errors", () => {
+    expect(pageSource).toContain('accept=".pdf,.csv"');
+    expect(pageSource).toContain("parseStudentCsv");
+    expect(pageSource).toContain("Import student lists from PDF or CSV rosters");
+    expect(pageSource).toContain("invalidCount > 0");
+  });
+
   it("uses unique keys for repeated skipped IDs", () => {
     expect(pageSource).toContain("{#each skippedList as skip, idx (idx)}");
   });

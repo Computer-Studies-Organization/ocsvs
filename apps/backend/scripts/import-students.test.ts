@@ -6,6 +6,7 @@ import {
   escapeCsvCell,
   generatePassword,
   parseSplitRosterPages,
+  parseStudentCsv,
   parseStudentText,
   planStudentImports,
   writeCredentialsCsv,
@@ -95,6 +96,22 @@ describe("parseStudentText", () => {
     });
   });
 
+  it.each([
+    ["missing", "JOHN BSCS", "Missing year level."],
+    ["unparseable", "JOHN BSCS 5TH OLD PAYMENT", 'Unparseable year level: "5TH".'],
+  ])("rejects %s legacy year levels instead of defaulting", (_label, courseInfo, message) => {
+    const text = [
+      "C23-01-",
+      "0095-",
+      "BSC301",
+      "DOE",
+      courseInfo,
+      "Showing 1 to 1 of 1 entries",
+    ].join("\n");
+
+    expect(() => parseStudentText(text)).toThrow(message);
+  });
+
   it("keeps split roster rows aligned across page groups", () => {
     const pages = [
       {
@@ -118,7 +135,7 @@ describe("parseStudentText", () => {
       {
         text: [
           "M.i.\tCourse\tLevel\tType\tContact #",
-          "ABELLA\tBSIT\t1ST\tNEW",
+          "ABELLA\tBSIT\t1ST\tOLD",
           "-\tBSCS\t2ND\tTRANSFEREE",
           "SANTOS\tWADT\t3RD\tNEW",
         ].join("\n"),
@@ -211,6 +228,51 @@ describe("parseStudentText", () => {
         },
       ]),
     ).toThrow("Split roster columns cannot be aligned.");
+  });
+});
+
+describe("parseStudentCsv", () => {
+  it("ignores source-only enrollment status", () => {
+    const csv = [
+      ",,,,,,,,,",
+      '1,C25-01-10001-MAN121,,SMITH,"JANE DOE",M,BSCS,1ST,NEW,',
+      '2,C26-01-10002-MAN121,,"DOE, JR","ANN MARIE",M,BSIT,1ST,OLD,',
+    ].join("\r\n");
+
+    expect(parseStudentCsv(`\uFEFF${csv}\r\n`)).toEqual([
+      {
+        studentId: "C25-01-10001-MAN121",
+        lastName: "SMITH",
+        firstName: "JANE DOE",
+        middleName: null,
+        course: "BSCS",
+        yearLevel: "1st Year",
+      },
+      {
+        studentId: "C26-01-10002-MAN121",
+        lastName: "DOE, JR",
+        firstName: "ANN MARIE",
+        middleName: null,
+        course: "BSIT",
+        yearLevel: "1st Year",
+      },
+    ]);
+  });
+
+  it("reports row numbers for wrong-width and invalid rows", () => {
+    expect(() =>
+      parseStudentCsv([",,,,,,,,,", "1,C25-01-10001-MAN121,SMITH,JANE"].join("\r\n")),
+    ).toThrow("CSV row 2: expected 10 columns");
+
+    expect(() =>
+      parseStudentCsv([",,,,,,,,,", "1,BAD,,SMITH,JANE,,BSA,5TH,NEW,"].join("\r\n")),
+    ).toThrow("CSV row 2: invalid student ID");
+  });
+
+  it("rejects malformed quoted cells before import", () => {
+    expect(() =>
+      parseStudentCsv([",,,,,,,,,", '1,C25-01-10001-MAN121,,"SMITH'].join("\r\n")),
+    ).toThrow("CSV row 2: unterminated quoted cell");
   });
 });
 

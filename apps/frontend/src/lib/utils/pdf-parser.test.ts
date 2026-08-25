@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseLegacyRosterPages, parseLines, parseSplitRosterPages } from "./pdf-parser";
+import {
+  parseLegacyRosterPages,
+  parseLines,
+  parseSplitRosterPages,
+  parseStudentCsv,
+} from "./pdf-parser";
 
 describe("pdf-parser parseLines", () => {
   it("should parse split student IDs spanning 3 lines", () => {
@@ -122,7 +127,7 @@ describe("pdf-parser parseLines", () => {
       ],
       [
         ["M.i.", "Course", "Level", "Type", "Contact #"],
-        ["ABELLA", "BSIT", "1ST", "NEW"],
+        ["ABELLA", "BSIT", "1ST", "OLD"],
         ["-", "BSCS", "2ND", "TRANSFEREE"],
         ["SANTOS", "WADT", "3RD", "NEW"],
       ],
@@ -218,7 +223,7 @@ describe("pdf-parser parseLines", () => {
         lastName: "VALID",
         firstName: "STUDENT",
         course: "BSCS",
-        yearLevel: "1st Year",
+        yearLevel: "5TH",
         hasParseError: true,
         parseErrorMessage: "Split roster enrollment row is malformed.",
       },
@@ -268,9 +273,9 @@ describe("pdf-parser parseLines", () => {
       lastName: "DOE",
       firstName: "JOHN",
       course: "BSCS",
-      yearLevel: "1st Year", // Default fallback
+      yearLevel: "",
       hasParseError: true,
-      parseErrorMessage: "Missing year level. Defaulted to 1st Year.",
+      parseErrorMessage: "Missing year level.",
     });
   });
 
@@ -290,9 +295,9 @@ describe("pdf-parser parseLines", () => {
       lastName: "DOE",
       firstName: "JOHN",
       course: "BSCS",
-      yearLevel: "1st Year", // Default fallback
+      yearLevel: "5TH",
       hasParseError: true,
-      parseErrorMessage: 'Unparseable year level: "5TH". Defaulted to 1st Year.',
+      parseErrorMessage: 'Unparseable year level: "5TH".',
     });
   });
 
@@ -412,5 +417,68 @@ describe("pdf-parser parseLines", () => {
       hasParseError: false,
       parseErrorMessage: undefined,
     });
+  });
+});
+
+describe("pdf-parser parseStudentCsv", () => {
+  it("ignores source-only enrollment status while parsing CRLF/BOM input and quoted names", () => {
+    const csv = [
+      ",,,,,,,,,",
+      '1,C25-01-10001-MAN121,,SMITH,"JANE DOE",M,BSCS,1ST,NEW,',
+      '2,C26-01-10002-MAN121,,"DOE, JR","ANN MARIE",M,BSIT,1ST,OLD,',
+    ].join("\r\n");
+
+    const result = parseStudentCsv(`\uFEFF${csv}\r\n`);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      studentId: "C25-01-10001-MAN121",
+      lastName: "SMITH",
+      firstName: "JANE DOE",
+      course: "BSCS",
+      yearLevel: "1st Year",
+      hasParseError: false,
+    });
+    expect(result[1]).toMatchObject({
+      studentId: "C26-01-10002-MAN121",
+      lastName: "DOE, JR",
+      firstName: "ANN MARIE",
+      course: "BSIT",
+      yearLevel: "1st Year",
+      hasParseError: false,
+    });
+  });
+
+  it("returns editable errors for invalid fields", () => {
+    const result = parseStudentCsv([",,,,,,,,,", "1,BAD,,SMITH,JANE,,BSA,5TH,NEW,"].join("\r\n"));
+
+    expect(result[0]).toMatchObject({
+      studentId: "BAD",
+      course: "",
+      yearLevel: "5TH",
+      hasParseError: true,
+    });
+    expect(result[0].parseErrorMessage).toContain("invalid student ID");
+  });
+
+  it("preserves an invalid year level for validation after edits", () => {
+    const [record] = parseStudentCsv(
+      [",,,,,,,,,", "1,C25-01-10001-MAN121,,SMITH,JANE,,BSCS,5TH,NEW,"].join("\r\n"),
+    );
+
+    expect(record).toMatchObject({
+      yearLevel: "5TH",
+      hasParseError: true,
+    });
+  });
+
+  it("rejects malformed CSV structure", () => {
+    expect(() =>
+      parseStudentCsv([",,,,,,,,,", "1,C25-01-10001-MAN121,SMITH,JANE"].join("\r\n")),
+    ).toThrow("CSV row 2: expected 10 columns");
+
+    expect(() =>
+      parseStudentCsv([",,,,,,,,,", '1,C25-01-10001-MAN121,,"SMITH'].join("\r\n")),
+    ).toThrow("CSV row 2: unterminated quoted cell");
   });
 });

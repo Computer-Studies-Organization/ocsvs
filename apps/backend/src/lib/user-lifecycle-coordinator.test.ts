@@ -112,7 +112,7 @@ vi.mock("@/lib/profanity", () => ({
 const mockFindOpenElection = vi.fn().mockResolvedValue(null);
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
-    findOpen: (...args: any[]) => mockFindOpenElection(...args),
+    findCurrentlyOpen: (...args: any[]) => mockFindOpenElection(...args),
   },
 }));
 

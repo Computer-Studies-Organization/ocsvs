@@ -7,8 +7,10 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { eq } from "drizzle-orm";
 import { accounts, users, auditLog } from "../src/database/schema";
+import * as schema from "../src/database/schema";
 import type { AuditAction } from "../src/lib/constants/audit-actions";
 import { isAdminRole } from "../src/lib/election-visibility";
+import { assertElectorateMutable } from "../src/lib/user-lifecycle-coordinator";
 import { hashPassword, verifyPassword } from "../src/lib/password";
 import "dotenv/config";
 
@@ -44,6 +46,7 @@ interface SplitEnrollmentRow {
 const SPLIT_ROSTER_ID = /C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
 const STUDENT_ID = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/;
 const SUPPORTED_COURSES = new Set(["BSCS", "BSIT", "WADT"]);
+const CSV_COLUMN_COUNT = 10;
 
 function toYearLevel(rawLevel: string): string | null {
   switch (rawLevel.toUpperCase()) {
@@ -58,6 +61,132 @@ function toYearLevel(rawLevel: string): string | null {
     default:
       return null;
   }
+}
+
+function parseCsvRows(text: string): string[][] {
+  const source = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  let closedQuote = false;
+  let rowNumber = 1;
+
+  const pushRow = () => {
+    row.push(field.trim());
+    rows.push(row);
+    row = [];
+    field = "";
+    closedQuote = false;
+    rowNumber++;
+  };
+
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index];
+
+    if (inQuotes) {
+      if (character === '"') {
+        if (source[index + 1] === '"') {
+          field += '"';
+          index++;
+        } else {
+          inQuotes = false;
+          closedQuote = true;
+        }
+      } else {
+        field += character;
+      }
+      continue;
+    }
+
+    if (closedQuote) {
+      if (character === ",") {
+        row.push(field.trim());
+        field = "";
+        closedQuote = false;
+        continue;
+      }
+      if (character === "\r" || character === "\n") {
+        pushRow();
+        if (character === "\r" && source[index + 1] === "\n") index++;
+        continue;
+      }
+      throw new Error(`CSV row ${rowNumber}: characters after a closing quote are not allowed.`);
+    }
+
+    if (character === '"') {
+      if (field.length > 0) {
+        throw new Error(`CSV row ${rowNumber}: quoted cells must start with a quote.`);
+      }
+      inQuotes = true;
+    } else if (character === ",") {
+      row.push(field.trim());
+      field = "";
+    } else if (character === "\r" || character === "\n") {
+      pushRow();
+      if (character === "\r" && source[index + 1] === "\n") index++;
+    } else {
+      field += character;
+    }
+  }
+
+  if (inQuotes) {
+    throw new Error(`CSV row ${rowNumber}: unterminated quoted cell.`);
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field.trim());
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+export function parseStudentCsv(text: string): StudentRecord[] {
+  const rows = parseCsvRows(text);
+  const header = rows[0];
+  if (!header || header.length !== CSV_COLUMN_COUNT || header.some((cell) => cell !== "")) {
+    throw new Error("CSV must start with a blank ten-cell row.");
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length === 0) {
+    throw new Error("CSV contains no student records.");
+  }
+
+  return dataRows.map((row, index) => {
+    const rowNumber = index + 2;
+    if (row.length !== CSV_COLUMN_COUNT) {
+      throw new Error(
+        `CSV row ${rowNumber}: expected ${CSV_COLUMN_COUNT} columns, found ${row.length}.`,
+      );
+    }
+
+    const studentId = row[1];
+    const lastName = row[3];
+    const firstName = row[4];
+    const course = row[6].toUpperCase();
+    const yearLevel = toYearLevel(row[7]);
+    const errors: string[] = [];
+
+    if (!STUDENT_ID.test(studentId)) errors.push("invalid student ID");
+    if (!lastName) errors.push("last name is required");
+    if (!firstName) errors.push("first name is required");
+    if (!SUPPORTED_COURSES.has(course)) errors.push(`unsupported course: ${row[6]}`);
+    if (!yearLevel) errors.push(`unknown year level: ${row[7]}`);
+
+    if (errors.length > 0) {
+      throw new Error(`CSV row ${rowNumber}: ${errors.join("; ")}.`);
+    }
+
+    return {
+      studentId,
+      lastName,
+      firstName,
+      middleName: null,
+      course,
+      yearLevel: yearLevel!,
+    };
+  });
 }
 
 function tableCells(line: string): string[] {
@@ -118,14 +247,9 @@ function collectEnrollmentRows(pages: PdfTextPage[]): SplitEnrollmentRow[] {
       const cells = tableCells(line);
       if (cells.length === 0 || cells.includes("Course")) continue;
 
-      const [rawMiddleName, rawCourse, rawLevel, rawStatus] = cells;
+      const [rawMiddleName, rawCourse, rawLevel] = cells;
       const yearLevel = rawLevel ? toYearLevel(rawLevel) : null;
-      if (
-        !rawMiddleName ||
-        !/^[A-Z]+$/i.test(rawCourse ?? "") ||
-        !yearLevel ||
-        !/^(NEW|TRANSFEREE)$/i.test(rawStatus ?? "")
-      ) {
+      if (!rawMiddleName || !/^[A-Z]+$/i.test(rawCourse ?? "") || !yearLevel) {
         throw new Error("Split roster enrollment row is malformed.");
       }
 
@@ -316,8 +440,13 @@ export function parseStudentText(text: string): StudentRecord[] {
         const afterCourse = courseInfoLine.substring(courseIndex).replace(/\s+/g, " ").trim();
         const partsAfterCourse = afterCourse.split(" ");
         const course = courseMatch[1].toUpperCase();
-        const rawLevel = partsAfterCourse[1] || "1ST";
-        const yearLevel = toYearLevel(rawLevel) ?? "1st Year";
+        const rawLevel = partsAfterCourse[1];
+        const yearLevel = toYearLevel(rawLevel ?? "");
+        if (!yearLevel) {
+          throw new Error(
+            rawLevel ? `Unparseable year level: "${rawLevel}".` : "Missing year level.",
+          );
+        }
 
         records.push({
           studentId,
@@ -542,15 +671,15 @@ export async function authenticateAdmin(db: any): Promise<{ id: string; username
 
 async function main() {
   const args = process.argv.slice(2);
-  const pdfPathArg = args.find((arg) => !arg.startsWith("-"));
+  const inputPathArg = args.find((arg) => !arg.startsWith("-"));
 
-  if (!pdfPathArg) {
-    console.error("Error: Please provide a path to the PDF file.");
-    console.error("Usage: pnpm db:import-students <path-to-pdf> [--dry-run]");
+  if (!inputPathArg) {
+    console.error("Error: Please provide a path to a PDF or CSV file.");
+    console.error("Usage: pnpm db:import-students <path-to-pdf-or-csv> [--dry-run]");
     process.exit(1);
   }
 
-  const absolutePath = path.resolve(pdfPathArg);
+  const absolutePath = path.resolve(inputPathArg);
   if (!fs.existsSync(absolutePath)) {
     console.error(`Error: File not found at path: ${absolutePath}`);
     process.exit(1);
@@ -558,19 +687,23 @@ async function main() {
 
   const dryRun = args.includes("--dry-run") || args.includes("-d");
 
-  console.log(`Loading PDF from: ${absolutePath}`);
   if (dryRun) {
     console.log("Running in DRY-RUN mode (no database writes will be made).\n");
   }
 
-  const dataBuffer = fs.readFileSync(absolutePath);
-
   try {
-    const parser = new pdf.PDFParse({ data: dataBuffer });
-    const textResult = await parser.getText({ cellThreshold: 2 });
+    let students: StudentRecord[];
+    if (path.extname(absolutePath).toLowerCase() === ".csv") {
+      console.log(`Loading CSV from: ${absolutePath}`);
+      students = parseStudentCsv(fs.readFileSync(absolutePath, "utf8"));
+    } else {
+      console.log(`Loading PDF from: ${absolutePath}`);
+      const parser = new pdf.PDFParse({ data: fs.readFileSync(absolutePath) });
+      const textResult = await parser.getText({ cellThreshold: 2 });
+      students = parseSplitRosterPages(textResult.pages) ?? parseStudentText(textResult.text);
+    }
 
-    const students = parseSplitRosterPages(textResult.pages) ?? parseStudentText(textResult.text);
-    console.log(`Parsed ${students.length} student records from PDF.`);
+    console.log(`Parsed ${students.length} student records.`);
 
     if (students.length === 0) {
       console.log("No student records found in PDF. Exiting.");
@@ -588,7 +721,7 @@ async function main() {
       url: dbUrl,
       authToken: process.env.TURSO_AUTH_TOKEN || undefined,
     });
-    const db = drizzle(client);
+    const db = drizzle(client, { schema });
 
     // Fetch existing records for duplicate check
     console.log("Fetching existing usernames and student IDs from database...");
@@ -639,6 +772,8 @@ async function main() {
 
       // Direct batch-insert via transaction
       await db.transaction(async (tx) => {
+        await assertElectorateMutable(tx);
+
         await tx.insert(accounts).values({
           id: accountId,
           username,

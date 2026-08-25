@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parseRosterPdf } from "$lib/utils/pdf-parser";
+  import { parseRosterPdf, parseStudentCsv } from "$lib/utils/pdf-parser";
   import { addToast } from "$lib/stores/toast.svelte";
   import { importUsersInBatches } from "$lib/api/users";
   import { 
@@ -90,10 +90,6 @@
 
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
-        addToast("error", "Only PDF files are supported.");
-        return;
-      }
       await parseFile(file);
     }
   }
@@ -106,11 +102,20 @@
   }
 
   async function parseFile(file: File) {
+    const fileName = file.name.toLowerCase();
+    const isCsv = file.type === "text/csv" || fileName.endsWith(".csv");
+    const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
+    if (!isCsv && !isPdf) {
+      addToast("error", "Only PDF or CSV files are supported.");
+      return;
+    }
+
     isParsing = true;
     try {
-      const parsed = await parseRosterPdf(file);
+      const parsed = isCsv ? parseStudentCsv(await file.text()) : await parseRosterPdf(file);
+      const fileType = isCsv ? "CSV" : "PDF";
       if (parsed.length === 0) {
-        addToast("error", "No voter records detected in the PDF. Please check file format.");
+        addToast("error", `No voter records detected in the ${fileType}. Please check file format.`);
       } else {
         records = parsed.map(r => ({
           id: crypto.randomUUID(),
@@ -126,7 +131,7 @@
         step = 2;
       }
     } catch (err: any) {
-      addToast("error", "Error parsing PDF: " + err.message);
+      addToast("error", "Error parsing roster: " + err.message);
     } finally {
       isParsing = false;
     }
@@ -266,7 +271,7 @@
           <ArrowLeft size={14} /> Back to Users
         </a>
         <h1 class="text-2xl font-black text-slate-50 sm:text-3xl">Voter Bulk Import</h1>
-        <p class="mt-1 text-xs text-slate-500">Import student lists from PDF rosters and generate credentials</p>
+        <p class="mt-1 text-xs text-slate-500">Import student lists from PDF or CSV rosters and generate credentials</p>
       </div>
     </header>
 
@@ -347,7 +352,7 @@
                   <div class="w-16 h-16 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin"></div>
                   <Upload size={24} class="absolute text-amber-400 animate-pulse" />
                 </div>
-                <div class="text-amber-300 font-bold text-lg">Processing Roster PDF</div>
+                <div class="text-amber-300 font-bold text-lg">Processing Roster File</div>
                 <p class="text-slate-400 text-sm max-w-xs leading-relaxed">
                   Extracting text and parsing student records... This might take a few seconds.
                 </p>
@@ -357,14 +362,14 @@
                 <div class="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-6 border border-amber-500/20">
                   <Upload size={32} />
                 </div>
-                <h3 class="text-lg font-bold text-slate-50">Upload Student List PDF</h3>
+                <h3 class="text-lg font-bold text-slate-50">Upload Student List PDF or CSV</h3>
                 <p class="text-slate-400 text-sm max-w-sm mt-2 mb-8 leading-relaxed">
-                  Drag and drop your registrar PDF roster here, or click to browse your files.
+                  Drag and drop your registrar PDF or CSV roster here, or click to browse your files.
                 </p>
                 
                 <input 
                   type="file" 
-                  accept=".pdf" 
+                  accept=".pdf,.csv"
                   onchange={handleFileSelected} 
                   class="hidden" 
                   id="file-upload" 
@@ -373,7 +378,7 @@
                   type="button"
                   class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-6 py-3 shadow-[0_4px_12px_rgba(245,158,11,0.2)] transition-all duration-300 cursor-pointer"
                 >
-                  Choose PDF File
+                  Choose PDF or CSV File
                 </button>
               </div>
             {/if}
@@ -382,7 +387,7 @@
           <!-- Roster Guidelines -->
           <div class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/30 p-4 sm:p-6">
             <h4 class="text-sm font-bold text-slate-350 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Info size={16} class="text-amber-400" /> Roster PDF Guidelines
+              <Info size={16} class="text-amber-400" /> Roster PDF/CSV Guidelines
             </h4>
             <ul class="text-xs text-slate-400 space-y-2 list-disc list-inside">
               <li>Expected format contains student numbers (e.g. <code>C23-01-095</code>).</li>
