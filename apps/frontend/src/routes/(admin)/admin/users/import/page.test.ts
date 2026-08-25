@@ -16,6 +16,11 @@ describe("bulk import mobile layout", () => {
     expect(pageSource).toContain('replace(/^[=+\\-@\\t\\r]/, "\'$&")');
   });
 
+  it("automatically downloads credentials after importing accounts", () => {
+    expect(pageSource).toContain("downloadCredentialsCsv(false)");
+    expect(pageSource).toContain("If the file didn't download, use Download CSV below.");
+  });
+
   it("uses unique keys for repeated skipped IDs", () => {
     expect(pageSource).toContain("{#each skippedList as skip, idx (idx)}");
   });

@@ -186,6 +186,7 @@
       });
 
       if (importedList.length > 0) {
+        downloadCredentialsCsv(false);
         addToast("success", `Successfully imported ${importedList.length} voters.`);
       }
       if (skippedList.length > 0) {
@@ -200,6 +201,7 @@
         importFailure = message;
         activeTab = importedList.length > 0 ? "imported" : "skipped";
         step = 3;
+        if (importedList.length > 0) downloadCredentialsCsv(false);
         addToast("error", `${message} Successful batch results are available below.`);
       } else {
         addToast("error", message);
@@ -209,7 +211,7 @@
     }
   }
 
-  function downloadCredentialsCsv() {
+  function downloadCredentialsCsv(showToast = true) {
     const headers = ["Student ID", "Full Name", "Username", "Password"];
     const rows = importedList.map(item => [
       item.studentId,
@@ -232,7 +234,11 @@
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    addToast("success", "Credentials CSV downloaded successfully");
+    if (showToast) {
+      addToast("success", "Credentials CSV downloaded successfully");
+    } else {
+      addToast("info", "If the file didn't download, use Download CSV below.");
+    }
   }
 
   async function copyAllCredentials() {
@@ -622,7 +628,7 @@
                   </p>
                   <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
                     <button
-                      onclick={downloadCredentialsCsv}
+                      onclick={() => downloadCredentialsCsv()}
                       class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-slate-950 font-extrabold px-5 py-2 text-xs transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer shadow-[0_4px_12px_rgba(245,158,11,0.15)]"
                     >
                       <FileSpreadsheet size={14} /> Download CSV
