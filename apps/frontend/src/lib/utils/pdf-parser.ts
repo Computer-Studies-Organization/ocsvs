@@ -1,3 +1,9 @@
+import {
+  isStudentId,
+  isSupportedCourse,
+  parseStudentCsv as parseCsv,
+  toYearLevel,
+} from "@cso-voting/student-csv-parser";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 export interface ParsedStudentRecord {
@@ -31,147 +37,21 @@ interface SplitIdentityRow {
 }
 
 const SPLIT_ROSTER_ID = /C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
-const STUDENT_ID = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/;
-const SUPPORTED_COURSES = new Set(["BSCS", "BSIT", "WADT"]);
-const CSV_COLUMN_COUNT = 10;
-
-function toYearLevel(rawLevel: string): string | null {
-  switch (rawLevel.toUpperCase()) {
-    case "1ST":
-      return "1st Year";
-    case "2ND":
-      return "2nd Year";
-    case "3RD":
-      return "3rd Year";
-    case "4TH":
-      return "4th Year";
-    default:
-      return null;
-  }
-}
-
-function parseCsvRows(text: string): string[][] {
-  const source = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  let closedQuote = false;
-  let rowNumber = 1;
-
-  const pushRow = () => {
-    row.push(field.trim());
-    rows.push(row);
-    row = [];
-    field = "";
-    closedQuote = false;
-    rowNumber++;
-  };
-
-  for (let index = 0; index < source.length; index++) {
-    const character = source[index];
-
-    if (inQuotes) {
-      if (character === '"') {
-        if (source[index + 1] === '"') {
-          field += '"';
-          index++;
-        } else {
-          inQuotes = false;
-          closedQuote = true;
-        }
-      } else {
-        field += character;
-      }
-      continue;
-    }
-
-    if (closedQuote) {
-      if (character === ",") {
-        row.push(field.trim());
-        field = "";
-        closedQuote = false;
-        continue;
-      }
-      if (character === "\r" || character === "\n") {
-        pushRow();
-        if (character === "\r" && source[index + 1] === "\n") index++;
-        continue;
-      }
-      throw new Error(`CSV row ${rowNumber}: characters after a closing quote are not allowed.`);
-    }
-
-    if (character === '"') {
-      if (field.length > 0) {
-        throw new Error(`CSV row ${rowNumber}: quoted cells must start with a quote.`);
-      }
-      inQuotes = true;
-    } else if (character === ",") {
-      row.push(field.trim());
-      field = "";
-    } else if (character === "\r" || character === "\n") {
-      pushRow();
-      if (character === "\r" && source[index + 1] === "\n") index++;
-    } else {
-      field += character;
-    }
-  }
-
-  if (inQuotes) {
-    throw new Error(`CSV row ${rowNumber}: unterminated quoted cell.`);
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field.trim());
-    rows.push(row);
-  }
-
-  return rows;
-}
-
 export function parseStudentCsv(text: string): ParsedStudentRecord[] {
-  const rows = parseCsvRows(text);
-  const header = rows[0];
-  if (!header || header.length !== CSV_COLUMN_COUNT || header.some((cell) => cell !== "")) {
-    throw new Error("CSV must start with a blank ten-cell row.");
+  const rows = parseCsv(text);
+  for (const row of rows) {
+    if (row.isStructuralError) throw new Error(row.errorMessage);
   }
 
-  const dataRows = rows.slice(1);
-  if (dataRows.length === 0) {
-    throw new Error("CSV contains no student records.");
-  }
-
-  return dataRows.map((row, index) => {
-    const rowNumber = index + 2;
-    if (row.length !== CSV_COLUMN_COUNT) {
-      throw new Error(
-        `CSV row ${rowNumber}: expected ${CSV_COLUMN_COUNT} columns, found ${row.length}.`,
-      );
-    }
-
-    const studentId = row[1];
-    const lastName = row[3];
-    const firstName = row[4];
-    const rawCourse = row[6].toUpperCase();
-    const rawLevel = row[7];
-    const parsedYearLevel = toYearLevel(rawLevel);
-    const course = SUPPORTED_COURSES.has(rawCourse) ? rawCourse : "";
-    const errors: string[] = [];
-
-    if (!STUDENT_ID.test(studentId)) errors.push("invalid student ID");
-    if (!lastName) errors.push("last name is required");
-    if (!firstName) errors.push("first name is required");
-    if (!course) errors.push(`unsupported course: ${row[6]}`);
-    if (!parsedYearLevel) errors.push(`unknown year level: ${row[7]}`);
-
+  return rows.map((row) => {
     return {
-      studentId,
-      lastName,
-      firstName,
-      course,
-      yearLevel: parsedYearLevel ?? rawLevel,
-      hasParseError: errors.length > 0,
-      parseErrorMessage:
-        errors.length > 0 ? `CSV row ${rowNumber}: ${errors.join("; ")}.` : undefined,
+      studentId: row.studentId,
+      lastName: row.lastName,
+      firstName: row.firstName,
+      course: row.course,
+      yearLevel: row.yearLevel,
+      hasParseError: Boolean(row.errorMessage),
+      parseErrorMessage: row.errorMessage,
     };
   });
 }
@@ -248,13 +128,13 @@ function collectEnrollmentRows(pages: string[][][]): SplitEnrollmentRow[] {
       const [, rawCourse, rawLevel] = row;
       const detectedCourse = rawCourse?.toUpperCase() ?? "";
       const isReadableCourse = /^[A-Z]+$/i.test(rawCourse ?? "");
-      const course = SUPPORTED_COURSES.has(detectedCourse) ? detectedCourse : "";
+      const course = isSupportedCourse(detectedCourse) ? detectedCourse : "";
       const yearLevel = toYearLevel(rawLevel ?? "") ?? rawLevel ?? "";
       if (!isReadableCourse || !toYearLevel(rawLevel ?? "")) {
         rows.push({
           course,
           yearLevel,
-          isUnsupportedCourse: isReadableCourse && !SUPPORTED_COURSES.has(detectedCourse),
+          isUnsupportedCourse: isReadableCourse && !isSupportedCourse(detectedCourse),
           error: "Split roster enrollment row is malformed.",
         });
         continue;
@@ -263,7 +143,7 @@ function collectEnrollmentRows(pages: string[][][]): SplitEnrollmentRow[] {
       rows.push({
         course,
         yearLevel,
-        isUnsupportedCourse: !SUPPORTED_COURSES.has(detectedCourse),
+        isUnsupportedCourse: !isSupportedCourse(detectedCourse),
       });
     }
   }
@@ -275,7 +155,7 @@ function parseSplitIdentityRow(cells: string[]): SplitIdentityRow {
   const idIndex = cells.findIndex((cell) => SPLIT_ROSTER_ID.test(cell));
   const idMatch = idIndex >= 0 ? SPLIT_ROSTER_ID.exec(cells[idIndex]) : null;
   const studentId = idMatch?.[0];
-  if (!studentId || !STUDENT_ID.test(studentId)) {
+  if (!studentId || !isStudentId(studentId)) {
     return {
       studentId: studentId ?? "",
       lastName: "",

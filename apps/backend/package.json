@@ -29,6 +29,7 @@
     "clean": "rm -rf dist .wrangler"
   },
   "dependencies": {
+    "@cso-voting/student-csv-parser": "workspace:*",
     "@hono/zod-openapi": "^0.19.10",
     "@libsql/client": "^0.15.15",
     "@scalar/hono-api-reference": "^0.9.34",

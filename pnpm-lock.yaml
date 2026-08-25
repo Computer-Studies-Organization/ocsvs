@@ -15,6 +15,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@cso-voting/student-csv-parser':
+        specifier: workspace:*
+        version: link:../../packages/student-csv-parser
       '@hono/zod-openapi':
         specifier: ^0.19.10
         version: 0.19.10(hono@4.12.27)(zod@3.25.76)
@@ -112,6 +115,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@cso-voting/student-csv-parser':
+        specifier: workspace:*
+        version: link:../../packages/student-csv-parser
       '@sentry/browser':
         specifier: 10.69.0
         version: 10.69.0
@@ -167,6 +173,8 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.28)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+
+  packages/student-csv-parser: {}
 
 packages:
 
