@@ -7,10 +7,11 @@ const { mockCaptureException } = vi.hoisted(() => ({
   mockCaptureException: vi.fn(),
 }));
 
+vi.hoisted(() => {
+  vi.stubEnv("PUBLIC_SENTRY_DSN", "https://sentinel.example/123");
+});
+
 vi.mock("$app/environment", () => ({ browser: true }));
-vi.mock("$env/static/public", () => ({
-  PUBLIC_SENTRY_DSN: "https://sentinel.example/123",
-}));
 vi.mock("@sentry/browser", () => ({
   init: mockInit,
   captureException: mockCaptureException,

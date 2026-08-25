@@ -1,11 +1,12 @@
 import { browser } from "$app/environment";
-import { PUBLIC_API_BASE_URL } from "$env/static/public";
 import { authStore } from "$lib/stores/auth.svelte";
 
 // Production assets and the API are served by the same Cloudflare Worker.
 // Keep the configurable base URL for local development, but never bake a
 // cross-origin API URL into a production bundle.
-const API_BASE_URL = import.meta.env.PROD ? "" : PUBLIC_API_BASE_URL;
+const API_BASE_URL = import.meta.env.PROD
+  ? ""
+  : (import.meta.env.PUBLIC_API_BASE_URL ?? "http://localhost:8787");
 
 export class ApiError extends Error {
   constructor(

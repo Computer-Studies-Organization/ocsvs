@@ -1,7 +1,6 @@
 <script lang='ts'>
   import { goto } from '$app/navigation'
   import { login } from '$lib/api/auth'
-  import { PUBLIC_OFFLINE_DEV, PUBLIC_TURNSTILE_SITEKEY } from '$env/static/public'
   import aclcLogo from '$lib/assets/aclcLogo.webp'
   import csoLogo from '$lib/assets/cso-logo.webp'
   import { authStore } from '$lib/stores/auth.svelte'
@@ -22,7 +21,8 @@
   let turnstileToken = $state('')
   let turnstileWidgetId = $state<string | null>(null)
   let container = $state<HTMLElement | null>(null)
-  const offlineDev = PUBLIC_OFFLINE_DEV === 'true'
+  const offlineDev = import.meta.env.PUBLIC_OFFLINE_DEV === 'true'
+  const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? ''
 
   // Login form state
   const loginData = $state({
@@ -50,7 +50,7 @@
           clearInterval(checkTurnstile);
         }
         turnstileWidgetId = (window as any).turnstile.render(container, {
-          sitekey: PUBLIC_TURNSTILE_SITEKEY,
+          sitekey: turnstileSitekey,
           callback: (token: string) => {
             turnstileToken = token;
           },
