@@ -23,6 +23,7 @@ html {
 @font-face {
   font-family: "JetBrains Mono Local";
   src: local("JetBrains Mono"), local("JetBrains Mono Regular"), local("JetBrainsMono-Regular");
+  font-display: swap;
 }
 
 @utility no-scrollbar {

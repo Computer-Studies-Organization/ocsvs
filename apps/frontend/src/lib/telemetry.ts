@@ -25,7 +25,13 @@ function loadSentry(): Promise<typeof import("./sentry") | undefined> {
   return sentryPromise;
 }
 
-if (isEnabled()) loadSentry();
+if (isEnabled()) {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => void loadSentry(), { timeout: 3000 });
+  } else if (typeof setTimeout !== "undefined") {
+    setTimeout(() => void loadSentry(), 1000);
+  }
+}
 
 export function captureException(error: unknown): void {
   if (isEnabled()) void loadSentry().then((Sentry) => Sentry?.captureException(error));
