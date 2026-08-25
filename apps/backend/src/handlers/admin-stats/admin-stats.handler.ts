@@ -15,20 +15,16 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
 
   const { db } = createDb(c);
 
-  // 1. Count voter accounts, including soft-deleted voters whose ballots remain durable
-  const voterCountResult = await db
-    .select({ count: count() })
-    .from(accounts)
-    .where(eq(accounts.role, "user"))
-    .get();
+  // Execute independent queries concurrently to minimize DB round-trips
+  const [voterCountResult, electionCountResult, openElection, logs] = await Promise.all([
+    db.select({ count: count() }).from(accounts).where(eq(accounts.role, "user")).get(),
+    db.select({ count: count() }).from(elections).get(),
+    electionRepo.findCurrentlyOpen(db),
+    db.select().from(auditLog).orderBy(desc(auditLog.createdAt), desc(auditLog.id)).limit(5).all(),
+  ]);
+
   const votersCount = voterCountResult?.count ?? 0;
-
-  // 2. Count total elections
-  const electionCountResult = await db.select({ count: count() }).from(elections).get();
   const electionsCount = electionCountResult?.count ?? 0;
-
-  // 3. Get active election and turnout details
-  const openElection = await electionRepo.findCurrentlyOpen(db);
 
   let activeElection = null;
   if (openElection) {
@@ -55,14 +51,6 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
       turnoutPct,
     };
   }
-
-  // 4. Get last 5 audit logs
-  const logs = await db
-    .select()
-    .from(auditLog)
-    .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
-    .limit(5)
-    .all();
 
   return c.json(
     {
