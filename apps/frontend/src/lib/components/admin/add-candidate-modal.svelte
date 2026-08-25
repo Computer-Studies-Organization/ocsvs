@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onDestroy, tick } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { createCandidate } from '$lib/api/candidates'
-  import { getCandidateUserLabel, resolveCandidateUserSelection } from '$lib/adminUsers'
+  import { getCandidateUserLabel } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { createCandidateSchema } from '$lib/validation/candidate'
   import Modal from '$lib/components/ui/modal.svelte'
-  import { Loader } from 'lucide-svelte'
+  import { Loader, Search, X } from 'lucide-svelte'
   import { appCache } from '$lib/cache'
   import type { TPartyList, TUsersData } from '$lib/types'
 
@@ -28,8 +28,13 @@
     onsuccess: () => void
   } = $props()
 
-  let users = $state<TUsersData[]>([])
-  let usersError = $state('')
+  let userSearch = $state('')
+  let userResults = $state<TUsersData[]>([])
+  let selectedUser = $state<TUsersData | null>(null)
+  let userSearchLoading = $state(false)
+  let userSearchError = $state('')
+  let userResultsOpen = $state(false)
+  let activeUserIndex = $state(-1)
   let createAccountId = $state('')
   let createFullName = $state('')
   let createPartyId = $state('')
@@ -37,28 +42,105 @@
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
 
-  // Fetch users on mount (modal is conditionally mounted by parent)
-  onMount(() => {
-    void loadUsers()
-  })
+  let searchTimeout: ReturnType<typeof setTimeout> | undefined
+  let searchRequestId = 0
+  let userSearchInput: HTMLInputElement | undefined = $state()
 
-  async function loadUsers() {
-    const usersEntry = appCache.get('users', { limit: 100, includeDeleted: false })
+  function handleUserSearchInput(e: Event) {
+    const value = (e.currentTarget as HTMLInputElement).value
+    const query = value.trim()
+    const requestId = ++searchRequestId
+
+    userSearch = value
+    userResults = []
+    activeUserIndex = -1
+    userSearchError = ''
+    userResultsOpen = query.length > 0
+    userSearchLoading = query.length >= 2
+
+    if (searchTimeout) clearTimeout(searchTimeout)
+
+    if (query.length < 2) return
+
+    searchTimeout = setTimeout(() => {
+      void searchUsers(query, requestId)
+    }, 300)
+  }
+
+  async function searchUsers(query: string, requestId: number) {
+    const usersEntry = appCache.get('users', {
+      page: 1,
+      limit: 20,
+      search: query,
+      includeDeleted: false,
+    })
     const result = await usersEntry.fetch()
 
+    if (requestId !== searchRequestId || userSearch.trim() !== query) return
+
+    userSearchLoading = false
     if (result) {
-      users = result.data
-    } else {
-      usersError = usersEntry.error ?? 'Failed to load users'
-      users = []
+      userResults = result.data
+      return
+    }
+
+    userResults = []
+    userSearchError = usersEntry.error ?? 'Failed to search users'
+  }
+
+  function handleUserSelect(user: TUsersData) {
+    selectedUser = user
+    createAccountId = user.accountId
+    createFullName = `${user.firstName} ${user.lastName}`.trim()
+    userSearch = ''
+    userResults = []
+    userResultsOpen = false
+    userSearchLoading = false
+    userSearchError = ''
+    activeUserIndex = -1
+    if (createErrors.user) createErrors.user = ''
+  }
+
+  function clearUserSelection() {
+    ++searchRequestId
+    if (searchTimeout) clearTimeout(searchTimeout)
+    selectedUser = null
+    createAccountId = ''
+    createFullName = ''
+    userSearch = ''
+    userResults = []
+    userResultsOpen = false
+    userSearchLoading = false
+    userSearchError = ''
+    activeUserIndex = -1
+    void tick().then(() => userSearchInput?.focus())
+  }
+
+  function handleUserSearchKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      userResultsOpen = false
+      activeUserIndex = -1
+      return
+    }
+
+    if (!userResultsOpen || userResults.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      activeUserIndex = (activeUserIndex + 1) % userResults.length
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      activeUserIndex = (activeUserIndex - 1 + userResults.length) % userResults.length
+    } else if (e.key === 'Enter' && activeUserIndex >= 0) {
+      e.preventDefault()
+      handleUserSelect(userResults[activeUserIndex])
     }
   }
 
-  function handleUserSelect(accountId: string) {
-    const selected = resolveCandidateUserSelection(users, accountId)
-    createAccountId = selected?.accountId ?? ''
-    createFullName = selected ? `${selected.firstName} ${selected.lastName}` : ''
-  }
+  onDestroy(() => {
+    if (searchTimeout) clearTimeout(searchTimeout)
+    ++searchRequestId
+  })
 
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
@@ -106,31 +188,97 @@
 <Modal open={true} onclose={handleClose} presentation="sheet">
   <h2 class="text-xl font-black mb-4" style="color: oklch(0.95 0.008 250)">Add candidate</h2>
 
-  {#if usersError}
-    <div class="mb-4 rounded-xl border border-yellow-500/30 px-4 py-2 text-sm" style="background: oklch(0.25 0.025 250); color: oklch(0.95 0.008 250)">
-      {usersError}
-    </div>
-  {/if}
-
   <form onsubmit={submitCreate} class="space-y-5">
     <div class="space-y-2">
-      <label for="createAccountId" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
-        User
-      </label>
-      <select
-        id="createAccountId"
-        value={createAccountId}
-        onchange={(e) => { handleUserSelect(e.currentTarget.value); if (createErrors.user) createErrors.user = '' }}
-        required
-        disabled={createBusy}
-        class="w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none {createErrors.user ? 'border-red-500' : ''}"
-        style="background: oklch(0.16 0.020 250); border-color: {createErrors.user ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)"
-      >
-        <option value="">Select a user</option>
-        {#each users as u (u.accountId)}
-          <option value={u.accountId}>{getCandidateUserLabel(u)}</option>
-        {/each}
-      </select>
+      {#if selectedUser}
+        <p class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">User</p>
+        <div
+          class="flex min-h-11 items-center justify-between gap-3 rounded-xl border-2 px-4 py-3"
+          style="background: oklch(0.16 0.020 250); border-color: {createErrors.user ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)"
+        >
+          <div class="min-w-0">
+            <p class="truncate font-semibold">{getCandidateUserLabel(selectedUser)}</p>
+            <p class="text-xs" style="color: oklch(0.60 0.015 250)">Selected user</p>
+          </div>
+          <button
+            type="button"
+            onclick={clearUserSelection}
+            disabled={createBusy}
+            class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-sm font-bold transition hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+            style="color: oklch(0.70 0.15 225)"
+          >
+            <X size={15} />
+            Change
+          </button>
+        </div>
+      {:else}
+        <label for="candidate-user-search" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+          User
+        </label>
+        <div class="relative">
+          <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            id="candidate-user-search"
+            type="text"
+            bind:this={userSearchInput}
+            value={userSearch}
+            oninput={handleUserSearchInput}
+            onkeydown={handleUserSearchKeydown}
+            onfocus={() => { if (userSearch.trim()) userResultsOpen = true }}
+            disabled={createBusy}
+            autocomplete="off"
+            placeholder="Search name or student ID…"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="candidate-user-results"
+            aria-expanded={userResultsOpen}
+            aria-haspopup="listbox"
+            aria-activedescendant={activeUserIndex >= 0 ? `candidate-user-option-${userResults[activeUserIndex]?.accountId}` : undefined}
+            aria-required="true"
+            aria-invalid={createErrors.user ? 'true' : 'false'}
+            class="min-h-11 w-full rounded-xl border-2 py-3 pl-10 pr-4 font-semibold transition focus:outline-none {createErrors.user ? 'border-red-500' : ''}"
+            style="background: oklch(0.16 0.020 250); border-color: {createErrors.user ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)"
+          />
+
+          {#if userResultsOpen}
+            <div
+              id="candidate-user-results"
+              role="listbox"
+              aria-label="User search results"
+              class="absolute left-0 right-0 top-full z-10 mt-2 max-h-64 overflow-y-auto rounded-xl border-2 p-1 shadow-2xl"
+              style="background: oklch(0.12 0.020 250); border-color: oklch(0.28 0.025 250)"
+            >
+              {#if userSearchLoading}
+                <div class="flex min-h-11 items-center gap-2 px-3 py-2 text-sm" style="color: oklch(0.70 0.015 250)">
+                  <Loader class="animate-spin" size={16} />
+                  Searching users…
+                </div>
+              {:else if userSearchError}
+                <div class="px-3 py-2 text-sm" style="color: oklch(0.65 0.15 25)">{userSearchError}</div>
+              {:else if userSearch.trim().length < 2}
+                <div class="px-3 py-2 text-sm" style="color: oklch(0.60 0.015 250)">Type at least 2 characters.</div>
+              {:else if userResults.length === 0}
+                <div class="px-3 py-2 text-sm" style="color: oklch(0.60 0.015 250)">No users found.</div>
+              {:else}
+                {#each userResults as user, index (user.accountId)}
+                  <button
+                    id={`candidate-user-option-${user.accountId}`}
+                    type="button"
+                    role="option"
+                    aria-selected={activeUserIndex === index}
+                    onclick={() => handleUserSelect(user)}
+                    onmouseenter={() => { activeUserIndex = index }}
+                    class="flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left text-sm font-semibold transition hover:bg-slate-800 {activeUserIndex === index ? 'bg-slate-800' : ''} cursor-pointer"
+                    style="color: oklch(0.95 0.008 250)"
+                  >
+                    {getCandidateUserLabel(user)}
+                  </button>
+                {/each}
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
       {#if createErrors.user}
         <p class="text-xs mt-1" style="color: oklch(0.65 0.15 25)">{createErrors.user}</p>
       {/if}

@@ -26,6 +26,20 @@ it("sends the selected role to the users endpoint", async () => {
   expect(mockApiFetch).toHaveBeenCalledWith(expect.stringContaining("role=admin"), undefined);
 });
 
+it("serializes the bounded live-search query", async () => {
+  await fetchUsers({
+    page: 1,
+    limit: 20,
+    search: "Carl Jerome",
+    includeDeleted: false,
+  });
+
+  expect(mockApiFetch).toHaveBeenCalledWith(
+    "/users?page=1&limit=20&search=Carl+Jerome&includeDeleted=false",
+    undefined,
+  );
+});
+
 it("submits users to the import endpoint", async () => {
   const users = [
     {

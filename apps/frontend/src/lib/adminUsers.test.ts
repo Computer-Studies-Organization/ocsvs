@@ -1,6 +1,6 @@
 import type { TUsersData } from "./types";
 import { expect, test } from "vitest";
-import { getCandidateUserLabel, resolveCandidateUserSelection } from "./adminUsers";
+import { getCandidateUserLabel } from "./adminUsers";
 
 const baseUser = {
   username: "alex.cruz",
@@ -35,13 +35,6 @@ const duplicateNameUsers: TUsersData[] = [
     ...baseUser,
   },
 ];
-
-test("candidate picker resolves users by accountId instead of display name", () => {
-  const selectedUser = resolveCandidateUserSelection(duplicateNameUsers, "account-2");
-
-  expect(selectedUser?.accountId).toBe("account-2");
-  expect(selectedUser?.studentId).toBe("C23-00-0002-MAN121");
-});
 
 test("candidate picker labels include student id so duplicate names stay distinguishable", () => {
   expect(getCandidateUserLabel(duplicateNameUsers[0])).toBe("Alex Cruz (C23-00-0001-MAN121)");

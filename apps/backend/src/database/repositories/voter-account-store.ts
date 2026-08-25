@@ -370,13 +370,16 @@ export const voterAccountStore = {
       conditions.push(isNull(accounts.deletedAt));
     }
 
-    if (opts.search) {
+    const search = opts.search?.trim();
+
+    if (search) {
       conditions.push(
         or(
-          like(users.firstName, `%${opts.search}%`),
-          like(users.lastName, `%${opts.search}%`),
-          like(users.studentId, `%${opts.search}%`),
-          like(accounts.username, `%${opts.search}%`),
+          like(users.firstName, `%${search}%`),
+          like(users.lastName, `%${search}%`),
+          like(sql`${users.firstName} || ' ' || ${users.lastName}`, `%${search}%`),
+          like(users.studentId, `%${search}%`),
+          like(accounts.username, `%${search}%`),
         ),
       );
     }
