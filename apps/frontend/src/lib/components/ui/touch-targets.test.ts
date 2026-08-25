@@ -42,13 +42,15 @@ describe("mobile touch targets", () => {
   it("keeps header action controls at least 44px square", () => {
     expect(headerSource).toMatch(/href='\/settings'[\s\S]*?class="[^"]*min-h-11[^"]*min-w-11/);
     expect(headerSource).toMatch(
-      /onclick=\{handleLogout\}[\s\S]*?class='[^']*min-h-11[^']*min-w-11/,
+      /onclick=\{\(\) => showLogoutConfirm = true\}[\s\S]*?class='[^']*min-h-11[^']*min-w-11/,
     );
     expect(headerSource).toMatch(
       /aria-label=\{mobileMenuOpen \? 'Close menu' : 'Open menu'\}[\s\S]*?class='[^']*min-h-11[^']*min-w-11/,
     );
     expect(headerSource).toContain("aria-label='Settings'");
     expect(headerSource).toContain("aria-label='Log out'");
+    expect(headerSource).toContain("ariaLabelledby='logout-title'");
+    expect(headerSource).toContain("Are you sure you want to log out?");
   });
 
   it("keeps mobile drawer links at least 44px tall", () => {
