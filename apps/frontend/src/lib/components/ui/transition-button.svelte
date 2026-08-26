@@ -18,10 +18,24 @@
   let activeTarget = $state<TElectionStatus | null>(null)
   let opensAtInput = $state('')
   let closesAtInput = $state('')
+  let now = $state(Math.floor(Date.now() / 1000))
+
+  $effect(() => {
+    const interval = setInterval(() => {
+      now = Math.floor(Date.now() / 1000)
+    }, 1000)
+    return () => clearInterval(interval)
+  })
 
   const selectedOpensAt = $derived(fromLocalDateTime(opensAtInput))
   const selectedClosesAt = $derived(fromLocalDateTime(closesAtInput))
-  const isExpiredOpen = $derived(election.status === 'open' && getEffectiveElectionStatus(election) === 'closed')
+  const isExpiredOpen = $derived(election.status === 'open' && getEffectiveElectionStatus(election, now) === 'closed')
+  const isScheduledOpen = $derived(
+    election.status === 'open' &&
+    election.opensAt !== null &&
+    election.opensAt > now &&
+    getEffectiveElectionStatus(election, now) === 'draft'
+  )
 
   const targets: TElectionStatus[] = ['open', 'closed', 'archived', 'draft']
   const allowed = $derived(targets.filter(t => canTransition(election.status, t)))
@@ -77,7 +91,11 @@
     class='min-h-11 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer {className}'
     style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
   >
-    {isExpiredOpen && t === 'closed' ? 'Finalize closure' : `Transition to ${labels[t]}`}
+    {isExpiredOpen && t === 'closed'
+      ? 'Finalize closure'
+      : isScheduledOpen && t === 'closed'
+        ? 'Close scheduled election'
+        : `Transition to ${labels[t]}`}
   </button>
 {/each}
 

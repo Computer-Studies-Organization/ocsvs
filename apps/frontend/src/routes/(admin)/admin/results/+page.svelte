@@ -2,6 +2,7 @@
   import type { TElection, TVoteCount, TVoteResults, TVoteResultsResponse } from '$lib/types'
   import { goto } from '$app/navigation'
   import { authStore } from '$lib/stores/auth.svelte'
+  import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import { ArrowLeft, BarChart3, Trophy, Download } from 'lucide-svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -18,6 +19,14 @@
   const isError = $derived(Boolean(data.resultsError))
 
   const user = $derived(authStore.user)
+  let now = $state(Math.floor(Date.now() / 1000))
+
+  $effect(() => {
+    const interval = setInterval(() => {
+      now = Math.floor(Date.now() / 1000)
+    }, 1000)
+    return () => clearInterval(interval)
+  })
 
   const statusLabels: Record<string, string> = {
     draft: 'Draft',
@@ -27,7 +36,7 @@
   }
 
   const visibleElections = $derived(
-    elections.filter(e => e.status !== 'draft')
+    elections.filter(e => getEffectiveElectionStatus(e, now) !== 'draft')
   )
 
   const resultsWithPercentages = $derived.by<PositionResult[]>(() => {
@@ -163,7 +172,7 @@
             class='min-h-11 w-full min-w-0 cursor-pointer rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-100 focus:border-sky-400 focus:outline-none sm:w-auto'
           >
             {#each visibleElections as e (e.id)}
-              <option value={e.id}>{e.name} ({statusLabels[e.status] ?? e.status})</option>
+              <option value={e.id}>{e.name} ({statusLabels[getEffectiveElectionStatus(e, now)] ?? getEffectiveElectionStatus(e, now)})</option>
             {/each}
           </select>
         {:else}

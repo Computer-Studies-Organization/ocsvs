@@ -1,6 +1,7 @@
 import type { PageLoad } from "./$types";
 import { appCache } from "$lib/cache";
 import { listResults } from "$lib/api/elections";
+import { getEffectiveElectionStatus } from "$lib/election-lifecycle-client";
 import { extractErrorMessage } from "$lib/mutation-feedback-utils";
 import type { TVoteResultsResponse } from "$lib/types";
 
@@ -18,7 +19,7 @@ export const load: PageLoad = async ({ url, fetch }) => {
     myVotes: { electionId: null, hasVoted: false },
   };
 
-  const filtered = electionList.filter((e) => e.status !== "draft");
+  const filtered = electionList.filter((e) => getEffectiveElectionStatus(e) !== "draft");
 
   // Resolve selected election: explicit query param > active > first visible.
   const queryId = url.searchParams.get("electionId");

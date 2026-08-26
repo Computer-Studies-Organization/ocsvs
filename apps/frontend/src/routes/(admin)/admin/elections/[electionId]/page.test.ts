@@ -139,6 +139,30 @@ describe("admin election party controls", () => {
     expect(body).not.toContain("Transition to Closed");
   });
 
+  it("labels a scheduled open election's close action clearly without enabling edits", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election: {
+            ...election,
+            status: "open",
+            opensAt: 4_000_000_000,
+            closesAt: 4_000_000_100,
+          },
+          positions: [],
+          partyLists: [],
+          candidates: [],
+        },
+      },
+    });
+
+    expect(body).toContain("Draft for setup");
+    expect(body).toContain("Close scheduled election");
+    expect(body).not.toContain("Transition to Closed");
+    expect(body).not.toContain("Add Party List");
+    expect(body).not.toContain("Add position");
+  });
+
   it("shows the assigned candidate roster with position and inactive status", () => {
     const { body } = render(Page, {
       props: {
