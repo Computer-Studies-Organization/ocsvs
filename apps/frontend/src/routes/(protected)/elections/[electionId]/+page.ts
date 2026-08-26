@@ -2,7 +2,7 @@ import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { ApiError } from "$lib/api/client";
 import { appCache } from "$lib/cache";
-import type { TElectionStatus } from "$lib/types";
+import { getEffectiveElectionStatus } from "$lib/election-lifecycle-client";
 
 export const load: PageLoad = async ({ params, fetch, depends }) => {
   depends("app:election-detail");
@@ -15,17 +15,7 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
       throw cause;
     });
 
-  const now = Math.floor(Date.now() / 1000);
-  const effectiveStatus: TElectionStatus =
-    election.status !== "open"
-      ? election.status
-      : election.opensAt === null || election.closesAt === null
-        ? "draft"
-        : now < election.opensAt
-          ? "draft"
-          : now > election.closesAt
-            ? "closed"
-            : "open";
+  const effectiveStatus = getEffectiveElectionStatus(election);
   const votingState =
     effectiveStatus === "open"
       ? await appCache.get("votingState", {}).fetchOrThrow(true, { fetch })

@@ -1,4 +1,4 @@
-import type { TElectionStatus } from "$lib/types";
+import type { TElection, TElectionStatus } from "$lib/types";
 
 const TRANSITIONS: ReadonlyArray<readonly [TElectionStatus, TElectionStatus]> = [
   ["draft", "open"],
@@ -6,6 +6,17 @@ const TRANSITIONS: ReadonlyArray<readonly [TElectionStatus, TElectionStatus]> = 
   ["closed", "archived"],
   ["closed", "draft"],
 ];
+
+export function getEffectiveElectionStatus(
+  election: Pick<TElection, "status" | "opensAt" | "closesAt">,
+  now = Math.floor(Date.now() / 1000),
+): TElectionStatus {
+  if (election.status !== "open") return election.status;
+  if (election.opensAt === null || election.closesAt === null) return "draft";
+  if (now < election.opensAt) return "draft";
+  if (now > election.closesAt) return "closed";
+  return "open";
+}
 
 export function canTransition(from: TElectionStatus, to: TElectionStatus): boolean {
   return TRANSITIONS.some(([f, t]) => f === from && t === to);

@@ -11,12 +11,14 @@
   import AddPartyModal from '$lib/components/admin/add-party-modal.svelte'
   import EditPartyModal from '$lib/components/admin/edit-party-modal.svelte'
   import EditElectionModal from '$lib/components/admin/edit-election-modal.svelte'
+  import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
 
   let { data } = $props()
   const election = $derived(data.election)
   const positions = $derived(data.positions)
   const partyLists = $derived(data.partyLists)
   const candidates = $derived(data.candidates)
+  const displayStatus = $derived(getEffectiveElectionStatus(election))
 
   let isCreateOpen = $state(false)
   let editingPosition = $state<TPosition | null>(null)
@@ -29,11 +31,11 @@
   let isEditElectionOpen = $state(false)
 
   const lifecycleInfo = $derived({
-    title: election.status === 'draft' ? 'Draft for setup' : election.status === 'open' ? 'Open for voting' : election.status === 'closed' ? 'Closed for voting' : 'Archived',
+    title: displayStatus === 'draft' ? 'Draft for setup' : displayStatus === 'open' ? 'Open for voting' : displayStatus === 'closed' ? 'Closed for voting' : 'Archived',
     steps: [
-      { label: 'Draft', color: election.status === 'draft' ? 'bg-sky-500' : 'bg-emerald-500' },
-      { label: 'Open', color: election.status === 'draft' ? 'bg-slate-800' : election.status === 'open' ? 'bg-sky-500' : 'bg-emerald-500' },
-      { label: 'Closed', color: election.status === 'draft' || election.status === 'open' ? 'bg-slate-800' : election.status === 'closed' ? 'bg-sky-500' : 'bg-emerald-500' }
+      { label: 'Draft', color: displayStatus === 'draft' ? 'bg-sky-500' : 'bg-emerald-500' },
+      { label: 'Open', color: displayStatus === 'draft' ? 'bg-slate-800' : displayStatus === 'open' ? 'bg-sky-500' : 'bg-emerald-500' },
+      { label: 'Closed', color: displayStatus === 'draft' || displayStatus === 'open' ? 'bg-slate-800' : displayStatus === 'closed' ? 'bg-sky-500' : 'bg-emerald-500' }
     ]
   })
 
@@ -95,7 +97,7 @@
         <div class='min-w-0 flex-1'>
           <div class='mb-2 flex flex-wrap items-start gap-2 sm:items-center sm:gap-3'>
             <h1 class='min-w-0 break-words text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{election.name}</h1>
-            <StatusBadge status={election.status} />
+            <StatusBadge status={displayStatus} />
           </div>
           <p class='text-sm line-clamp-2' style='color: oklch(0.70 0.015 250)'>
             {election.description || '(no description)'}

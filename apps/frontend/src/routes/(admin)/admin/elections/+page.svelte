@@ -12,6 +12,7 @@
   import Modal from '$lib/components/ui/modal.svelte'
   import type { TElection, TElectionStatus } from '$lib/types'
   import { appCache } from '$lib/cache'
+  import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import { formatTimestamp } from '$lib/utils'
 
   let { data } = $props()
@@ -101,7 +102,7 @@
           >
             <div class='flex items-start justify-between gap-3 mb-3'>
               <h2 class='text-lg font-black line-clamp-2' style='color: oklch(0.95 0.008 250)'>{election.name}</h2>
-              <StatusBadge status={election.status} />
+              <StatusBadge status={getEffectiveElectionStatus(election)} />
             </div>
             <p class='text-xs line-clamp-2 mb-4' style='color: oklch(0.60 0.015 250)'>
               {election.description || '(no description)'}
