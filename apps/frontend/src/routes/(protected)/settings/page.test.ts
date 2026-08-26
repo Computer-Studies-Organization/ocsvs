@@ -14,4 +14,25 @@ describe("settings page", () => {
     expect(pageSource).toContain("p-4 sm:p-6");
     expect(pageSource).toContain("min-h-11 w-full");
   });
+
+  it("implements responsive two-column grid layout with sticky sidebar", () => {
+    expect(pageSource).toContain("lg:grid-cols-12");
+    expect(pageSource).toContain("lg:col-span-4");
+    expect(pageSource).toContain("lg:col-span-8");
+    expect(pageSource).toContain("lg:sticky");
+  });
+
+  it("presents a digital identity card with institutional record and copy control", () => {
+    expect(pageSource).toContain("Institutional Record");
+    expect(pageSource).toContain("Verified");
+    expect(pageSource).toContain("Student ID");
+    expect(pageSource).toContain("aria-label='Copy Student ID'");
+    expect(pageSource).toContain("min-h-11 min-w-11");
+  });
+
+  it("provides real-time password feedback indicators", () => {
+    expect(pageSource).toContain("8+ characters");
+    expect(pageSource).toContain("Passwords match");
+    expect(pageSource).toContain("Passwords do not match");
+  });
 });
