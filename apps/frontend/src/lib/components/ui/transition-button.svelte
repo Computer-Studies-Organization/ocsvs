@@ -1,7 +1,7 @@
 <script lang='ts'>
   import type { TElection, TElectionStatus } from '$lib/types'
   import { transitionElection } from '$lib/api/elections'
-  import { canTransition, fromLocalDateTime, toLocalDateTime } from '$lib/election-lifecycle-client'
+  import { canTransition, fromLocalDateTime, getEffectiveElectionStatus, toLocalDateTime } from '$lib/election-lifecycle-client'
   import Modal from './modal.svelte'
   import { addToast } from '$lib/stores/toast.svelte'
   import { formatTimestamp } from '$lib/utils'
@@ -21,6 +21,7 @@
 
   const selectedOpensAt = $derived(fromLocalDateTime(opensAtInput))
   const selectedClosesAt = $derived(fromLocalDateTime(closesAtInput))
+  const isExpiredOpen = $derived(election.status === 'open' && getEffectiveElectionStatus(election) === 'closed')
 
   const targets: TElectionStatus[] = ['open', 'closed', 'archived', 'draft']
   const allowed = $derived(targets.filter(t => canTransition(election.status, t)))
@@ -76,7 +77,7 @@
     class='min-h-11 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg cursor-pointer {className}'
     style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
   >
-    Transition to {labels[t]}
+    {isExpiredOpen && t === 'closed' ? 'Finalize closure' : `Transition to ${labels[t]}`}
   </button>
 {/each}
 

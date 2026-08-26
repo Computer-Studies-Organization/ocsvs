@@ -122,6 +122,23 @@ describe("admin election party controls", () => {
     expect(body).toContain('title="Edit Party"');
   });
 
+  it("labels an expired open election's close action as finalizing closure", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election: { ...election, status: "open", opensAt: 1, closesAt: 2 },
+          positions: [],
+          partyLists: [],
+          candidates: [],
+        },
+      },
+    });
+
+    expect(body).toContain("Closed for voting");
+    expect(body).toContain("Finalize closure");
+    expect(body).not.toContain("Transition to Closed");
+  });
+
   it("shows the assigned candidate roster with position and inactive status", () => {
     const { body } = render(Page, {
       props: {
