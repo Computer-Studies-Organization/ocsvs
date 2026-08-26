@@ -255,7 +255,7 @@
         {#if partyLists.length === 0}
           <p class='text-xs italic' style='color: oklch(0.60 0.015 250)'>No party lists created yet. Candidates will default to Independent.</p>
         {:else}
-          <div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+          <div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start'>
             {#each partyLists as party (party.id)}
               {@const partyCandidates = candidates.filter((candidate) => candidate.partyId === party.id)}
               <article
