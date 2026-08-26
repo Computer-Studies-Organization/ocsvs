@@ -300,7 +300,7 @@
 </script>
 
 <div class="min-h-[100dvh] bg-slate-950 text-slate-100">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+  <div class="w-full mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
     <!-- Header -->
     <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div>

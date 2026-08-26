@@ -144,7 +144,7 @@
 </script>
 
 {#if pageState.kind === 'loading'}
-  <div class='mx-auto max-w-3xl p-6'>
+  <div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>
     <SkeletonCard />
     <div class='mt-6 rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl'>
       <div class='flex items-start justify-between gap-3 mb-3'>
@@ -288,7 +288,7 @@
   {@const totalPositions = pageState.positions.length}
   {@const isReview = isReviewStep(pageState.voting, totalPositions)}
   {@const currentPosition = pageState.positions[pageState.voting.currentPositionIndex]}
-  <div class='mx-auto max-w-3xl p-6'>
+  <div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>
     <div class='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
       <div>
         <h1 class='text-3xl font-black text-slate-100'>{pageState.election.name}</h1>
@@ -344,7 +344,7 @@
         <div class='mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md'>
           <h2 class='text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
           <p class='mt-1 text-sm text-slate-400'>Select one candidate.</p>
-          <div class='mt-6 grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <div class='mt-6 flex flex-col gap-4'>
             {#each currentPosition.candidates as c (c.id)}
               <VotingCandidateCard
                 candidate={c}

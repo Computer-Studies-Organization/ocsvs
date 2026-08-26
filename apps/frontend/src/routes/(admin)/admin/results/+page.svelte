@@ -129,7 +129,7 @@
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto flex max-w-6xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8'>
+  <div class='w-full mx-auto flex max-w-6xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8'>
     <!-- Header -->
     <header class='flex items-start gap-4 border-b border-slate-800/70 pb-4'>
       <div class='space-y-3'>

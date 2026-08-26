@@ -70,7 +70,7 @@
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='w-full mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     <div class='flex flex-wrap items-center justify-between gap-4 mb-6'>
       <h1 class='text-3xl font-black' style='color: oklch(0.95 0.008 250)'>Elections</h1>
       <button

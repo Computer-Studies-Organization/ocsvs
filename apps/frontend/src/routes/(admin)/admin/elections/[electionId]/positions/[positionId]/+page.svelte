@@ -37,7 +37,7 @@
 </script>
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
+  <div class='w-full mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8'>
     {#if election}
       <a
         href={`/admin/elections/${election.id}`}

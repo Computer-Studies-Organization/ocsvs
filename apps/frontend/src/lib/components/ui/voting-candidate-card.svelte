@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { User, Check } from 'lucide-svelte'
+  import { Check } from 'lucide-svelte'
 
   let {
     candidate,
@@ -14,7 +14,15 @@
   } = $props()
 
   let isExpanded = $state(false)
+  let imageError = $state(false)
+
   const party = $derived(candidate.partyId ? partyLists.find((p) => p.id === candidate.partyId) : null)
+
+  $effect(() => {
+    // Reset image error if candidate or imageUrl changes
+    const _ = candidate.imageUrl
+    imageError = false
+  })
 </script>
 
 <div
@@ -28,83 +36,133 @@
     }
   }}
   aria-pressed={selected}
-  class="group relative flex w-full flex-col gap-3 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-lg'} focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+  class="group relative flex w-full flex-col sm:flex-row gap-5 rounded-2xl border p-5 text-left transition-all duration-200 cursor-pointer overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/40' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-xl'} focus:outline-none focus:ring-2 focus:ring-blue-500/50"
 >
-  <div class="flex w-full items-center justify-between gap-3">
-    <div class="flex items-center gap-3">
-      {#if candidate.imageUrl}
-        <img
-          src={candidate.imageUrl}
-          alt={candidate.fullName}
-          class="h-11 w-11 rounded-full object-cover border border-slate-800 group-hover:border-slate-700 transition-colors"
-        />
+  <!-- Left Section: Fixed-Size Candidate Portrait Frame -->
+  <div class="relative w-full sm:w-52 md:w-60 shrink-0 aspect-[4/3] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center">
+    {#if candidate.imageUrl && !imageError}
+      <img
+        src={candidate.imageUrl}
+        alt={candidate.fullName}
+        class="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+        loading="lazy"
+        onerror={() => {
+          imageError = true
+        }}
+      />
+    {:else}
+      <!-- Candidate Silhouette Bust Placeholder -->
+      <div class="flex h-full w-full items-center justify-center bg-gradient-to-b from-slate-900/50 to-slate-950 p-6">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          class="h-full max-h-36 w-full text-slate-700 transition-transform duration-300 group-hover:scale-[1.02]"
+          aria-hidden="true"
+          data-testid="candidate-portrait-silhouette"
+        >
+          <!-- Head -->
+          <circle cx="12" cy="8" r="4.2" fill="currentColor" />
+          <!-- Torso / Shoulders silhouette -->
+          <path
+            d="M4 21.5C4 16.8 7.5 13.5 12 13.5C16.5 13.5 20 16.8 20 21.5H4Z"
+            fill="currentColor"
+          />
+        </svg>
+      </div>
+    {/if}
+
+    <!-- Top-Left Floating Party Badge on Mobile only -->
+    <div class="absolute top-3 left-3 z-10 sm:hidden">
+      {#if party}
+        <span
+          class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md"
+          style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+        >
+          {party.code}
+        </span>
       {:else}
-        <div class="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 border border-slate-800 group-hover:border-slate-700 transition-colors">
-          <User size={22} class="text-slate-400" />
-        </div>
+        <span class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-slate-700/80 bg-slate-950/80 text-slate-300 shadow-lg backdrop-blur-md">
+          INDEPENDENT
+        </span>
       {/if}
-      <div class="flex flex-col">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-slate-100 text-base group-hover:text-white transition-colors">
-            {candidate.fullName}
-          </span>
-          {#if party}
-            <span
-              class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border shadow-sm"
-              style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
-            >
-              {party.code}
-            </span>
-          {:else}
-            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-slate-700/80 bg-slate-800/60 text-slate-400">
-              INDEPENDENT
-            </span>
-          {/if}
-        </div>
+    </div>
+
+    <!-- Top-Right Floating Selection Check Indicator on Mobile only -->
+    <div class="absolute top-3 right-3 z-10 sm:hidden">
+      <div
+        class="flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 {selected ? 'border-blue-400 bg-blue-500 text-white scale-110 shadow-[0_0_10px_rgba(59,130,246,0.6)]' : 'border-slate-700 bg-slate-950/80 text-transparent scale-100'}"
+      >
+        <Check size={16} class="stroke-[3]" />
       </div>
     </div>
-    
-    <!-- Selection Check Indicator -->
-    <div
-      class="flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-300"
-      class:border-slate-700={!selected}
-      class:text-transparent={!selected}
-      class:scale-100={!selected}
-      
-      class:border-blue-500={selected}
-      class:bg-blue-500={selected}
-      class:text-white={selected}
-      class:scale-110={selected}
-      class:shadow-[0_0_8px_rgba(59,130,246,0.5)]={selected}
-    >
-      <Check size={14} class="stroke-[3]" />
-    </div>
   </div>
 
-  <!-- Platform Manifesto -->
-  <div class="mt-1 w-full border-t border-white/5 pt-3">
-    <div class="flex items-center justify-between mb-1">
-      <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500">platform manifesto</p>
-      {#if candidate.manifesto && candidate.manifesto.length > 120}
-        <button
-          type="button"
-          class="min-h-11 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
-          onclick={(e) => {
-            e.stopPropagation();
-            isExpanded = !isExpanded;
-          }}
+  <!-- Right Section: Details, Manifesto & Actions -->
+  <div class="flex flex-1 min-w-0 flex-col justify-between">
+    <div>
+      <!-- Header row: Name + Party badge + Desktop Checkmark -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex flex-col gap-1.5 min-w-0">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h3 class="font-bold text-slate-100 text-lg sm:text-xl group-hover:text-white transition-colors tracking-tight">
+              {candidate.fullName}
+            </h3>
+            <div class="hidden sm:inline-flex">
+              {#if party}
+                <span
+                  class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm"
+                  style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+                >
+                  {party.code}
+                </span>
+              {:else}
+                <span class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-slate-700/80 bg-slate-800/60 text-slate-400">
+                  INDEPENDENT
+                </span>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Check Indicator -->
+        <div
+          class="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 {selected ? 'border-blue-400 bg-blue-500 text-white scale-110 shadow-[0_0_12px_rgba(59,130,246,0.6)]' : 'border-slate-700 bg-slate-950/80 text-transparent scale-100 group-hover:border-slate-600'}"
         >
-          {isExpanded ? 'Read Less' : 'Read More'}
-        </button>
-      {/if}
-    </div>
-    <p class="text-slate-300 text-xs font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
-      {candidate.manifesto || 'No platform manifesto provided for this candidate.'}
-    </p>
-  </div>
+          <Check size={18} class="stroke-[3]" />
+        </div>
+      </div>
 
-  <!-- IDE commit branch footer decoration -->
-  <span class="self-end font-mono text-[8px] text-slate-600 group-hover:text-slate-500 transition-colors uppercase tracking-wider mt-1">
-    feat/{candidate.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}
-  </span>
+      <!-- Platform Manifesto -->
+      <div class="mt-3 w-full border-t border-white/5 pt-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500">platform manifesto</p>
+          {#if candidate.manifesto && candidate.manifesto.length > 150}
+            <button
+              type="button"
+              class="min-h-11 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
+              onclick={(e) => {
+                e.stopPropagation();
+                isExpanded = !isExpanded;
+              }}
+            >
+              {isExpanded ? 'Read Less' : 'Read More'}
+            </button>
+          {/if}
+        </div>
+        <p class="text-slate-300 text-sm font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
+          {candidate.manifesto || 'No platform manifesto provided for this candidate.'}
+        </p>
+      </div>
+    </div>
+
+    <!-- IDE commit branch footer decoration -->
+    <div class="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
+      <span class="text-[11px] font-mono {selected ? 'text-blue-400 font-semibold' : 'text-slate-500'}">
+        {selected ? '● Selected on ballot' : '○ Click to select candidate'}
+      </span>
+      <span class="font-mono text-[8px] text-slate-600 group-hover:text-slate-500 transition-colors uppercase tracking-wider">
+        feat/{candidate.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}
+      </span>
+    </div>
+  </div>
 </div>

@@ -25,7 +25,7 @@
   </div>
   
   <!-- Grid layout of position selections -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {#each positions as pos, idx (pos.id)}
       {@const selectedCandidateId = selectedVotes[pos.id]}
       {@const selectedCandidate = pos.candidates.find(c => c.id === selectedCandidateId)}
@@ -50,11 +50,11 @@
                 <img
                   src={selectedCandidate.imageUrl}
                   alt={selectedCandidate.fullName}
-                  class="h-8 w-8 rounded-full object-cover border border-slate-800"
+                  class="h-9 w-9 rounded-lg object-cover object-top border border-slate-800"
                 />
               {:else}
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 border border-slate-800 text-slate-400">
-                  <User size={14} />
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 border border-slate-800 text-slate-400">
+                  <User size={16} />
                 </div>
               {/if}
               <div class="flex flex-col min-w-0">

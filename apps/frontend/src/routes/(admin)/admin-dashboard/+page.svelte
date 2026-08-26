@@ -29,7 +29,7 @@
   <!-- Top accent bar -->
   <div class='h-1 w-full bg-gradient-to-r from-amber-500 via-orange-400 to-rose-500'></div>
 
-  <div class='mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
+  <div class='w-full mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
     <!-- Header -->
     <header class='mb-8 flex flex-wrap items-center justify-between gap-4'>
       <div>

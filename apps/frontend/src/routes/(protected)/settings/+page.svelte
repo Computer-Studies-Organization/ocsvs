@@ -111,7 +111,7 @@
   }
 </script>
 
-<div class='keyboard-scroll-content mx-auto max-w-4xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8'>
+<div class='keyboard-scroll-content w-full mx-auto max-w-4xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8'>
 
     <!-- Header -->
     <div class='mb-8'>

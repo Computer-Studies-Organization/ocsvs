@@ -111,3 +111,10 @@ describe("voting page overview dates", () => {
     expect(pageSource).not.toContain("formatTimestamp");
   });
 });
+
+describe("voting page layout stability", () => {
+  it("enforces w-full on page containers so width is stable and does not shrink-wrap candidate contents", () => {
+    expect(pageSource).toContain("<div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>");
+    expect(pageSource).not.toContain("<div class='mx-auto max-w-4xl p-4 sm:p-6'>");
+  });
+});

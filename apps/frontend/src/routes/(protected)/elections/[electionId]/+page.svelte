@@ -41,7 +41,7 @@
   })
 </script>
 
-<div class='mx-auto flex max-w-4xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8'>
+<div class='w-full mx-auto flex max-w-4xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8'>
     <!-- Header -->
     <header class='relative flex flex-col gap-4 border-b border-slate-800/70 pb-4 sm:flex-row sm:items-start sm:justify-between'>
       <div class='space-y-2'>

@@ -46,7 +46,7 @@
   onMount(load)
 </script>
 
-<div class='mx-auto max-w-4xl p-6'>
+<div class='w-full mx-auto max-w-4xl p-6'>
   <div class='flex items-center justify-between border-b border-white/10 pb-6'>
     <div>
       <h1 class='text-3xl font-black text-slate-100'>Elections</h1>

@@ -78,7 +78,7 @@
 />
 
 <div class='min-h-[100dvh] bg-slate-950 text-slate-100'>
-  <div class='mx-auto max-w-6xl space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:px-8'>
+  <div class='w-full mx-auto max-w-6xl space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:px-8'>
     <a
       href='/admin/elections'
       class='inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-80'
