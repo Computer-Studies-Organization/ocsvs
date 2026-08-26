@@ -8,6 +8,7 @@
   import { addToast } from '$lib/stores/toast.svelte'
   import Modal from '$lib/components/ui/modal.svelte'
   import ImageUpload from '$lib/components/ui/image-upload.svelte'
+  import CandidateAvatar from '$lib/components/ui/candidate-avatar.svelte'
   import { validate } from '$lib/validation/helpers'
   import { updateCandidateSchema } from '$lib/validation/candidate'
   import type { TAdminCandidate, TElection, TPartyList, TPosition, TUsersData } from '$lib/types'
@@ -138,24 +139,31 @@
       </div>
     {:else}
       <header
-        class='rounded-2xl border p-5 shadow-lg mb-6'
+        class='rounded-2xl border p-5 sm:p-6 shadow-lg mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-7'
         style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
       >
-        <p class='text-xs uppercase tracking-wider mb-1' style='color: oklch(0.60 0.015 250)'>
-          {election?.name ?? ''} · {position?.name ?? ''}
-        </p>
-        <h1 class='text-2xl font-black' style='color: oklch(0.95 0.008 250)'>{candidate.fullName}</h1>
-        {#if user}
-          <p class='text-sm mt-1' style='color: oklch(0.70 0.015 250)'>
-            {user.studentId} · {user.email ?? ''}
+        <CandidateAvatar
+          src={candidate.imageUrl}
+          alt={`Avatar for ${candidate.fullName}`}
+          sizeClass='h-24 w-24 sm:h-36 sm:w-36 md:h-44 md:w-44 lg:h-52 lg:w-52'
+        />
+        <div class='min-w-0 flex-1'>
+          <p class='text-xs uppercase tracking-wider mb-1' style='color: oklch(0.60 0.015 250)'>
+            {election?.name ?? ''} · {position?.name ?? ''}
           </p>
-        {/if}
-        <a
-          href={`/admin/audit-log?targetType=candidate&targetId=${candidateId}`}
-          class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
-        >
-          View Audit Trail →
-        </a>
+          <h1 class='text-2xl font-black break-words' style='color: oklch(0.95 0.008 250)'>{candidate.fullName}</h1>
+          {#if user}
+            <p class='text-sm mt-1' style='color: oklch(0.70 0.015 250)'>
+              {user.studentId} · {user.email ?? ''}
+            </p>
+          {/if}
+          <a
+            href={`/admin/audit-log?targetType=candidate&targetId=${candidateId}`}
+            class='mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition cursor-pointer'
+          >
+            View Audit Trail →
+          </a>
+        </div>
       </header>
 
   {#if canModify}
@@ -258,9 +266,7 @@
       <p class='text-sm' style='color: oklch(0.70 0.015 250)'>
         Candidate details are locked once the election leaves draft.
       </p>
-      {#if candidate.imageUrl}
-        <img src={candidate.imageUrl} alt={`Avatar for ${candidate.fullName}`} class='max-h-64 rounded-xl object-cover' />
-      {/if}
+
       {#if candidate.partyId}
         {@const currentParty = partyLists.find((p) => p.id === candidate.partyId)}
         {#if currentParty}

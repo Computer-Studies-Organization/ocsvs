@@ -224,4 +224,89 @@ describe("candidate detail page", () => {
     expect(body).toContain("Party List");
     expect(body).toContain("Innovators (INNOV)");
   });
+
+  it("renders silhouette avatar in the header when candidate has no image", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          candidate: {
+            id: "candidate-1",
+            fullName: "Alex Candidate",
+            accountId: "account-1",
+            userId: "user-1",
+            positionId: "position-1",
+            manifesto: "Manifesto",
+            isActive: 1,
+            imageUrl: null,
+          },
+          election: {
+            id: "election-1",
+            name: "CSO Election",
+            description: null,
+            status: "draft",
+            opensAt: null,
+            closesAt: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          position: {
+            id: "position-1",
+            electionId: "election-1",
+            name: "President",
+            displayOrder: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          user: null,
+          partyLists: [],
+        },
+      },
+    });
+
+    expect(body).toContain('data-testid="candidate-avatar"');
+    expect(body).toContain('data-testid="candidate-avatar-silhouette"');
+  });
+
+  it("renders candidate image in the header when candidate has an image", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          candidate: {
+            id: "candidate-1",
+            fullName: "Alex Candidate",
+            accountId: "account-1",
+            userId: "user-1",
+            positionId: "position-1",
+            manifesto: "Manifesto",
+            isActive: 1,
+            imageUrl: "https://example.com/carl.jpg",
+          },
+          election: {
+            id: "election-1",
+            name: "CSO Election",
+            description: null,
+            status: "open",
+            opensAt: null,
+            closesAt: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          position: {
+            id: "position-1",
+            electionId: "election-1",
+            name: "President",
+            displayOrder: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          user: null,
+          partyLists: [],
+        },
+      },
+    });
+
+    expect(body).toContain('data-testid="candidate-avatar"');
+    expect(body).toContain('src="https://example.com/carl.jpg"');
+    expect(body).toContain('alt="Avatar for Alex Candidate"');
+  });
 });
