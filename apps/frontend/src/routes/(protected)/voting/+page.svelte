@@ -23,7 +23,6 @@
     withVoting,
   } from '$lib/voting-stepper-logic'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
-  import { formatTimestamp } from '$lib/utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { captureException } from '$lib/telemetry'
   import { authStore } from '$lib/stores/auth.svelte'
@@ -44,6 +43,17 @@
   let runtimeError = $state<string | null>(null)
   const loadError = $derived(data.loadError ?? runtimeError)
   let isSubmitting = $state(false)
+
+  const overviewDateFormatter = new Intl.DateTimeFormat(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+  function formatOverviewDate(unixSeconds: number | null | undefined): string {
+    if (unixSeconds === null || unixSeconds === undefined) return 'To Be Determined'
+    return overviewDateFormatter.format(new Date(unixSeconds * 1000))
+  }
 
   const isAdmin = $derived(authStore.user?.role === UserRole.ADMIN || authStore.user?.role === UserRole.SUPER_ADMIN)
 
@@ -186,7 +196,7 @@
         <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 text-left'>
           <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
           <span class='mt-1 block text-sm font-bold text-slate-200'>
-            {formatTimestamp(d.opensAt)}
+            {formatOverviewDate(d.opensAt)}
           </span>
         </div>
       {:else if pageState.variant === 'last-closed' && pageState.lastClosed}
@@ -205,7 +215,7 @@
           <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4'>
             <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
             <span class='mt-1 block text-sm font-bold text-slate-200'>
-              Ended {formatTimestamp(c.closesAt)}
+              Ended {formatOverviewDate(c.closesAt)}
             </span>
           </div>
           <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 flex flex-col justify-between'>
@@ -224,7 +234,7 @@
         </div>
         <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>No active election</h1>
         <p class='mt-2 text-sm text-slate-400'>
-          Latest: {c.name} (ended {formatTimestamp(c.closesAt)}). Next: {d.name} opens {formatTimestamp(d.opensAt)}.
+          Latest: {c.name} (ended {formatOverviewDate(c.closesAt)}). Next: {d.name} opens {formatOverviewDate(d.opensAt)}.
         </p>
 
         <hr class='my-6 border-white/10' />

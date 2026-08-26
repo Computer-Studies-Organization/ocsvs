@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { load } from "./+page";
+
+const pageSource = readFileSync(fileURLToPath(new URL("./+page.svelte", import.meta.url)), "utf8");
 
 const { mockCacheGet } = vi.hoisted(() => ({
   mockCacheGet: vi.fn(),
@@ -87,5 +91,23 @@ describe("voting page loader", () => {
 
     expect(result.loadError).toBe("Failed to load ballot data");
     expect(result.candidates).toBeNull();
+  });
+});
+
+describe("voting page overview dates", () => {
+  it("uses a long-month formatter only for the empty-state overview dates", () => {
+    expect(pageSource).toContain(
+      "const overviewDateFormatter = new Intl.DateTimeFormat(undefined, {",
+    );
+    expect(pageSource).toContain("month: 'long'");
+    expect(pageSource).toContain("day: 'numeric'");
+    expect(pageSource).toContain("year: 'numeric'");
+    expect(pageSource).toContain("return 'To Be Determined'");
+    expect(pageSource).toContain("{formatOverviewDate(d.opensAt)}");
+    expect(pageSource).toContain("Ended {formatOverviewDate(c.closesAt)}");
+    expect(pageSource).toContain(
+      "Latest: {c.name} (ended {formatOverviewDate(c.closesAt)}). Next: {d.name} opens {formatOverviewDate(d.opensAt)}.",
+    );
+    expect(pageSource).not.toContain("formatTimestamp");
   });
 });
