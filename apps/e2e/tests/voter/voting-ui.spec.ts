@@ -51,4 +51,29 @@ test.describe("Voter Journey Browser UI", () => {
     // Verify double-voting is prevented by asserting already voted state
     await votingPage.expectAlreadyVotedMessage();
   });
+
+  test("expands a manifesto with the keyboard without selecting the candidate", async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    const votingPage = new VotingPage(page);
+
+    await loginPage.goto();
+    await loginPage.login(TEST_USERS.voter.studentId, TEST_USERS.voter.password);
+    await votingPage.goto();
+
+    const card = page.locator('[role="button"]').filter({ hasText: "Alice President" }).first();
+    const manifestoToggle = card.locator("button").filter({ hasText: "Read More" });
+
+    await expect(manifestoToggle).toBeVisible({ timeout: 15000 });
+    await expect(card).toHaveAttribute("aria-pressed", "false");
+
+    await manifestoToggle.press("Space");
+    await expect(manifestoToggle).toHaveText("Read Less");
+    await expect(card).toHaveAttribute("aria-pressed", "false");
+
+    await manifestoToggle.press("Enter");
+    await expect(manifestoToggle).toHaveText("Read More");
+    await expect(card).toHaveAttribute("aria-pressed", "false");
+  });
 });

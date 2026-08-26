@@ -236,6 +236,16 @@ export async function seedActiveElection() {
       ],
     },
     {
+      sql: "UPDATE candidates SET manifesto = ?, updated_at = ? WHERE id = ?",
+      args: [
+        "Better campus facilities and student welfare through transparent leadership, practical student support, accessible services, and regular progress updates for every Computer Studies student.".repeat(
+          2,
+        ),
+        now,
+        candPres1Id,
+      ],
+    },
+    {
       sql: `INSERT OR IGNORE INTO candidates (id, full_name, account_id, position_id, manifesto, is_active, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
       args: [
