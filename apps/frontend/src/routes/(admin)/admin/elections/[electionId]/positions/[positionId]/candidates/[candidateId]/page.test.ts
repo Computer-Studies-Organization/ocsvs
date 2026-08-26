@@ -114,7 +114,51 @@ describe("candidate detail page", () => {
 
     expect(body).toContain("Candidate details are locked once the election leaves draft.");
     expect(body).not.toContain("Save changes");
+    expect(body).not.toContain("Save &amp; return");
     expect(body).not.toContain("Delete candidate?");
+  });
+
+  it("renders mutation controls including Save changes and Save & return during draft edit", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          candidate: {
+            id: "candidate-1",
+            fullName: "Alex Candidate",
+            accountId: "account-1",
+            userId: "user-1",
+            positionId: "position-1",
+            manifesto: "Manifesto",
+            isActive: 1,
+            imageUrl: null,
+          },
+          election: {
+            id: "election-1",
+            name: "CSO Election",
+            description: null,
+            status: "draft",
+            opensAt: null,
+            closesAt: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          position: {
+            id: "position-1",
+            electionId: "election-1",
+            name: "President",
+            displayOrder: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          user: null,
+          partyLists: [],
+        },
+      },
+    });
+
+    expect(body).toContain("Save changes");
+    expect(body).toContain("Save &amp; return");
+    expect(body).toContain("Delete");
   });
 
   it("renders party list selection dropdown during draft edit", () => {

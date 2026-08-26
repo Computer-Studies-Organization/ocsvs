@@ -27,6 +27,7 @@
   const canModify = $derived(election?.status === 'draft' && candidate?.isActive === 1)
 
   let isSaving = $state(false)
+  let isSavingAndReturning = $state(false)
   let isDeleteOpen = $state(false)
   let isDeleting = $state(false)
   let imageError = $state('')
@@ -35,8 +36,8 @@
   let editPartyId = $state(untrack(() => candidate.partyId ?? ''))
   let editErrors = $state<Record<string, string>>({})
 
-  async function handleSave(e: SubmitEvent) {
-    e.preventDefault()
+  async function handleSave(e?: SubmitEvent, returnToList = false) {
+    e?.preventDefault()
     if (!candidateId || !canModify) return
     const result = validate(updateCandidateSchema, {
       manifesto: editManifesto,
@@ -46,21 +47,31 @@
       return
     }
     editErrors = {}
-    isSaving = true
+    if (returnToList) {
+      isSavingAndReturning = true
+    } else {
+      isSaving = true
+    }
     try {
       await updateCandidate(candidateId, {
         manifesto: editManifesto,
         partyId: editPartyId || null,
       })
       appCache.invalidate({ params: { electionId } })
-      await invalidate('app:candidate')
-      addToast('success', 'Candidate updated')
+      if (returnToList) {
+        addToast('success', 'Candidate updated')
+        await goto(`/admin/elections/${electionId}/positions/${positionId}`)
+      } else {
+        await invalidate('app:candidate')
+        addToast('success', 'Candidate updated')
+      }
     }
     catch (err: unknown) {
       addToast('error', extractErrorMessage(err, 'Failed to update candidate'))
     }
     finally {
       isSaving = false
+      isSavingAndReturning = false
     }
   }
 
@@ -177,7 +188,7 @@
           currentImageUrl={candidate.imageUrl}
           onupload={handleImageUpload}
           ondelete={handleImageDelete}
-          disabled={isSaving}
+          disabled={isSaving || isSavingAndReturning}
         />
 
         {#if imageError}
@@ -205,7 +216,7 @@
           <select
             id='editPartyId'
             bind:value={editPartyId}
-            disabled={isSaving}
+            disabled={isSaving || isSavingAndReturning}
             class='w-full px-4 py-3 rounded-xl border-2 font-semibold transition focus:outline-none'
             style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
           >
@@ -224,7 +235,7 @@
             id='editManifesto'
             bind:value={editManifesto}
             rows={6}
-            disabled={isSaving}
+            disabled={isSaving || isSavingAndReturning}
             oninput={() => { if (editErrors.manifesto) editErrors.manifesto = '' }}
             class='w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none {editErrors.manifesto ? 'border-red-500' : ''}'
             style='background: oklch(0.16 0.020 250); border-color: {editErrors.manifesto ? 'oklch(0.65 0.15 25)' : 'oklch(0.28 0.025 250)'}; color: oklch(0.95 0.008 250)'
@@ -237,7 +248,7 @@
         <div class='flex flex-wrap gap-3 pt-2'>
           <button
             type='submit'
-            disabled={isSaving}
+            disabled={isSaving || isSavingAndReturning}
             class='flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg disabled:opacity-50 cursor-pointer'
             style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
           >
@@ -247,8 +258,19 @@
           </button>
           <button
             type='button'
+            onclick={() => handleSave(undefined, true)}
+            disabled={isSaving || isSavingAndReturning}
+            class='flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50 cursor-pointer transition-colors hover:opacity-90'
+            style='background: oklch(0.28 0.035 250); color: oklch(0.95 0.008 250); border: 1px solid oklch(0.35 0.03 250)'
+          >
+            {#if isSavingAndReturning}<Loader class='animate-spin' size={16} />{/if}
+            <ArrowLeft size={16} stroke-width={2.5} />
+            {isSavingAndReturning ? 'Saving…' : 'Save & return'}
+          </button>
+          <button
+            type='button'
             onclick={openDelete}
-            disabled={isSaving || isDeleting}
+            disabled={isSaving || isSavingAndReturning || isDeleting}
             class='flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer'
             style='background: oklch(0.40 0.15 25); color: oklch(0.98 0.005 250)'
           >
