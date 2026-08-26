@@ -217,14 +217,14 @@
       </div>
 
       <!-- Buttons Row -->
-      <div class='flex flex-col sm:flex-row gap-3 sm:gap-4 w-full'>
+      <div class='flex flex-wrap items-center justify-end gap-3'>
         <a
           href={`/admin/audit-log?targetType=election&targetId=${election.id}`}
-          class='flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm font-bold text-sky-400 hover:bg-sky-500/10 transition cursor-pointer text-center w-full'
+          class='min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-2.5 text-sm font-bold text-sky-400 hover:bg-sky-500/10 transition cursor-pointer text-center'
         >
           Audit trail &rarr;
         </a>
-        <TransitionButton {election} onsuccess={handleTransitionSuccess} class='flex-1 w-full justify-center py-3' />
+        <TransitionButton {election} onsuccess={handleTransitionSuccess} />
       </div>
     </div>
 
