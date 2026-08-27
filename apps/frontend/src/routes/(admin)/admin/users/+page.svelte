@@ -1,4 +1,5 @@
 <script lang='ts'>
+  import { isStudentId } from '@cso-voting/student-csv-parser'
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
@@ -170,9 +171,8 @@
   async function handleAddSave(e?: SubmitEvent) {
     if (e) e.preventDefault()
 
-    const studentIdRegex = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/
-    if (!studentIdRegex.test(addForm.studentId)) {
-      addMsg = 'Invalid Student ID format (should be CXX-XX-XXXX-XXX123)'
+    if (!isStudentId(addForm.studentId)) {
+      addMsg = 'Invalid Student ID format (e.g. C25-01-10306-MAN121 or A25-01-1240-MAN121)'
       return
     }
     if (!addForm.firstName.trim() || !addForm.lastName.trim()) {

@@ -49,7 +49,7 @@ interface SplitEnrollmentRow {
   yearLevel: string;
 }
 
-const SPLIT_ROSTER_ID = /C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
+const SPLIT_ROSTER_ID = /[AC]\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
 export function parseStudentCsv(text: string): StudentRecord[] {
   return parseCsv(text).map((row) => {
     if (row.errorMessage) throw new Error(row.errorMessage);
@@ -88,7 +88,7 @@ function isEnrollmentPage(text: string): boolean {
 function isIdentityRowStart(cells: string[]): boolean {
   const firstCell = cells[0] ?? "";
   return (
-    (/^\d+$/.test(firstCell) || /^\d+\s+C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}\b/.test(firstCell)) &&
+    (/^\d+$/.test(firstCell) || /^\d+\s+[AC]\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}\b/.test(firstCell)) &&
     cells.some((cell) => SPLIT_ROSTER_ID.test(cell))
   );
 }
@@ -228,8 +228,8 @@ export function parseStudentText(text: string): StudentRecord[] {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Check if this line starts a student number, e.g. C25-01-
-    if (line.match(/^C\d{2}-\d{2}-$/)) {
+    // Check if this line starts a student number, e.g. C25-01- or A25-01-
+    if (line.match(/^[AC]\d{2}-\d{2}-$/)) {
       // Student number spans 3 lines:
       // i: C25-01-
       // i+1: 10306-
@@ -249,7 +249,7 @@ export function parseStudentText(text: string): StudentRecord[] {
         const nextLine = lines[j];
         // If we hit another student number or footer, stop
         if (
-          nextLine.match(/^C\d{2}-\d{2}-$/) ||
+          nextLine.match(/^[AC]\d{2}-\d{2}-$/) ||
           nextLine.includes("Showing") ||
           nextLine.includes("ACLC")
         ) {

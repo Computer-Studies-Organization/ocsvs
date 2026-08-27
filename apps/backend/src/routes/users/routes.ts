@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { STUDENT_ID_PATTERN } from "@cso-voting/student-csv-parser";
 import { AdminUserApiSchema } from "@/database/openapi-schemas";
 import { booleanQuery } from "@/lib/validation/boolean-query";
 import jsonContent from "@/middleware/utils/json-content";
@@ -237,7 +238,7 @@ export const ImportUsersBodySchema = z
     users: z
       .array(
         z.object({
-          studentId: z.string().regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/),
+          studentId: z.string().regex(STUDENT_ID_PATTERN),
           firstName: z.string().min(1),
           lastName: z.string().min(1),
           course: z.enum(IMPORT_COURSES),
@@ -348,9 +349,7 @@ export const createUserBodySchema = z
     email: z.string().email().optional().or(z.literal("")).nullable(),
     username: z.string().min(3).max(50).optional().or(z.literal("")).nullable(),
     password: z.string().min(8),
-    studentId: z
-      .string()
-      .regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
+    studentId: z.string().regex(STUDENT_ID_PATTERN, "Invalid Student ID format"),
     course: z.enum(IMPORT_COURSES),
     yearLevel: z.enum(IMPORT_YEAR_LEVELS),
     role: z.enum(["user", "admin", "super_admin"]).optional().default("user"),

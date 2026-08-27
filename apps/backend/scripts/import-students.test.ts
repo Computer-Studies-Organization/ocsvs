@@ -82,6 +82,27 @@ describe("parseStudentText", () => {
     ]);
   });
 
+  it("accepts A-prefixed student IDs", () => {
+    const text = [
+      "ACLC College",
+      "A25-01-",
+      "1240-",
+      "MAN121",
+      "DOE",
+      "JANE BSCS 1ST OLD PAYMENT",
+      "Showing 1 to 1 of 1 entries",
+    ].join("\n");
+
+    expect(parseStudentText(text)[0]).toEqual({
+      studentId: "A25-01-1240-MAN121",
+      lastName: "DOE",
+      firstName: "JANE",
+      middleName: null,
+      course: "BSCS",
+      yearLevel: "1st Year",
+    });
+  });
+
   it("joins PDF line breaks split across hyphenated names", () => {
     const text = ["C25-01-", "10308-", "MAN121", "CRUZ", "JO-", "AN Q BSCS 3RD OLD PAYMENT"].join(
       "\n",
@@ -266,6 +287,12 @@ describe("parseStudentCsv", () => {
 
     expect(() =>
       parseStudentCsv([",,,,,,,,,", "1,BAD,,SMITH,JANE,,BSA,5TH,NEW,"].join("\r\n")),
+    ).toThrow("CSV row 2: invalid student ID");
+
+    expect(() =>
+      parseStudentCsv(
+        [",,,,,,,,,", "1,B25-01-10001-MAN121,,SMITH,JANE,,BSCS,1ST,NEW,"].join("\r\n"),
+      ),
     ).toThrow("CSV row 2: invalid student ID");
   });
 

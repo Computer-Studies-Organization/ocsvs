@@ -78,6 +78,27 @@ describe("pdf-parser parseLines", () => {
     });
   });
 
+  it("should parse A-prefixed student IDs", () => {
+    const lines = [
+      "ACLC College",
+      "A25-01-1240-MAN121",
+      "DOE",
+      "JANE BSCS 1ST OLD PAYMENT",
+      "Showing 1 to 1 of 1 entries",
+    ];
+
+    const result = parseLines(lines);
+    expect(result[0]).toEqual({
+      studentId: "A25-01-1240-MAN121",
+      lastName: "DOE",
+      firstName: "JANE",
+      course: "BSCS",
+      yearLevel: "1st Year",
+      hasParseError: false,
+      parseErrorMessage: undefined,
+    });
+  });
+
   it("should ignore leading row numbers in legacy roster rows", () => {
     const result = parseLegacyRosterPages([
       [

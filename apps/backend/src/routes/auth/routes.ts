@@ -1,12 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { STUDENT_ID_PATTERN } from "@cso-voting/student-csv-parser";
 import { TooManyRequestsSchema } from "@/database/openapi-schemas";
 import jsonContent, { jsonContentRequired } from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
 export const loginSchema = z.object({
-  studentNumber: z
-    .string()
-    .regex(/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/, "Invalid Student ID format"),
+  studentNumber: z.string().regex(STUDENT_ID_PATTERN, "Invalid Student ID format"),
   password: z.string(),
   turnstileToken: z.string().optional().openapi({
     description: "Cloudflare Turnstile token for client-side bot verification",

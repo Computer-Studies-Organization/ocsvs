@@ -36,7 +36,7 @@ interface SplitIdentityRow {
   error?: string;
 }
 
-const SPLIT_ROSTER_ID = /C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
+const SPLIT_ROSTER_ID = /[AC]\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}/;
 export function parseStudentCsv(text: string): ParsedStudentRecord[] {
   const rows = parseCsv(text);
   for (const row of rows) {
@@ -92,7 +92,7 @@ function isEnrollmentPage(rows: string[][]): boolean {
 function isIdentityRowStart(row: string[]): boolean {
   const firstCell = row[0] ?? "";
   return (
-    (/^\d+$/.test(firstCell) || /^\d+\s+C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}\b/.test(firstCell)) &&
+    (/^\d+$/.test(firstCell) || /^\d+\s+[AC]\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}\b/.test(firstCell)) &&
     row.some((cell) => SPLIT_ROSTER_ID.test(cell))
   );
 }
@@ -329,11 +329,11 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Match starting with CXX-XX-
-    if (line.match(/^C\d{2}-\d{2}-/)) {
+    // Match starting with [AC]XX-XX-
+    if (line.match(/^[AC]\d{2}-\d{2}-/)) {
       let studentId = "";
       let j = i;
-      if (line.match(/^C\d{2}-\d{2}-$/)) {
+      if (line.match(/^[AC]\d{2}-\d{2}-$/)) {
         const part1 = line;
         const part2 = lines[i + 1] || "";
         // A 3-part split has a trailing dash on part2 (e.g. "10306-");
@@ -357,7 +357,7 @@ export function parseLines(lines: string[]): ParsedStudentRecord[] {
       while (j < lines.length) {
         const nextLine = lines[j];
         if (
-          nextLine.match(/^C\d{2}-\d{2}-/) ||
+          nextLine.match(/^[AC]\d{2}-\d{2}-/) ||
           nextLine.includes("Showing") ||
           nextLine.includes("ACLC")
         ) {

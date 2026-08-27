@@ -4,6 +4,8 @@ import auditLog from "@/routes/audit-log";
 import { getElectionAuditRoute, getPositionAuditRoute } from "@/routes/elections/audit.routes";
 import { getCandidateAuditRoute } from "@/routes/candidates/audit.routes";
 import { getUserAuditRoute } from "@/routes/users/audit.routes";
+import { loginRoute } from "@/routes/auth/routes";
+import { createUserRoute, importUsersRoute } from "@/routes/users/routes";
 import {
   listCandidateAudit,
   listElectionAudit,
@@ -60,5 +62,28 @@ describe("OpenAPI doc for audit-log endpoints", () => {
     expect(paths["/users/{id}/audit"]?.get).toBeDefined();
     expect(components.schemas).toHaveProperty("AuditLogEntrySchema");
     expect(components.schemas).toHaveProperty("AuditLogListResponse");
+  });
+});
+
+describe("OpenAPI doc for student-ID constraints", () => {
+  it("publishes the student-ID pattern for every user-input schema", async () => {
+    const app = createRouter();
+    app.openapi(loginRoute, ((c: any) => c.json({})) as any);
+    app.openapi(importUsersRoute, ((c: any) => c.json({})) as any);
+    app.openapi(createUserRoute, ((c: any) => c.json({})) as any);
+    app.doc("/docs", { openapi: "3.0.0", info: { title: "Test", version: "1.0.0" } });
+
+    const doc = (await (await app.request("/docs")).json()) as any;
+    const expectedPattern = "^[AC]\\d{2}-\\d{2}-\\d{4,6}-[A-Z]{3}\\d{3}$";
+    const loginStudentNumber =
+      doc.paths["/login"].post.requestBody.content["application/json"].schema.properties
+        .studentNumber;
+    const importStudentId =
+      doc.components.schemas.ImportUsersBody.properties.users.items.properties.studentId;
+    const createStudentId = doc.components.schemas.CreateUserBody.properties.studentId;
+
+    expect(loginStudentNumber.pattern).toBe(expectedPattern);
+    expect(importStudentId.pattern).toBe(expectedPattern);
+    expect(createStudentId.pattern).toBe(expectedPattern);
   });
 });

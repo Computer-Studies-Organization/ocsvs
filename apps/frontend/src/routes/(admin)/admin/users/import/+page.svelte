@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isStudentId } from "@cso-voting/student-csv-parser";
   import { parseRosterPdf, parseStudentCsv } from "$lib/utils/pdf-parser";
   import { addToast } from "$lib/stores/toast.svelte";
   import { importUsersInBatches } from "$lib/api/users";
@@ -54,8 +55,8 @@
     if (!rec.studentId.trim()) {
       return "Student ID is required";
     }
-    if (!/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/.test(rec.studentId.trim())) {
-      return "Invalid ID format (expected e.g. C25-01-10306-MAN121)";
+    if (!isStudentId(rec.studentId.trim())) {
+      return "Invalid ID format (expected e.g. C25-01-10306-MAN121 or A25-01-1240-MAN121)";
     }
     if (!rec.firstName.trim()) {
       return "First Name is required";
@@ -469,7 +470,7 @@
                                 oninput={() => { record.hasParseError = false; record.parseErrorMessage = undefined; }}
                                 placeholder="e.g. C25-01-10306-MAN121"
                                 class="w-full bg-slate-950 border rounded-lg px-3 py-1.5 text-sm font-semibold transition
-                                  {err && (!record.studentId.trim() || !/^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/.test(record.studentId.trim()))
+                                  {err && (!record.studentId.trim() || !isStudentId(record.studentId.trim()))
                                     ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50' 
                                     : 'border-slate-800 focus:border-amber-500 focus:outline-none'}"
                               />

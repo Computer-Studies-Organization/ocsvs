@@ -1,4 +1,4 @@
-const STUDENT_ID_PATTERN = /^C\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/;
+export const STUDENT_ID_PATTERN = /^[AC]\d{2}-\d{2}-\d{4,6}-[A-Z]{3}\d{3}$/;
 const SUPPORTED_COURSES = new Set(["BSCS", "BSIT", "WADT"]);
 const CSV_COLUMN_COUNT = 10;
 
