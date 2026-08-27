@@ -49,7 +49,6 @@
 
   const user = $derived(authStore.user)
   const isAdmin = $derived(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN)
-  const isSuperAdmin = $derived(user?.role === UserRole.SUPER_ADMIN)
 
   function toTitleCase(str: string): string {
     if (!str) return ''
@@ -78,11 +77,7 @@
     return username || 'Account'
   })
 
-  const roleLabel = $derived.by(() => {
-    if (isSuperAdmin) return 'Super Admin'
-    if (isAdmin) return 'Administrator'
-    return 'Student Voter'
-  })
+  const roleLabel = $derived(user?.role === UserRole.SUPER_ADMIN ? 'Super Admin' : isAdmin ? 'Administrator' : 'Student Voter')
 
   // Password helpers
   const isNewPasswordLongEnough = $derived(newPassword.length >= 8)
