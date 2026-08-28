@@ -1,4 +1,4 @@
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loginAttempts } from "@/database/schema";
@@ -93,5 +93,19 @@ describe("loginAttemptRepo.deleteExpiredAttempts", () => {
     expect(mockDb.delete).toHaveBeenCalledTimes(1);
     expect(mockDb.delete).toHaveBeenCalledWith(loginAttempts);
     expect(chain.where).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("loginAttemptRepo.deleteAllExpiredAttempts", () => {
+  it("deletes expired rows for every identifier", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-20T00:00:00Z"));
+
+    await loginAttemptRepo.deleteAllExpiredAttempts(mockDb as any, 900);
+
+    expect(mockDb.delete).toHaveBeenCalledWith(loginAttempts);
+    expect(chain.where).toHaveBeenCalledWith(
+      lt(loginAttempts.attemptedAt, Math.floor(Date.now() / 1000) - 900),
+    );
   });
 });

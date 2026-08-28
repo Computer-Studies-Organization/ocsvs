@@ -56,4 +56,9 @@ export const loginAttemptRepo = {
       )
       .run();
   },
+
+  async deleteAllExpiredAttempts(db: DbClient, windowSeconds: number): Promise<void> {
+    const threshold = Math.floor(Date.now() / 1000) - windowSeconds;
+    await db.delete(loginAttempts).where(lt(loginAttempts.attemptedAt, threshold)).run();
+  },
 };

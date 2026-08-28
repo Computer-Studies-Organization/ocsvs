@@ -1,6 +1,10 @@
-import type { AppOpenAPI } from "./lib/types/app-types";
+import type { AppBindings, AppOpenAPI } from "./lib/types/app-types";
 import createApp from "@/lib/create-app";
 import configureOpenAPI from "@/lib/openapi-configuration";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import * as schema from "@/database/schema";
+import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
 import auditLog from "@/routes/audit-log";
 import auth from "@/routes/auth/auth.index";
 import candidates from "@/routes/candidates";
@@ -55,4 +59,19 @@ routes.forEach((route) => {
   app.route("/", route);
 });
 
-export default app;
+const worker = Object.assign(app, {
+  async scheduled(_controller: ScheduledController, env: AppBindings["Bindings"]) {
+    const client = createClient({
+      url: env.TURSO_DATABASE_URL,
+      authToken: env.TURSO_AUTH_TOKEN,
+    });
+
+    try {
+      await loginAttemptRepo.deleteAllExpiredAttempts(drizzle(client, { schema }), 900);
+    } finally {
+      client.close();
+    }
+  },
+});
+
+export default worker;

@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { createClient } from "@libsql/client";
+import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
 import app from "./app";
+
+vi.mock("@libsql/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@libsql/client")>();
+  return { ...actual, createClient: vi.fn(actual.createClient) };
+});
 
 function buildAssets(status = 200) {
   return {
@@ -237,5 +244,40 @@ describe("production asset routing", () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ message: "Not Found - /unknown-endpoint" });
     expect(assets.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("scheduled login-attempt cleanup", () => {
+  const env = {
+    TURSO_DATABASE_URL: "libsql://scheduled.example",
+    TURSO_AUTH_TOKEN: "scheduled-token",
+  } as any;
+
+  it("invokes cleanup with the Worker database bindings and closes the client", async () => {
+    const close = vi.fn();
+    vi.mocked(createClient).mockReturnValueOnce({ close } as any);
+    const cleanup = vi.spyOn(loginAttemptRepo, "deleteAllExpiredAttempts").mockResolvedValue();
+
+    await app.scheduled({} as ScheduledController, env);
+
+    expect(createClient).toHaveBeenCalledWith({
+      url: env.TURSO_DATABASE_URL,
+      authToken: env.TURSO_AUTH_TOKEN,
+    });
+    expect(cleanup).toHaveBeenCalledWith(expect.anything(), 900);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes the client when cleanup fails", async () => {
+    const close = vi.fn();
+    vi.mocked(createClient).mockReturnValueOnce({ close } as any);
+    vi.spyOn(loginAttemptRepo, "deleteAllExpiredAttempts").mockRejectedValue(
+      new Error("database unavailable"),
+    );
+
+    await expect(app.scheduled({} as ScheduledController, env)).rejects.toThrow(
+      "database unavailable",
+    );
+    expect(close).toHaveBeenCalledOnce();
   });
 });
