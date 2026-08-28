@@ -30,6 +30,7 @@ const mockCountActiveAdminsAndSuperAdmins = vi.fn();
 const mockHardDelete = vi.fn();
 const mockInsert = vi.fn();
 const mockFindById = vi.fn();
+const { mockClearAttempts } = vi.hoisted(() => ({ mockClearAttempts: vi.fn() }));
 
 vi.mock("@/database/repositories/voter-account-store", () => ({
   voterAccountStore: {
@@ -58,6 +59,12 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
 vi.mock("@/database/repositories/audit-log.repository", () => ({
   auditLogRepo: {
     insert: (...args: any[]) => mockInsert(...args),
+  },
+}));
+
+vi.mock("@/database/repositories/login-attempt.repository", () => ({
+  loginAttemptRepo: {
+    clearAttempts: (...args: any[]) => mockClearAttempts(...args),
   },
 }));
 
@@ -193,6 +200,7 @@ describe("hardDeleteUser handler", () => {
     const body = (await res.json()) as any;
     expect(body.message).toBe("User permanently deleted");
     expect(mockHardDelete).toHaveBeenCalledWith(mockDb, "target-user-id");
+    expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "C24-1234");
     expect(mockInsert).toHaveBeenCalledWith(
       mockDb,
       expect.objectContaining({

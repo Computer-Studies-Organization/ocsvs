@@ -11,7 +11,8 @@ import { isUniqueConstraintError } from "@/lib/errors";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 import { decodeHmacSecret } from "@/middleware/env";
 
-export const PARTICIPATION_TIMESTAMP_SENTINEL = 0;
+export const VOTE_TIMESTAMP_SENTINEL = 0;
+export const PARTICIPATION_TIMESTAMP_SENTINEL = VOTE_TIMESTAMP_SENTINEL;
 
 export async function computeLegacyVoterHash(
   electionId: string,
@@ -362,8 +363,8 @@ export class DrizzleBallotCaster {
         candidateId: sel.candidateId,
         positionId: sel.positionId,
         electionId: input.electionId,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: VOTE_TIMESTAMP_SENTINEL,
+        updatedAt: VOTE_TIMESTAMP_SENTINEL,
       }));
 
       if (recordsToInsert.length > 0) {
@@ -375,7 +376,11 @@ export class DrizzleBallotCaster {
         // double-vote prevention even across user hard-deletes.
         const batchStatements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
           db.insert(votes).values(recordsToInsert),
-          db.insert(ballotSnapshots).values({ id: snapshotId, electionId: input.electionId }),
+          db.insert(ballotSnapshots).values({
+            id: snapshotId,
+            electionId: input.electionId,
+            createdAt: VOTE_TIMESTAMP_SENTINEL,
+          }),
         ];
 
         const currentHash = hashesToCheck[0];

@@ -1,5 +1,6 @@
 /**
- * Backfill durable HMAC participation records, then unlink legacy vote owners.
+ * Backfill durable HMAC participation records, unlink legacy vote owners, and
+ * scrub ballot timestamps.
  *
  * Dry-run (default): pnpm db:anonymize-votes
  * Apply: HMAC_SECRET='...' pnpm db:anonymize-votes -- --apply
@@ -8,17 +9,22 @@
  * then rerun the dry-run and expect zero linked rows.
  *
  * The apply path is intentionally irreversible. Take a database backup first;
- * the only rollback is restoring that backup. Vote rows and aggregate tallies
- * are preserved, while legacy user_id links are cleared in the same transaction
- * that inserts their election-scoped HMAC participation records.
+ * the only rollback is restoring that backup. Vote rows, aggregate tallies, and
+ * turnout snapshots are preserved, while legacy user_id links and ballot timing
+ * are cleared in the same transaction that inserts their election-scoped HMAC
+ * participation records.
  */
 
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { count, eq, isNotNull } from "drizzle-orm";
 import "dotenv/config";
-import { computeVoterHash, PARTICIPATION_TIMESTAMP_SENTINEL } from "../src/lib/ballot-caster";
-import { users, voterElectionParticipation, votes } from "../src/database/schema";
+import {
+  computeVoterHash,
+  PARTICIPATION_TIMESTAMP_SENTINEL,
+  VOTE_TIMESTAMP_SENTINEL,
+} from "../src/lib/ballot-caster";
+import { ballotSnapshots, users, voterElectionParticipation, votes } from "../src/database/schema";
 
 const apply = process.argv.includes("--apply");
 const url = process.env.TURSO_DATABASE_URL;
@@ -71,7 +77,11 @@ const summary = await db.transaction(async (tx) => {
     .update(voterElectionParticipation)
     .set({ createdAt: PARTICIPATION_TIMESTAMP_SENTINEL })
     .run();
-  await tx.update(votes).set({ userId: null }).where(isNotNull(votes.userId)).run();
+  await tx
+    .update(votes)
+    .set({ userId: null, createdAt: VOTE_TIMESTAMP_SENTINEL, updatedAt: VOTE_TIMESTAMP_SENTINEL })
+    .run();
+  await tx.update(ballotSnapshots).set({ createdAt: VOTE_TIMESTAMP_SENTINEL }).run();
   return { pairs: linked.length, votes: Number(linkedVotes?.count ?? 0) };
 });
 

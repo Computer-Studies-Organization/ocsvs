@@ -694,6 +694,7 @@ export class UserLifecycleCoordinator {
       const username = details?.username ?? "unknown";
       const studentId = details?.studentId ?? "unknown";
 
+      if (details) await loginAttemptRepo.clearAttempts(tx, details.studentId);
       await voterAccountStore.hardDelete(tx, user.accountId);
 
       // Audit log entry

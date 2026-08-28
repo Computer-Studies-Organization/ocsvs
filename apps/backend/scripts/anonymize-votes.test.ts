@@ -23,7 +23,8 @@ it("anonymizes a linked legacy ballot without changing its tally and is idempote
 
   await client.batch([
     "CREATE TABLE users (id TEXT PRIMARY KEY, student_id TEXT NOT NULL)",
-    "CREATE TABLE votes (id TEXT PRIMARY KEY, user_id TEXT, candidate_id TEXT NOT NULL, election_id TEXT NOT NULL)",
+    "CREATE TABLE votes (id TEXT PRIMARY KEY, user_id TEXT, candidate_id TEXT NOT NULL, election_id TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)",
+    "CREATE TABLE ballot_snapshots (id TEXT PRIMARY KEY, election_id TEXT NOT NULL, created_at INTEGER NOT NULL)",
     "CREATE TABLE voter_election_participation (id TEXT PRIMARY KEY, election_id TEXT NOT NULL, voter_hash TEXT NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch()))",
     "CREATE UNIQUE INDEX idx_voter_election_participation_unique ON voter_election_participation (election_id, voter_hash)",
     {
@@ -31,8 +32,12 @@ it("anonymizes a linked legacy ballot without changing its tally and is idempote
       args: ["user-1", "2026-0001"],
     },
     {
-      sql: "INSERT INTO votes (id, user_id, candidate_id, election_id) VALUES (?, ?, ?, ?)",
-      args: ["vote-1", "user-1", "candidate-1", "election-1"],
+      sql: "INSERT INTO votes (id, user_id, candidate_id, election_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: ["vote-1", "user-1", "candidate-1", "election-1", 123, 456],
+    },
+    {
+      sql: "INSERT INTO ballot_snapshots (id, election_id, created_at) VALUES (?, ?, ?)",
+      args: ["snapshot-1", "election-1", 789],
     },
     {
       sql: "INSERT INTO voter_election_participation (id, election_id, voter_hash, created_at) VALUES (?, ?, ?, ?)",
@@ -61,12 +66,20 @@ it("anonymizes a linked legacy ballot without changing its tally and is idempote
   const participation = await verificationClient.execute(
     "SELECT election_id, voter_hash, created_at FROM voter_election_participation ORDER BY election_id",
   );
+  const voteTimestamps = await verificationClient.execute(
+    "SELECT created_at, updated_at FROM votes",
+  );
+  const snapshotTimestamps = await verificationClient.execute(
+    "SELECT created_at FROM ballot_snapshots",
+  );
   const tallyAfter = await verificationClient.execute({
     sql: "SELECT count(*) AS count FROM votes WHERE candidate_id = ?",
     args: ["candidate-1"],
   });
 
   expect(votes.rows).toEqual([{ user_id: null, candidate_id: "candidate-1" }]);
+  expect(voteTimestamps.rows).toEqual([{ created_at: 0, updated_at: 0 }]);
+  expect(snapshotTimestamps.rows).toEqual([{ created_at: 0 }]);
   expect(participation.rows).toEqual([
     { election_id: "election-0", voter_hash: "existing-hash", created_at: 0 },
     {

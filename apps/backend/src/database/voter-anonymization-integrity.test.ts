@@ -202,6 +202,14 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       .all();
     expect(newVoteRows).toHaveLength(1);
     expect(newVoteRows[0].userId).toBeNull();
+    expect(newVoteRows[0].createdAt).toBe(0);
+    expect(newVoteRows[0].updatedAt).toBe(0);
+    const newSnapshot = await db
+      .select()
+      .from(schema.ballotSnapshots)
+      .where(eq(schema.ballotSnapshots.electionId, electionId))
+      .get();
+    expect(newSnapshot?.createdAt).toBe(0);
 
     // 5. Step 3: Log in as Super Admin and perform a Hard Delete on that student voter account
     const superAdminActor = {
@@ -575,6 +583,17 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       .where(eq(schema.elections.id, electionId))
       .run();
     const voter = await voterAccountStore.findByAccountId(db, voterReg.accountId);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await db
+        .insert(schema.loginAttempts)
+        .values({
+          id: crypto.randomUUID(),
+          identifier: studentId,
+          attemptedAt: now,
+          ipAddress: "127.0.0.1",
+        })
+        .run();
+    }
     await userLifecycleCoordinator.hardDelete(db, voter!.id, superAdminActor);
 
     // 4. Re-import/re-register while voting is closed (creates a new account/user ID)
@@ -590,6 +609,14 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
     });
 
     expect(reimportedVoter.accountId).not.toBe(voterReg.accountId);
+
+    const login = await userLifecycleCoordinator.authenticate(
+      db,
+      studentId,
+      "password123",
+      "127.0.0.1",
+    );
+    expect(login.accountId).toBe(reimportedVoter.accountId);
 
     // Re-open election after the electorate is finalized.
     await db

@@ -4,6 +4,7 @@ import {
   computeLegacyVoterHash,
   computeVoterHash,
   hasVoterParticipated,
+  VOTE_TIMESTAMP_SENTINEL,
 } from "./ballot-caster";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 
@@ -390,11 +391,14 @@ describe("DrizzleBallotCaster", () => {
         candidateId,
         positionId,
         electionId,
-        createdAt: expect.any(Number),
-        updatedAt: expect.any(Number),
+        createdAt: VOTE_TIMESTAMP_SENTINEL,
+        updatedAt: VOTE_TIMESTAMP_SENTINEL,
       });
       expect(result.data.votes[0].id).toEqual(expect.any(String));
       expect(mockDb.values.mock.calls[0][0][0].userId).toBeNull();
+      expect(mockDb.values.mock.calls[0][0][0].createdAt).toBe(VOTE_TIMESTAMP_SENTINEL);
+      expect(mockDb.values.mock.calls[0][0][0].updatedAt).toBe(VOTE_TIMESTAMP_SENTINEL);
+      expect(mockDb.values.mock.calls[1][0].createdAt).toBe(VOTE_TIMESTAMP_SENTINEL);
       expect(mockDb.values.mock.calls[2][0].createdAt).toBe(0);
     }
   });
