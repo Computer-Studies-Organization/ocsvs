@@ -136,7 +136,7 @@ export const electionRepo = {
       (await db
         .select()
         .from(elections)
-        .where(eq(elections.status, "closed"))
+        .where(or(eq(elections.status, "closed"), eq(elections.status, "archived")))
         .orderBy(desc(elections.closesAt))
         .get()) ?? null
     );

@@ -86,11 +86,22 @@ describe("electionRepo", () => {
             createdAt: 1,
             updatedAt: 1,
           },
+          {
+            id: "archived",
+            name: "Archived",
+            description: null,
+            status: "archived",
+            opensAt: 1,
+            closesAt: 1200,
+            createdAt: 1,
+            updatedAt: 1,
+          },
         ])
         .run();
 
       expect((await electionRepo.findCurrentlyOpen(db, 1000))?.id).toBe("current");
       expect((await electionRepo.findLatestClosedOrExpiredOpen(db, 1000))?.id).toBe("expired");
+      expect((await electionRepo.findLatestClosed(db))?.id).toBe("archived");
     } finally {
       client.close();
     }
