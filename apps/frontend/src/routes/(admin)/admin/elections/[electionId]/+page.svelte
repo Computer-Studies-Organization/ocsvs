@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { ArrowLeft, ChevronDown, Edit, Flag, ListOrdered, Plus, MoreHorizontal } from 'lucide-svelte'
+  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Flag, ListOrdered, Plus, MoreHorizontal } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
@@ -324,6 +324,15 @@
                       {/if}
                     </div>
                   </details>
+
+                  <a
+                    href={`/elections/${election.id}/parties/${party.id}`}
+                    aria-label="View {party.name} platform"
+                    title='View Platform'
+                    class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-slate-800 transition cursor-pointer text-slate-400 hover:text-slate-200 shrink-0'
+                  >
+                    <ExternalLink size={16} />
+                  </a>
 
                   {#if election.status === 'draft'}
                     <button

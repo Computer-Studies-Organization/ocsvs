@@ -121,6 +121,8 @@ describe("admin election party controls", () => {
 
     expect(body).toContain("Add Party List");
     expect(body).toContain('title="Edit Party"');
+    expect(body).toContain('title="View Platform"');
+    expect(body).toContain('href="/elections/election-1/parties/party-1"');
   });
 
   it("labels an expired open election's close action as finalizing closure", () => {
