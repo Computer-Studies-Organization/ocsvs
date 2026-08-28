@@ -122,6 +122,7 @@ export type TResultsCandidate = {
   voteCount: number;
   percentage: number;
   imageUrl?: string | null;
+  partyId?: string | null;
   partyName?: string | null;
   partyCode?: string | null;
   partyColor?: string | null;

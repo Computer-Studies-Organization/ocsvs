@@ -425,6 +425,10 @@ export const ResultsPositionSchema = z
           description: "Candidate avatar image URL",
           example: "https://example.com/avatar.jpg",
         }),
+        partyId: z.string().nullable().optional().openapi({
+          description: "Party list ID",
+          example: "party_202abc",
+        }),
         partyName: z.string().nullable().optional().openapi({
           description: "Party name",
           example: "Leadership Alliance",
@@ -488,6 +492,7 @@ export const LastClosedResultsItemSchema = z.object({
       voteCount: z.number(),
       percentage: z.number(),
       imageUrl: z.string().nullable().optional(),
+      partyId: z.string().nullable().optional(),
       partyName: z.string().nullable().optional(),
       partyCode: z.string().nullable().optional(),
       partyColor: z.string().nullable().optional(),

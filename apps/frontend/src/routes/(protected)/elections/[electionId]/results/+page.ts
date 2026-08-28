@@ -27,9 +27,15 @@ export const load: PageLoad = async ({ params, fetch }) => {
       throw cause;
     });
 
+  const partyLists = await appCache
+    .get("partyLists", { electionId: params.electionId })
+    .fetchOrThrow(false, { fetch })
+    .catch(() => []);
+
   return {
     election,
     results: resultData.results,
     turnout: resultData.turnout,
+    partyLists,
   };
 };

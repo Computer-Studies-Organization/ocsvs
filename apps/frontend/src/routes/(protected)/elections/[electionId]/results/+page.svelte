@@ -5,7 +5,7 @@
     refreshResultsAfterClose,
     startResultsPolling,
   } from '$lib/results-polling'
-  import type { TElectionStatus, TElectionTurnout, TResults } from '$lib/types'
+  import type { TPartyList, TElectionStatus, TElectionTurnout, TResults } from '$lib/types'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-svelte'
   import ResultsPanel from '$lib/components/results/results-panel.svelte'
@@ -23,6 +23,7 @@
   )
   const results = $derived<TResults>(resultsEntry.data?.results ?? data.results ?? [])
   const turnout = $derived<TElectionTurnout | null>(resultsEntry.data?.turnout ?? data.turnout ?? null)
+  const partyLists = $derived<TPartyList[]>(data.partyLists ?? [])
   let now = $state(Math.floor(Date.now() / 1000))
   const effectiveStatus = $derived(getEffectiveElectionStatus(election, now))
 
@@ -108,6 +109,36 @@
 
     <!-- Main Results Content -->
     <main class="mt-6 space-y-8">
+      {#if partyLists.length > 0}
+        <section class="space-y-4 rounded-3xl border border-slate-800/90 bg-slate-900/60 p-5 shadow-xl backdrop-blur sm:p-7" aria-labelledby="party-platforms-heading">
+          <div class="border-b border-slate-800/80 pb-3">
+            <h2 id="party-platforms-heading" class="text-lg font-extrabold tracking-tight text-slate-100 sm:text-xl">
+              Party Platforms
+            </h2>
+            <p class="mt-1 text-sm text-slate-400">Read each party's platform and priorities.</p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            {#each partyLists as party (party.id)}
+              <a
+                href="/elections/{election.id}/parties/{party.id}"
+                class="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4 transition hover:border-slate-600 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="rounded-md border px-2 py-0.5 text-[11px] font-bold"
+                    style="color: {party.color || '#60A5FA'}; border-color: {party.color || '#334155'}"
+                  >
+                    {party.code}
+                  </span>
+                  <span class="font-bold text-slate-100">{party.name}</span>
+                </div>
+                <p class="mt-2 text-sm leading-relaxed text-slate-400">{party.description || 'View party platform'}</p>
+              </a>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
       {#if results.length === 0}
         <EmptyState
           icon={BarChart3}

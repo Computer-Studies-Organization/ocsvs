@@ -20,6 +20,7 @@ describe("Results Components", () => {
               voteCount: 66,
               percentage: 66.0,
               imageUrl: "https://example.com/john.jpg",
+              partyId: "party-lead",
               partyCode: "LEAD",
               partyColor: "#3B82F6",
             },
@@ -37,7 +38,7 @@ describe("Results Components", () => {
       ];
 
       const { body } = render(CouncilShowcase, {
-        props: { results },
+        props: { results, electionId: "election-1" },
       });
 
       expect(body).toContain("Newly Elected Officers");
@@ -47,6 +48,14 @@ describe("Results Components", () => {
       expect(body).toContain("66%");
       expect(body).toContain("Elected");
       expect(body).toContain('href="#position-pos-1"');
+      expect(body).toContain('aria-label="View Chairman race"');
+      expect(body).toContain('href="/elections/election-1/parties/party-lead"');
+      expect(body.indexOf('href="/elections/election-1/parties/party-lead"')).toBeGreaterThan(
+        body.indexOf("</a>"),
+      );
+      expect(body).not.toContain("opacity-0");
+      expect(body).not.toContain('role="link"');
+      expect(body).not.toContain('tabindex="0"');
     });
 
     it("uses leading language while the election is open", () => {
@@ -240,6 +249,7 @@ describe("Results Components", () => {
             voteCount: 85,
             percentage: 66.4,
             imageUrl: "https://example.com/john.jpg",
+            partyId: "party-lead",
             partyName: "Leadership Alliance",
             partyCode: "LEAD",
             partyColor: "#3B82F6",
@@ -250,6 +260,7 @@ describe("Results Components", () => {
             voteCount: 43,
             percentage: 33.6,
             imageUrl: null,
+            partyId: "party-spark",
             partyName: "Spark Movement",
             partyCode: "SPARK",
             partyColor: "#F59E0B",
@@ -258,7 +269,7 @@ describe("Results Components", () => {
       };
 
       const { body } = render(PositionResultCard, {
-        props: { position },
+        props: { position, electionId: "election-1" },
       });
 
       expect(body).toContain("Chairman");
@@ -270,6 +281,7 @@ describe("Results Components", () => {
       expect(body).toContain("33.6%");
       expect(body).toContain("LEAD");
       expect(body).toContain("SPARK");
+      expect(body).toContain('href="/elections/election-1/parties/');
     });
 
     it("renders tie alert when there is a tie for first place", () => {

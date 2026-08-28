@@ -42,6 +42,7 @@ export interface ResultsCandidate {
   voteCount: number;
   percentage: number;
   imageUrl?: string | null;
+  partyId?: string | null;
   partyName?: string | null;
   partyCode?: string | null;
   partyColor?: string | null;
@@ -134,6 +135,7 @@ export const electionQueries = {
         candidateId: candidates.id,
         candidateName: candidates.fullName,
         candidateImageUrl: candidates.imageUrl,
+        partyId: partyLists.id,
         partyName: partyLists.name,
         partyCode: partyLists.code,
         partyColor: partyLists.color,
@@ -152,6 +154,7 @@ export const electionQueries = {
         candidates.id,
         candidates.fullName,
         candidates.imageUrl,
+        partyLists.id,
         partyLists.name,
         partyLists.code,
         partyLists.color,
@@ -178,6 +181,7 @@ export const electionQueries = {
           voteCount: r.voteCount,
           percentage: 0,
           imageUrl: r.candidateImageUrl ?? null,
+          partyId: r.partyId ?? null,
           partyName: r.partyName ?? null,
           partyCode: r.partyCode ?? null,
           partyColor: r.partyColor ?? null,

@@ -66,6 +66,25 @@ describe("VotingCandidateCard component", () => {
     expect(body).toContain("TECH");
   });
 
+  it("links a party badge to its platform", () => {
+    const { body } = render(VotingCandidateCard, {
+      props: {
+        candidate: baseCandidate,
+        partyLists: sampleParties,
+        electionId: "election-1",
+        selected: false,
+        onclick: () => {},
+      },
+    });
+
+    expect(body).toContain('href="/elections/election-1/parties/party-tech"');
+    expect(body).not.toContain('role="button"');
+    expect(body).toContain('aria-label="Select John Roben Garote Manayon"');
+    expect(body.indexOf('href="/elections/election-1/parties/party-tech"')).toBeGreaterThan(
+      body.indexOf("</button>"),
+    );
+  });
+
   it("renders the INDEPENDENT badge when partyId is null or not found", () => {
     const { body } = render(VotingCandidateCard, {
       props: {

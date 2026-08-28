@@ -4,11 +4,13 @@
   let {
     candidate,
     partyLists = [],
+    electionId,
     selected = false,
     onclick,
   }: {
     candidate: { id: string; fullName: string; imageUrl: string | null; manifesto: string; partyId?: string | null }
     partyLists?: Array<{ id: string; name: string; code: string; color: string | null }>
+    electionId?: string
     selected?: boolean
     onclick: () => void
   } = $props()
@@ -26,21 +28,18 @@
 </script>
 
 <div
-  role="button"
-  tabindex="0"
-  onclick={() => onclick()}
-  onkeydown={(e) => {
-    if (e.target !== e.currentTarget) return
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onclick()
-    }
-  }}
-  aria-pressed={selected}
-  class="group relative flex w-full flex-col sm:flex-row gap-5 rounded-2xl border p-5 text-left transition-all duration-200 cursor-pointer overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/40' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-xl'} focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+  class="group relative flex w-full flex-col gap-5 rounded-2xl border p-5 text-left transition-all duration-200 overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/40' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-xl'} focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500/50 sm:flex-row"
 >
+  <button
+    type="button"
+    aria-label="Select {candidate.fullName}"
+    aria-pressed={selected}
+    onclick={onclick}
+    class="absolute inset-0 z-0 h-full w-full cursor-pointer rounded-2xl border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+  ></button>
+
   <!-- Left Section: Fixed-Size Candidate Portrait Frame -->
-  <div class="relative w-full sm:w-52 md:w-60 shrink-0 aspect-[4/3] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center">
+  <div class="relative z-10 pointer-events-none w-full shrink-0 aspect-[4/3] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center sm:w-52 md:w-60">
     {#if candidate.imageUrl && !imageError}
       <img
         src={candidate.imageUrl}
@@ -75,12 +74,24 @@
     <!-- Top-Left Floating Party Badge on Mobile only -->
     <div class="absolute top-3 left-3 z-10 sm:hidden">
       {#if party}
-        <span
-          class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md"
-          style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
-        >
-          {party.code}
-        </span>
+        {#if electionId}
+          <a
+            href="/elections/{electionId}/parties/{party.id}"
+            aria-label="View {party.name} platform"
+            onclick={(event) => event.stopPropagation()}
+            class="relative z-20 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+          >
+            {party.code}
+          </a>
+        {:else}
+          <span
+            class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md"
+            style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+          >
+            {party.code}
+          </span>
+        {/if}
       {:else}
         <span class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-slate-700/80 bg-slate-950/80 text-slate-300 shadow-lg backdrop-blur-md">
           INDEPENDENT
@@ -99,7 +110,7 @@
   </div>
 
   <!-- Right Section: Details, Manifesto & Actions -->
-  <div class="flex flex-1 min-w-0 flex-col justify-between">
+  <div class="relative z-10 pointer-events-none flex flex-1 min-w-0 flex-col justify-between">
     <div>
       <!-- Header row: Name + Party badge + Desktop Checkmark -->
       <div class="flex items-start justify-between gap-4">
@@ -110,12 +121,24 @@
             </h3>
             <div class="hidden sm:inline-flex">
               {#if party}
-                <span
-                  class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm"
-                  style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
-                >
-                  {party.code}
-                </span>
+                {#if electionId}
+                  <a
+                    href="/elections/{electionId}/parties/{party.id}"
+                    aria-label="View {party.name} platform"
+                    onclick={(event) => event.stopPropagation()}
+                    class="relative z-20 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+                  >
+                    {party.code}
+                  </a>
+                {:else}
+                  <span
+                    class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm"
+                    style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
+                  >
+                    {party.code}
+                  </span>
+                {/if}
               {:else}
                 <span class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-slate-700/80 bg-slate-800/60 text-slate-400">
                   INDEPENDENT
@@ -140,7 +163,7 @@
           {#if candidate.manifesto && candidate.manifesto.length > 150}
             <button
               type="button"
-              class="min-h-11 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
+              class="relative z-20 min-h-11 pointer-events-auto text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline text-[10px] uppercase focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
               onclick={(e) => {
                 e.stopPropagation();
                 isExpanded = !isExpanded;

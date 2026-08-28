@@ -14,9 +14,11 @@
   let {
     position,
     isFinal = true,
+    electionId,
   }: {
     position: PositionResultProp
     isFinal?: boolean
+    electionId?: string
   } = $props()
 
   const sortedCandidates = $derived(
@@ -145,15 +147,29 @@
 
             <div class="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
               {#if candidate.partyName || candidate.partyCode}
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-md border border-slate-700/50 bg-slate-800/80 px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:text-xs"
-                  style={candidate.partyColor ? `color: ${candidate.partyColor}` : undefined}
-                >
-                  {#if candidate.partyColor}
-                    <span class="h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2" style="background-color: {candidate.partyColor}"></span>
-                  {/if}
-                  {candidate.partyName || candidate.partyCode} {#if candidate.partyCode && candidate.partyName}({candidate.partyCode}){/if}
-                </span>
+                {#if candidate.partyId && electionId}
+                  <a
+                    href="/elections/{electionId}/parties/{candidate.partyId}"
+                    aria-label="View {candidate.partyName || candidate.partyCode} platform"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-slate-700/50 bg-slate-800/80 px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:text-xs hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    style={candidate.partyColor ? `color: ${candidate.partyColor}` : undefined}
+                  >
+                    {#if candidate.partyColor}
+                      <span class="h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2" style="background-color: {candidate.partyColor}"></span>
+                    {/if}
+                    {candidate.partyName || candidate.partyCode} {#if candidate.partyCode && candidate.partyName}({candidate.partyCode}){/if}
+                  </a>
+                {:else}
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-md border border-slate-700/50 bg-slate-800/80 px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:text-xs"
+                    style={candidate.partyColor ? `color: ${candidate.partyColor}` : undefined}
+                  >
+                    {#if candidate.partyColor}
+                      <span class="h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2" style="background-color: {candidate.partyColor}"></span>
+                    {/if}
+                    {candidate.partyName || candidate.partyCode} {#if candidate.partyCode && candidate.partyName}({candidate.partyCode}){/if}
+                  </span>
+                {/if}
               {:else}
                 <span class="text-[11px] text-slate-500 sm:text-xs">Independent</span>
               {/if}

@@ -79,12 +79,26 @@ describe("voter results page", () => {
             totalBallotsCast: 0,
             turnoutPercentage: 0,
           },
+          partyLists: [
+            {
+              id: "party-1",
+              electionId: "election-1",
+              name: "Leadership Alliance",
+              code: "LEAD",
+              color: "#3B82F6",
+              description: "A platform for student leadership.",
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          ],
         },
       },
     });
 
     expect(body).toContain("Fresh Candidate");
     expect(body).not.toContain("Stale Candidate");
+    expect(body).toContain("Party Platforms");
+    expect(body).toContain('href="/elections/election-1/parties/party-1"');
   });
 
   it("labels effectively open results as live and unofficial", () => {
@@ -109,6 +123,7 @@ describe("voter results page", () => {
             totalBallotsCast: 0,
             turnoutPercentage: 0,
           },
+          partyLists: [],
         },
       },
     });
@@ -165,6 +180,7 @@ describe("voter results page", () => {
             totalBallotsCast: 1,
             turnoutPercentage: 10,
           },
+          partyLists: [],
         },
       },
     });

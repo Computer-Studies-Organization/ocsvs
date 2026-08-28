@@ -23,7 +23,7 @@
 <div class="space-y-8">
   <TurnoutBanner {election} {turnout} totalPositions={results.length} {status} />
 
-  <CouncilShowcase {results} {isFinal} />
+  <CouncilShowcase {results} {isFinal} electionId={election?.id} />
 
   <section class="space-y-4" aria-labelledby="results-breakdown-heading">
     <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
@@ -40,7 +40,7 @@
 
     <div class="space-y-4 sm:space-y-6">
       {#each results as position (position.positionId)}
-        <PositionResultCard {position} {isFinal} />
+        <PositionResultCard {position} {isFinal} electionId={election?.id} />
       {/each}
     </div>
   </section>

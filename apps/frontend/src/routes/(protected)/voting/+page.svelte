@@ -374,6 +374,7 @@
               <VotingCandidateCard
                 candidate={c}
                 partyLists={partyLists}
+                electionId={pageState.election.id}
                 selected={pageState.voting.selectedVotes[currentPosition.id] === c.id}
                 onclick={() => selectAt(currentPosition.id, c.id)}
               />

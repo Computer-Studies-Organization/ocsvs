@@ -6,9 +6,11 @@
   let {
     results = [],
     isFinal = true,
+    electionId,
   }: {
     results: TResults
     isFinal?: boolean
+    electionId?: string
   } = $props()
 
   const winners = $derived.by(() => {
@@ -61,10 +63,14 @@
       data-testid="council-showcase"
     >
       {#each winners as item (item.positionId)}
-        <a
-          href="#position-{item.positionId}"
-          class="group relative flex w-[280px] shrink-0 snap-start flex-col items-center justify-between rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/95 p-5 sm:p-6 text-center shadow-xl backdrop-blur transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:w-auto cursor-pointer"
+        <div
+          class="group relative flex w-[280px] shrink-0 snap-start flex-col items-center justify-between rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/95 p-5 sm:p-6 text-center shadow-xl backdrop-blur transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10 sm:w-auto pointer-events-none"
         >
+          <a
+            href="#position-{item.positionId}"
+            aria-label="View {item.positionName} race"
+            class="absolute inset-0 z-0 rounded-3xl pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          ></a>
           <!-- Top: Position & Status -->
           <div class="mb-3 flex w-full items-center justify-between gap-2">
             <span class="truncate text-xs font-black uppercase tracking-wider text-slate-400 group-hover:text-slate-200">
@@ -128,15 +134,30 @@
 
               <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">
                 {#if item.topCandidate.partyName || item.topCandidate.partyCode}
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-xs bg-slate-800/90 border border-slate-700/60 shadow-sm"
-                    style={item.topCandidate.partyColor ? `color: ${item.topCandidate.partyColor}; border-color: ${item.topCandidate.partyColor}40` : undefined}
-                  >
-                    {#if item.topCandidate.partyColor}
-                      <span class="h-2 w-2 rounded-full shrink-0" style="background-color: {item.topCandidate.partyColor}"></span>
-                    {/if}
-                    {item.topCandidate.partyCode || item.topCandidate.partyName}
-                  </span>
+                  {#if item.topCandidate.partyId && electionId}
+                    <a
+                      href="/elections/{electionId}/parties/{item.topCandidate.partyId}"
+                      aria-label="View {item.topCandidate.partyName || item.topCandidate.partyCode} platform"
+                      onclick={(event) => event.stopPropagation()}
+                      class="relative z-20 inline-flex pointer-events-auto items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-xs bg-slate-800/90 border border-slate-700/60 shadow-sm hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      style={item.topCandidate.partyColor ? `color: ${item.topCandidate.partyColor}; border-color: ${item.topCandidate.partyColor}40` : undefined}
+                    >
+                      {#if item.topCandidate.partyColor}
+                        <span class="h-2 w-2 rounded-full shrink-0" style="background-color: {item.topCandidate.partyColor}"></span>
+                      {/if}
+                      {item.topCandidate.partyCode || item.topCandidate.partyName}
+                    </a>
+                  {:else}
+                    <span
+                      class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-xs bg-slate-800/90 border border-slate-700/60 shadow-sm"
+                      style={item.topCandidate.partyColor ? `color: ${item.topCandidate.partyColor}; border-color: ${item.topCandidate.partyColor}40` : undefined}
+                    >
+                      {#if item.topCandidate.partyColor}
+                        <span class="h-2 w-2 rounded-full shrink-0" style="background-color: {item.topCandidate.partyColor}"></span>
+                      {/if}
+                      {item.topCandidate.partyCode || item.topCandidate.partyName}
+                    </span>
+                  {/if}
                 {:else}
                   <span class="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-400 bg-slate-800/80 border border-slate-700/60">Independent</span>
                 {/if}
@@ -154,11 +175,11 @@
           <!-- Bottom link affordance -->
           <div class="mt-4 flex w-full items-center justify-between border-t border-slate-800/80 pt-3 text-xs font-medium text-slate-500 group-hover:text-slate-300">
             <span>{item.totalVotes} {item.totalVotes === 1 ? 'vote' : 'votes'}</span>
-            <span class="inline-flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 text-emerald-400 font-bold">
+            <span aria-hidden="true" class="inline-flex items-center gap-1 text-emerald-400 font-bold">
               View race <ArrowRight size={13} />
             </span>
           </div>
-        </a>
+        </div>
       {/each}
     </div>
   </section>
