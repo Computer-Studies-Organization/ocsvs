@@ -112,6 +112,13 @@ describe("voting page overview dates", () => {
   });
 });
 
+describe("voting page result access notice", () => {
+  it("prompts unvoted voters to cast a ballot before viewing live results", () => {
+    expect(pageSource).toContain("Vote first to view live results");
+    expect(pageSource).toContain("Please cast your ballot below");
+  });
+});
+
 describe("voting page layout stability", () => {
   it("enforces w-full on page containers so width is stable and does not shrink-wrap candidate contents", () => {
     expect(pageSource).toContain("<div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>");

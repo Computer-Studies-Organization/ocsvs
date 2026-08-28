@@ -23,22 +23,29 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
   const effectiveElection =
     effectiveStatus === election.status ? election : { ...election, status: effectiveStatus };
 
-  let results = null;
-  let hasVoted = false;
+  const hasVoted =
+    effectiveElection.status === "open" &&
+    votingState?.myVotes.electionId === params.electionId &&
+    votingState.myVotes.hasVoted;
+  const shouldLoadResults =
+    effectiveElection.status === "closed" ||
+    effectiveElection.status === "archived" ||
+    (effectiveElection.status === "open" && hasVoted);
 
-  if (effectiveElection.status === "closed" || effectiveElection.status === "archived") {
-    results = await appCache
+  let results = null;
+  let turnout = null;
+  if (shouldLoadResults) {
+    const resultData = await appCache
       .get("results", { electionId: params.electionId })
-      .fetchOrThrow(false, { fetch });
-  } else if (effectiveElection.status === "open") {
-    hasVoted =
-      votingState?.myVotes.electionId === params.electionId && votingState.myVotes.hasVoted;
-    if (hasVoted) {
-      results = await appCache
-        .get("results", { electionId: params.electionId })
-        .fetchOrThrow(false, { fetch });
-    }
+      .fetchOrThrow(
+        effectiveElection.status === "closed" || effectiveElection.status === "archived",
+        {
+          fetch,
+        },
+      );
+    results = resultData.results;
+    turnout = resultData.turnout;
   }
 
-  return { election: effectiveElection, results, hasVoted };
+  return { election: effectiveElection, results, turnout, hasVoted };
 };

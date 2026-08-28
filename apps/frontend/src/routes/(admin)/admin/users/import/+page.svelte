@@ -3,6 +3,7 @@
   import { parseRosterPdf, parseStudentCsv } from "$lib/utils/pdf-parser";
   import { addToast } from "$lib/stores/toast.svelte";
   import { importUsersInBatches } from "$lib/api/users";
+  import { appCache } from "$lib/cache";
   import { 
     ArrowLeft, 
     Upload, 
@@ -189,6 +190,7 @@
       await importUsersInBatches(payload, (res) => {
         importedList = [...importedList, ...(res.imported || [])];
         skippedList = [...skippedList, ...(res.skipped || [])];
+        appCache.invalidate({ resource: "users" });
       });
 
       if (importedList.length > 0) {

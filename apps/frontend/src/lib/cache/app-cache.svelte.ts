@@ -1,7 +1,7 @@
 import type {
   TElection,
   TElectionStatus,
-  TResults,
+  TResultsResponse,
   TVotingState,
   TPosition,
   TCandidate,
@@ -34,7 +34,7 @@ export interface AppCacheMap {
   };
   results: {
     params: { electionId: string };
-    data: TResults;
+    data: TResultsResponse;
   };
   partyLists: {
     params: { electionId: string };

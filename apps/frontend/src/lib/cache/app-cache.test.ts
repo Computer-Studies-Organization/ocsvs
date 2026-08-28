@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AppCache, serializeParams } from "./app-cache.svelte";
+import { appCache as productionAppCache } from "./index";
 import type { ApiClientAdapter } from "./api-client";
+import { authStore } from "$lib/stores/auth.svelte";
+import { UserRole } from "$lib/types";
 
 describe("serializeParams", () => {
   it("serializes objects stably by sorting keys alphabetically", () => {
@@ -76,9 +79,66 @@ describe("AppCache", () => {
     expect(mockApi.getVotingState).toHaveBeenCalledTimes(2);
   });
 
+  it("does not return stale voting state after an authentication identity or role transition", async () => {
+    const firstState = {
+      open: null,
+      nextDraft: null,
+      lastClosed: null,
+      ballot: null,
+      myVotes: { electionId: "e1", hasVoted: true },
+    };
+    const secondState = { ...firstState, myVotes: { electionId: null, hasVoted: false } };
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(firstState), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(secondState), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    productionAppCache.invalidate();
+    authStore.set({
+      user: {
+        user: { id: "user-1", email: "user@example.com", username: "user", role: UserRole.USER },
+      },
+      loading: false,
+    });
+
+    const entry = productionAppCache.get("votingState", { includeBallot: true });
+    await entry.fetchOrThrow(false, { fetch });
+    expect(entry.data).toEqual(firstState);
+
+    authStore.set({
+      user: {
+        user: { id: "user-1", email: "user@example.com", username: "user", role: UserRole.ADMIN },
+      },
+      loading: false,
+    });
+
+    expect(entry.data).toBeNull();
+    await expect(entry.fetchOrThrow(false, { fetch })).resolves.toEqual(secondState);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    productionAppCache.invalidate();
+  });
+
   it("supports partial parameters cascading invalidation", async () => {
     vi.mocked(mockApi.listPositions).mockResolvedValue([{ id: "pos-1", electionId: "e1" } as any]);
-    vi.mocked(mockApi.listResults).mockResolvedValue([{ positionId: "pos-1" } as any]);
+    vi.mocked(mockApi.listResults).mockResolvedValue({
+      results: [{ positionId: "pos-1" } as any],
+      turnout: {
+        electionId: "e1",
+        totalEligibleVoters: null,
+        totalBallotsCast: 0,
+        turnoutPercentage: null,
+      },
+    });
     const cache = new AppCache(mockApi);
 
     const posEntry = cache.get("positions", { electionId: "e1" });

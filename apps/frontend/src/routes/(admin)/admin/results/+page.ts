@@ -1,9 +1,8 @@
 import type { PageLoad } from "./$types";
 import { appCache } from "$lib/cache";
-import { listResults } from "$lib/api/elections";
 import { getEffectiveElectionStatus } from "$lib/election-lifecycle-client";
 import { extractErrorMessage } from "$lib/mutation-feedback-utils";
-import type { TVoteResultsResponse } from "$lib/types";
+import type { TElectionTurnout, TResults } from "$lib/types";
 
 export const load: PageLoad = async ({ url, fetch }) => {
   const [elections, state] = await Promise.all([
@@ -35,35 +34,26 @@ export const load: PageLoad = async ({ url, fetch }) => {
     }
   }
 
-  let resultsData: TVoteResultsResponse = {
-    results: [],
-    meta: { totalVotes: 0, totalPositions: 0 },
-  };
+  let results: TResults = [];
+  let turnout: TElectionTurnout | null = null;
   let resultsError = "";
   if (selectedElectionId) {
     try {
-      const results = await listResults(selectedElectionId, { fetch });
-      resultsData = {
-        results: results.map((r) => ({
-          positionId: r.positionId,
-          positionName: r.positionName,
-          candidates: r.candidates.map((c) => ({
-            candidateId: c.candidateId,
-            candidateName: c.fullName,
-            positionId: r.positionId,
-            positionName: r.positionName,
-            voteCount: c.voteCount,
-          })),
-        })),
-        meta: {
-          totalVotes: results.reduce((sum, r) => sum + r.totalVotes, 0),
-          totalPositions: results.length,
-        },
-      };
+      const resultData = await appCache
+        .get("results", { electionId: selectedElectionId })
+        .fetchOrThrow(true, { fetch });
+      results = resultData.results;
+      turnout = resultData.turnout;
     } catch (err: unknown) {
       resultsError = extractErrorMessage(err, "Failed to load election results");
     }
   }
 
-  return { elections: electionList, selectedElectionId, resultsData, resultsError };
+  return {
+    elections: electionList,
+    selectedElectionId,
+    results,
+    turnout,
+    resultsError,
+  };
 };

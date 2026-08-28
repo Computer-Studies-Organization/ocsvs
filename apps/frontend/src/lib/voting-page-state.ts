@@ -30,6 +30,7 @@ export type TVotingPageState =
       isAdmin: boolean;
     }
   | { kind: "voted"; election: TElection }
+  | { kind: "admin"; election: TElection }
   | {
       kind: "stepper";
       election: TElection;
@@ -85,6 +86,9 @@ export function deriveVotingPageState(input: TVotingPageInput): TVotingPageState
       lastClosed: input.apiState.lastClosed,
       isAdmin: input.isAdmin,
     };
+  }
+  if (input.isAdmin) {
+    return { kind: "admin", election: input.apiState.open };
   }
   if (hasVotedIn(input.apiState, input.apiState.open.id)) {
     return { kind: "voted", election: input.apiState.open };

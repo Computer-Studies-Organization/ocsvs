@@ -1,4 +1,4 @@
-import type { TElection, TElectionStatus, TResults, TVotingState } from "$lib/types";
+import type { TElection, TElectionStatus, TResultsResponse, TVotingState } from "$lib/types";
 import { apiFetch, type ApiFetchOptions } from "./client";
 
 export async function listElections(
@@ -47,8 +47,8 @@ export async function transitionElection(
 export async function listResults(
   electionId: string,
   options?: ApiFetchOptions,
-): Promise<TResults> {
-  return apiFetch<TResults>(`/elections/${electionId}/results`, options);
+): Promise<TResultsResponse> {
+  return apiFetch<TResultsResponse>(`/elections/${electionId}/results`, options);
 }
 
 export async function getVotingState(

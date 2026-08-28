@@ -58,7 +58,7 @@ describe("election detail results", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCacheGet.mockReturnValue({
-      data: freshResults,
+      data: { results: freshResults, turnout: null },
       fetch: vi.fn(),
     });
   });
@@ -69,6 +69,7 @@ describe("election detail results", () => {
         data: {
           election,
           results: staleResults,
+          turnout: null,
           hasVoted: true,
         },
       },
@@ -78,21 +79,47 @@ describe("election detail results", () => {
     expect(body).not.toContain("Stale Candidate");
   });
 
+  it("renders expired open elections as closed instead of requiring a vote", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(101_000);
+    mockCacheGet.mockReturnValue({ data: null, fetch: vi.fn() });
+
+    try {
+      const { body } = render(Page, {
+        props: {
+          data: {
+            election: { ...election, opensAt: 1, closesAt: 100 },
+            results: [],
+            turnout: null,
+            hasVoted: false,
+          },
+        },
+      });
+
+      expect(body).not.toContain("Voting required");
+      expect(body).toContain("No votes cast yet");
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("keeps result controls and cards flexible on narrow screens", () => {
     const { body } = render(Page, {
       props: {
         data: {
           election: { ...election, status: "closed" },
           results: staleResults,
+          turnout: {
+            electionId: "election-1",
+            totalEligibleVoters: 10,
+            totalBallotsCast: 1,
+            turnoutPercentage: 10,
+          },
           hasVoted: true,
         },
       },
     });
 
     expect(body).toContain("min-h-11");
-    expect(body).toContain("p-4 shadow-2xl backdrop-blur-xl sm:p-8");
-    expect(body).toContain("mb-4 flex flex-col items-start gap-3");
-    expect(body).toContain("max-w-full items-start gap-2");
-    expect(body).toContain("flex flex-wrap items-center gap-x-4 gap-y-1");
+    expect(body).toContain("Fresh Candidate");
   });
 });

@@ -35,7 +35,7 @@ export class CacheEntry<T> {
   async fetch(force = false, options?: { fetch?: typeof fetch }): Promise<T | null> {
     if (!force && this.data !== null) return this.data;
 
-    if (this.inflight) return this.inflight;
+    if (this.inflight && !force) return this.inflight;
 
     const myEpoch = ++this.epoch;
     this.loading = true;

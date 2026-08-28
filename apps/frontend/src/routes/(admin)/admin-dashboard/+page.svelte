@@ -19,6 +19,10 @@
   let { data } = $props()
   const stats = $derived<AdminStats>(data.stats)
   const error = $derived<string | undefined>(data.error)
+  const turnoutPct = $derived(stats.activeElection?.turnoutPct ?? null)
+  const votedCount = $derived(stats.activeElection?.votedCount ?? null)
+  const votersCount = $derived(stats.activeElection?.votersCount ?? null)
+  const turnoutProgress = $derived(Math.max(0, Math.min(100, turnoutPct ?? 0)))
 
   function truncateId(id: string): string {
     return id.length > 12 ? id.slice(0, 12) + '…' : id
@@ -91,7 +95,7 @@
           <div>
             <p class='text-xs font-bold uppercase tracking-wider text-slate-500'>Active Turnout</p>
             <p class='mt-2 text-3xl font-black text-slate-50'>
-              {stats.activeElection ? `${stats.activeElection.turnoutPct}%` : 'N/A'}
+              {stats.activeElection && turnoutPct !== null ? `${turnoutPct}%` : 'Unavailable'}
             </p>
           </div>
           <div class='rounded-xl bg-emerald-500/10 p-3 text-emerald-400 border border-emerald-500/10'>
@@ -100,7 +104,11 @@
         </div>
         <div class='mt-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3'>
           <span>
-            {stats.activeElection ? `${stats.activeElection.votedCount} votes cast` : 'No active election'}
+            {stats.activeElection
+              ? votedCount !== null
+                ? `${votedCount} votes cast`
+                : 'Ballot count unavailable'
+              : 'No active election'}
           </span>
           {#if stats.activeElection}
             <a href='/admin/results' class='flex items-center gap-0.5 text-emerald-400 font-bold hover:underline'>
@@ -132,8 +140,12 @@
                   <h3 class='text-base font-bold text-slate-100'>{stats.activeElection.name}</h3>
                 </div>
                 <div class='text-right'>
-                  <span class='text-xl font-black text-amber-400'>{stats.activeElection.turnoutPct}%</span>
-                  <p class='text-xs text-slate-500'>{stats.activeElection.votedCount} / {stats.activeElection.votersCount} voted</p>
+                  <span class='text-xl font-black text-amber-400'>{turnoutPct !== null ? `${turnoutPct}%` : 'Unavailable'}</span>
+                  {#if votedCount !== null && votersCount !== null}
+                    <p class='text-xs text-slate-500'>{votedCount} / {votersCount} voted</p>
+                  {:else}
+                    <p class='text-xs text-slate-500'>Ballot turnout unavailable</p>
+                  {/if}
                 </div>
               </div>
 
@@ -142,7 +154,7 @@
                 <div class='h-3 w-full overflow-hidden rounded-full bg-slate-950 border border-slate-800/80'>
                   <div
                     class='h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500'
-                    style='width: {stats.activeElection.turnoutPct}%'
+                    style='width: {turnoutProgress}%'
                   ></div>
                 </div>
               </div>

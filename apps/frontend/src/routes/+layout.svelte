@@ -1,5 +1,6 @@
 <script lang='ts'>
   import { me } from '$lib/api/auth'
+  import { appCache } from '$lib/cache'
   import { authStore } from '$lib/stores/auth.svelte'
   import { onMount } from 'svelte'
   import { navigating } from '$app/stores'
@@ -15,6 +16,7 @@
 
   async function initializeAuth() {
     authBootstrapError = false
+    appCache.invalidate()
     authStore.set({ user: null, loading: true })
     try {
       const user = await me()

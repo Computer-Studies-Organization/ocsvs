@@ -81,6 +81,30 @@ test("CacheEntry.fetch with force=true bypasses cached data and re-fetches", asy
   expect(entry.data).toBe(2);
 });
 
+test("CacheEntry.fetch with force=true supersedes an in-flight fetch", async () => {
+  let calls = 0;
+  let resolveFirst!: (value: number) => void;
+  let resolveSecond!: (value: number) => void;
+  const entry = new CacheEntry<number>(() => {
+    calls += 1;
+    return new Promise<number>((resolve) => {
+      if (calls === 1) resolveFirst = resolve;
+      else resolveSecond = resolve;
+    });
+  });
+
+  const first = entry.fetch();
+  const second = entry.fetch(true);
+  expect(calls).toBe(2);
+
+  resolveSecond(2);
+  expect(await second).toBe(2);
+
+  resolveFirst(1);
+  expect(await first).toBeNull();
+  expect(entry.data).toBe(2);
+});
+
 test("CacheEntry.invalidate clears cached data", () => {
   const entry = new CacheEntry<number>(async () => 1);
   entry.data = 1;

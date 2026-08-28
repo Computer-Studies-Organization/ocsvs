@@ -284,6 +284,15 @@
       <a href='/elections/{pageState.election.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
     </div>
   </div>
+{:else if pageState.kind === 'admin'}
+  <div class='flex min-h-[60vh] items-center justify-center p-8'>
+    <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+      <Info size={48} class='mx-auto mb-4 text-sky-400' />
+      <h1 class='text-2xl font-bold text-slate-100'>Election is open</h1>
+      <p class='mt-2 text-slate-400'>Administrators cannot cast ballots. Manage the election from the administration portal.</p>
+      <a href='/admin/elections/{pageState.election.id}' class='mt-6 inline-block text-blue-400 hover:underline'>Manage election →</a>
+    </div>
+  </div>
 {:else}
   {@const totalPositions = pageState.positions.length}
   {@const isReview = isReviewStep(pageState.voting, totalPositions)}
@@ -307,6 +316,14 @@
           }}
         />
       {/if}
+    </div>
+
+    <div class='mt-6 flex items-start gap-3 rounded-xl border border-sky-500/20 bg-sky-950/20 p-4 text-sky-100'>
+      <Info size={18} class='mt-0.5 shrink-0 text-sky-400' />
+      <div>
+        <p class='font-semibold'>Vote first to view live results</p>
+        <p class='mt-1 text-sm text-sky-200/80'>Please cast your ballot below. Once your vote is submitted, you can view the live results.</p>
+      </div>
     </div>
 
     {#if partyLists.length > 0}

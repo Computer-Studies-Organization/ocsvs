@@ -3,6 +3,7 @@ import { listPositions } from "$lib/api/positions";
 import { allCandidates } from "$lib/api/candidates";
 import { fetchUsers } from "$lib/api/users";
 import { listPartyLists } from "$lib/api/parties";
+import { onAuthTransition } from "$lib/stores/auth.svelte";
 import { AppCache } from "./app-cache.svelte";
 import type { ApiClientAdapter } from "./api-client";
 
@@ -24,3 +25,4 @@ export type { ApiClientAdapter } from "./api-client";
 
 // Export the singleton configured for production
 export const appCache = new AppCache(productionApi);
+onAuthTransition(() => appCache.invalidate());

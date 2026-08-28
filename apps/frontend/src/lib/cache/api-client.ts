@@ -1,7 +1,7 @@
 import type {
   TElection,
   TElectionStatus,
-  TResults,
+  TResultsResponse,
   TVotingState,
   TPosition,
   TCandidate,
@@ -24,7 +24,7 @@ export interface ApiClientAdapter {
     },
     options?: ApiFetchOptions,
   ): Promise<{ data: TCandidate[] }>;
-  listResults(electionId: string, options?: ApiFetchOptions): Promise<TResults>;
+  listResults(electionId: string, options?: ApiFetchOptions): Promise<TResultsResponse>;
   fetchUsers(
     query?: {
       page?: number;

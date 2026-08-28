@@ -6,9 +6,9 @@ export interface ActiveElectionStats {
   name: string;
   opensAt: number | null;
   closesAt: number | null;
-  votedCount: number;
-  votersCount: number;
-  turnoutPct: number;
+  votedCount: number | null;
+  votersCount: number | null;
+  turnoutPct: number | null;
 }
 
 export interface AdminStats {

@@ -234,6 +234,17 @@ test("deriveVotingPageState returns voted when apiState.open is set and myVotes 
   expect(result).toEqual({ kind: "voted", election: openElection });
 });
 
+test("deriveVotingPageState returns an admin state instead of a ballot for an open election", () => {
+  const result = deriveVotingPageState({
+    ...emptyInput,
+    apiState: apiStateWithOpen,
+    isAdmin: true,
+    positions: samplePositions,
+    candidates: sampleCandidates,
+  });
+  expect(result).toEqual({ kind: "admin", election: openElection });
+});
+
 test("deriveVotingPageState returns stepper when apiState.open is set and user has not voted", () => {
   const result = deriveVotingPageState({
     ...emptyInput,

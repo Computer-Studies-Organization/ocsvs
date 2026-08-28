@@ -69,28 +69,6 @@ export type TPartyList = {
   updatedAt: number;
 };
 
-export interface TVoteCount {
-  candidateId: string;
-  candidateName: string;
-  positionId: string;
-  positionName: string;
-  voteCount: number;
-}
-
-export interface TVoteResults {
-  positionId: string;
-  positionName: string;
-  candidates: TVoteCount[];
-}
-
-export interface TVoteResultsResponse {
-  results: TVoteResults[];
-  meta: {
-    totalVotes: number;
-    totalPositions: number;
-  };
-}
-
 export interface ProfileData {
   id: string;
   username: string;
@@ -137,17 +115,36 @@ export type TPosition = {
   updatedAt: number;
 };
 
+export type TResultsCandidate = {
+  candidateId: string;
+  fullName: string;
+  voteCount: number;
+  percentage: number;
+  imageUrl?: string | null;
+  partyName?: string | null;
+  partyCode?: string | null;
+  partyColor?: string | null;
+};
+
 export type TResults = Array<{
   positionId: string;
   positionName: string;
+  displayOrder?: number;
   totalVotes: number;
-  candidates: Array<{
-    candidateId: string;
-    fullName: string;
-    voteCount: number;
-    percentage: number;
-  }>;
+  candidates: TResultsCandidate[];
 }>;
+
+export type TElectionTurnout = {
+  electionId: string;
+  totalEligibleVoters: number | null;
+  totalBallotsCast: number | null;
+  turnoutPercentage: number | null;
+};
+
+export type TResultsResponse = {
+  results: TResults;
+  turnout: TElectionTurnout;
+};
 
 export type TNextDraft = {
   id: string;

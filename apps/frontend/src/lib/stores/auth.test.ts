@@ -42,6 +42,7 @@ class FakeBroadcastChannel {
 
 let fakeWindow: EventTarget;
 let authStore: (typeof import("./auth.svelte"))["authStore"];
+let onAuthTransition: (typeof import("./auth.svelte"))["onAuthTransition"];
 
 function dispatchPageEvent(type: "pagehide" | "pageshow", persisted: boolean): void {
   const event = new Event(type);
@@ -62,7 +63,7 @@ beforeEach(async () => {
     value: FakeBroadcastChannel,
   });
 
-  ({ authStore } = await import("./auth.svelte"));
+  ({ authStore, onAuthTransition } = await import("./auth.svelte"));
 });
 
 afterEach(() => {
@@ -84,6 +85,8 @@ test.each([false, true])(
       },
       loading: false,
     });
+    const invalidate = vi.fn();
+    const unsubscribe = onAuthTransition(invalidate);
 
     const initialChannel = FakeBroadcastChannel.instances[0];
     dispatchPageEvent("pagehide", persisted);
@@ -98,5 +101,7 @@ test.each([false, true])(
 
     expect(authStore.user).toBeNull();
     expect(authStore.loading).toBe(false);
+    expect(invalidate).toHaveBeenCalledOnce();
+    unsubscribe();
   },
 );

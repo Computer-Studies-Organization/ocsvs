@@ -29,27 +29,39 @@ describe("election detail loader", () => {
       updatedAt: 1,
     };
 
+    const fetchResults = vi.fn().mockResolvedValue({
+      results: [],
+      turnout: {
+        electionId: "e1",
+        totalEligibleVoters: 10,
+        totalBallotsCast: 0,
+        turnoutPercentage: 0,
+      },
+    });
     mockCacheGet.mockImplementation((resource: string) => ({
-      fetchOrThrow: vi
-        .fn()
-        .mockResolvedValue(
-          resource === "election"
-            ? election
-            : resource === "votingState"
-              ? { open: null, nextDraft: null, lastClosed: { id: "e1" }, myVotes: {} }
-              : [],
-        ),
+      fetchOrThrow:
+        resource === "results"
+          ? fetchResults
+          : vi
+              .fn()
+              .mockResolvedValue(
+                resource === "election"
+                  ? election
+                  : { open: null, nextDraft: null, lastClosed: { id: "e1" }, myVotes: {} },
+              ),
     }));
 
+    const fetch = vi.fn();
     const result = (await load({
       params: { electionId: "e1" },
-      fetch: vi.fn(),
+      fetch,
       depends: vi.fn(),
     } as any)) as any;
 
     expect(result.election.status).toBe("closed");
     expect(result.results).toEqual([]);
     expect(mockCacheGet).toHaveBeenCalledWith("results", { electionId: "e1" });
+    expect(fetchResults).toHaveBeenCalledWith(true, { fetch });
     expect(mockCacheGet).not.toHaveBeenCalledWith("votingState", {});
   });
 
