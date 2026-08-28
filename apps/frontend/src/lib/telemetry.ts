@@ -8,11 +8,11 @@ function isEnabled(): boolean {
   return browser && Boolean(getDsn());
 }
 
-let sentryPromise: Promise<typeof import("./sentry") | undefined> | undefined;
+let sentryPromise: Promise<typeof import("@sentry/browser") | undefined> | undefined;
 
-function loadSentry(): Promise<typeof import("./sentry") | undefined> {
+function loadSentry(): Promise<typeof import("@sentry/browser") | undefined> {
   const dsn = getDsn();
-  sentryPromise ??= import("./sentry")
+  sentryPromise ??= import("@sentry/browser")
     .then((Sentry) => {
       Sentry.init({
         dsn,

@@ -10,7 +10,6 @@ import {
   goPrevious,
   hasCurrentVote,
   isFirstPosition,
-  isLastPosition,
   isReviewStep,
   selectCandidate,
   selectPartySlate,
@@ -110,11 +109,6 @@ test("goPrevious does not go below 0", () => {
 test("isFirstPosition true at 0, false otherwise", () => {
   expect(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 0 })).toBe(true);
   expect(isFirstPosition({ selectedVotes: {}, currentPositionIndex: 1 })).toBe(false);
-});
-
-test("isLastPosition true at last, false otherwise", () => {
-  expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 2 }, 3)).toBe(true);
-  expect(isLastPosition({ selectedVotes: {}, currentPositionIndex: 0 }, 3)).toBe(false);
 });
 
 test("isReviewStep true at totalPositions, false otherwise", () => {

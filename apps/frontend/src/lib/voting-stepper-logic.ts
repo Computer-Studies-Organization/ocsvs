@@ -70,10 +70,6 @@ export function isFirstPosition(state: TStepperVotingState): boolean {
   return state.currentPositionIndex === 0;
 }
 
-export function isLastPosition(state: TStepperVotingState, totalPositions: number): boolean {
-  return state.currentPositionIndex === totalPositions - 1;
-}
-
 export function isReviewStep(state: TStepperVotingState, totalPositions: number): boolean {
   return state.currentPositionIndex === totalPositions;
 }
