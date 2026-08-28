@@ -37,6 +37,10 @@ const userImportSource = readFileSync(
   ),
   "utf8",
 );
+const commonPositionsModalSource = readFileSync(
+  fileURLToPath(new URL("../admin/common-positions-modal.svelte", import.meta.url)),
+  "utf8",
+);
 
 describe("mobile touch targets", () => {
   it("keeps header action controls at least 44px square", () => {
@@ -133,5 +137,15 @@ describe("mobile touch targets", () => {
     expect(deleteButton).toBeDefined();
     expect(deleteButton).toContain("min-h-11");
     expect(deleteButton).toContain("min-w-11");
+  });
+
+  it("keeps common position preset rows and all modal buttons at least 44px tall", () => {
+    const labelTags = commonPositionsModalSource.match(/<label[\s\S]*?<\/label>/g) ?? [];
+    const buttonTags = commonPositionsModalSource.match(/<button[\s\S]*?<\/button>/g) ?? [];
+
+    expect(labelTags.length).toBeGreaterThan(0);
+    expect(buttonTags.length).toBeGreaterThan(0);
+    expect(labelTags.every((tag) => tag.includes("min-h-11"))).toBe(true);
+    expect(buttonTags.every((tag) => tag.includes("min-h-11"))).toBe(true);
   });
 });

@@ -8,6 +8,7 @@
   import { appCache } from '$lib/cache'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
   import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
+  import CommonPositionsModal from '$lib/components/admin/common-positions-modal.svelte'
   import AddPartyModal from '$lib/components/admin/add-party-modal.svelte'
   import EditPartyModal from '$lib/components/admin/edit-party-modal.svelte'
   import EditElectionModal from '$lib/components/admin/edit-election-modal.svelte'
@@ -21,6 +22,7 @@
   const displayStatus = $derived(getEffectiveElectionStatus(election))
 
   let isCreateOpen = $state(false)
+  let isCommonPositionsOpen = $state(false)
   let editingPosition = $state<TPosition | null>(null)
 
   let isPartyCreateOpen = $state(false)
@@ -45,6 +47,18 @@
 
   function closeCreate() {
     isCreateOpen = false
+  }
+
+  function openCommonPositions() {
+    isCommonPositionsOpen = true
+  }
+
+  function closeCommonPositions() {
+    isCommonPositionsOpen = false
+  }
+
+  function handleCommonPositionsSuccess() {
+    closeCommonPositions()
   }
 
   function openEdit(p: TPosition) {
@@ -339,24 +353,36 @@
           description={election.status === 'draft' ? 'Add positions for this election.' : 'No positions have been defined for this election.'}
           cta={election.status === 'draft' ? 'Add position' : undefined}
           oncta={election.status === 'draft' ? openCreate : undefined}
+          secondaryCta={election.status === 'draft' ? 'Common positions' : undefined}
+          onsecondarycta={election.status === 'draft' ? openCommonPositions : undefined}
         />
       {:else}
         <section
           class='rounded-2xl border p-5 shadow-lg'
           style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
         >
-          <div class='flex items-center justify-between mb-4 gap-4'>
+          <div class='flex flex-wrap items-center justify-between mb-4 gap-3'>
             <h2 class='text-lg font-black' style='color: oklch(0.95 0.008 250)'>Positions</h2>
             {#if election.status === 'draft'}
-              <button
-                type='button'
-                onclick={openCreate}
-                class='hidden md:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
-                style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
-              >
-                <Plus size={16} stroke-width={2.5} />
-                Add position
-              </button>
+              <div class='flex flex-wrap items-center gap-2'>
+                <button
+                  type='button'
+                  onclick={openCommonPositions}
+                  class='flex min-h-11 items-center gap-2 px-3 sm:px-4 py-2 rounded-xl font-bold text-sm border border-sky-500/30 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition cursor-pointer shrink-0'
+                >
+                  <ListOrdered size={16} stroke-width={2.5} />
+                  Common positions
+                </button>
+                <button
+                  type='button'
+                  onclick={openCreate}
+                  class='hidden sm:flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-lg cursor-pointer shrink-0'
+                  style='background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)'
+                >
+                  <Plus size={16} stroke-width={2.5} />
+                  Add position
+                </button>
+              </div>
             {/if}
           </div>
 
@@ -431,6 +457,15 @@
   onclose={closeCreate}
   electionId={election.id}
   onsuccess={closeCreate}
+/>
+{/if}
+
+{#if isCommonPositionsOpen && election.status === 'draft'}
+<CommonPositionsModal
+  onclose={closeCommonPositions}
+  electionId={election.id}
+  existingPositions={positions}
+  onsuccess={handleCommonPositionsSuccess}
 />
 {/if}
 

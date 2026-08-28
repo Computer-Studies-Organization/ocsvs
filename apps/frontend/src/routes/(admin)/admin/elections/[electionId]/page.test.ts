@@ -226,4 +226,44 @@ describe("admin election party controls", () => {
     expect(body).toContain("grid grid-cols-1 gap-4 sm:grid-cols-3");
     expect(body).toContain("h-11 w-11");
   });
+
+  it("renders both manual add and common positions actions for draft election in empty positions state", () => {
+    const { body } = render(Page, {
+      props: { data: { election, positions: [], partyLists: [], candidates: [] } },
+    });
+
+    expect(body).toContain("No positions yet");
+    expect(body).toContain("Add position");
+    expect(body).toContain("Common positions");
+  });
+
+  it("renders both manual add and common positions actions for draft election in populated positions state", () => {
+    const { body } = render(Page, {
+      props: { data: { election, positions: [position], partyLists: [], candidates: [] } },
+    });
+
+    expect(body).toContain("Add position");
+    expect(body).toContain("Common positions");
+    expect(body).toContain("President");
+  });
+
+  it.each(nonDraftStatuses)(
+    "hides position management and common positions actions when election status is %s",
+    (status) => {
+      const { body } = render(Page, {
+        props: {
+          data: {
+            election: { ...election, status },
+            positions: [position],
+            partyLists: [],
+            candidates: [],
+          },
+        },
+      });
+
+      expect(body).not.toContain("Common positions");
+      expect(body).not.toContain("Add position");
+      expect(body).not.toContain('aria-label="Edit President position"');
+    },
+  );
 });
