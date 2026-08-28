@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import * as schema from "@/database/schema";
 import { candidates, partyLists } from "@/database/schema";
 
 const chain: any = {
@@ -44,6 +47,32 @@ describe("partyListRepo", () => {
         color: "#3B82F6",
       }),
     );
+  });
+
+  it("round-trips descriptions through create, list, and update", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE party_lists (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, election_id TEXT NOT NULL, name TEXT NOT NULL, code TEXT NOT NULL, color TEXT, description TEXT)",
+      );
+      const db = drizzle(client, { schema });
+      const description = "A student-first platform.";
+      const id = await partyListRepo.create(db, {
+        electionId: "e1",
+        name: "Innovators Party",
+        code: "INNOVATORS",
+        color: "#3B82F6",
+        description,
+      });
+
+      expect((await partyListRepo.listByElection(db, "e1"))[0]?.description).toBe(description);
+
+      await partyListRepo.update(db, id, { description: null });
+      expect((await partyListRepo.findById(db, id))?.description).toBeNull();
+    } finally {
+      client.close();
+    }
   });
 
   it("findById returns row or null", async () => {

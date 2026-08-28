@@ -21,6 +21,7 @@
   let createName = $state('')
   let createCode = $state('')
   let createColor = $state('#3B82F6')
+  let createDescription = $state('')
   let createBusy = $state(false)
   let createError = $state('')
 
@@ -42,6 +43,7 @@
         name: createName.trim(),
         code: codeVal,
         color: createColor.trim() || null,
+        description: createDescription.trim() || null,
       })
       appCache.invalidate({ resource: 'partyLists', params: { electionId } })
       await invalidate('app:election')
@@ -121,6 +123,21 @@
           style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
         />
       </div>
+    </div>
+
+    <div class="space-y-2">
+      <label for="partyDescription" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+        Platform Description <span style="color: oklch(0.55 0.015 250)">(optional)</span>
+      </label>
+      <textarea
+        id="partyDescription"
+        bind:value={createDescription}
+        disabled={createBusy}
+        rows={6}
+        placeholder="Paste the party's platform here…"
+        class="w-full px-4 py-3 rounded-xl border-2 font-normal text-sm transition focus:outline-none resize-y"
+        style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
+      ></textarea>
     </div>
 
     {#if createError}

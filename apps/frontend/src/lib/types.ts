@@ -65,6 +65,7 @@ export type TPartyList = {
   name: string;
   code: string;
   color: string | null;
+  description: string | null;
   createdAt: number;
   updatedAt: number;
 };

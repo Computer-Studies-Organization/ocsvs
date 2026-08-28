@@ -7,7 +7,13 @@ export type PartyListRow = typeof partyLists.$inferSelect;
 export const partyListRepo = {
   async create(
     db: DbClient,
-    data: { electionId: string; name: string; code: string; color?: string | null },
+    data: {
+      electionId: string;
+      name: string;
+      code: string;
+      color?: string | null;
+      description?: string | null;
+    },
   ): Promise<string> {
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
@@ -20,6 +26,7 @@ export const partyListRepo = {
         name: data.name,
         code: data.code,
         color: data.color ?? null,
+        description: data.description ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -43,7 +50,7 @@ export const partyListRepo = {
   async update(
     db: DbClient,
     id: string,
-    data: Partial<Pick<PartyListRow, "name" | "code" | "color">>,
+    data: Partial<Pick<PartyListRow, "name" | "code" | "color" | "description">>,
   ): Promise<boolean> {
     const result = await db
       .update(partyLists)

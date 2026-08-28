@@ -37,6 +37,7 @@ export const createPartyListHandler: AppRouteHandler<typeof createPartyListRoute
         name: body.name,
         code: body.code,
         color: body.color,
+        description: body.description,
       },
       actor,
     );
@@ -64,6 +65,7 @@ export const updatePartyListHandler: AppRouteHandler<typeof updatePartyListRoute
         name: body.name,
         code: body.code,
         color: body.color,
+        description: body.description,
       },
       actor,
     );

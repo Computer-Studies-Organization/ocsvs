@@ -35,6 +35,7 @@ export interface CreatePartyInput {
   name: string;
   code: string;
   color?: string | null;
+  description?: string | null;
 }
 
 export interface UpdatePartyInput {
@@ -43,6 +44,7 @@ export interface UpdatePartyInput {
   name?: string;
   code?: string;
   color?: string | null;
+  description?: string | null;
 }
 
 export interface DeletePartyInput {
@@ -70,6 +72,7 @@ export const partyLifecycleCoordinator = {
           name: input.name,
           code: input.code,
           color: input.color,
+          description: input.description,
         });
 
         const party = await partyListRepo.findById(tx, partyId);
@@ -122,6 +125,7 @@ export const partyLifecycleCoordinator = {
           name: input.name,
           code: input.code,
           color: input.color,
+          description: input.description,
         });
 
         const updated = await partyListRepo.findById(tx, input.partyId);

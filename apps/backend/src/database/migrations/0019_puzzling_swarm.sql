@@ -1,0 +1,1 @@
+ALTER TABLE `party_lists` ADD `description` text;

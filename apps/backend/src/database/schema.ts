@@ -124,6 +124,7 @@ export const partyLists = sqliteTable(
     name: text("name").notNull(),
     code: text("code").notNull(),
     color: text("color"),
+    description: text("description"),
   },
   (table) => [
     uniqueIndex("idx_party_lists_election_name").on(

@@ -231,6 +231,10 @@ export const PartyListSchema = z.object({
     description: "Party list badge color (hex string, e.g. #3B82F6)",
     example: "#3B82F6",
   }),
+  description: z.string().nullable().openapi({
+    description: "Free-form party platform description (plain text)",
+    example: "SULONG — Moving Forward. Growing Together. Leading the Future.",
+  }),
 });
 export const CreatePartyListBodySchema = z
   .object({
@@ -251,6 +255,10 @@ export const CreatePartyListBodySchema = z
     color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
+    }),
+    description: z.string().nullable().optional().openapi({
+      description: "Free-form party platform description (plain text)",
+      example: "SULONG — Moving Forward. Growing Together. Leading the Future.",
     }),
   })
   .openapi("CreatePartyListBody");
@@ -275,6 +283,10 @@ export const UpdatePartyListBodySchema = z
     color: PartyColorSchema.optional().openapi({
       description: "Party list hex color",
       example: "#3B82F6",
+    }),
+    description: z.string().nullable().optional().openapi({
+      description: "Free-form party platform description (plain text)",
+      example: "SULONG — Moving Forward. Growing Together. Leading the Future.",
     }),
   })
   .openapi("UpdatePartyListBody");

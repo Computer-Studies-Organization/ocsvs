@@ -25,6 +25,7 @@
   let editName = $state(untrack(() => party.name))
   let editCode = $state(untrack(() => party.code))
   let editColor = $state(untrack(() => party.color || '#3B82F6'))
+  let editDescription = $state(untrack(() => party.description || ''))
   let busy = $state(false)
   let errorMsg = $state('')
 
@@ -46,6 +47,7 @@
         name: editName.trim(),
         code: codeVal,
         color: editColor.trim() || null,
+        description: editDescription.trim() || null,
       })
       appCache.invalidate({ resource: 'partyLists', params: { electionId } })
       await invalidate('app:election')
@@ -156,6 +158,21 @@
           style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
         />
       </div>
+    </div>
+
+    <div class="space-y-2">
+      <label for="editPartyDescription" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+        Platform Description <span style="color: oklch(0.55 0.015 250)">(optional)</span>
+      </label>
+      <textarea
+        id="editPartyDescription"
+        bind:value={editDescription}
+        disabled={busy}
+        rows={6}
+        placeholder="Paste the party's platform here…"
+        class="w-full px-4 py-3 rounded-xl border-2 font-normal text-sm transition focus:outline-none resize-y"
+        style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
+      ></textarea>
     </div>
 
     {#if errorMsg}

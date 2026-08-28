@@ -10,7 +10,7 @@ export async function listPartyLists(
 
 export async function createPartyList(
   electionId: string,
-  body: { name: string; code: string; color?: string | null },
+  body: { name: string; code: string; color?: string | null; description?: string | null },
 ): Promise<TPartyList> {
   return apiFetch<TPartyList>(`/elections/${electionId}/parties`, {
     method: "POST",
@@ -21,7 +21,7 @@ export async function createPartyList(
 export async function updatePartyList(
   electionId: string,
   partyId: string,
-  body: Partial<{ name: string; code: string; color?: string | null }>,
+  body: Partial<{ name: string; code: string; color?: string | null; description?: string | null }>,
 ): Promise<TPartyList> {
   return apiFetch<TPartyList>(`/elections/${electionId}/parties/${partyId}`, {
     method: "PATCH",

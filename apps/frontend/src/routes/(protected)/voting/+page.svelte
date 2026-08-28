@@ -335,15 +335,23 @@
         </div>
         <div class='flex flex-wrap items-center gap-2.5'>
           {#each partyLists as party (party.id)}
-            <button
-              type='button'
-              onclick={() => applyPartySlate(party)}
-              class='flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-md'
-              style='background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}'
-            >
-              <Flag size={14} />
-              Fill {party.code} Slate
-            </button>
+            <div class='flex flex-wrap items-center gap-2'>
+              <button
+                type='button'
+                onclick={() => applyPartySlate(party)}
+                class='flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-md'
+                style='background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}'
+              >
+                <Flag size={14} />
+                Fill {party.code} Slate
+              </button>
+              <a
+                href='/elections/{pageState.election.id}/parties/{party.id}'
+                class='rounded-xl border border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-300 transition hover:border-slate-500 hover:text-white'
+              >
+                View platform
+              </a>
+            </div>
           {/each}
         </div>
       </div>

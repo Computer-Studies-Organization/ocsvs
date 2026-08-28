@@ -38,6 +38,7 @@ const party: TPartyList = {
   name: "Innovators",
   code: "INNOV",
   color: "#3B82F6",
+  description: null,
   createdAt: 1,
   updatedAt: 1,
 };
