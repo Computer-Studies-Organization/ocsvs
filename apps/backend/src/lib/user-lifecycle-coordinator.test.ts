@@ -609,6 +609,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
           actorUsernameSnapshot: "admin",
         }),
       );
+      expect(mockDb.transaction).toHaveBeenCalledTimes(1);
     });
 
     it("throws USER_NOT_FOUND if user does not exist", async () => {

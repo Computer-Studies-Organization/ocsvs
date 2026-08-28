@@ -787,20 +787,22 @@ export class UserLifecycleCoordinator {
     if (actor.role !== "admin" && actor.role !== "super_admin") {
       throw new UserLifecycleError("FORBIDDEN", 403);
     }
-    const user = await voterAccountStore.findById(db, userId);
-    if (!user) {
-      throw new UserLifecycleError("USER_NOT_FOUND", 404);
-    }
-    const tx = db as any;
-    await loginAttemptRepo.clearAttempts(tx, user.studentId);
+    await db.transaction(async (tx) => {
+      const user = await voterAccountStore.findById(tx, userId);
+      if (!user) {
+        throw new UserLifecycleError("USER_NOT_FOUND", 404);
+      }
 
-    await auditLogRepo.insert(tx, {
-      action: "user.unlock",
-      targetType: "user",
-      targetId: user.id,
-      actorAccountIdSnapshot: actor.id,
-      actorUsernameSnapshot: actor.username,
-      description: `Unlocked account for student: ${user.studentId}`,
+      await loginAttemptRepo.clearAttempts(tx, user.studentId);
+
+      await auditLogRepo.insert(tx, {
+        action: "user.unlock",
+        targetType: "user",
+        targetId: user.id,
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+        description: `Unlocked account for student: ${user.studentId}`,
+      });
     });
   }
 }
