@@ -1,6 +1,14 @@
 import type { DbClient } from "../repositories/database.type";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { candidates, elections, positions, votes } from "@/database/schema";
+import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import {
+  ballotSnapshots,
+  candidates,
+  elections,
+  partyLists,
+  positions,
+  voterElectionParticipation,
+  votes,
+} from "@/database/schema";
 import { electionRepo } from "@/database/repositories/election.repository";
 
 export interface ElectionWithPositions {
@@ -12,6 +20,8 @@ export interface ElectionWithPositions {
   closesAt: number | null;
   createdAt: number;
   updatedAt: number;
+  /** Internal turnout metric; stripped from public responses. */
+  eligibleVotersCount?: number | null;
   positions: Array<{
     id: string;
     name: string;
@@ -26,17 +36,30 @@ export interface ElectionWithPositions {
   }>;
 }
 
+export interface ResultsCandidate {
+  candidateId: string;
+  fullName: string;
+  voteCount: number;
+  percentage: number;
+  imageUrl?: string | null;
+  partyName?: string | null;
+  partyCode?: string | null;
+  partyColor?: string | null;
+}
+
 export interface ResultsPosition {
   positionId: string;
   positionName: string;
   displayOrder: number;
   totalVotes: number;
-  candidates: Array<{
-    candidateId: string;
-    fullName: string;
-    voteCount: number;
-    percentage: number;
-  }>;
+  candidates: ResultsCandidate[];
+}
+
+export interface ElectionTurnout {
+  electionId: string;
+  totalEligibleVoters: number | null;
+  totalBallotsCast: number | null;
+  turnoutPercentage: number | null;
 }
 
 export const electionQueries = {
@@ -110,11 +133,16 @@ export const electionQueries = {
         displayOrder: positions.displayOrder,
         candidateId: candidates.id,
         candidateName: candidates.fullName,
+        candidateImageUrl: candidates.imageUrl,
+        partyName: partyLists.name,
+        partyCode: partyLists.code,
+        partyColor: partyLists.color,
         voteCount: count(votes.id),
       })
       .from(positions)
       .leftJoin(candidates, eq(candidates.positionId, positions.id))
-      .leftJoin(votes, eq(votes.candidateId, candidates.id))
+      .leftJoin(partyLists, eq(candidates.partyId, partyLists.id))
+      .leftJoin(votes, and(eq(votes.candidateId, candidates.id), eq(votes.electionId, electionId)))
       .where(eq(positions.electionId, electionId))
       .groupBy(
         positions.id,
@@ -123,6 +151,10 @@ export const electionQueries = {
         positions.createdAt,
         candidates.id,
         candidates.fullName,
+        candidates.imageUrl,
+        partyLists.name,
+        partyLists.code,
+        partyLists.color,
       )
       .orderBy(asc(positions.displayOrder), asc(positions.createdAt), desc(count(votes.id)))
       .all();
@@ -145,6 +177,10 @@ export const electionQueries = {
           fullName: r.candidateName ?? "",
           voteCount: r.voteCount,
           percentage: 0,
+          imageUrl: r.candidateImageUrl ?? null,
+          partyName: r.partyName ?? null,
+          partyCode: r.partyCode ?? null,
+          partyColor: r.partyColor ?? null,
         });
       }
     }
@@ -156,5 +192,64 @@ export const electionQueries = {
       }
     }
     return Array.from(byPosition.values());
+  },
+
+  async getTurnout(db: DbClient, electionId: string): Promise<ElectionTurnout> {
+    const [electionResult, snapshotsResult, participationResult, legacyResult, voteResult] =
+      await Promise.all([
+        db
+          .select({ eligibleVotersCount: elections.eligibleVotersCount })
+          .from(elections)
+          .where(eq(elections.id, electionId))
+          .get(),
+        db
+          .select({ count: count() })
+          .from(ballotSnapshots)
+          .where(eq(ballotSnapshots.electionId, electionId))
+          .get(),
+        db
+          .select({ count: count() })
+          .from(voterElectionParticipation)
+          .where(eq(voterElectionParticipation.electionId, electionId))
+          .get(),
+        db
+          .select({ count: sql<number>`count(distinct ${votes.userId})` })
+          .from(votes)
+          .where(and(eq(votes.electionId, electionId), isNotNull(votes.userId)))
+          .get(),
+        db.select({ count: count() }).from(votes).where(eq(votes.electionId, electionId)).get(),
+      ]);
+
+    const participationCount = Number(participationResult?.count ?? 0);
+    const legacyBallotCount = Number(legacyResult?.count ?? 0);
+    const voteCount = Number(voteResult?.count ?? 0);
+    const snapshotCount = Number(snapshotsResult?.count ?? 0);
+
+    // Participation and linked legacy ballots are disjoint during the
+    // anonymisation window. Snapshots overlap new participation, so use them
+    // only when no voter-level source exists. Anonymous vote rows alone cannot
+    // reveal how many ballots they represent.
+    const totalBallotsCast =
+      participationCount > 0 || legacyBallotCount > 0
+        ? participationCount + legacyBallotCount
+        : snapshotCount > 0
+          ? snapshotCount
+          : voteCount > 0
+            ? null
+            : 0;
+    const totalEligibleVoters = electionResult?.eligibleVotersCount ?? null;
+    const turnoutPercentage =
+      totalEligibleVoters !== null && totalBallotsCast !== null && totalEligibleVoters > 0
+        ? Math.round((totalBallotsCast / totalEligibleVoters) * 10000) / 100
+        : totalEligibleVoters === 0 && totalBallotsCast !== null
+          ? 0
+          : null;
+
+    return {
+      electionId,
+      totalEligibleVoters,
+      totalBallotsCast,
+      turnoutPercentage,
+    };
   },
 };

@@ -81,6 +81,7 @@ export const electionRepo = {
       status: TElectionStatus;
       opensAt?: number | null;
       closesAt?: number | null;
+      eligibleVotersCount?: number | null;
     },
   ): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
@@ -90,6 +91,9 @@ export const electionRepo = {
     };
     if (data.opensAt !== undefined) set.opensAt = data.opensAt;
     if (data.closesAt !== undefined) set.closesAt = data.closesAt;
+    if (data.eligibleVotersCount !== undefined) {
+      set.eligibleVotersCount = data.eligibleVotersCount;
+    }
     const result = await db
       .update(elections)
       .set(set)

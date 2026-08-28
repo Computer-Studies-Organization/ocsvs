@@ -1,11 +1,11 @@
 import type { DbClient } from "@/database/repositories/database.type";
 import type { TElectionStatus } from "@/database/schema";
 import type { ElectionRow } from "@/database/repositories/election.repository";
-import { ballotSnapshots, votes } from "@/database/schema";
+import { accounts, ballotSnapshots, votes } from "@/database/schema";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { electionQueries } from "@/database/queries/election.queries";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
-import { eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import {
   assertTransition,
   getEffectiveElectionStatus,
@@ -30,6 +30,16 @@ export interface TransitionParams {
   actor: { id: string; username: string };
   opensAt?: number;
   closesAt?: number;
+}
+
+/**
+ * Maps an internal ElectionRow to the public election shape exposed by the
+ * API. `eligibleVotersCount` is an internal turnout metric and must not leak
+ * through election endpoints.
+ */
+export function toPublicElection(election: ElectionRow) {
+  const { eligibleVotersCount: _eligibleVotersCount, ...rest } = election;
+  return rest;
 }
 
 export interface TransitionResult {
@@ -187,6 +197,17 @@ export const ElectionLifecycleCoordinator = {
         positionsWithActiveCandidates,
       );
 
+      const eligibleVotersCount =
+        fromStatus === "draft" && toStatus === "open"
+          ? ((
+              await tx
+                .select({ count: count() })
+                .from(accounts)
+                .where(and(eq(accounts.role, "user"), isNull(accounts.deletedAt)))
+                .get()
+            )?.count ?? 0)
+          : undefined;
+
       if (fromStatus === "closed" && toStatus === "draft") {
         const ballotSnapshot = await tx
           .select({ id: ballotSnapshots.id })
@@ -212,6 +233,7 @@ export const ElectionLifecycleCoordinator = {
           status: toStatus,
           opensAt: resolvedOpensAt,
           closesAt: resolvedClosesAt,
+          eligibleVotersCount,
         });
 
         if (!updated) {

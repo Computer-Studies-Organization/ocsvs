@@ -95,6 +95,12 @@ export const submitVoteRoute = createRoute({
       }),
       ERROR_MESSAGES.UNAUTHORIZED,
     ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      ERROR_MESSAGES.FORBIDDEN,
+    ),
     [httpStatusCodes.CONFLICT]: jsonContent(
       z.object({
         message: z.string(),

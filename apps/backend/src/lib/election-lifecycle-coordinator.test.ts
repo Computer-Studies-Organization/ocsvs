@@ -130,7 +130,8 @@ describe("ElectionLifecycleCoordinator", () => {
   });
 
   describe("transition", () => {
-    it("successfully opens a draft election", async () => {
+    it("snapshots the electorate when scheduling a draft election to open", async () => {
+      const now = Math.floor(Date.now() / 1000);
       mockFindById.mockResolvedValueOnce({
         id: "e1",
         status: "draft",
@@ -140,18 +141,23 @@ describe("ElectionLifecycleCoordinator", () => {
       mockCountPositions.mockResolvedValueOnce(3);
       mockCountPositionsWithActiveCandidates.mockResolvedValueOnce(3);
       mockFindOpen.mockResolvedValueOnce(null);
+      mockDb.get.mockResolvedValueOnce({ count: 100 });
       mockUpdateStatus.mockResolvedValueOnce(true);
 
       const result = await ElectionLifecycleCoordinator.transition(mockDb, "e1", {
         to: "open",
         actor: { id: "admin-id", username: "admin" },
-        opensAt: 1700000000,
-        closesAt: 1700003600,
+        opensAt: now + 3600,
+        closesAt: now + 7200,
       });
 
       expect(result.newStatus).toBe("open");
       expect(result.messageKey).toBe("ELECTION_OPENED_SUCCESSFULLY");
-      expect(mockUpdateStatus).toHaveBeenCalled();
+      expect(mockUpdateStatus).toHaveBeenCalledWith(
+        mockDb,
+        "e1",
+        expect.objectContaining({ eligibleVotersCount: 100 }),
+      );
       expect(mockAuditInsert).toHaveBeenCalledWith(mockDb, {
         action: "election.transition",
         targetType: "election",
@@ -210,6 +216,7 @@ describe("ElectionLifecycleCoordinator", () => {
       mockCountPositions.mockResolvedValueOnce(3);
       mockCountPositionsWithActiveCandidates.mockResolvedValueOnce(3);
       mockFindOpen.mockResolvedValueOnce(expired);
+      mockDb.get.mockResolvedValueOnce({ count: 42 });
       mockUpdateStatus.mockResolvedValue(true);
 
       const result = await ElectionLifecycleCoordinator.transition(mockDb, "e1", {
@@ -231,6 +238,7 @@ describe("ElectionLifecycleCoordinator", () => {
         status: "open",
         opensAt: now,
         closesAt: now + 3600,
+        eligibleVotersCount: 42,
       });
       expect(mockAuditInsert).toHaveBeenNthCalledWith(1, mockDb, {
         action: "election.transition",

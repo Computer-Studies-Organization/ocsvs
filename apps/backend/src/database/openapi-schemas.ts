@@ -409,12 +409,54 @@ export const ResultsPositionSchema = z
           description: "Percentage of position votes (0-100, 2 decimals)",
           example: 50.0,
         }),
+        imageUrl: z.string().nullable().optional().openapi({
+          description: "Candidate avatar image URL",
+          example: "https://example.com/avatar.jpg",
+        }),
+        partyName: z.string().nullable().optional().openapi({
+          description: "Party name",
+          example: "Leadership Alliance",
+        }),
+        partyCode: z.string().nullable().optional().openapi({
+          description: "Party code",
+          example: "LEAD",
+        }),
+        partyColor: z.string().nullable().optional().openapi({
+          description: "Party hex color code",
+          example: "#3B82F6",
+        }),
       }),
     ),
   })
   .openapi("ResultsPosition");
 
-export const ResultsResponseSchema = z.array(ResultsPositionSchema);
+export const ElectionTurnoutSchema = z
+  .object({
+    electionId: z.string().openapi({
+      description: "Election ID",
+      example: "elec_123",
+    }),
+    totalEligibleVoters: z.number().int().nullable().openapi({
+      description: "Total registered active student voters",
+      example: 500,
+    }),
+    totalBallotsCast: z.number().int().nullable().openapi({
+      description: "Total ballots submitted for this election",
+      example: 382,
+    }),
+    turnoutPercentage: z.number().nullable().openapi({
+      description: "Turnout percentage (totalBallotsCast / totalEligibleVoters * 100)",
+      example: 76.4,
+    }),
+  })
+  .openapi("ElectionTurnout");
+
+export const ResultsResponseSchema = z
+  .object({
+    results: z.array(ResultsPositionSchema),
+    turnout: ElectionTurnoutSchema,
+  })
+  .openapi("ResultsResponse");
 
 export const NextDraftSchema = z.object({
   id: z.string(),
@@ -433,6 +475,10 @@ export const LastClosedResultsItemSchema = z.object({
       fullName: z.string(),
       voteCount: z.number(),
       percentage: z.number(),
+      imageUrl: z.string().nullable().optional(),
+      partyName: z.string().nullable().optional(),
+      partyCode: z.string().nullable().optional(),
+      partyColor: z.string().nullable().optional(),
     }),
   ),
 });
@@ -557,15 +603,15 @@ export const AdminStatsSchema = z
           description: "Unix timestamp when voting closes",
           example: 1719486400,
         }),
-        votedCount: z.number().int().openapi({
+        votedCount: z.number().int().nullable().openapi({
           description: "Total number of unique voters who have voted so far in this election",
           example: 926,
         }),
-        votersCount: z.number().int().openapi({
+        votersCount: z.number().int().nullable().openapi({
           description: "Total number of eligible active voters",
           example: 1248,
         }),
-        turnoutPct: z.number().openapi({
+        turnoutPct: z.number().nullable().openapi({
           description: "Turnout percentage (votedCount / votersCount * 100)",
           example: 74.2,
         }),

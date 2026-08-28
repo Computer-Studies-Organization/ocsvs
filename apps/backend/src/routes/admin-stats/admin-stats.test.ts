@@ -114,9 +114,14 @@ describe("admin stats routes", () => {
           opensAt: 1700000000,
           closesAt: 1710000000,
           status: "open",
+          eligibleVotersCount: 80,
         };
       }
-      if (getCallCount === 4) return { count: 65 }; // unique votes count
+      if (getCallCount === 4) return { eligibleVotersCount: 80 };
+      if (getCallCount === 5) return { count: 65 }; // ballot snapshots
+      if (getCallCount === 6) return { count: 65 }; // durable participation
+      if (getCallCount === 7) return { count: 0 }; // linked legacy voters
+      if (getCallCount === 8) return { count: 65 }; // legacy vote rows
       return null;
     });
 
@@ -133,12 +138,12 @@ describe("admin stats routes", () => {
       opensAt: 1700000000,
       closesAt: 1710000000,
       votedCount: 65,
-      votersCount: 100,
-      turnoutPct: 65,
+      votersCount: 80,
+      turnoutPct: 81.25,
     });
   });
 
-  it("includes soft-deleted voters in the turnout denominator", async () => {
+  it("counts active voters globally while preserving the election denominator", async () => {
     const whereConditions: unknown[] = [];
     const hasColumn = (value: unknown, name: string, seen = new Set<object>()): boolean => {
       if (value === null || typeof value !== "object" || seen.has(value)) return false;
@@ -172,9 +177,14 @@ describe("admin stats routes", () => {
           opensAt: 1700000000,
           closesAt: 1710000000,
           status: "open",
+          eligibleVotersCount: 2,
         };
       }
-      if (getCallCount === 4) return { count: 2 };
+      if (getCallCount === 4) return { eligibleVotersCount: 2 };
+      if (getCallCount === 5) return { count: 2 }; // ballot snapshots
+      if (getCallCount === 6) return { count: 2 }; // durable participation
+      if (getCallCount === 7) return { count: 0 }; // linked legacy voters
+      if (getCallCount === 8) return { count: 2 }; // legacy vote rows
       return null;
     });
     mockDb.all.mockReturnValue([]);
@@ -182,6 +192,7 @@ describe("admin stats routes", () => {
     const res = await router.request("/admin/stats", { method: "GET" });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
+    expect(body.votersCount).toBe(1);
     expect(body.activeElection.votersCount).toBe(2);
     expect(body.activeElection.votedCount).toBe(2);
     expect(body.activeElection.turnoutPct).toBe(100);

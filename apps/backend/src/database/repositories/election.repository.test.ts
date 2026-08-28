@@ -50,7 +50,7 @@ describe("electionRepo", () => {
 
     try {
       await client.execute(
-        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
       );
       const db = drizzle(client, { schema });
       await db
@@ -101,7 +101,7 @@ describe("electionRepo", () => {
 
     try {
       await client.execute(
-        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
       );
       await client.execute({
         sql: "INSERT INTO elections (id, name, status, opens_at, closes_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)",
@@ -142,7 +142,7 @@ describe("electionRepo", () => {
 
     try {
       await client.execute(
-        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
       );
       const db = drizzle(client, { schema });
       await db.insert(schema.elections).values({
@@ -191,7 +191,7 @@ describe("electionRepo", () => {
 
     try {
       await client.execute(
-        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER)",
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
       );
       await client.execute({
         sql: "INSERT INTO elections (id, name, status, opens_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)",

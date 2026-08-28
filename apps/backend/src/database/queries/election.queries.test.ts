@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import type { SQL } from "drizzle-orm";
 import { electionQueries } from "./election.queries";
+import { votes } from "@/database/schema";
 
 const { mockFindCurrentlyOpen } = vi.hoisted(() => ({
   mockFindCurrentlyOpen: vi.fn(),
@@ -249,6 +252,10 @@ describe("electionQueries", () => {
           displayOrder: 1,
           candidateId: "c1",
           candidateName: "Alice",
+          candidateImageUrl: "https://example.com/alice.jpg",
+          partyName: "Leadership",
+          partyCode: "LEAD",
+          partyColor: "#3B82F6",
           voteCount: 3,
         },
         {
@@ -257,6 +264,10 @@ describe("electionQueries", () => {
           displayOrder: 1,
           candidateId: "c2",
           candidateName: "Bob",
+          candidateImageUrl: null,
+          partyName: null,
+          partyCode: null,
+          partyColor: null,
           voteCount: 1,
         },
       ]);
@@ -270,8 +281,26 @@ describe("electionQueries", () => {
           displayOrder: 1,
           totalVotes: 4,
           candidates: [
-            { candidateId: "c1", fullName: "Alice", voteCount: 3, percentage: 75 },
-            { candidateId: "c2", fullName: "Bob", voteCount: 1, percentage: 25 },
+            {
+              candidateId: "c1",
+              fullName: "Alice",
+              voteCount: 3,
+              percentage: 75,
+              imageUrl: "https://example.com/alice.jpg",
+              partyName: "Leadership",
+              partyCode: "LEAD",
+              partyColor: "#3B82F6",
+            },
+            {
+              candidateId: "c2",
+              fullName: "Bob",
+              voteCount: 1,
+              percentage: 25,
+              imageUrl: null,
+              partyName: null,
+              partyCode: null,
+              partyColor: null,
+            },
           ],
         },
       ]);
@@ -283,6 +312,117 @@ describe("electionQueries", () => {
       expect(chain.orderBy).toHaveBeenCalled();
       const lastCallArgs = chain.orderBy.mock.calls[0];
       expect(lastCallArgs).toHaveLength(3);
+    });
+
+    it("scopes the vote join to the requested election", async () => {
+      chain.all.mockReturnValueOnce([]);
+      await electionQueries.getResults(mockDb as any, "e1");
+
+      const voteJoin = chain.leftJoin.mock.calls.find(
+        ([table]: [unknown, unknown]) => table === votes,
+      ) as [typeof votes, SQL] | undefined;
+      expect(voteJoin).toBeDefined();
+      const query = new SQLiteSyncDialect().sqlToQuery(voteJoin![1]);
+      expect(query.sql).toContain('"votes"."election_id" = ?');
+      expect(query.params).toContain("e1");
+    });
+  });
+
+  describe("getTurnout", () => {
+    it("calculates turnout percentage from the persisted denominator and ballots cast", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: 100 })
+        .mockReturnValueOnce({ count: 75 })
+        .mockReturnValueOnce({ count: 75 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 75 });
+      const result = await electionQueries.getTurnout(mockDb as any, "e1");
+      expect(result).toEqual({
+        electionId: "e1",
+        totalEligibleVoters: 100,
+        totalBallotsCast: 75,
+        turnoutPercentage: 75,
+      });
+    });
+
+    it("returns 0% turnout when total eligible voters is 0", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: 0 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 0 });
+      const result = await electionQueries.getTurnout(mockDb as any, "e1");
+      expect(result).toEqual({
+        electionId: "e1",
+        totalEligibleVoters: 0,
+        totalBallotsCast: 0,
+        turnoutPercentage: 0,
+      });
+    });
+
+    it("uses durable participation for legacy ballots and leaves turnout unavailable without a roster snapshot", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: null })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 3 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 6 });
+
+      await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
+        electionId: "e1",
+        totalEligibleVoters: null,
+        totalBallotsCast: 3,
+        turnoutPercentage: null,
+      });
+    });
+
+    it("uses disjoint legacy linked ballots instead of overlapping snapshots", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: 100 })
+        .mockReturnValueOnce({ count: 2 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 3 })
+        .mockReturnValueOnce({ count: 6 });
+
+      await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
+        electionId: "e1",
+        totalEligibleVoters: 100,
+        totalBallotsCast: 3,
+        turnoutPercentage: 3,
+      });
+    });
+
+    it("combines migrated participation with newer snapshots without double counting", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: 100 })
+        .mockReturnValueOnce({ count: 4 })
+        .mockReturnValueOnce({ count: 7 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 6 });
+
+      await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
+        electionId: "e1",
+        totalEligibleVoters: 100,
+        totalBallotsCast: 7,
+        turnoutPercentage: 7,
+      });
+    });
+
+    it("leaves turnout unavailable for anonymous vote rows without a durable count", async () => {
+      chain.get
+        .mockReturnValueOnce({ eligibleVotersCount: 100 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 0 })
+        .mockReturnValueOnce({ count: 6 });
+
+      await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
+        electionId: "e1",
+        totalEligibleVoters: 100,
+        totalBallotsCast: null,
+        turnoutPercentage: null,
+      });
     });
   });
 });

@@ -45,7 +45,7 @@ const mockFindOpen = vi.fn().mockResolvedValue(null);
 
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
-    findCurrentlyOpen: (...args: any[]) => mockFindOpen(...args),
+    findOpen: (...args: any[]) => mockFindOpen(...args),
   },
 }));
 

@@ -161,12 +161,16 @@ describe("elections routes", () => {
 
   describe("gET /elections (listElections)", () => {
     it("returns 200 with array of elections for admin", async () => {
-      const rows = [makeElection({ id: "e1" }), makeElection({ id: "e2", status: "open" })];
+      const rows = [
+        makeElection({ id: "e1", eligibleVotersCount: 42 }),
+        makeElection({ id: "e2", status: "open" }),
+      ];
       mockList.mockResolvedValue(rows);
       const res = await router.request("/elections", { method: "GET" });
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json).toHaveLength(2);
+      expect(json[0]).not.toHaveProperty("eligibleVotersCount");
       expect(mockList).toHaveBeenCalledWith(mockDb, undefined);
     });
 
@@ -237,7 +241,7 @@ describe("elections routes", () => {
 
     it("returns 201 with the created election for admin", async () => {
       mockCreate.mockResolvedValue(electionId);
-      mockFindById.mockResolvedValue(makeElection());
+      mockFindById.mockResolvedValue(makeElection({ eligibleVotersCount: 42 }));
       const res = await router.request("/elections", {
         method: "POST",
         body: JSON.stringify({ name: "CSO 2026" }),
@@ -247,16 +251,20 @@ describe("elections routes", () => {
       const json = (await res.json()) as any;
       expect(json.id).toBe(electionId);
       expect(json.name).toBe("CSO 2026");
+      expect(json).not.toHaveProperty("eligibleVotersCount");
     });
   });
 
   describe("gET /elections/current", () => {
     it("returns 200 with the open election", async () => {
-      mockGetCurrentElection.mockResolvedValue(makeElection({ status: "open" }));
+      mockGetCurrentElection.mockResolvedValue(
+        makeElection({ status: "open", eligibleVotersCount: 42 }),
+      );
       const res = await router.request("/elections/current", { method: "GET" });
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.status).toBe("open");
+      expect(json).not.toHaveProperty("eligibleVotersCount");
     });
 
     it("returns 404 when no open election", async () => {
@@ -270,11 +278,12 @@ describe("elections routes", () => {
 
   describe("gET /elections/:id", () => {
     it("returns 200 with the election", async () => {
-      mockFindById.mockResolvedValue(makeElection());
+      mockFindById.mockResolvedValue(makeElection({ eligibleVotersCount: 42 }));
       const res = await router.request(`/elections/${electionId}`, { method: "GET" });
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.id).toBe(electionId);
+      expect(json).not.toHaveProperty("eligibleVotersCount");
     });
 
     it("returns 404 when not found", async () => {
@@ -318,7 +327,9 @@ describe("elections routes", () => {
     it("returns 200 when status is draft", async () => {
       mockFindById
         .mockResolvedValueOnce(makeElection({ status: "draft" }))
-        .mockResolvedValueOnce(makeElection({ status: "draft", name: "Renamed" }));
+        .mockResolvedValueOnce(
+          makeElection({ status: "draft", name: "Renamed", eligibleVotersCount: 42 }),
+        );
       const res = await router.request(`/elections/${electionId}`, {
         method: "PATCH",
         body: JSON.stringify({ name: "Renamed" }),
@@ -327,6 +338,7 @@ describe("elections routes", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.name).toBe("Renamed");
+      expect(json).not.toHaveProperty("eligibleVotersCount");
     });
 
     it("returns 409 when status is open", async () => {

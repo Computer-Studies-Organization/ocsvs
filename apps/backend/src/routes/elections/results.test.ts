@@ -66,8 +66,9 @@ vi.mock("@/config/db", () => ({
   createDb: vi.fn(() => ({ db: mockDb })),
 }));
 
-const { mockGetResults, mockFindById, mockFindByAccountId } = vi.hoisted(() => ({
+const { mockGetResults, mockGetTurnout, mockFindById, mockFindByAccountId } = vi.hoisted(() => ({
   mockGetResults: vi.fn(),
+  mockGetTurnout: vi.fn(),
   mockFindById: vi.fn(),
   mockFindByAccountId: vi.fn(),
 }));
@@ -78,6 +79,7 @@ vi.mock("@/database/queries/election.queries", () => ({
     getElectionWithPositions: vi.fn(),
     countPositions: vi.fn(),
     getResults: mockGetResults,
+    getTurnout: mockGetTurnout,
   },
 }));
 
@@ -100,10 +102,17 @@ describe("election results route", () => {
     vi.clearAllMocks();
     mockDb = createMockDb();
     mockGetResults.mockReset();
+    mockGetTurnout.mockReset();
     mockFindById.mockReset();
     mockFindByAccountId.mockReset();
     mockHasVoterParticipated.mockReset();
     mockHasVoterParticipated.mockResolvedValue(false);
+    mockGetTurnout.mockResolvedValue({
+      electionId,
+      totalEligibleVoters: 500,
+      totalBallotsCast: 382,
+      turnoutPercentage: 76.4,
+    });
     TEST_USER = {
       id: "test-user-id",
       email: "test@example.com",
@@ -126,6 +135,7 @@ describe("election results route", () => {
       {
         positionId: "pos-1",
         positionName: "President",
+        displayOrder: 1,
         totalVotes: 2,
         candidates: [{ candidateId: "cand-1", fullName: "Alice", voteCount: 2, percentage: 100 }],
       },
@@ -143,7 +153,15 @@ describe("election results route", () => {
       mockGetResults.mockResolvedValue(results);
       const res = await router.request(`/elections/${electionId}/results`, { method: "GET" });
       expect(res.status).toBe(200);
-      expect(await res.json()).toHaveLength(1);
+      expect(await res.json()).toEqual({
+        results,
+        turnout: {
+          electionId,
+          totalEligibleVoters: 500,
+          totalBallotsCast: 382,
+          turnoutPercentage: 76.4,
+        },
+      });
     });
 
     it("returns 403 when election is open and user has not voted", async () => {

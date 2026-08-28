@@ -1,9 +1,10 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type { getAdminStatsRoute } from "@/routes/admin-stats/routes";
 import { createDb } from "@/config/db";
-import { accounts, elections, ballotSnapshots, auditLog } from "@/database/schema";
+import { accounts, elections, auditLog } from "@/database/schema";
+import { electionQueries } from "@/database/queries/election.queries";
 import { electionRepo } from "@/database/repositories/election.repository";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import type { AuditAction, TargetType } from "@/lib/constants/audit-actions";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
@@ -17,7 +18,11 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
 
   // Execute independent queries concurrently to minimize DB round-trips
   const [voterCountResult, electionCountResult, openElection, logs] = await Promise.all([
-    db.select({ count: count() }).from(accounts).where(eq(accounts.role, "user")).get(),
+    db
+      .select({ count: count() })
+      .from(accounts)
+      .where(and(eq(accounts.role, "user"), isNull(accounts.deletedAt)))
+      .get(),
     db.select({ count: count() }).from(elections).get(),
     electionRepo.findCurrentlyOpen(db),
     db.select().from(auditLog).orderBy(desc(auditLog.createdAt), desc(auditLog.id)).limit(5).all(),
@@ -28,27 +33,16 @@ export const getAdminStats: AppRouteHandler<typeof getAdminStatsRoute> = async (
 
   let activeElection = null;
   if (openElection) {
-    // Turnout is count of ballot submissions recorded at vote time.
-    // Using ballot_snapshots (one row per submitted ballot) instead of
-    // count(distinct votes.userId) so that anonymised votes from hard-deleted
-    // users are still counted accurately.
-    const turnoutResult = await db
-      .select({ count: count() })
-      .from(ballotSnapshots)
-      .where(eq(ballotSnapshots.electionId, openElection.id))
-      .get();
-
-    const votedCount = turnoutResult?.count ?? 0;
-    const turnoutPct = votersCount > 0 ? Math.round((votedCount / votersCount) * 10000) / 100 : 0;
+    const turnout = await electionQueries.getTurnout(db, openElection.id);
 
     activeElection = {
       id: openElection.id,
       name: openElection.name,
       opensAt: openElection.opensAt,
       closesAt: openElection.closesAt,
-      votedCount,
-      votersCount,
-      turnoutPct,
+      votedCount: turnout.totalBallotsCast,
+      votersCount: turnout.totalEligibleVoters,
+      turnoutPct: turnout.turnoutPercentage,
     };
   }
 

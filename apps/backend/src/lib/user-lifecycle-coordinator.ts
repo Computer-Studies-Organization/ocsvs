@@ -17,6 +17,7 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { getEffectiveElectionStatus } from "@/lib/election-lifecycle";
 
 /**
  * User roles within the system.
@@ -167,7 +168,8 @@ function generateVoterUsername(
 
 export async function assertElectorateMutable(db: DbClient): Promise<void> {
   // ponytail: application-level freeze; add a persisted election roster if concurrent admin writes matter.
-  if (await electionRepo.findCurrentlyOpen(db)) {
+  const openElection = await electionRepo.findOpen(db);
+  if (openElection && getEffectiveElectionStatus(openElection) !== "closed") {
     throw new UserLifecycleError("ELECTION_IS_OPEN", 400, ERROR_MESSAGES.ELECTION_IS_OPEN);
   }
 }

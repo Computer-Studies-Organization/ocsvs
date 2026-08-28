@@ -222,6 +222,29 @@ describe("votes Routes (repository)", () => {
       expect(res.status).toBe(401);
     });
 
+    it.each(["admin", "super_admin"] as const)(
+      "returns 403 when authenticated as %s for submitVote",
+      async (role) => {
+        TEST_USER = { ...TEST_USER, role };
+        const res = await router.request(
+          "/votes",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              electionId: testElectionId,
+              votes: [{ candidateId: testCandidateId1, positionId: testPositionId1 }],
+            }),
+            headers: { "Content-Type": "application/json" },
+          },
+          { HMAC_SECRET: "test-secret" },
+        );
+
+        expect(res.status).toBe(403);
+        expect(await res.json()).toEqual({ message: ERROR_MESSAGES.FORBIDDEN });
+        expect(mockCast).not.toHaveBeenCalled();
+      },
+    );
+
     it("returns 401 when not authenticated for getVoteResults", async () => {
       AUTH_ENABLED = false;
       const res = await router.request("/votes/results", { method: "GET" });

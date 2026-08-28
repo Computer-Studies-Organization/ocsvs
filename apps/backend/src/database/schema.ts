@@ -77,6 +77,7 @@ export const elections = sqliteTable(
     status: text("status").notNull().default("draft"),
     opensAt: integer("opens_at"),
     closesAt: integer("closes_at"),
+    eligibleVotersCount: integer("eligible_voters_count"),
   },
   (table) => [
     uniqueIndex("idx_elections_one_open")

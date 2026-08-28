@@ -4,6 +4,7 @@ import { createDb } from "@/config/db";
 import { electionQueries } from "@/database/queries/election.queries";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
+import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { getEffectiveElectionStatus } from "@/lib/election-lifecycle";
 import { hasVoterParticipated, normalizePreviousHmacSecrets } from "@/lib/ballot-caster";
@@ -49,5 +50,24 @@ export const getElectionResultsHandler: AppRouteHandler<typeof getElectionResult
     }
   }
 
-  return c.json(await electionQueries.getResults(db, id), httpStatusCodes.OK);
+  const [results, turnout] = await Promise.all([
+    electionQueries.getResults(db, id),
+    electionQueries.getTurnout(db, id),
+  ]);
+  const resolvedResults = results.map((position) => ({
+    ...position,
+    candidates: position.candidates.map((candidate) => ({
+      ...candidate,
+      imageUrl: c.env
+        ? resolveCandidateImageUrl(
+            candidate.imageUrl ?? null,
+            candidate.candidateId,
+            c.env,
+            c.req.url,
+          )
+        : candidate.imageUrl,
+    })),
+  }));
+
+  return c.json({ results: resolvedResults, turnout }, httpStatusCodes.OK);
 };

@@ -24,6 +24,11 @@ import {
 export const submitVote: AppRouteHandler<typeof submitVoteRoute> = async (c) => {
   const { electionId, votes: voteItems } = c.req.valid("json");
   const authUser = c.get("authUser");
+
+  if (authUser.role !== "user") {
+    return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
+  }
+
   const { db } = createDb(c);
 
   if (!c.env?.HMAC_SECRET) {

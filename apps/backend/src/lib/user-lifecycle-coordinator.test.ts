@@ -112,7 +112,7 @@ vi.mock("@/lib/profanity", () => ({
 const mockFindOpenElection = vi.fn().mockResolvedValue(null);
 vi.mock("@/database/repositories/election.repository", () => ({
   electionRepo: {
-    findCurrentlyOpen: (...args: any[]) => mockFindOpenElection(...args),
+    findOpen: (...args: any[]) => mockFindOpenElection(...args),
   },
 }));
 
@@ -163,6 +163,7 @@ const coordinator = new UserLifecycleCoordinator();
 describe("UserLifecycleCoordinator Unit Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFindOpenElection.mockReset().mockResolvedValue(null);
     mockValidateProfanity.mockReturnValue(null);
     mockIsPasswordHashSupported.mockReturnValue(true);
   });
@@ -372,8 +373,35 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
   });
 
   describe("register", () => {
+    it("rejects voter creation while an election is scheduled to open in the future", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockFindOpenElection.mockResolvedValueOnce({
+        id: "scheduled-election",
+        status: "open",
+        opensAt: now + 3600,
+        closesAt: now + 7200,
+      });
+
+      await expect(
+        coordinator.register(mockDb, {
+          firstName: "John",
+          lastName: "Doe",
+          studentId: "student-123",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          username: "johndoe",
+        }),
+      ).rejects.toMatchObject({
+        code: "ELECTION_IS_OPEN",
+        statusCode: 400,
+        message: ERROR_MESSAGES.ELECTION_IS_OPEN,
+      });
+
+      expect(mockAccountCreate).not.toHaveBeenCalled();
+    });
+
     it("rejects voter creation while an election is open", async () => {
-      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(
         coordinator.register(mockDb, {
@@ -394,9 +422,12 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
     });
 
     it("rechecks the electorate freeze atomically before creating a voter", async () => {
-      mockFindOpenElection
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: "newly-opened-election" });
+      mockFindOpenElection.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: "newly-opened-election",
+        status: "open",
+        opensAt: Math.floor(Date.now() / 1000) + 3600,
+        closesAt: Math.floor(Date.now() / 1000) + 7200,
+      });
       mockAccountExists.mockResolvedValueOnce(false);
       mockDbGet.mockResolvedValueOnce(null);
       mockHashPassword.mockResolvedValueOnce("hashed-password");
@@ -420,7 +451,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
     });
 
     it("allows admin account creation while an election is open", async () => {
-      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
       mockAccountExists.mockResolvedValueOnce(false);
       mockDbGet.mockResolvedValueOnce(null);
       mockHashPassword.mockResolvedValueOnce("hashed-password");
@@ -676,7 +707,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         role: "user",
         deletedAt: null,
       });
-      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(coordinator.softDelete(mockDb, "user-123", actor)).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
@@ -693,7 +724,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         deletedAt: null,
       });
       mockCountActiveAdminsAndSuperAdmins.mockResolvedValueOnce(2);
-      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
 
       await coordinator.softDelete(mockDb, "user-123", actor);
 
@@ -749,7 +780,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         role: "user",
         deletedAt: 1234567890,
       });
-      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(coordinator.restore(mockDb, "user-123", actor)).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
@@ -765,7 +796,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         role: "admin",
         deletedAt: 1234567890,
       });
-      mockFindOpenElection.mockResolvedValue({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
 
       await coordinator.restore(mockDb, "user-123", actor);
 
@@ -812,7 +843,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         deletedAt: null,
       });
       mockIsCandidate.mockResolvedValueOnce(false);
-      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(coordinator.hardDelete(mockDb, "user-123", actor)).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
@@ -830,7 +861,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
       mockDbAll.mockResolvedValueOnce([]); // existing usernames check
       mockHashPassword.mockResolvedValue("hashed-pwd");
-      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election" });
+      mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(
         coordinator.bulkImport(

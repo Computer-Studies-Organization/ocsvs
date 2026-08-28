@@ -14,7 +14,10 @@ import { electionRepo } from "@/database/repositories/election.repository";
 import { resolveCandidateImageUrl } from "@/lib/b2-client";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { getEffectiveElectionStatus, TransitionError } from "@/lib/election-lifecycle";
-import { ElectionLifecycleCoordinator } from "@/lib/election-lifecycle-coordinator";
+import {
+  ElectionLifecycleCoordinator,
+  toPublicElection,
+} from "@/lib/election-lifecycle-coordinator";
 import type { TElectionStatus } from "@/database/schema";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -34,7 +37,7 @@ export const createElectionHandler: AppRouteHandler<typeof createElectionRoute> 
     throw new Error("Election row missing immediately after create");
   }
 
-  return c.json(row, httpStatusCodes.CREATED);
+  return c.json(toPublicElection(row), httpStatusCodes.CREATED);
 };
 
 export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = async (c) => {
@@ -55,7 +58,7 @@ export const listElectionsHandler: AppRouteHandler<typeof listElectionsRoute> = 
         .filter(
           (election) => election.status !== "draft" && (!status || election.status === status),
         );
-  return c.json(visibleElections, httpStatusCodes.OK);
+  return c.json(visibleElections.map(toPublicElection), httpStatusCodes.OK);
 };
 
 export const getCurrentElectionHandler: AppRouteHandler<typeof getCurrentElectionRoute> = async (
@@ -75,7 +78,8 @@ export const getCurrentElectionHandler: AppRouteHandler<typeof getCurrentElectio
       }
     }
   }
-  return c.json(row, httpStatusCodes.OK);
+  const { eligibleVotersCount: _eligibleVotersCount, ...publicRow } = row;
+  return c.json(publicRow, httpStatusCodes.OK);
 };
 
 export const getElectionHandler: AppRouteHandler<typeof getElectionRoute> = async (c) => {
@@ -87,7 +91,7 @@ export const getElectionHandler: AppRouteHandler<typeof getElectionRoute> = asyn
   if (!visibleRow || (visibleRow.status === "draft" && !isAdmin)) {
     return c.json({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND }, httpStatusCodes.NOT_FOUND);
   }
-  return c.json(visibleRow, httpStatusCodes.OK);
+  return c.json(toPublicElection(visibleRow), httpStatusCodes.OK);
 };
 
 export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> = async (c) => {
@@ -102,7 +106,7 @@ export const updateElectionHandler: AppRouteHandler<typeof updateElectionRoute> 
       id: actorAccountId,
       username: actorUsername,
     });
-    return c.json(updated, httpStatusCodes.OK);
+    return c.json(toPublicElection(updated), httpStatusCodes.OK);
   } catch (err) {
     if (err instanceof TransitionError) {
       if (err.status === httpStatusCodes.NOT_FOUND) {

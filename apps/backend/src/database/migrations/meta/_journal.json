@@ -127,6 +127,13 @@
       "when": 1787530407157,
       "tag": "0017_vote_window_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1787811103830,
+      "tag": "0018_curly_wong",
+      "breakpoints": true
     }
   ]
 }

@@ -73,6 +73,7 @@ describe("GET /elections/state", () => {
       closesAt: 2,
       createdAt: 1,
       updatedAt: 1,
+      eligibleVotersCount: 42,
     };
     getState.mockResolvedValue({
       open: open as VotingState["open"],
@@ -85,7 +86,8 @@ describe("GET /elections/state", () => {
     const res = await router.request("/elections/state", { method: "GET" });
     expect(res.status).toBe(200);
     const body = (await res.json()) as VotingState;
-    expect(body.open).toEqual(open);
+    expect(body.open?.id).toBe(open.id);
+    expect(body.open).not.toHaveProperty("eligibleVotersCount");
     expect(body.nextDraft).toBeNull();
     expect(body.lastClosed).toBeNull();
     expect(body.myVotes).toEqual({ electionId: null, hasVoted: false });
@@ -154,6 +156,55 @@ describe("GET /elections/state", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as VotingState;
     expect(body.lastClosed?.results[0].totalVotes).toBe(10);
+  });
+
+  it("resolves private B2 image URLs in lastClosed results", async () => {
+    const imageUrl =
+      "https://f003.backblazeb2.com/file/cso-voting-candidates/candidates/cand-1/image.png";
+    getState.mockResolvedValue({
+      open: null,
+      nextDraft: null,
+      lastClosed: {
+        id: "c1",
+        name: "Recent",
+        closesAt: 200,
+        results: [
+          {
+            positionId: "p1",
+            positionName: "President",
+            displayOrder: 1,
+            totalVotes: 10,
+            candidates: [
+              {
+                candidateId: "cand-1",
+                fullName: "Jane Doe",
+                voteCount: 10,
+                percentage: 100,
+                imageUrl,
+              },
+            ],
+          },
+        ],
+      },
+      ballot: null,
+      myVotes: { electionId: null, hasVoted: false },
+    });
+
+    const res = await router.request(
+      "/elections/state",
+      { method: "GET" },
+      {
+        B2_BUCKET_NAME: "cso-voting-candidates",
+        B2_PUBLIC_ACCESS: false,
+        B2_PUBLIC_BASE_URL: "https://f003.backblazeb2.com/file",
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as VotingState;
+    expect(body.lastClosed?.results[0].candidates[0].imageUrl).toBe(
+      "http://localhost/candidates/cand-1/image",
+    );
   });
 
   it("returns both nextDraft and lastClosed when both exist", async () => {
