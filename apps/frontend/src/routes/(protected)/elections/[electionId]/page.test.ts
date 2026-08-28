@@ -57,10 +57,10 @@ const freshResults: TResults = [
 describe("election detail results", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCacheGet.mockReturnValue({
-      data: { results: freshResults, turnout: null },
+    mockCacheGet.mockImplementation((resource: string) => ({
+      data: resource === "results" ? { results: freshResults, turnout: null } : null,
       fetch: vi.fn(),
-    });
+    }));
   });
 
   it("renders refreshed results from the cache entry", () => {
@@ -100,6 +100,34 @@ describe("election detail results", () => {
     } finally {
       nowSpy.mockRestore();
     }
+  });
+
+  it("uses refreshed election metadata for final result status", () => {
+    const openElection = { ...election, closesAt: 9_999_999_999 };
+    const closedElection = { ...openElection, status: "closed" as const, closesAt: 100 };
+    mockCacheGet.mockImplementation((resource: string) => ({
+      data:
+        resource === "election"
+          ? closedElection
+          : resource === "results"
+            ? { results: freshResults, turnout: null }
+            : null,
+      fetch: vi.fn(),
+    }));
+
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election: openElection,
+          results: staleResults,
+          turnout: null,
+          hasVoted: true,
+        },
+      },
+    });
+
+    expect(body).toContain("Official Final Results");
+    expect(body).not.toContain("Live Unofficial Count");
   });
 
   it("keeps result controls and cards flexible on narrow screens", () => {

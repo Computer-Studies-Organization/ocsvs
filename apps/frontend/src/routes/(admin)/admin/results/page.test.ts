@@ -92,6 +92,60 @@ describe("admin results mobile layout", () => {
     expect(body).not.toContain("Stale Candidate");
   });
 
+  it("uses refreshed election metadata for final result status", () => {
+    const openElection = {
+      id: "election-1",
+      name: "Freedom",
+      description: null,
+      status: "open" as const,
+      opensAt: 1,
+      closesAt: 9_999_999_999,
+      createdAt: 0,
+      updatedAt: 0,
+    };
+    const closedElection = { ...openElection, status: "closed" as const, closesAt: 100 };
+
+    mockCacheGet.mockImplementation((resource: string) => ({
+      data:
+        resource === "election"
+          ? closedElection
+          : resource === "results"
+            ? {
+                results: [
+                  {
+                    positionId: "position-1",
+                    positionName: "Mayor",
+                    totalVotes: 1,
+                    candidates: [],
+                  },
+                ],
+                turnout: {
+                  electionId: "election-1",
+                  totalEligibleVoters: 10,
+                  totalBallotsCast: 1,
+                  turnoutPercentage: 10,
+                },
+              }
+            : null,
+      fetch: vi.fn(),
+    }));
+
+    const { body } = render(Page, {
+      props: {
+        data: {
+          elections: [openElection],
+          selectedElectionId: "election-1",
+          results: [],
+          turnout: null,
+          resultsError: "",
+        },
+      },
+    });
+
+    expect(body).toContain("Official Final Results");
+    expect(body).not.toContain("Live Unofficial Count");
+  });
+
   it("shows recovered cached results after an initial load error", () => {
     mockCacheGet.mockImplementation((resource: string) => ({
       data:

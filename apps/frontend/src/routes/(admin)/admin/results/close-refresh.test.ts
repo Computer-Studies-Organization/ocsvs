@@ -9,5 +9,7 @@ describe("admin results close refresh", () => {
     expect(pageSource).toContain("refreshResultsAfterClose(");
     expect(pageSource).toContain("() => poll(true)");
     expect(pageSource).toContain("async function poll(force = false)");
+    expect(pageSource).toContain("refreshElectionAndResults(");
+    expect(pageSource).toContain("() => electionEntry?.fetch(true)");
   });
 });

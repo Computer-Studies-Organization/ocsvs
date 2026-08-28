@@ -116,4 +116,60 @@ describe("voter results page", () => {
     expect(body).toContain("Live Unofficial Count");
     expect(body).not.toContain("Official Election Results & Outcomes");
   });
+
+  it("uses refreshed election metadata for final result status", () => {
+    const openElection = {
+      id: "election-1",
+      name: "CSO Election",
+      description: null,
+      status: "open" as const,
+      opensAt: 1,
+      closesAt: 9_999_999_999,
+      createdAt: 0,
+      updatedAt: 0,
+    };
+    const closedElection = { ...openElection, status: "closed" as const, closesAt: 100 };
+    mockCacheGet.mockImplementation((resource: string) => ({
+      data:
+        resource === "election"
+          ? closedElection
+          : resource === "results"
+            ? {
+                results: [
+                  {
+                    positionId: "position-1",
+                    positionName: "President",
+                    totalVotes: 1,
+                    candidates: [],
+                  },
+                ],
+                turnout: {
+                  electionId: "election-1",
+                  totalEligibleVoters: 10,
+                  totalBallotsCast: 1,
+                  turnoutPercentage: 10,
+                },
+              }
+            : null,
+      fetch: vi.fn(),
+    }));
+
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election: openElection,
+          results: [],
+          turnout: {
+            electionId: "election-1",
+            totalEligibleVoters: 10,
+            totalBallotsCast: 1,
+            turnoutPercentage: 10,
+          },
+        },
+      },
+    });
+
+    expect(body).toContain("Official Final Results");
+    expect(body).not.toContain("Live Unofficial Count");
+  });
 });

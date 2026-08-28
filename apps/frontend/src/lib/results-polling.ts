@@ -3,6 +3,14 @@ import type { TElectionStatus } from "$lib/types";
 export const RESULTS_POLL_INTERVAL_MS = 15_000;
 
 type VisibilityTarget = Pick<Document, "hidden" | "addEventListener" | "removeEventListener">;
+type RefreshTask = () => void | Promise<unknown>;
+
+export async function refreshElectionAndResults(
+  refreshElection: RefreshTask,
+  refreshResults: RefreshTask,
+): Promise<void> {
+  await Promise.all([refreshElection(), refreshResults()]);
+}
 
 export function startResultsPolling(
   poll: () => void | Promise<void>,

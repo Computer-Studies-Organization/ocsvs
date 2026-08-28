@@ -1,6 +1,10 @@
 <script lang="ts">
   import { appCache } from '$lib/cache'
-  import { refreshResultsAfterClose, startResultsPolling } from '$lib/results-polling'
+  import {
+    refreshElectionAndResults,
+    refreshResultsAfterClose,
+    startResultsPolling,
+  } from '$lib/results-polling'
   import type { TElectionStatus, TElectionTurnout, TResults } from '$lib/types'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-svelte'
@@ -9,7 +13,11 @@
 
   let { data } = $props()
 
-  const election = $derived(data.election)
+  const initialElection = $derived(data.election)
+  const electionEntry = $derived(
+    initialElection ? appCache.get('election', { id: initialElection.id }) : null,
+  )
+  const election = $derived(electionEntry?.data ?? initialElection)
   const resultsEntry = $derived(
     appCache.get('results', { electionId: election.id })
   )
@@ -28,7 +36,10 @@
   async function poll(force = false) {
     if ((!force && effectiveStatus !== 'open') || (!force && document.hidden)) return
     try {
-      await resultsEntry.fetch(true)
+      await refreshElectionAndResults(
+        () => electionEntry?.fetch(true),
+        () => resultsEntry.fetch(true),
+      )
     } catch {
       // Fail silently (polling is best-effort)
     }

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TElectionStatus } from "$lib/types";
 import {
+  refreshElectionAndResults,
   refreshResultsAfterClose,
   RESULTS_POLL_INTERVAL_MS,
   startResultsPolling,
@@ -61,5 +62,15 @@ describe("results polling", () => {
 
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledWith(true);
+  });
+
+  it("refreshes election metadata alongside results", async () => {
+    const refreshElection = vi.fn().mockResolvedValue(undefined);
+    const refreshResults = vi.fn().mockResolvedValue(undefined);
+
+    await refreshElectionAndResults(refreshElection, refreshResults);
+
+    expect(refreshElection).toHaveBeenCalledOnce();
+    expect(refreshResults).toHaveBeenCalledOnce();
   });
 });

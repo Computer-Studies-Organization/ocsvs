@@ -1,7 +1,11 @@
 <script lang='ts'>
   import type { TElection, TElectionStatus, TElectionTurnout, TResults } from '$lib/types'
   import { appCache } from '$lib/cache'
-  import { refreshResultsAfterClose, startResultsPolling } from '$lib/results-polling'
+  import {
+    refreshElectionAndResults,
+    refreshResultsAfterClose,
+    startResultsPolling,
+  } from '$lib/results-polling'
   import { goto } from '$app/navigation'
   import { authStore } from '$lib/stores/auth.svelte'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
@@ -16,8 +20,12 @@
   const selectedElection = $derived(
     elections.find(e => e.id === data.selectedElectionId) ?? null
   )
+  const electionEntry = $derived(
+    selectedElection ? appCache.get('election', { id: selectedElection.id }) : null,
+  )
+  const currentElection = $derived(electionEntry?.data ?? selectedElection)
   const resultsEntry = $derived(
-    selectedElection ? appCache.get('results', { electionId: selectedElection.id }) : null,
+    currentElection ? appCache.get('results', { electionId: currentElection.id }) : null,
   )
   const isError = $derived(Boolean(data.resultsError) && resultsEntry?.data === null)
   const results = $derived<TResults>(resultsEntry?.data?.results ?? data.results ?? [])
@@ -34,13 +42,16 @@
   })
 
   const effectiveStatus = $derived(
-    selectedElection ? getEffectiveElectionStatus(selectedElection, now) : null,
+    currentElection ? getEffectiveElectionStatus(currentElection, now) : null,
   )
 
   async function poll(force = false) {
     if ((!force && effectiveStatus !== 'open') || (!force && document.hidden)) return
     try {
-      await resultsEntry?.fetch(true)
+      await refreshElectionAndResults(
+        () => electionEntry?.fetch(true),
+        () => resultsEntry?.fetch(true),
+      )
     } catch {
       // Fail silently (polling is best-effort)
     }
@@ -67,7 +78,10 @@
   }
 
   const visibleElections = $derived(
-    elections.filter(e => getEffectiveElectionStatus(e, now) !== 'draft')
+    (currentElection
+      ? elections.map(e => e.id === currentElection.id ? currentElection : e)
+      : elections
+    ).filter(e => getEffectiveElectionStatus(e, now) !== 'draft')
   )
 
   function selectElection(id: string) {
@@ -76,10 +90,10 @@
 
   function exportToCSV() {
     if (!results.length) return
-    const electionName = selectedElection?.name ?? ''
+    const electionName = currentElection?.name ?? ''
     const totalBallotsCast = turnout?.totalBallotsCast ?? 'Unavailable'
-    const isFinal = !selectedElection || ['closed', 'archived'].includes(
-      getEffectiveElectionStatus(selectedElection, now),
+    const isFinal = !currentElection || ['closed', 'archived'].includes(
+      getEffectiveElectionStatus(currentElection, now),
     )
 
     const escapeCsv = (val: string) => {
@@ -170,8 +184,8 @@
         <div>
           <h1 class='text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl'>Vote Results</h1>
           <p class='mt-1 break-words text-xs font-medium uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]'>
-            {#if selectedElection}
-              Real-time Election Statistics — {selectedElection.name}
+            {#if currentElection}
+              Real-time Election Statistics — {currentElection.name}
             {:else}
               Real-time Election Statistics
             {/if}
@@ -232,7 +246,7 @@
           oncta={() => goto('/admin/elections')}
         />
       {:else}
-        <ResultsPanel election={selectedElection} {results} {turnout} status={effectiveStatus ?? 'closed'} />
+        <ResultsPanel election={currentElection} {results} {turnout} status={effectiveStatus ?? 'closed'} />
       {/if}
     </main>
   </div>

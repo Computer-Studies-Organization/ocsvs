@@ -1,6 +1,10 @@
 <script lang='ts'>
   import { appCache } from '$lib/cache'
-  import { refreshResultsAfterClose, startResultsPolling } from '$lib/results-polling'
+  import {
+    refreshElectionAndResults,
+    refreshResultsAfterClose,
+    startResultsPolling,
+  } from '$lib/results-polling'
   import type { TElectionStatus, TElectionTurnout, TResults } from '$lib/types'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
@@ -8,7 +12,11 @@
   import ResultsPanel from '$lib/components/results/results-panel.svelte'
 
   let { data } = $props()
-  const election = $derived(data.election)
+  const initialElection = $derived(data.election)
+  const electionEntry = $derived(
+    initialElection ? appCache.get('election', { id: initialElection.id }) : null,
+  )
+  const election = $derived(electionEntry?.data ?? initialElection)
   const resultsEntry = $derived(
     election ? appCache.get('results', { electionId: election.id }) : null,
   )
@@ -26,9 +34,12 @@
   })
 
   async function poll(force = false) {
-    if (!force && (effectiveStatus !== 'open' || !hasVoted || document.hidden)) return
+    if (!force && (effectiveStatus !== 'open' || document.hidden)) return
     try {
-      await resultsEntry?.fetch(true)
+      await refreshElectionAndResults(
+        () => electionEntry?.fetch(true),
+        () => (force || hasVoted ? resultsEntry?.fetch(true) : undefined),
+      )
     } catch {
       // Fail silently (polling is best-effort)
     }
@@ -44,7 +55,7 @@
       () => poll(true),
     )
 
-    if (status !== 'open' || !hasVoted) return
+    if (status !== 'open') return
 
     return startResultsPolling(() => poll(), () => status === 'open')
   })
