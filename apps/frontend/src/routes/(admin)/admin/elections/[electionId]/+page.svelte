@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { ArrowLeft, Edit, Flag, ListOrdered, Plus, MoreHorizontal } from 'lucide-svelte'
+  import { ArrowLeft, ChevronDown, Edit, Flag, ListOrdered, Plus, MoreHorizontal } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
@@ -263,9 +263,9 @@
                 style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
               >
                 <div class='flex items-start gap-2 p-3.5'>
-                  <details class='min-w-0 flex-1'>
-                    <summary class='min-h-11 cursor-pointer rounded-lg px-1 py-2 text-left transition hover:bg-slate-900/50'>
-                      <span class='flex items-center gap-3'>
+                  <details class='group min-w-0 flex-1'>
+                    <summary class='flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 py-2 text-left transition hover:bg-slate-900/50 [&::-webkit-details-marker]:hidden'>
+                      <span class='flex min-w-0 flex-1 items-center gap-3'>
                         <span
                           class='h-3.5 w-3.5 shrink-0 rounded-full'
                           style='background-color: {party.color || '#3B82F6'}'
@@ -280,6 +280,7 @@
                           {partyCandidates.length} {partyCandidates.length === 1 ? 'candidate' : 'candidates'}
                         </span>
                       </span>
+                      <ChevronDown size={14} class='shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180' />
                     </summary>
 
                     <div class='mt-3 border-t pt-3' style='border-color: oklch(0.25 0.025 250)'>
