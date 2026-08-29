@@ -17,6 +17,7 @@ import { candidateRepo } from "@/database/repositories/candidates.repository";
 import { electionRepo } from "@/database/repositories/election.repository";
 import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
+import { LOCKOUT_WINDOW_SECONDS } from "@/lib/constants/login-lockout";
 import { getEffectiveElectionStatus } from "@/lib/election-lifecycle";
 
 /**
@@ -718,13 +719,21 @@ export class UserLifecycleCoordinator {
     const dummyHash = CURRENT_COST_DUMMY_HASH;
 
     // 1. Lockout window checks
-    await loginAttemptRepo.deleteExpiredAttempts(db, studentNumber, 900);
-    const attemptsList = await loginAttemptRepo.getRecentAttempts(db, studentNumber, clientIp, 900);
+    await loginAttemptRepo.deleteExpiredAttempts(db, studentNumber, LOCKOUT_WINDOW_SECONDS);
+    const attemptsList = await loginAttemptRepo.getRecentAttempts(
+      db,
+      studentNumber,
+      clientIp,
+      LOCKOUT_WINDOW_SECONDS,
+    );
     const attempts = attemptsList.length;
 
     if (attempts >= 5) {
       const oldest = attemptsList[0]?.attemptedAt ?? 0;
-      const retryAfter = Math.max(1, oldest + 900 - Math.floor(Date.now() / 1000));
+      const retryAfter = Math.max(
+        1,
+        oldest + LOCKOUT_WINDOW_SECONDS - Math.floor(Date.now() / 1000),
+      );
       // Constant-time hash verification to prevent timing analysis
       await verifyPassword(password, dummyHash);
       throw new UserLifecycleError(

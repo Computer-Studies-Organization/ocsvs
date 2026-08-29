@@ -5,6 +5,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "@/database/schema";
 import { loginAttemptRepo } from "@/database/repositories/login-attempt.repository";
+import { LOCKOUT_WINDOW_SECONDS } from "@/lib/constants/login-lockout";
 import auditLog from "@/routes/audit-log";
 import auth from "@/routes/auth/auth.index";
 import candidates from "@/routes/candidates";
@@ -67,7 +68,10 @@ const worker = Object.assign(app, {
     });
 
     try {
-      await loginAttemptRepo.deleteAllExpiredAttempts(drizzle(client, { schema }), 900);
+      await loginAttemptRepo.deleteAllExpiredAttempts(
+        drizzle(client, { schema }),
+        LOCKOUT_WINDOW_SECONDS,
+      );
     } finally {
       client.close();
     }
