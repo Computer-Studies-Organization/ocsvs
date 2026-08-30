@@ -14,6 +14,3 @@ export const updateCandidateSchema = z
       .optional(),
   })
   .strict();
-
-export type CreateCandidateInput = z.infer<typeof createCandidateSchema>;
-export type UpdateCandidateInput = z.infer<typeof updateCandidateSchema>;

@@ -1,3 +1,5 @@
+import { redirect } from "@sveltejs/kit";
+import { ApiError } from "$lib/api/client";
 import type { TUserData } from "$lib/types";
 import { UserRole } from "$lib/types";
 
@@ -27,4 +29,8 @@ export function getAdminRouteRedirectPath(user: TUserSession | null | undefined)
     return "/voting";
   }
   return null;
+}
+
+export function redirectOnUnauthorized(cause: unknown): void {
+  if (cause instanceof ApiError && cause.status === 401) redirect(302, "/auth");
 }

@@ -5,11 +5,7 @@ export const createPositionSchema = z.object({
   displayOrder: z.coerce.number().int().min(0).optional(),
 });
 
-export type CreatePositionInput = z.infer<typeof createPositionSchema>;
-
 export const updatePositionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name too long").optional(),
   displayOrder: z.coerce.number().int().min(0).optional(),
 });
-
-export type UpdatePositionInput = z.infer<typeof updatePositionSchema>;

@@ -18,8 +18,6 @@ export const COMMON_POSITION_PRESETS = [
   "Networking Committee Leader",
 ] as const;
 
-export type CommonPositionPreset = (typeof COMMON_POSITION_PRESETS)[number];
-
 /**
  * Normalizes a position name for case-insensitive, whitespace-trimmed comparison.
  */
@@ -36,15 +34,4 @@ export function isPositionAlreadyAdded(
 ): boolean {
   const normalized = normalizePositionName(presetName);
   return existingPositions.some((p) => normalizePositionName(p.name) === normalized);
-}
-
-/**
- * Returns preset entries that are not already present in existing positions.
- */
-export function getMissingPresets(
-  existingPositions: Array<{ name: string }>,
-): CommonPositionPreset[] {
-  return COMMON_POSITION_PRESETS.filter(
-    (preset) => !isPositionAlreadyAdded(preset, existingPositions),
-  );
 }

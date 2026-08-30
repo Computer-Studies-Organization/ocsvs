@@ -19,10 +19,6 @@ const productionApi: ApiClientAdapter = {
   fetchUsers,
 };
 
-export { CacheEntry } from "./cache-entry.svelte";
-export { AppCache } from "./app-cache.svelte";
-export type { ApiClientAdapter } from "./api-client";
-
 // Export the singleton configured for production
 export const appCache = new AppCache(productionApi);
 onAuthTransition(() => appCache.invalidate());

@@ -1,7 +1,8 @@
 import type { PageLoad } from "./$types";
-import { error, redirect } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { ApiError } from "$lib/api/client";
 import { appCache } from "$lib/cache";
+import { redirectOnUnauthorized } from "$lib/routeGuards";
 
 export const load: PageLoad = async ({ params, fetch }) => {
   const { electionId, partyId } = params;
@@ -10,8 +11,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
     .get("partyLists", { electionId })
     .fetchOrThrow(false, { fetch })
     .catch((cause: unknown) => {
+      redirectOnUnauthorized(cause);
       if (cause instanceof ApiError) {
-        if (cause.status === 401) redirect(302, "/auth");
         if (cause.status === 404) error(404, "Election not found");
       }
       throw cause;
@@ -26,9 +27,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
       .fetchOrThrow(false, { fetch }),
     appCache.get("positions", { electionId }).fetchOrThrow(false, { fetch }),
   ]).catch((cause: unknown) => {
-    if (cause instanceof ApiError && cause.status === 401) {
-      redirect(302, "/auth");
-    }
+    redirectOnUnauthorized(cause);
     throw cause;
   });
 

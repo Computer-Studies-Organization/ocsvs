@@ -4,7 +4,9 @@ import {
   getAdminRouteRedirectPath,
   getProtectedRouteRedirectPath,
   getPublicRouteRedirectPath,
+  redirectOnUnauthorized,
 } from "./routeGuards";
+import { ApiError } from "./api/client";
 import { UserRole } from "./types";
 
 const adminUser = {
@@ -67,5 +69,11 @@ describe("routeGuards", () => {
 
   test("admin routes allow super_admins to continue", () => {
     expect(getAdminRouteRedirectPath(superAdminUser)).toBeNull();
+  });
+
+  test("redirects unauthorized API errors to login", () => {
+    expect(() => redirectOnUnauthorized(new ApiError(401, "Unauthorized"))).toThrowError(
+      expect.objectContaining({ status: 302, location: "/auth" }),
+    );
   });
 });

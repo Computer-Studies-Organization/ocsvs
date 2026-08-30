@@ -55,7 +55,7 @@ build:
 
 # Build frontend only
 build-fe:
-    pnpm build:frontend
+    pnpm --filter @cso-voting/frontend build
 
 # Generate a new Drizzle migration from schema changes
 db-generate:
