@@ -1,6 +1,6 @@
 import type { DbClient } from "./database.type";
 import { and, count, desc, eq, inArray, isNotNull, lte, ne, or } from "drizzle-orm";
-import { candidates, elections, positions, users, votes } from "@/database/schema";
+import { candidates, elections, positions, users } from "@/database/schema";
 
 function voterElectionVisibility(now: number) {
   return or(
@@ -25,14 +25,6 @@ export interface AdminListResult {
     limit: number;
     totalPages: number;
   };
-}
-
-export interface VoteCountResult {
-  candidateId: string;
-  candidateName: string;
-  positionId: string;
-  positionName: string;
-  voteCount: number;
 }
 
 export interface BallotCandidateRow {
@@ -210,16 +202,6 @@ export const candidateRepo = {
     return ((await query.where(whereClause).get()) as AdminCandidateRow | undefined) ?? null;
   },
 
-  // Count of active candidates
-  async countActive(db: DbClient): Promise<number> {
-    const res = await db
-      .select({ count: count() })
-      .from(candidates)
-      .where(eq(candidates.isActive, 1))
-      .get();
-    return (res as { count: number } | null)?.count ?? 0;
-  },
-
   // Count of candidates for a position (active-only by default)
   async countByPositionId(
     db: DbClient,
@@ -375,25 +357,5 @@ export const candidateRepo = {
       .limit(1)
       .get();
     return res !== undefined;
-  },
-
-  // Specialized query for vote results: active candidates with vote counts
-  async listWithVoteCount(db: DbClient): Promise<VoteCountResult[]> {
-    const rows = await db
-      .select({
-        candidateId: candidates.id,
-        candidateName: candidates.fullName,
-        positionId: candidates.positionId,
-        positionName: positions.name,
-        voteCount: count(votes.id),
-      })
-      .from(candidates)
-      .leftJoin(positions, eq(candidates.positionId, positions.id))
-      .leftJoin(votes, eq(candidates.id, votes.candidateId))
-      .where(eq(candidates.isActive, 1))
-      .groupBy(candidates.id, candidates.fullName, candidates.positionId, positions.name)
-      .orderBy(desc(count(votes.id)))
-      .all();
-    return rows as VoteCountResult[];
   },
 };

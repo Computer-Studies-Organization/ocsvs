@@ -48,30 +48,6 @@ export async function createSession(db: Database, accountId: string): Promise<Se
 }
 
 /**
- * Retrieves a valid (non-expired) session by ID.
- * Returns null if session doesn't exist or is expired.
- */
-export async function getSession(db: Database, sessionId: string): Promise<SessionData | null> {
-  const now = Math.floor(Date.now() / 1000);
-
-  const session = await db
-    .select()
-    .from(sessions)
-    .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, now)))
-    .get();
-
-  if (!session) {
-    return null;
-  }
-
-  return {
-    id: session.id,
-    accountId: session.accountId,
-    expiresAt: session.expiresAt,
-  };
-}
-
-/**
  * Retrieves the account associated with a session.
  */
 export async function getSessionAccount(db: Database, sessionId: string) {

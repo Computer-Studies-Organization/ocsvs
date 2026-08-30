@@ -277,14 +277,6 @@ describe("candidateRepo", () => {
   });
 
   describe("counts & batch lookups", () => {
-    it("countActive returns count or 0 default", async () => {
-      countQueryChain.get.mockResolvedValueOnce({ count: 4 });
-      expect(await candidateRepo.countActive(mockDb as any)).toBe(4);
-
-      countQueryChain.get.mockResolvedValueOnce(null);
-      expect(await candidateRepo.countActive(mockDb as any)).toBe(0);
-    });
-
     it("countByPositionId respects includeInactive option", async () => {
       countQueryChain.get.mockResolvedValueOnce({ count: 2 });
       expect(await candidateRepo.countByPositionId(mockDb as any, "p1")).toBe(2);
@@ -432,25 +424,6 @@ describe("candidateRepo", () => {
       dataQueryChain.get.mockResolvedValueOnce(undefined);
       expect(await candidateRepo.isCandidate(mockDb as any, "a2")).toBe(false);
       expect(eq).toHaveBeenCalledWith(candidates.accountId, "a2");
-    });
-
-    it("listWithVoteCount runs left join query for candidate votes", async () => {
-      dataQueryChain.all.mockResolvedValueOnce([
-        {
-          candidateId: "c1",
-          candidateName: "Alice",
-          positionId: "p1",
-          positionName: "President",
-          voteCount: 10,
-        },
-      ]);
-
-      const list = await candidateRepo.listWithVoteCount(mockDb as any);
-
-      expect(dataQueryChain.leftJoin).toHaveBeenCalledTimes(2);
-      expect(dataQueryChain.groupBy).toHaveBeenCalled();
-      expect(list).toHaveLength(1);
-      expect(list[0].voteCount).toBe(10);
     });
   });
 });

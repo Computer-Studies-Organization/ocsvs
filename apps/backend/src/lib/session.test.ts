@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSession,
-  getSession,
   getSessionAccount,
   deleteSession,
   setSessionCookie,
@@ -59,33 +58,6 @@ describe("session utilities", () => {
         expiresAt: session.expiresAt,
       });
       expect(insertChain.run).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("getSession", () => {
-    it("should retrieve a valid session", async () => {
-      const sessionId = "test-session-id";
-      const expectedSessionRow = {
-        id: sessionId,
-        accountId: "test-account-id",
-        expiresAt: Math.floor(Date.now() / 1000) + 1000,
-      };
-      selectChain.get.mockResolvedValue(expectedSessionRow);
-
-      const session = await getSession(mockDb, sessionId);
-
-      expect(session).toEqual(expectedSessionRow);
-      expect(mockDb.select).toHaveBeenCalledTimes(1);
-      expect(selectChain.from).toHaveBeenCalledWith(sessions);
-      expect(selectChain.where).toHaveBeenCalledTimes(1);
-      expect(selectChain.get).toHaveBeenCalledTimes(1);
-    });
-
-    it("should return null if session is not found or expired", async () => {
-      selectChain.get.mockResolvedValue(undefined);
-
-      const session = await getSession(mockDb, "non-existent");
-      expect(session).toBeNull();
     });
   });
 

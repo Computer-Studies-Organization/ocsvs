@@ -77,7 +77,6 @@ vi.mock("@/config/db", () => ({
 
 const {
   mockFindActiveByIds,
-  mockListWithVoteCount,
   mockGetForAdminView,
   mockFindByAccountId,
   mockCountByCandidateId,
@@ -90,7 +89,6 @@ const {
   mockCast,
 } = vi.hoisted(() => ({
   mockFindActiveByIds: vi.fn(),
-  mockListWithVoteCount: vi.fn(),
   mockGetForAdminView: vi.fn(),
   mockFindByAccountId: vi.fn(),
   mockCountByCandidateId: vi.fn(),
@@ -114,7 +112,6 @@ vi.mock("@/lib/ballot-caster", () => ({
 vi.mock("@/database/repositories/candidates.repository", () => ({
   candidateRepo: {
     findActiveByIds: mockFindActiveByIds,
-    listWithVoteCount: mockListWithVoteCount,
     getForAdminView: mockGetForAdminView,
   },
 }));
@@ -166,7 +163,6 @@ describe("votes Routes (repository)", () => {
     vi.clearAllMocks();
     mockDb = createMockDb();
     mockFindActiveByIds.mockReset();
-    mockListWithVoteCount.mockReset();
     mockGetForAdminView.mockReset();
     mockFindByAccountId.mockReset();
     mockCountByCandidateId.mockReset();
