@@ -14,10 +14,4 @@ export class LoginPage {
     await this.page.click('button[type="submit"]');
     await this.page.waitForURL((url) => !url.pathname.endsWith("/auth"));
   }
-
-  async expectLoginFormVisible() {
-    await expect(this.page.locator("#studentNumber")).toBeVisible();
-    await expect(this.page.locator("#password")).toBeVisible();
-    await expect(this.page.locator('button[type="submit"]')).toBeVisible();
-  }
 }

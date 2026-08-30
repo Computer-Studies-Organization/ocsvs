@@ -12,7 +12,6 @@
     "@libsql/client": "^0.15.15",
     "@playwright/test": "^1.50.0",
     "@types/node": "^20.19.27",
-    "dotenv": "^16.4.7",
-    "typescript": "^5.9.3"
+    "dotenv": "^16.4.7"
   }
 }

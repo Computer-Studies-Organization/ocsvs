@@ -1,9 +1,19 @@
 import { test, expect } from "../../fixtures/offline-test";
-import { TEST_USERS, seedTestUsers } from "../../fixtures/db-setup";
+import {
+  TEST_USERS,
+  closeOpenElection,
+  seedActiveElection,
+  seedTestUsers,
+} from "../../fixtures/db-setup";
 
 test.describe("User Archiving (Soft-Delete) & Restoration Flow", () => {
   test.beforeEach(async () => {
+    await closeOpenElection();
     await seedTestUsers();
+  });
+
+  test.afterEach(async () => {
+    await seedActiveElection();
   });
 
   test("multi-session invalidation: soft-deleting voter invalidates active sessions and blocks login until restored", async ({

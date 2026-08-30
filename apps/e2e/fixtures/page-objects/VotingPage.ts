@@ -8,20 +8,11 @@ export class VotingPage {
   }
 
   async selectCandidateByName(candidateName?: string) {
-    const candidateCard = this.page.locator('.grid [role="button"]').first();
-    await expect(candidateCard).toBeVisible({ timeout: 10000 });
-    if (candidateName) {
-      const cardByName = this.page
-        .locator('[role="button"]')
-        .filter({ hasText: candidateName })
-        .first();
-      if (await cardByName.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await cardByName.click();
-        await this.page.waitForTimeout(400);
-        return;
-      }
-    }
-    await candidateCard.click();
+    const candidateButton = candidateName
+      ? this.page.getByRole("button", { name: `Select ${candidateName}`, exact: true })
+      : this.page.getByRole("button", { name: /^Select / }).first();
+    await expect(candidateButton).toBeVisible({ timeout: 10000 });
+    await candidateButton.click();
     await this.page.waitForTimeout(400);
   }
 
@@ -46,17 +37,6 @@ export class VotingPage {
     await expect(submitBtn).toBeEnabled({ timeout: 10000 });
     await submitBtn.click();
   }
-
-  async expectThankYouMessage() {
-    await expect(this.page.locator("h1")).toContainText("Thank you for voting!");
-  }
-
-  async expectNoActiveElectionMessage() {
-    await expect(this.page.locator("body")).toContainText(
-      /No active election|No elections scheduled|has ended/i,
-    );
-  }
-
   async expectAlreadyVotedMessage() {
     await expect(this.page.locator("body")).toContainText(
       /Thank you for voting|Your vote.*has been recorded|Already voted/i,

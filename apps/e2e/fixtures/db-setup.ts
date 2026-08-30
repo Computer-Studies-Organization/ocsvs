@@ -126,6 +126,8 @@ export const DRAFT_CANDIDATE = {
   candidateId: "e2e-draft-candidate-id",
 };
 
+const ACTIVE_ELECTION_ID = "e2e-open-election-id";
+
 export async function seedTestUsers() {
   const client = createTestDatabaseClient();
 
@@ -175,7 +177,7 @@ export async function seedActiveElection() {
   const client = createTestDatabaseClient();
 
   const now = Math.floor(Date.now() / 1000);
-  const electionId = "e2e-open-election-id";
+  const electionId = ACTIVE_ELECTION_ID;
   const posPresId = "e2e-pos-president";
   const posVpId = "e2e-pos-vice-president";
   const candPres1Id = "e2e-cand-pres-1";
@@ -189,10 +191,14 @@ export async function seedActiveElection() {
     sql: "UPDATE elections SET status = 'closed' WHERE status = 'open' AND id != ?",
     args: [electionId],
   });
-  await client.execute({
-    sql: "DELETE FROM votes WHERE user_id = ?",
-    args: [TEST_USERS.votedVoter.userId],
-  });
+  await client.batch([
+    { sql: "DELETE FROM votes WHERE election_id = ?", args: [electionId] },
+    { sql: "DELETE FROM ballot_snapshots WHERE election_id = ?", args: [electionId] },
+    {
+      sql: "DELETE FROM voter_election_participation WHERE election_id = ?",
+      args: [electionId],
+    },
+  ]);
 
   await client.batch([
     {
@@ -319,16 +325,13 @@ export async function seedActiveElection() {
       }
     }
   }
-
-  // Ensure fresh voter has no votes left over from previous test runs
-  await resetVoterVotes();
 }
 
-export async function resetVoterVotes() {
+export async function closeOpenElection() {
   const client = createTestDatabaseClient();
   await client.execute({
-    sql: "DELETE FROM votes WHERE user_id = ?",
-    args: [TEST_USERS.voter.userId],
+    sql: "UPDATE elections SET status = 'closed', updated_at = ? WHERE status = 'open'",
+    args: [Math.floor(Date.now() / 1000)],
   });
 }
 
