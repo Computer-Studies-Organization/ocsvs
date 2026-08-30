@@ -205,4 +205,88 @@ describe("voter election results loader", () => {
 
     expect(data.results).toEqual(results);
   });
+
+  it("redirects to /auth when election request is unauthorized (401)", async () => {
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "election") throw new ApiError(401, "Unauthorized");
+        return null;
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
+  it("redirects to /auth when results request is unauthorized (401)", async () => {
+    const election = {
+      id: "e1",
+      name: "CSO 2026",
+      status: "closed",
+      opensAt: 1000,
+      closesAt: 2000,
+      createdAt: 500,
+      updatedAt: 600,
+    };
+
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "election") return election;
+        if (resource === "results") throw new ApiError(401, "Unauthorized");
+        return [];
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
+  it("redirects to /auth when party-list request is unauthorized (401)", async () => {
+    const election = {
+      id: "e1",
+      name: "CSO 2026",
+      status: "closed",
+      opensAt: 1000,
+      closesAt: 2000,
+      createdAt: 500,
+      updatedAt: 600,
+    };
+
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "election") return election;
+        if (resource === "results") {
+          return {
+            results: [],
+            turnout: {
+              electionId: "e1",
+              totalEligibleVoters: 10,
+              totalBallotsCast: 0,
+              turnoutPercentage: 0,
+            },
+          };
+        }
+        if (resource === "partyLists") throw new ApiError(401, "Unauthorized");
+        return [];
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
 });

@@ -1,5 +1,5 @@
 import type { PageLoad } from "./$types";
-import { error } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { ApiError } from "$lib/api/client";
 import { appCache } from "$lib/cache";
 import { getEffectiveElectionStatus } from "$lib/election-lifecycle-client";
@@ -11,14 +11,25 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
     .get("election", { id: params.electionId })
     .fetchOrThrow(false, { fetch })
     .catch((cause: unknown) => {
-      if (cause instanceof ApiError && cause.status === 404) error(404, "Election not found");
+      if (cause instanceof ApiError) {
+        if (cause.status === 401) redirect(302, "/auth");
+        if (cause.status === 404) error(404, "Election not found");
+      }
       throw cause;
     });
 
   const effectiveStatus = getEffectiveElectionStatus(election);
   const votingState =
     effectiveStatus === "open"
-      ? await appCache.get("votingState", {}).fetchOrThrow(true, { fetch })
+      ? await appCache
+          .get("votingState", {})
+          .fetchOrThrow(true, { fetch })
+          .catch((cause: unknown) => {
+            if (cause instanceof ApiError && cause.status === 401) {
+              redirect(302, "/auth");
+            }
+            throw cause;
+          })
       : null;
   const effectiveElection =
     effectiveStatus === election.status ? election : { ...election, status: effectiveStatus };
@@ -42,7 +53,13 @@ export const load: PageLoad = async ({ params, fetch, depends }) => {
         {
           fetch,
         },
-      );
+      )
+      .catch((cause: unknown) => {
+        if (cause instanceof ApiError && cause.status === 401) {
+          redirect(302, "/auth");
+        }
+        throw cause;
+      });
     results = resultData.results;
     turnout = resultData.turnout;
   }

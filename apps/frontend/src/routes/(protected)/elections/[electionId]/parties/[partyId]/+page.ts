@@ -1,5 +1,5 @@
 import type { PageLoad } from "./$types";
-import { error } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { ApiError } from "$lib/api/client";
 import { appCache } from "$lib/cache";
 
@@ -10,7 +10,10 @@ export const load: PageLoad = async ({ params, fetch }) => {
     .get("partyLists", { electionId })
     .fetchOrThrow(false, { fetch })
     .catch((cause: unknown) => {
-      if (cause instanceof ApiError && cause.status === 404) error(404, "Election not found");
+      if (cause instanceof ApiError) {
+        if (cause.status === 401) redirect(302, "/auth");
+        if (cause.status === 404) error(404, "Election not found");
+      }
       throw cause;
     });
 
@@ -22,7 +25,12 @@ export const load: PageLoad = async ({ params, fetch }) => {
       .get("candidates", { electionId, includeInactive: false })
       .fetchOrThrow(false, { fetch }),
     appCache.get("positions", { electionId }).fetchOrThrow(false, { fetch }),
-  ]);
+  ]).catch((cause: unknown) => {
+    if (cause instanceof ApiError && cause.status === 401) {
+      redirect(302, "/auth");
+    }
+    throw cause;
+  });
 
   const positionMap = new Map(positions.map((p) => [p.id, p]));
   const partyCandidates = candidates

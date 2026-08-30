@@ -65,8 +65,11 @@ export class CacheEntry<T> {
 
   /** Use in route loads where a failed request must not look like missing data. */
   async fetchOrThrow(force = false, options?: { fetch?: typeof fetch }): Promise<T> {
-    const result = await this.fetch(force, options);
+    const pending = this.fetch(force, options);
+    const requestEpoch = this.epoch;
+    const result = await pending;
     if (result !== null) return result;
+    if (requestEpoch !== this.epoch) return this.fetchOrThrow(force, options);
     throw this.failure ?? new Error(this.error ?? "Failed to fetch data");
   }
 

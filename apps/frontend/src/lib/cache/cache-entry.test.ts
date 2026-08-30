@@ -162,6 +162,28 @@ test("CacheEntry.fetch after invalidate during in-flight runs a fresh fetch", as
   expect(entry.error).toBeNull();
 });
 
+test("CacheEntry.fetchOrThrow retries after invalidation instead of losing the failure", async () => {
+  let calls = 0;
+  let rejectFirst!: (reason?: unknown) => void;
+  const failure = new Error("Unauthorized");
+  const entry = new CacheEntry<number>(() => {
+    calls += 1;
+    if (calls === 1) {
+      return new Promise<number>((_, reject) => {
+        rejectFirst = reject;
+      });
+    }
+    return Promise.reject(failure);
+  });
+
+  const pending = entry.fetchOrThrow();
+  entry.invalidate();
+  rejectFirst(failure);
+
+  await expect(pending).rejects.toBe(failure);
+  expect(calls).toBe(2);
+});
+
 test("CacheEntry.fetch after a failure clears the previous error on the next success", async () => {
   let shouldFail = true;
   const entry = new CacheEntry<number>(async () => {

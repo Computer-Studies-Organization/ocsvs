@@ -142,4 +142,48 @@ describe("candidate detail loader", () => {
       expect(err.body.message).toBe("Candidate not found in this position");
     }
   });
+
+  it("redirects to /auth when candidate fetch is unauthorized (401)", async () => {
+    const { ApiError } = await import("$lib/api/client");
+    vi.mocked(getCandidate).mockRejectedValueOnce(new ApiError(401, "Unauthorized"));
+
+    await expect(
+      load({
+        params: {
+          electionId: "election-1",
+          positionId: "position-1",
+          candidateId: "candidate-1",
+        },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
+  it("redirects to /auth when candidate user fetch is unauthorized (401)", async () => {
+    const { ApiError } = await import("$lib/api/client");
+    vi.mocked(getCandidate).mockResolvedValueOnce({
+      id: "candidate-1",
+      fullName: "Alex Candidate",
+      accountId: "account-1",
+      userId: "user-1",
+      positionId: "position-1",
+      manifesto: "Manifesto",
+      isActive: 1,
+      imageUrl: null,
+    } as any);
+    vi.mocked(fetchUser).mockRejectedValueOnce(new ApiError(401, "Unauthorized"));
+
+    await expect(
+      load({
+        params: {
+          electionId: "election-1",
+          positionId: "position-1",
+          candidateId: "candidate-1",
+        },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
 });

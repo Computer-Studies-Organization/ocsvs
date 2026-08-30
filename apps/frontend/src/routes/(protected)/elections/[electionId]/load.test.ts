@@ -135,4 +135,77 @@ describe("election detail loader", () => {
       } as any),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  it("redirects to /auth when election request is unauthorized (401)", async () => {
+    mockCacheGet.mockReturnValue({
+      fetchOrThrow: vi.fn().mockRejectedValue(new ApiError(401, "Unauthorized")),
+    });
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
+  it("redirects to /auth when voting-state request is unauthorized (401)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const election = {
+      id: "e1",
+      name: "Active Election",
+      status: "open",
+      opensAt: now - 100,
+      closesAt: now + 1000,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "election") return election;
+        throw new ApiError(401, "Unauthorized");
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
+  it("redirects to /auth when results request is unauthorized (401)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const election = {
+      id: "e1",
+      name: "Active Election",
+      status: "open",
+      opensAt: now - 100,
+      closesAt: now + 1000,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "election") return election;
+        if (resource === "votingState") {
+          return { myVotes: { electionId: "e1", hasVoted: true } };
+        }
+        throw new ApiError(401, "Unauthorized");
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "e1" },
+        fetch: vi.fn(),
+        depends: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
 });

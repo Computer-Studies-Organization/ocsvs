@@ -103,8 +103,46 @@ describe("party platform page loader", () => {
     expect(result.positions).toHaveLength(1);
   });
 
+  it("redirects to /auth when partyLists request is unauthorized (401)", async () => {
+    const failure = new ApiError(401, "Unauthorized");
+    mockCacheGet.mockImplementation((resource: string) => ({
+      fetchOrThrow: vi.fn().mockImplementation(async () => {
+        if (resource === "partyLists") throw failure;
+        return [];
+      }),
+    }));
+
+    await expect(
+      load({
+        params: { electionId: "election-1", partyId: "party-1" },
+        fetch: vi.fn(),
+      } as any),
+    ).rejects.toMatchObject({ status: 302, location: "/auth" });
+  });
+
   it.each(["candidates", "positions"] as const)(
-    "propagates %s fetch failures",
+    "redirects to /auth when %s request is unauthorized (401)",
+    async (failedResource) => {
+      const failure = new ApiError(401, "Unauthorized");
+      mockCacheGet.mockImplementation((resource: string) => ({
+        fetchOrThrow: vi.fn().mockImplementation(async () => {
+          if (resource === "partyLists") return [mockParty];
+          if (resource === failedResource) throw failure;
+          return resource === "candidates" ? mockCandidates : [mockPosition];
+        }),
+      }));
+
+      await expect(
+        load({
+          params: { electionId: "election-1", partyId: "party-1" },
+          fetch: vi.fn(),
+        } as any),
+      ).rejects.toMatchObject({ status: 302, location: "/auth" });
+    },
+  );
+
+  it.each(["candidates", "positions"] as const)(
+    "propagates %s fetch failures for non-401 errors",
     async (failedResource) => {
       const failure = new ApiError(503, "Service unavailable");
       mockCacheGet.mockImplementation((resource: string) => ({
