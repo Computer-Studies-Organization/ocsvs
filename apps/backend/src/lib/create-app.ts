@@ -4,7 +4,6 @@ import { cors } from "hono/cors";
 import logger from "@/middleware/pino-logger";
 import notFound from "@/middleware/utils/not-found";
 import onError from "@/middleware/utils/on-error";
-import serveEmojiFavicon from "@/middleware/utils/serve-emoji-favicon";
 import defaultHook from "@/openapi/default-hook";
 import { envValidator } from "@/middleware/env-validator";
 import { csrfProtection } from "@/middleware/csrf";
@@ -21,8 +20,7 @@ export default function createApp() {
       }),
     )
     .use(csrfProtection())
-    .use(securityHeaders())
-    .use(serveEmojiFavicon("🔥"));
+    .use(securityHeaders());
 
   app.notFound(notFound);
   app.onError(onError);

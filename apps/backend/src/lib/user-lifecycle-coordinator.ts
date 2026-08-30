@@ -766,7 +766,9 @@ export class UserLifecycleCoordinator {
     // 4. Rehash legacy/below-current hashes with the current policy on successful login
     if (needsRehash(result.password_hash)) {
       try {
-        await voterAccountStore.updatePassword(db, result.id, await hashPassword(password));
+        await voterAccountStore.updateAccount(db, result.id, {
+          password_hash: await hashPassword(password),
+        });
       } catch {
         // Rehashing is opportunistic; verified credentials must still be allowed to log in.
       }

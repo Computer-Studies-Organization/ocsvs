@@ -31,7 +31,6 @@ const {
   mockUsernameExists,
   mockUpdateAccount,
   mockGetPasswordHash,
-  mockUpdatePassword,
   mockChangePasswordAndInvalidateSessions,
   mockFindByAccountId,
   mockUpdateUser,
@@ -40,7 +39,6 @@ const {
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockGetPasswordHash: vi.fn(),
-  mockUpdatePassword: vi.fn(),
   mockChangePasswordAndInvalidateSessions: vi.fn().mockResolvedValue(undefined),
   mockFindByAccountId: vi.fn(),
   mockUpdateUser: vi.fn(),
@@ -54,7 +52,6 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     create: vi.fn(),
     updateAccount: mockUpdateAccount,
     updateUser: mockUpdateUser,
-    updatePassword: mockUpdatePassword,
     changePasswordAndInvalidateSessions: mockChangePasswordAndInvalidateSessions,
     getPasswordHash: mockGetPasswordHash,
     softDelete: vi.fn(),
@@ -199,7 +196,6 @@ describe("profile Routes", () => {
       "test-user-id",
       "new-hashed-password",
     );
-    expect(mockUpdatePassword).not.toHaveBeenCalled();
     expect(mockCreateSession).toHaveBeenCalled();
     expect(mockSetSessionCookie).toHaveBeenCalled();
   });

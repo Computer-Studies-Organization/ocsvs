@@ -92,6 +92,3 @@ export const ERROR_MESSAGES = {
   // Server errors
   INTERNAL_SERVER_ERROR: "Internal server error",
 } as const;
-
-// Type for error message keys
-export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;

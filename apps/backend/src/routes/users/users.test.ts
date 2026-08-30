@@ -110,7 +110,6 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     usernameExists: mockUsernameExists,
     create: mockCreate,
     updateAccount: mockUpdateAccount,
-    updatePassword: vi.fn(),
     getPasswordHash: vi.fn(),
     softDelete: mockSoftDelete,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,

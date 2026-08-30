@@ -36,9 +36,8 @@ expect(body.message).toBe(ERROR_MESSAGES.CANDIDATE_CREATED_SUCCESSFULLY);
 
 1. Add the message constant to `ERROR_MESSAGES` object
 2. Use a descriptive, uppercase key name
-3. Add the type to the `ErrorMessageKey` type if needed
-4. Update handlers and routes to use the new constant
-5. Update tests to expect the new constant
+3. Update handlers and routes to use the new constant
+4. Update tests to expect the new constant
 
 ### Benefits
 

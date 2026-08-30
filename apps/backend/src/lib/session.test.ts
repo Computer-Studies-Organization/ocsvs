@@ -146,25 +146,36 @@ describe("session utilities", () => {
 
       expect(c.header).toHaveBeenCalledWith(
         "Set-Cookie",
-        expect.stringContaining(
-          "session_id=test-session-id; Path=/; HttpOnly; SameSite=Lax; Expires=",
-        ),
+        expect.stringContaining("session_id=test-session-id; Path=/; Expires="),
+        { append: true },
       );
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.not.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("HttpOnly"), {
+        append: true,
+      });
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("SameSite=Lax"), {
+        append: true,
+      });
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.not.stringContaining("Secure"), {
+        append: true,
+      });
     });
 
     it("should include Secure attribute in production", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "production" },
+        req: { raw: { headers: new Headers() } },
       } as any;
 
       setSessionCookie(c, "test-session-id", 1234567890);
 
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"), {
+        append: true,
+      });
       expect(c.header).toHaveBeenCalledWith(
         "Set-Cookie",
         expect.stringContaining("__Host-session_id=test-session-id"),
+        { append: true },
       );
       expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("session_id=;"), {
         append: true,
@@ -175,36 +186,42 @@ describe("session utilities", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "production" },
-        req: { url: "http://localhost:8787/api/auth/login" },
+        req: { url: "http://localhost:8787/api/auth/login", raw: { headers: new Headers() } },
       } as any;
 
       setSessionCookie(c, "test-session-id", 1234567890);
 
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"), {
+        append: true,
+      });
     });
 
     it("should include Secure attribute in staging even when request protocol is plain HTTP", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "staging" },
-        req: { url: "http://localhost:8787/api/auth/login" },
+        req: { url: "http://localhost:8787/api/auth/login", raw: { headers: new Headers() } },
       } as any;
 
       setSessionCookie(c, "test-session-id", 1234567890);
 
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"), {
+        append: true,
+      });
     });
 
     it("should omit Secure attribute in development over plain HTTP", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "development" },
-        req: { url: "http://localhost:8787/api/auth/login" },
+        req: { url: "http://localhost:8787/api/auth/login", raw: { headers: new Headers() } },
       } as any;
 
       setSessionCookie(c, "test-session-id", 1234567890);
 
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.not.stringContaining("Secure"));
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.not.stringContaining("Secure"), {
+        append: true,
+      });
     });
   });
 
@@ -213,6 +230,7 @@ describe("session utilities", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "development" },
+        req: { raw: { headers: new Headers() } },
       } as any;
 
       clearSessionCookie(c);
@@ -220,8 +238,9 @@ describe("session utilities", () => {
       expect(c.header).toHaveBeenCalledWith(
         "Set-Cookie",
         expect.stringContaining(
-          "session_id=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+          "session_id=; Max-Age=0; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax",
         ),
+        { append: true },
       );
     });
 
@@ -229,39 +248,45 @@ describe("session utilities", () => {
       const c = {
         header: vi.fn(),
         env: { NODE_ENV: "production" },
-        req: { url: "http://localhost:8787/api/auth/logout" },
+        req: { url: "http://localhost:8787/api/auth/logout", raw: { headers: new Headers() } },
       } as any;
 
       clearSessionCookie(c);
 
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"));
-      expect(c.header).toHaveBeenCalledWith(
-        "Set-Cookie",
-        expect.stringContaining("__Host-session_id=;"),
-      );
-      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("session_id=;"), {
+      expect(c.header).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("Secure"), {
         append: true,
       });
+      expect(c.header).toHaveBeenCalledWith(
+        "Set-Cookie",
+        expect.stringContaining("__Host-session_id=; Max-Age=0; Path=/;"),
+        { append: true },
+      );
+      expect(c.header).toHaveBeenCalledWith(
+        "Set-Cookie",
+        expect.stringContaining("session_id=; Max-Age=0; Path=/;"),
+        { append: true },
+      );
     });
   });
 
   describe("getSessionIdFromCookie", () => {
     it("should extract session ID from cookies", () => {
       const mockReq = {
-        header: vi
-          .fn()
-          .mockReturnValue("other_cookie=value; session_id=test-session-id; third=abc"),
+        raw: {
+          headers: new Headers({
+            Cookie: "other_cookie=value; session_id=test-session-id; third=abc",
+          }),
+        },
       };
       const c = { req: mockReq } as any;
 
       const sessionId = getSessionIdFromCookie(c);
       expect(sessionId).toBe("test-session-id");
-      expect(mockReq.header).toHaveBeenCalledWith("Cookie");
     });
 
     it("should return undefined if Cookie header is missing", () => {
       const mockReq = {
-        header: vi.fn().mockReturnValue(undefined),
+        raw: { headers: new Headers() },
       };
       const c = { req: mockReq } as any;
 
@@ -271,7 +296,7 @@ describe("session utilities", () => {
 
     it("should return undefined if session_id cookie is not in header", () => {
       const mockReq = {
-        header: vi.fn().mockReturnValue("other_cookie=value; hello=world"),
+        raw: { headers: new Headers({ Cookie: "other_cookie=value; hello=world" }) },
       };
       const c = { req: mockReq } as any;
 
@@ -281,9 +306,11 @@ describe("session utilities", () => {
 
     it("should only read the __Host- cookie in production", () => {
       const mockReq = {
-        header: vi
-          .fn()
-          .mockReturnValue("session_id=legacy-session-id; __Host-session_id=host-session-id"),
+        raw: {
+          headers: new Headers({
+            Cookie: "session_id=legacy-session-id; __Host-session_id=host-session-id",
+          }),
+        },
       };
       const c = { req: mockReq, env: { NODE_ENV: "production" } } as any;
 

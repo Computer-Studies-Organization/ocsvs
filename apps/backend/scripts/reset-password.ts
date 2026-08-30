@@ -16,23 +16,10 @@
 import { createClient, type Client } from "@libsql/client";
 import "dotenv/config";
 import { hashPassword } from "../src/lib/password";
+import { isLocalDatabaseUrl } from "../src/middleware/env";
 
 type ResetEnvironment = Readonly<Record<string, string | undefined>>;
 type ResetClient = Pick<Client, "execute" | "batch">;
-
-const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-function isLocalDatabaseUrl(url: string): boolean {
-  if (url === ":memory:" || url.startsWith("file:")) {
-    return true;
-  }
-
-  try {
-    return LOCAL_DATABASE_HOSTS.has(new URL(url).hostname);
-  } catch {
-    return false;
-  }
-}
 
 function promptForPassword(): Promise<string> {
   const input = process.stdin;

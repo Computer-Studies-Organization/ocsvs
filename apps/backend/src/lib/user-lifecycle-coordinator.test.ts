@@ -6,7 +6,6 @@ const {
   mockAccountCreate,
   mockUsernameExists,
   mockUpdateAccount,
-  mockUpdatePassword,
   mockCountActiveAdminsAndSuperAdmins,
   mockAccountSoftDelete,
   mockAccountRestore,
@@ -33,7 +32,6 @@ const {
   mockAccountCreate: vi.fn(),
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
-  mockUpdatePassword: vi.fn(),
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
   mockAccountSoftDelete: vi.fn(),
   mockAccountRestore: vi.fn(),
@@ -64,7 +62,6 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     create: mockAccountCreate,
     usernameExists: mockUsernameExists,
     updateAccount: mockUpdateAccount,
-    updatePassword: mockUpdatePassword,
     updateUser: mockUpdateUser,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     softDelete: mockAccountSoftDelete,
@@ -229,11 +226,9 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       );
 
       expect(mockHashPassword).toHaveBeenCalledWith("password123");
-      expect(mockUpdatePassword).toHaveBeenCalledWith(
-        mockDb,
-        "acc-123",
-        "pbkdf2-sha256$100000$salt$new-hash",
-      );
+      expect(mockUpdateAccount).toHaveBeenCalledWith(mockDb, "acc-123", {
+        password_hash: "pbkdf2-sha256$100000$salt$new-hash",
+      });
       expect(result.sessionId).toBe("sess-123");
     });
 
@@ -250,7 +245,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockVerifyPassword.mockResolvedValueOnce(true);
       mockNeedsRehash.mockReturnValueOnce(true);
       mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$600000$salt$new-hash");
-      mockUpdatePassword.mockRejectedValueOnce(new Error("database unavailable"));
+      mockUpdateAccount.mockRejectedValueOnce(new Error("database unavailable"));
       mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
 
       const result = await coordinator.authenticate(
@@ -281,7 +276,11 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       await coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1");
 
       expect(mockHashPassword).not.toHaveBeenCalled();
-      expect(mockUpdatePassword).not.toHaveBeenCalled();
+      expect(mockUpdateAccount).not.toHaveBeenCalledWith(
+        mockDb,
+        "acc-123",
+        expect.objectContaining({ password_hash: expect.anything() }),
+      );
     });
 
     it("throws UserLifecycleError RATE_LIMITED_ACCOUNT with retryAfter if lockout threshold met", async () => {

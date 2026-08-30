@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { accounts, sessions } from "@/database/schema";
 import type { Database } from "@/database/repositories/database.type";
@@ -6,7 +7,6 @@ import type { Database } from "@/database/repositories/database.type";
 const SESSION_DURATION_DAYS = 7;
 const LEGACY_COOKIE_NAME = "session_id";
 const HOST_COOKIE_NAME = "__Host-session_id";
-const EXPIRED_COOKIE_DATE = "Thu, 01 Jan 1970 00:00:00 GMT";
 
 function usesHostCookie(c: Context): boolean {
   return c.env?.NODE_ENV === "production" || c.env?.NODE_ENV === "staging";
@@ -16,16 +16,16 @@ function getCookieName(c: Context): string {
   return usesHostCookie(c) ? HOST_COOKIE_NAME : LEGACY_COOKIE_NAME;
 }
 
-function serializeCookie(name: string, value: string, expires: string, secure: boolean): string {
-  return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}${secure ? "; Secure" : ""}`;
-}
+function cookieOptions(c: Context, expires: Date) {
+  const isHttps = c.req?.url?.startsWith("https://") ?? false;
 
-function setCookieHeader(c: Context, value: string, append = false): void {
-  if (append) {
-    c.header("Set-Cookie", value, { append: true });
-  } else {
-    c.header("Set-Cookie", value);
-  }
+  return {
+    expires,
+    httpOnly: true,
+    path: "/",
+    sameSite: "Lax" as const,
+    secure: usesHostCookie(c) || isHttps,
+  };
 }
 
 export interface SessionData {
@@ -106,18 +106,10 @@ export async function deleteSession(db: Database, sessionId: string): Promise<vo
  * Sets the session cookie on the response.
  */
 export function setSessionCookie(c: Context, sessionId: string, expiresAt: number): void {
-  const expires = new Date(expiresAt * 1000);
-  const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = usesHostCookie(c) || isHttps;
-
-  setCookieHeader(c, serializeCookie(getCookieName(c), sessionId, expires.toUTCString(), isSecure));
+  setCookie(c, getCookieName(c), sessionId, cookieOptions(c, new Date(expiresAt * 1000)));
 
   if (usesHostCookie(c)) {
-    setCookieHeader(
-      c,
-      serializeCookie(LEGACY_COOKIE_NAME, "", EXPIRED_COOKIE_DATE, isSecure),
-      true,
-    );
+    deleteCookie(c, LEGACY_COOKIE_NAME, cookieOptions(c, new Date(0)));
   }
 }
 
@@ -125,17 +117,10 @@ export function setSessionCookie(c: Context, sessionId: string, expiresAt: numbe
  * Clears the session cookie.
  */
 export function clearSessionCookie(c: Context): void {
-  const isHttps = c.req?.url?.startsWith("https://") ?? false;
-  const isSecure = usesHostCookie(c) || isHttps;
-
-  setCookieHeader(c, serializeCookie(getCookieName(c), "", EXPIRED_COOKIE_DATE, isSecure));
+  deleteCookie(c, getCookieName(c), cookieOptions(c, new Date(0)));
 
   if (usesHostCookie(c)) {
-    setCookieHeader(
-      c,
-      serializeCookie(LEGACY_COOKIE_NAME, "", EXPIRED_COOKIE_DATE, isSecure),
-      true,
-    );
+    deleteCookie(c, LEGACY_COOKIE_NAME, cookieOptions(c, new Date(0)));
   }
 }
 
@@ -143,13 +128,6 @@ export function clearSessionCookie(c: Context): void {
  * Gets the session ID from the request cookie.
  */
 export function getSessionIdFromCookie(c: Context): string | undefined {
-  const cookieHeader = c.req?.header("Cookie");
-  if (!cookieHeader) return undefined;
-
-  const cookies = cookieHeader.split(";").map((c) => c.trim());
-  const cookieName = getCookieName(c);
-  const prefix = `${cookieName}=`;
-  const sessionCookie = cookies.find((cookie) => cookie.startsWith(prefix));
-
-  return sessionCookie?.slice(prefix.length);
+  if (!c.req?.raw) return undefined;
+  return getCookie(c, getCookieName(c));
 }

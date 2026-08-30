@@ -196,16 +196,6 @@ export const voterAccountStore = {
       .run();
   },
 
-  /** Update password hash */
-  async updatePassword(db: DbClient, accountId: string, passwordHash: string): Promise<void> {
-    const now = Math.floor(Date.now() / 1000);
-    await db
-      .update(accounts)
-      .set({ password_hash: passwordHash, updatedAt: now })
-      .where(eq(accounts.id, accountId))
-      .run();
-  },
-
   /** Change password and invalidate sessions atomically */
   async changePasswordAndInvalidateSessions(
     db: Database,
