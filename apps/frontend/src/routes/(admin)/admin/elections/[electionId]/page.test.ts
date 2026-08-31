@@ -1,17 +1,29 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
 import type { TCandidate, TElection, TPartyList, TPosition } from "$lib/types";
 import Page from "./+page.svelte";
 import { load } from "./+page";
+import { reorderAndRefreshPositions } from "./reorder";
 
-const pageSource = readFileSync(fileURLToPath(new URL("./+page.svelte", import.meta.url)), "utf8");
-
-const { mockCacheGet, mockCacheInvalidate, mockListPartyLists } = vi.hoisted(() => ({
+const {
+  mockAddToast,
+  mockCacheGet,
+  mockCacheInvalidate,
+  mockInvalidate,
+  mockListPartyLists,
+  mockReorderPositions,
+} = vi.hoisted(() => ({
+  mockAddToast: vi.fn(),
   mockCacheGet: vi.fn(),
   mockCacheInvalidate: vi.fn(),
+  mockInvalidate: vi.fn(),
   mockListPartyLists: vi.fn(),
+  mockReorderPositions: vi.fn(),
+}));
+
+vi.mock("$app/navigation", () => ({
+  goto: vi.fn(),
+  invalidate: mockInvalidate,
 }));
 
 vi.mock("$lib/cache", () => ({
@@ -23,6 +35,14 @@ vi.mock("$lib/cache", () => ({
 
 vi.mock("$lib/api/parties", () => ({
   listPartyLists: mockListPartyLists,
+}));
+
+vi.mock("$lib/api/positions", () => ({
+  reorderPositions: mockReorderPositions,
+}));
+
+vi.mock("$lib/stores/toast.svelte", () => ({
+  addToast: mockAddToast,
 }));
 
 const election: TElection = {
@@ -118,15 +138,29 @@ describe("admin election loader", () => {
 describe("admin election party controls", () => {
   const nonDraftStatuses = ["open", "closed", "archived"] as const;
 
-  it("keeps the confirmed reorder when refreshing election data fails", () => {
-    const refreshErrorHandler = pageSource.match(
-      /try \{\s*await invalidate\('app:election'\)\s*\} catch \(err: unknown\) \{([\s\S]*?)\n\s*\}/,
-    )?.[1];
+  it("keeps the confirmed reorder when refreshing election data fails", async () => {
+    const previous = [
+      { ...position, displayOrder: 0 },
+      { ...position, id: "position-2", name: "Vice President", displayOrder: 1 },
+    ];
+    const reordered = [
+      { ...previous[1], displayOrder: 0 },
+      { ...position, displayOrder: 1 },
+    ];
+    const refreshFailure = new Error("refresh failed");
+    mockReorderPositions.mockResolvedValueOnce(reordered);
+    mockInvalidate.mockRejectedValueOnce(refreshFailure);
+    let displayed = previous;
 
-    expect(refreshErrorHandler).toContain(
-      "Positions reordered, but failed to refresh election data",
-    );
-    expect(refreshErrorHandler).not.toContain("localPositions = prevPositions");
+    await reorderAndRefreshPositions(election.id, reordered, previous, (positions) => {
+      displayed = positions;
+    });
+
+    expect(displayed).toEqual(reordered);
+    expect(mockReorderPositions).toHaveBeenCalledWith(election.id, ["position-2", "position-1"]);
+    expect(mockCacheInvalidate).toHaveBeenCalledWith({ params: { electionId: election.id } });
+    expect(mockInvalidate).toHaveBeenCalledWith("app:election");
+    expect(mockAddToast).toHaveBeenCalledWith("error", "refresh failed");
   });
 
   it("renders party management controls for draft elections", () => {

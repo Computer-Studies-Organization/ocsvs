@@ -77,7 +77,7 @@ describe("positionRepo", () => {
     expect(await positionRepo.delete(mockDb as any, "p1")).toBe(true);
   });
 
-  it("reorders positions whose existing display orders are negative", async () => {
+  it("swaps positions without violating the unique display-order constraint", async () => {
     const client = createClient({ url: "file::memory:" });
     try {
       await client.execute(`
@@ -93,18 +93,18 @@ describe("positionRepo", () => {
       `);
       await client.execute({
         sql: "INSERT INTO positions VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)",
-        args: ["p1", "e1", "President", -2, 0, 0, "p2", "e1", "Vice President", -1, 0, 0],
+        args: ["p1", "e1", "President", 0, 0, 0, "p2", "e1", "Vice President", 1, 0, 0],
       });
       const db = drizzle(client, { schema: { positions } });
 
-      await positionRepo.reorder(db as any, ["p1", "p2"]);
+      await positionRepo.reorder(db as any, ["p2", "p1"]);
 
       const result = await client.execute(
         "SELECT id, display_order FROM positions ORDER BY display_order",
       );
       expect(result.rows).toEqual([
-        { id: "p1", display_order: 0 },
-        { id: "p2", display_order: 1 },
+        { id: "p2", display_order: 0 },
+        { id: "p1", display_order: 1 },
       ]);
     } finally {
       client.close();

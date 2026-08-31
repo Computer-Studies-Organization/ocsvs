@@ -6,9 +6,7 @@
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import type { TElection, TPartyList, TPosition } from '$lib/types'
   import { appCache } from '$lib/cache'
-  import { reorderPositions } from '$lib/api/positions'
-  import { addToast } from '$lib/stores/toast.svelte'
-  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
+  import { reorderAndRefreshPositions } from './reorder'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
   import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
   import CommonPositionsModal from '$lib/components/admin/common-positions-modal.svelte'
@@ -105,22 +103,11 @@
   async function handleReorder(newPositions: TPosition[]) {
     if (isReordering || election.status !== 'draft') return
     const prevPositions = positions
-    // Optimistic update
-    localPositions = newPositions.map((p, idx) => ({ ...p, displayOrder: idx }))
     isReordering = true
     try {
-      const positionIds = newPositions.map((p) => p.id)
-      const updated = await reorderPositions(election.id, positionIds)
-      localPositions = updated
-      appCache.invalidate({ params: { electionId: election.id } })
-      try {
-        await invalidate('app:election')
-      } catch (err: unknown) {
-        addToast('error', extractErrorMessage(err, 'Positions reordered, but failed to refresh election data'))
-      }
-    } catch (err: unknown) {
-      localPositions = prevPositions
-      addToast('error', extractErrorMessage(err, 'Failed to reorder positions'))
+      await reorderAndRefreshPositions(election.id, newPositions, prevPositions, (updated) => {
+        localPositions = updated
+      })
     } finally {
       isReordering = false
     }
