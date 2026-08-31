@@ -339,4 +339,20 @@ describe("admin election party controls", () => {
     expect(body).not.toContain("No candidates");
     expect(body).not.toContain("needs candidates");
   });
+
+  it("renders a 'Preview ballot' action link pointing to /admin/elections/:id/preview", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election,
+          positions: [position],
+          partyLists: [party],
+          candidates: [],
+        },
+      },
+    });
+
+    expect(body).toContain("Preview ballot");
+    expect(body).toContain('href="/admin/elections/election-1/preview"');
+  });
 });

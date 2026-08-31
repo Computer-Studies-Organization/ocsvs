@@ -10,17 +10,9 @@
     type TVotingPageState,
   } from '$lib/voting-page-state'
   import {
-    allPositionsVoted,
-    clearSelection,
-    getSelectedCount,
     getSelectedVotes,
-    goNext,
-    goPrevious,
-    isFirstPosition,
-    isReviewStep,
-    selectCandidate,
-    selectPartySlate,
     withVoting,
+    type TStepperVotingState,
   } from '$lib/voting-stepper-logic'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast.svelte'
@@ -28,12 +20,9 @@
   import { authStore } from '$lib/stores/auth.svelte'
   import { UserRole, type TPartyList, type TPosition, type TVotingCandidate, type TVotingState } from '$lib/types'
   import SkeletonCard from '$lib/components/ui/skeleton-card.svelte'
-  import { Calendar, CheckCircle, Flag, Info, Vote, X, Zap } from 'lucide-svelte'
+  import { Calendar, CheckCircle, Info, Vote } from 'lucide-svelte'
   import Countdown from '$lib/components/ui/countdown.svelte'
-  import VotingCandidateCard from '$lib/components/ui/voting-candidate-card.svelte'
-  import BallotReview from '$lib/components/ui/ballot-review.svelte'
-  import StepperNavigation from '$lib/components/ui/stepper-navigation.svelte'
-  import StepperProgress from '$lib/components/ui/stepper-progress.svelte'
+  import BallotStepper from '$lib/components/ui/ballot-stepper.svelte'
 
   let { data } = $props()
   const apiState = $derived<TVotingState | null>(data.votingState)
@@ -109,35 +98,13 @@
     }
   }
 
-  function selectAt(positionId: string, candidateId: string) {
+  function updateVoting(voting: TStepperVotingState) {
     if (pageState.kind !== 'stepper') return
-    pageState = withVoting(pageState, selectCandidate(pageState.voting, positionId, candidateId))
+    pageState = withVoting(pageState, voting)
   }
 
-  function clearAt(positionId: string) {
-    if (pageState.kind !== 'stepper') return
-    pageState = withVoting(pageState, clearSelection(pageState.voting, positionId))
-  }
-
-  function applyPartySlate(party: TPartyList) {
-    if (pageState.kind !== 'stepper') return
-    pageState = withVoting(pageState, selectPartySlate(pageState.voting, pageState.positions, party.id))
+  function notifyParty(party: TPartyList) {
     addToast('info', `Fast-filled candidates for ${party.name} slate`)
-  }
-
-  function next() {
-    if (pageState.kind !== 'stepper') return
-    pageState = withVoting(pageState, goNext(pageState.voting, pageState.positions.length))
-  }
-
-  function previous() {
-    if (pageState.kind !== 'stepper') return
-    pageState = withVoting(pageState, goPrevious(pageState.voting))
-  }
-
-  function goToPosition(idx: number) {
-    if (pageState.kind !== 'stepper') return
-    pageState.voting.currentPositionIndex = idx
   }
 
 
@@ -294,9 +261,6 @@
     </div>
   </div>
 {:else}
-  {@const totalPositions = pageState.positions.length}
-  {@const isReview = isReviewStep(pageState.voting, totalPositions)}
-  {@const currentPosition = pageState.positions[pageState.voting.currentPositionIndex]}
   <div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>
     <div class='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
       <div>
@@ -326,94 +290,15 @@
       </div>
     </div>
 
-    {#if partyLists.length > 0}
-      <div class='mt-6 rounded-2xl border border-sky-500/20 bg-sky-950/20 p-4 backdrop-blur-md'>
-        <div class='flex items-center gap-2 mb-3'>
-          <Zap size={16} class='text-amber-400' />
-          <span class='text-xs font-bold uppercase tracking-wider text-slate-300'>Slate Fast-Fill</span>
-          <span class='text-xs text-slate-400'>(Pre-select candidates for a full party slate)</span>
-        </div>
-        <div class='flex flex-wrap items-center gap-2.5'>
-          {#each partyLists as party (party.id)}
-            <div class='flex flex-wrap items-center gap-2'>
-              <button
-                type='button'
-                onclick={() => applyPartySlate(party)}
-                class='flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-md'
-                style='background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}'
-              >
-                <Flag size={14} />
-                Fill {party.code} Slate
-              </button>
-              <a
-                href='/elections/{pageState.election.id}/parties/{party.id}'
-                class='rounded-xl border border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-300 transition hover:border-slate-500 hover:text-white'
-              >
-                View platform
-              </a>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    <StepperProgress
+    <BallotStepper
       positions={pageState.positions}
-      currentPositionIndex={pageState.voting.currentPositionIndex}
-      selectedVotes={pageState.voting.selectedVotes}
-      ongoToPosition={goToPosition}
-    />
-
-    {#if !isReview}
-      {#if currentPosition}
-        <div class='mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md'>
-          <h2 class='text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
-          <p class='mt-1 text-sm text-slate-400'>Select one candidate.</p>
-          <div class='mt-6 flex flex-col gap-4'>
-            {#each currentPosition.candidates as c (c.id)}
-              <VotingCandidateCard
-                candidate={c}
-                partyLists={partyLists}
-                electionId={pageState.election.id}
-                selected={pageState.voting.selectedVotes[currentPosition.id] === c.id}
-                onclick={() => selectAt(currentPosition.id, c.id)}
-              />
-            {/each}
-          </div>
-          {#if pageState.voting.selectedVotes[currentPosition.id] !== null}
-            <div class='mt-4 flex justify-end'>
-              <button
-                type='button'
-                onclick={() => clearAt(currentPosition.id)}
-                aria-label="Clear selection for {currentPosition.name}"
-                class='min-h-11 inline-flex items-center gap-2 rounded-xl border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 transition-colors hover:border-rose-500/50 hover:text-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500/40 cursor-pointer'
-              >
-                <X size={14} /> Clear selection
-              </button>
-            </div>
-          {/if}
-        </div>
-      {/if}
-    {:else}
-      <BallotReview
-        positions={pageState.positions}
-        selectedVotes={pageState.voting.selectedVotes}
-        ongoToPosition={goToPosition}
-      />
-    {/if}
-
-    <StepperNavigation
-      currentPositionIndex={pageState.voting.currentPositionIndex}
-      isSubmitting={isSubmitting}
-      isReview={isReview}
-      selectedVotesCount={getSelectedCount(pageState.voting)}
-      totalPositions={totalPositions}
-      onprevious={previous}
-      onnext={next}
+      partyLists={partyLists}
+      electionId={pageState.election.id}
+      voting={pageState.voting}
+      {isSubmitting}
+      onvotingchange={updateVoting}
+      onapplyparty={notifyParty}
       onsubmit={submit}
-      canSubmit={allPositionsVoted(pageState.voting, pageState.positions)}
-      isCurrentSelected={currentPosition ? pageState.voting.selectedVotes[currentPosition.id] !== null : false}
     />
-    <div class="h-24 md:hidden"></div>
   </div>
 {/if}

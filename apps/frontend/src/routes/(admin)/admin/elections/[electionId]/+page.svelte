@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Flag, ListOrdered, Plus, MoreHorizontal, AlertCircle } from 'lucide-svelte'
+  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Eye, Flag, ListOrdered, Plus, MoreHorizontal, AlertCircle } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
@@ -243,6 +243,13 @@
           class='min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-2.5 text-sm font-bold text-sky-400 hover:bg-sky-500/10 transition cursor-pointer text-center'
         >
           Audit trail &rarr;
+        </a>
+        <a
+          href={`/admin/elections/${election.id}/preview`}
+          class='min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2.5 text-sm font-bold text-blue-400 hover:bg-blue-500/20 transition cursor-pointer text-center'
+        >
+          <Eye size={16} />
+          Preview ballot
         </a>
         <TransitionButton {election} onsuccess={handleTransitionSuccess} />
       </div>

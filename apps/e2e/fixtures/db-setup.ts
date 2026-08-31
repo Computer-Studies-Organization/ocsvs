@@ -139,7 +139,7 @@ export const DRAFT_CANDIDATE = {
   candidateId: "e2e-draft-candidate-id",
 };
 
-const ACTIVE_ELECTION_ID = "e2e-open-election-id";
+export const ACTIVE_ELECTION_ID = "e2e-open-election-id";
 
 export async function seedTestUsers() {
   const client = createTestDatabaseClient();
