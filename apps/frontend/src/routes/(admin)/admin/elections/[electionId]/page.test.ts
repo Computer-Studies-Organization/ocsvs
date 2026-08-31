@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
 import type { TCandidate, TElection, TPartyList, TPosition } from "$lib/types";
 import Page from "./+page.svelte";
 import { load } from "./+page";
+
+const pageSource = readFileSync(fileURLToPath(new URL("./+page.svelte", import.meta.url)), "utf8");
 
 const { mockCacheGet, mockCacheInvalidate, mockListPartyLists } = vi.hoisted(() => ({
   mockCacheGet: vi.fn(),
@@ -113,6 +117,17 @@ describe("admin election loader", () => {
 
 describe("admin election party controls", () => {
   const nonDraftStatuses = ["open", "closed", "archived"] as const;
+
+  it("keeps the confirmed reorder when refreshing election data fails", () => {
+    const refreshErrorHandler = pageSource.match(
+      /try \{\s*await invalidate\('app:election'\)\s*\} catch \(err: unknown\) \{([\s\S]*?)\n\s*\}/,
+    )?.[1];
+
+    expect(refreshErrorHandler).toContain(
+      "Positions reordered, but failed to refresh election data",
+    );
+    expect(refreshErrorHandler).not.toContain("localPositions = prevPositions");
+  });
 
   it("renders party management controls for draft elections", () => {
     const { body } = render(Page, {

@@ -63,6 +63,7 @@ const {
   mockListByElection,
   mockCreate,
   mockFindById,
+  mockReorder,
   mockUpdate,
   mockDelete,
   mockCountByPositionId,
@@ -71,6 +72,7 @@ const {
   mockListByElection: vi.fn(),
   mockCreate: vi.fn(),
   mockFindById: vi.fn(),
+  mockReorder: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
   mockCountByPositionId: vi.fn(),
@@ -82,6 +84,7 @@ vi.mock("@/database/repositories/position.repository", () => ({
     listByElection: mockListByElection,
     create: mockCreate,
     findById: mockFindById,
+    reorder: mockReorder,
     update: mockUpdate,
     delete: mockDelete,
   },
@@ -439,6 +442,96 @@ describe("positions routes", () => {
       const json = (await res.json()) as any;
       expect(json.message).toBe(ERROR_MESSAGES.POSITION_DELETED_SUCCESSFULLY);
       expect(mockDelete).toHaveBeenCalledWith(mockDb, positionId);
+    });
+  });
+
+  describe("PUT /elections/:id/positions/reorder", () => {
+    it("returns 401 when not authenticated", async () => {
+      AUTH_ENABLED = false;
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p1", "p2"] }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 403 when authenticated as a non-admin role", async () => {
+      TEST_USER.role = "user";
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p1", "p2"] }),
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("returns 404 when election does not exist", async () => {
+      mockElectionFindById.mockResolvedValue(null);
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p1", "p2"] }),
+      });
+      expect(res.status).toBe(404);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_FOUND);
+    });
+
+    it("returns 409 when election is not in draft status", async () => {
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "open" }));
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p1", "p2"] }),
+      });
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT);
+    });
+
+    it("returns 422 when position IDs do not match existing positions", async () => {
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      mockListByElection.mockResolvedValue([
+        makePosition({ id: "p1", displayOrder: 0 }),
+        makePosition({ id: "p2", displayOrder: 1 }),
+      ]);
+
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p1"] }), // Missing p2
+      });
+      expect(res.status).toBe(422);
+      const json = (await res.json()) as any;
+      expect(json.message).toBe(ERROR_MESSAGES.INVALID_POSITION_REORDER);
+    });
+
+    it("returns 200 on successful reorder and returns updated list", async () => {
+      mockElectionFindById.mockResolvedValue(makeElection({ status: "draft" }));
+      mockListByElection
+        .mockResolvedValueOnce([
+          makePosition({ id: "p1", name: "President", displayOrder: 0 }),
+          makePosition({ id: "p2", name: "Vice President", displayOrder: 1 }),
+        ])
+        .mockResolvedValueOnce([
+          makePosition({ id: "p2", name: "Vice President", displayOrder: 0 }),
+          makePosition({ id: "p1", name: "President", displayOrder: 1 }),
+        ]);
+      mockReorder.mockResolvedValue(undefined);
+
+      const res = await router.request(`/elections/${electionId}/positions/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionIds: ["p2", "p1"] }),
+      });
+
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json).toHaveLength(2);
+      expect(json[0].id).toBe("p2");
+      expect(json[1].id).toBe("p1");
+      expect(mockReorder).toHaveBeenCalledWith(mockDb, ["p2", "p1"]);
     });
   });
 });

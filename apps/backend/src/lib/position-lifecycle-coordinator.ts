@@ -13,13 +13,14 @@ export type PositionLifecycleErrorCode =
   | "ELECTION_NOT_IN_DRAFT"
   | "POSITION_NOT_FOUND"
   | "POSITION_ALREADY_EXISTS"
-  | "POSITION_HAS_CANDIDATES";
+  | "POSITION_HAS_CANDIDATES"
+  | "INVALID_POSITION_REORDER";
 
 export class PositionLifecycleError extends Error {
   readonly code: PositionLifecycleErrorCode;
-  readonly status: 404 | 409;
+  readonly status: 400 | 404 | 409 | 422;
 
-  constructor(code: PositionLifecycleErrorCode, status: 404 | 409, message?: string) {
+  constructor(code: PositionLifecycleErrorCode, status: 400 | 404 | 409 | 422, message?: string) {
     super(message || ERROR_MESSAGES[code]);
     this.code = code;
     this.status = status;
@@ -181,6 +182,58 @@ export const positionLifecycleCoordinator = {
         actorAccountIdSnapshot: actor.id,
         actorUsernameSnapshot: actor.username,
       });
+    });
+  },
+
+  /**
+   * Atomically reorders all positions in a draft election.
+   */
+  async reorder(
+    db: DbClient,
+    input: { electionId: string; positionIds: string[] },
+    actor: ActorInfo,
+  ): Promise<PositionRow[]> {
+    return await db.transaction(async (tx) => {
+      // 1. Verify election exists
+      const election = await electionRepo.findById(tx, input.electionId);
+      if (!election) {
+        throw new PositionLifecycleError("ELECTION_NOT_FOUND", 404);
+      }
+
+      // 2. Verify election status is draft
+      if (!isElectionEditable(election.status)) {
+        throw new PositionLifecycleError("ELECTION_NOT_IN_DRAFT", 409);
+      }
+
+      // 3. Fetch existing positions
+      const existing = await positionRepo.listByElection(tx, input.electionId);
+      const existingIds = new Set(existing.map((p) => p.id));
+
+      // 4. Validate exact permutation
+      if (
+        input.positionIds.length !== existing.length ||
+        new Set(input.positionIds).size !== input.positionIds.length ||
+        !input.positionIds.every((id) => existingIds.has(id))
+      ) {
+        throw new PositionLifecycleError("INVALID_POSITION_REORDER", 422);
+      }
+
+      // 5. Apply reorder if positions exist
+      if (input.positionIds.length > 0) {
+        await positionRepo.reorder(tx, input.positionIds);
+      }
+
+      // 6. Write audit log
+      await auditLogRepo.insert(tx, {
+        action: "position.reorder",
+        targetType: "election",
+        targetId: input.electionId,
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+      });
+
+      // 7. Return refreshed positions sorted by displayOrder
+      return await positionRepo.listByElection(tx, input.electionId);
     });
   },
 };

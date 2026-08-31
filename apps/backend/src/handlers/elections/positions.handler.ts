@@ -3,6 +3,7 @@ import type {
   createPositionRoute,
   deletePositionRoute,
   listPositionsRoute,
+  reorderPositionsRoute,
   updatePositionRoute,
 } from "@/routes/elections/positions.routes";
 import { createDb } from "@/config/db";
@@ -94,6 +95,34 @@ export const deletePositionHandler: AppRouteHandler<typeof deletePositionRoute> 
     if (error instanceof PositionLifecycleError) {
       if (error.status === 404) {
         return c.json({ message: error.message }, httpStatusCodes.NOT_FOUND);
+      }
+      return c.json({ message: error.message }, httpStatusCodes.CONFLICT);
+    }
+    throw error;
+  }
+};
+
+export const reorderPositionsHandler: AppRouteHandler<typeof reorderPositionsRoute> = async (c) => {
+  const actorAccountId = c.var.authUser.id;
+  const actorUsername = c.var.authUser.username;
+  const { db } = createDb(c);
+  const { id } = c.req.valid("param");
+  const body = c.req.valid("json");
+
+  try {
+    const updated = await positionLifecycleCoordinator.reorder(
+      db,
+      { electionId: id, positionIds: body.positionIds },
+      { id: actorAccountId, username: actorUsername },
+    );
+    return c.json(updated, httpStatusCodes.OK);
+  } catch (error) {
+    if (error instanceof PositionLifecycleError) {
+      if (error.status === 404) {
+        return c.json({ message: error.message }, httpStatusCodes.NOT_FOUND);
+      }
+      if (error.status === 422) {
+        return c.json({ message: error.message }, httpStatusCodes.UNPROCESSABLE_ENTITY);
       }
       return c.json({ message: error.message }, httpStatusCodes.CONFLICT);
     }

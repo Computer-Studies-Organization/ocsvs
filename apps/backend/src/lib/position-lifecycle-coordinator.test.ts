@@ -4,6 +4,8 @@ import { positionLifecycleCoordinator } from "./position-lifecycle-coordinator";
 const {
   mockPositionCreate,
   mockPositionFindById,
+  mockPositionListByElection,
+  mockPositionReorder,
   mockPositionUpdate,
   mockPositionDelete,
   mockElectionFindById,
@@ -12,6 +14,8 @@ const {
 } = vi.hoisted(() => ({
   mockPositionCreate: vi.fn(),
   mockPositionFindById: vi.fn(),
+  mockPositionListByElection: vi.fn(),
+  mockPositionReorder: vi.fn(),
   mockPositionUpdate: vi.fn(),
   mockPositionDelete: vi.fn(),
   mockElectionFindById: vi.fn(),
@@ -23,6 +27,8 @@ vi.mock("@/database/repositories/position.repository", () => ({
   positionRepo: {
     create: mockPositionCreate,
     findById: mockPositionFindById,
+    listByElection: mockPositionListByElection,
+    reorder: mockPositionReorder,
     update: mockPositionUpdate,
     delete: mockPositionDelete,
   },
@@ -201,6 +207,93 @@ describe("PositionLifecycleCoordinator", () => {
         positionLifecycleCoordinator.delete(mockDb, { electionId: "e1", positionId: "p1" }, actor),
       ).rejects.toThrow(expect.objectContaining({ code: "POSITION_HAS_CANDIDATES", status: 409 }));
       expect(mockPositionDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("reorder", () => {
+    it("successfully reorders positions in draft election and logs action", async () => {
+      mockElectionFindById.mockResolvedValueOnce({ id: "e1", status: "draft" });
+      mockPositionListByElection
+        .mockResolvedValueOnce([
+          { id: "p1", electionId: "e1", name: "President", displayOrder: 0 },
+          { id: "p2", electionId: "e1", name: "Vice President", displayOrder: 1 },
+        ])
+        .mockResolvedValueOnce([
+          { id: "p2", electionId: "e1", name: "Vice President", displayOrder: 0 },
+          { id: "p1", electionId: "e1", name: "President", displayOrder: 1 },
+        ]);
+
+      const result = await positionLifecycleCoordinator.reorder(
+        mockDb,
+        { electionId: "e1", positionIds: ["p2", "p1"] },
+        actor,
+      );
+
+      expect(mockPositionReorder).toHaveBeenCalledWith(mockDb, ["p2", "p1"]);
+      expect(mockAuditInsert).toHaveBeenCalledWith(mockDb, {
+        action: "position.reorder",
+        targetType: "election",
+        targetId: "e1",
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+      });
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("p2");
+    });
+
+    it("throws ELECTION_NOT_FOUND when election does not exist", async () => {
+      mockElectionFindById.mockResolvedValueOnce(null);
+
+      await expect(
+        positionLifecycleCoordinator.reorder(
+          mockDb,
+          { electionId: "e1", positionIds: ["p1"] },
+          actor,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_FOUND", status: 404 }));
+    });
+
+    it("throws ELECTION_NOT_IN_DRAFT when election is open or closed", async () => {
+      mockElectionFindById.mockResolvedValueOnce({ id: "e1", status: "open" });
+
+      await expect(
+        positionLifecycleCoordinator.reorder(
+          mockDb,
+          { electionId: "e1", positionIds: ["p1"] },
+          actor,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+    });
+
+    it("throws INVALID_POSITION_REORDER when positionIds length or IDs do not match existing positions", async () => {
+      mockElectionFindById.mockResolvedValueOnce({ id: "e1", status: "draft" });
+      mockPositionListByElection.mockResolvedValueOnce([
+        { id: "p1", electionId: "e1", name: "President", displayOrder: 0 },
+        { id: "p2", electionId: "e1", name: "Vice President", displayOrder: 1 },
+      ]);
+
+      // Missing p2
+      await expect(
+        positionLifecycleCoordinator.reorder(
+          mockDb,
+          { electionId: "e1", positionIds: ["p1"] },
+          actor,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "INVALID_POSITION_REORDER", status: 422 }));
+
+      // Duplicate p1
+      mockElectionFindById.mockResolvedValueOnce({ id: "e1", status: "draft" });
+      mockPositionListByElection.mockResolvedValueOnce([
+        { id: "p1", electionId: "e1", name: "President", displayOrder: 0 },
+        { id: "p2", electionId: "e1", name: "Vice President", displayOrder: 1 },
+      ]);
+      await expect(
+        positionLifecycleCoordinator.reorder(
+          mockDb,
+          { electionId: "e1", positionIds: ["p1", "p1"] },
+          actor,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ code: "INVALID_POSITION_REORDER", status: 422 }));
     });
   });
 });

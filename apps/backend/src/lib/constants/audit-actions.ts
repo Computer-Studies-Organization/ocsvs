@@ -34,6 +34,7 @@ export const AUDIT_ACTIONS = z.enum([
   "election.transition",
   "position.create",
   "position.update",
+  "position.reorder",
   "position.delete",
   "candidate.create",
   "candidate.update",

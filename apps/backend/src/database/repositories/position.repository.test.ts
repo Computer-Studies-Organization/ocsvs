@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { positions } from "@/database/schema";
 
 const chain: any = {
@@ -73,5 +75,39 @@ describe("positionRepo", () => {
 
   it("delete returns true when a row is affected", async () => {
     expect(await positionRepo.delete(mockDb as any, "p1")).toBe(true);
+  });
+
+  it("reorders positions whose existing display orders are negative", async () => {
+    const client = createClient({ url: "file::memory:" });
+    try {
+      await client.execute(`
+        CREATE TABLE positions (
+          id TEXT PRIMARY KEY,
+          election_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          display_order INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          UNIQUE (election_id, display_order)
+        )
+      `);
+      await client.execute({
+        sql: "INSERT INTO positions VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)",
+        args: ["p1", "e1", "President", -2, 0, 0, "p2", "e1", "Vice President", -1, 0, 0],
+      });
+      const db = drizzle(client, { schema: { positions } });
+
+      await positionRepo.reorder(db as any, ["p1", "p2"]);
+
+      const result = await client.execute(
+        "SELECT id, display_order FROM positions ORDER BY display_order",
+      );
+      expect(result.rows).toEqual([
+        { id: "p1", display_order: 0 },
+        { id: "p2", display_order: 1 },
+      ]);
+    } finally {
+      client.close();
+    }
   });
 });

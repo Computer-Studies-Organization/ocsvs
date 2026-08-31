@@ -385,6 +385,15 @@ export const UpdatePositionBodySchema = z
   })
   .openapi("UpdatePositionBody");
 
+export const ReorderPositionsBodySchema = z
+  .object({
+    positionIds: z.array(z.string().min(1)).openapi({
+      description: "Array of position IDs in the desired order (0-indexed)",
+      example: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"],
+    }),
+  })
+  .openapi("ReorderPositionsBody");
+
 export const ResultsPositionSchema = z
   .object({
     positionId: z.string().openapi({

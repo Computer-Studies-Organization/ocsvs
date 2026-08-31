@@ -37,3 +37,13 @@ export async function deletePosition(
     method: "DELETE",
   });
 }
+
+export async function reorderPositions(
+  electionId: string,
+  positionIds: string[],
+): Promise<TPosition[]> {
+  return apiFetch<TPosition[]>(`/elections/${electionId}/positions/reorder`, {
+    method: "PUT",
+    body: JSON.stringify({ positionIds }),
+  });
+}

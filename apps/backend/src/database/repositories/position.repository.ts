@@ -66,4 +66,30 @@ export const positionRepo = {
     const result = await db.delete(positions).where(eq(positions.id, id)).run();
     return result.rowsAffected > 0;
   },
+
+  async reorder(db: DbClient, orderedIds: string[]): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await db
+      .select({ minOrder: sql<number>`min(${positions.displayOrder})` })
+      .from(positions)
+      .get();
+    const temporaryStart = (result?.minOrder ?? 0) - orderedIds.length;
+
+    // Pass 1: Move every position below the current minimum to avoid unique constraint collisions
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(positions)
+        .set({ displayOrder: temporaryStart + i, updatedAt: now })
+        .where(eq(positions.id, orderedIds[i]))
+        .run();
+    }
+    // Pass 2: Set final dense 0-indexed display orders
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(positions)
+        .set({ displayOrder: i, updatedAt: now })
+        .where(eq(positions.id, orderedIds[i]))
+        .run();
+    }
+  },
 };

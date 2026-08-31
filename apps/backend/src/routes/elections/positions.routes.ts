@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import {
   CreatePositionBodySchema,
   PositionSchema,
+  ReorderPositionsBodySchema,
   UpdatePositionBodySchema,
 } from "@/database/openapi-schemas";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
@@ -86,5 +87,29 @@ export const deletePositionRoute = createRoute({
     [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.POSITION_NOT_FOUND),
     [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, ERROR_MESSAGES.POSITION_HAS_CANDIDATES),
+  },
+});
+
+export const reorderPositionsRoute = createRoute({
+  method: "put",
+  path: "/elections/{id}/positions/reorder",
+  tags: ["Positions"],
+  security: [{ sessionAuth: [] }],
+  request: {
+    params: IdParams,
+    body: jsonContent(ReorderPositionsBodySchema, "Ordered position IDs"),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      z.array(PositionSchema),
+      ERROR_MESSAGES.POSITIONS_REORDERED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorResponse, ERROR_MESSAGES.FORBIDDEN),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_FOUND),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorResponse, ERROR_MESSAGES.ELECTION_NOT_IN_DRAFT),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
+      z.union([validationErrorSchema, ErrorResponse]),
+      "Validation failed",
+    ),
   },
 });

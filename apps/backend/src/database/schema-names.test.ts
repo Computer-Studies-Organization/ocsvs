@@ -167,7 +167,7 @@ describe("audit_log schema", () => {
 
   it("accepts every AUDIT_ACTIONS value through the OpenAPI `action` field", () => {
     const actionValues = AUDIT_ACTIONS.options;
-    expect(actionValues).toHaveLength(19);
+    expect(actionValues).toHaveLength(20);
 
     const sampleRow = {
       id: "f0e1d2c3-b4a5-4687-8901-23456789abcd",

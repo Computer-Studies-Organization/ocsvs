@@ -11,6 +11,7 @@ import {
   createPositionHandler,
   deletePositionHandler,
   listPositionsHandler,
+  reorderPositionsHandler,
   updatePositionHandler,
 } from "@/handlers/elections/positions.handler";
 import { getElectionResultsHandler } from "@/handlers/elections/results.handler";
@@ -22,6 +23,7 @@ import {
   createPositionRoute,
   deletePositionRoute,
   listPositionsRoute,
+  reorderPositionsRoute,
   updatePositionRoute,
 } from "./positions.routes";
 import { getElectionResultsRoute } from "./results.routes";
@@ -54,6 +56,7 @@ router.openapi(updateElectionRoute, withAdmin(updateElectionHandler));
 router.openapi(transitionElectionRoute, withAdmin(transitionElectionHandler));
 router.openapi(createPositionRoute, withAdmin(createPositionHandler));
 router.openapi(updatePositionRoute, withAdmin(updatePositionHandler));
+router.openapi(reorderPositionsRoute, withAdmin(reorderPositionsHandler));
 router.openapi(deletePositionRoute, withAdmin(deletePositionHandler));
 
 // ── Audit routes (Admin-guarded via withAdmin seam) ──────────────────────

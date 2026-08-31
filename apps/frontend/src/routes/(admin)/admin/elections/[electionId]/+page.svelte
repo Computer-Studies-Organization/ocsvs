@@ -1,11 +1,14 @@
 <script lang='ts'>
-  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Eye, Flag, ListOrdered, Plus, MoreHorizontal, AlertCircle } from 'lucide-svelte'
+  import { ArrowLeft, ChevronDown, ChevronUp, Edit, ExternalLink, Eye, Flag, GripVertical, ListOrdered, Plus, MoreHorizontal, AlertCircle } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
   import TransitionButton from '$lib/components/ui/transition-button.svelte'
   import type { TElection, TPartyList, TPosition } from '$lib/types'
   import { appCache } from '$lib/cache'
+  import { reorderPositions } from '$lib/api/positions'
+  import { addToast } from '$lib/stores/toast.svelte'
+  import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
   import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
   import CommonPositionsModal from '$lib/components/admin/common-positions-modal.svelte'
@@ -16,9 +19,10 @@
 
   let { data } = $props()
   const election = $derived(data.election)
-  const positions = $derived(data.positions)
   const partyLists = $derived(data.partyLists)
   const candidates = $derived(data.candidates)
+  let localPositions = $state<TPosition[] | null>(null)
+  const positions = $derived(localPositions ?? data.positions)
   const displayStatus = $derived(getEffectiveElectionStatus(election))
   const emptyPositionsCount = $derived(
     positions.filter((p) => {
@@ -26,6 +30,12 @@
       return !posCandidates.some((c) => c.isActive !== 0)
     }).length
   )
+
+  $effect(() => {
+    if (data.positions) {
+      localPositions = null
+    }
+  })
 
   let isCreateOpen = $state(false)
   let isCommonPositionsOpen = $state(false)
@@ -86,6 +96,86 @@
     appCache.invalidate({ params: { electionId: election.id } })
     appCache.invalidate({ resource: 'votingState' })
     await invalidate('app:election')
+  }
+
+  let isReordering = $state(false)
+  let draggedIndex = $state<number | null>(null)
+  let dragOverIndex = $state<number | null>(null)
+
+  async function handleReorder(newPositions: TPosition[]) {
+    if (isReordering || election.status !== 'draft') return
+    const prevPositions = positions
+    // Optimistic update
+    localPositions = newPositions.map((p, idx) => ({ ...p, displayOrder: idx }))
+    isReordering = true
+    try {
+      const positionIds = newPositions.map((p) => p.id)
+      const updated = await reorderPositions(election.id, positionIds)
+      localPositions = updated
+      appCache.invalidate({ params: { electionId: election.id } })
+      try {
+        await invalidate('app:election')
+      } catch (err: unknown) {
+        addToast('error', extractErrorMessage(err, 'Positions reordered, but failed to refresh election data'))
+      }
+    } catch (err: unknown) {
+      localPositions = prevPositions
+      addToast('error', extractErrorMessage(err, 'Failed to reorder positions'))
+    } finally {
+      isReordering = false
+    }
+  }
+
+  function movePosition(index: number, targetIndex: number) {
+    if (targetIndex < 0 || targetIndex >= positions.length || targetIndex === index) return
+    const next = [...positions]
+    const [moved] = next.splice(index, 1)
+    next.splice(targetIndex, 0, moved)
+    handleReorder(next)
+  }
+
+  function onDragStart(e: DragEvent, index: number) {
+    if (election.status !== 'draft' || isReordering) {
+      e.preventDefault()
+      return
+    }
+    draggedIndex = index
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', String(index))
+    }
+  }
+
+  function onDragOver(e: DragEvent, index: number) {
+    if (draggedIndex === null || draggedIndex === index) return
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
+    dragOverIndex = index
+  }
+
+  function onDragLeave(_e: DragEvent, index: number) {
+    if (dragOverIndex === index) {
+      dragOverIndex = null
+    }
+  }
+
+  function onDrop(e: DragEvent, targetIndex: number) {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      draggedIndex = null
+      dragOverIndex = null
+      return
+    }
+    movePosition(draggedIndex, targetIndex)
+    draggedIndex = null
+    dragOverIndex = null
+  }
+
+  function onDragEnd() {
+    draggedIndex = null
+    dragOverIndex = null
   }
 </script>
 
@@ -417,11 +507,16 @@
           </div>
 
           <ul class='space-y-2'>
-            {#each positions as p (p.id)}
+            {#each positions as p, index (p.id)}
               {@const posCandidates = candidates.filter((c) => c.positionId === p.id)}
               {@const activeCount = posCandidates.filter((c) => c.isActive !== 0).length}
               {@const inactiveCount = posCandidates.length - activeCount}
-              <li>
+              <li
+                ondragover={(e) => onDragOver(e, index)}
+                ondragleave={(e) => onDragLeave(e, index)}
+                ondrop={(e) => onDrop(e, index)}
+                class="transition-all rounded-xl {draggedIndex === index ? 'opacity-40 scale-[0.99]' : ''} {dragOverIndex === index ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-950' : ''}"
+              >
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
@@ -429,6 +524,21 @@
                   class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer hover:border-slate-700/80 hover:scale-[1.005]'
                   style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
                 >
+                  {#if election.status === 'draft'}
+                    <button
+                      type='button'
+                      draggable={!isReordering}
+                      ondragstart={(e) => onDragStart(e, index)}
+                      ondragend={onDragEnd}
+                      onclick={(e) => e.stopPropagation()}
+                      aria-label={`Drag to reorder ${p.name}`}
+                      title="Drag to reorder"
+                      class='flex h-11 w-8 items-center justify-center -ml-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800/60 transition cursor-grab active:cursor-grabbing select-none shrink-0'
+                    >
+                      <GripVertical size={18} />
+                    </button>
+                  {/if}
+
                   <div class='min-w-0 flex-1'>
                     <div class='flex items-center gap-2 flex-wrap'>
                       <p class='font-bold truncate' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
@@ -451,8 +561,36 @@
                       {/if}
                     </p>
                   </div>
-                  <div class='flex items-center gap-3 shrink-0'>
+                  <div class='flex items-center gap-1.5 sm:gap-2 shrink-0'>
                     {#if election.status === 'draft'}
+                      <button
+                        type='button'
+                        disabled={index === 0 || isReordering}
+                        onclick={(e) => {
+                          e.stopPropagation()
+                          movePosition(index, index - 1)
+                        }}
+                        aria-label={`Move ${p.name} up`}
+                        title="Move up"
+                        class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors cursor-pointer hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed'
+                        style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
+                      >
+                        <ChevronUp size={16} />
+                      </button>
+                      <button
+                        type='button'
+                        disabled={index === positions.length - 1 || isReordering}
+                        onclick={(e) => {
+                          e.stopPropagation()
+                          movePosition(index, index + 1)
+                        }}
+                        aria-label={`Move ${p.name} down`}
+                        title="Move down"
+                        class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors cursor-pointer hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed'
+                        style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
+                      >
+                        <ChevronDown size={16} />
+                      </button>
                       <button
                         type='button'
                         onclick={(e) => {
@@ -460,6 +598,7 @@
                           openEdit(p)
                         }}
                         aria-label="Edit {p.name} position"
+                        title="Edit position"
                         class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors cursor-pointer hover:bg-slate-800'
                         style='background: oklch(0.25 0.025 250); color: oklch(0.70 0.015 250)'
                       >
