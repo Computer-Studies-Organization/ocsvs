@@ -336,13 +336,12 @@
 
     <div class="space-y-2">
       <label for="createManifesto" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
-        Manifesto
+        Manifesto <span style="color: oklch(0.55 0.015 250)">(optional)</span>
       </label>
       <textarea
         id="createManifesto"
         bind:value={createManifesto}
         rows={5}
-        required
         disabled={createBusy}
         oninput={() => { if (createErrors.manifesto) createErrors.manifesto = '' }}
         class="w-full px-4 py-3 rounded-xl border-2 font-semibold resize-none transition focus:outline-none {createErrors.manifesto ? 'border-red-500' : ''}"
@@ -365,7 +364,7 @@
       </button>
       <button
         type="submit"
-        disabled={createBusy || !createAccountId || !createFullName.trim() || !createManifesto.trim()}
+        disabled={createBusy || !createAccountId || !createFullName.trim()}
         class="flex-1 px-4 py-3 rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style="background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)"
       >

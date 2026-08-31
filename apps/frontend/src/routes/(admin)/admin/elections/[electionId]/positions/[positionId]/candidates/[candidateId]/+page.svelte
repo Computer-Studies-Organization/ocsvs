@@ -39,8 +39,9 @@
   async function handleSave(e?: SubmitEvent, returnToList = false) {
     e?.preventDefault()
     if (!candidateId || !canModify) return
+    const manifesto = editManifesto.trim()
     const result = validate(updateCandidateSchema, {
-      manifesto: editManifesto,
+      manifesto,
     })
     if (!result.ok) {
       editErrors = result.errors
@@ -54,7 +55,7 @@
     }
     try {
       await updateCandidate(candidateId, {
-        manifesto: editManifesto,
+        manifesto,
         partyId: editPartyId || null,
       })
       appCache.invalidate({ params: { electionId } })
@@ -229,7 +230,7 @@
 
         <div class='space-y-2'>
           <label for='editManifesto' class='block text-xs font-bold uppercase tracking-wider' style='color: oklch(0.70 0.015 250)'>
-            Manifesto
+            Manifesto <span style='color: oklch(0.55 0.015 250)'>(optional)</span>
           </label>
           <textarea
             id='editManifesto'

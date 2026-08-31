@@ -30,6 +30,18 @@ describe("add candidate user picker", () => {
     expect(modalSource).toContain("getCandidateUserLabel(selectedUser)");
   });
 
+  it("allows candidate submission without a manifesto", () => {
+    const manifestoOpeningTag =
+      modalSource.match(/<textarea\b[^>]*id="createManifesto"[^>]*>/)?.[0] ?? "";
+
+    expect(modalSource).toContain(
+      'Manifesto <span style="color: oklch(0.55 0.015 250)">(optional)</span>',
+    );
+    expect(modalSource).toContain("manifesto: createManifesto.trim()");
+    expect(modalSource).not.toContain("!createManifesto.trim()");
+    expect(manifestoOpeningTag).not.toContain("required");
+  });
+
   it("exposes result, empty, error, and keyboard-accessible combobox states", () => {
     expect(modalSource).toContain('role="combobox"');
     expect(modalSource).toContain('role="listbox"');
