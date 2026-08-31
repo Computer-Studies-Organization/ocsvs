@@ -136,19 +136,19 @@
     </div>
   </div>
 {:else if pageState.kind === 'error'}
-  <div class='p-8 text-center'>
+  <div class='p-6 sm:p-8 text-center'>
     <p class='text-red-400'>{pageState.message}</p>
   </div>
 {:else if pageState.kind === 'empty'}
-  <div class='flex min-h-[60vh] flex-col items-center justify-center p-8'>
-    <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/50 p-8 text-center shadow-2xl backdrop-blur-md'>
+  <div class='flex min-h-[60vh] flex-col items-center justify-center p-4 sm:p-8'>
+    <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/60 p-5 sm:p-8 text-center shadow-2xl backdrop-blur-md'>
       {#if pageState.variant === 'next-draft' && pageState.nextDraft}
         {@const d = pageState.nextDraft}
-        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
           <Calendar size={14} class="text-blue-400" />
           <span>Next election</span>
         </div>
-        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>{d.name}</h1>
+        <h1 class='text-xl sm:text-2xl font-bold tracking-tight text-slate-100 mt-2'>{d.name}</h1>
         {#if d.opensAt}
           <Countdown
             targetUnixSeconds={d.opensAt}
@@ -158,10 +158,10 @@
           />
         {/if}
 
-        <hr class='my-6 border-white/10' />
+        <hr class='my-5 sm:my-6 border-white/10' />
 
-        <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 text-left'>
-          <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
+        <div class='rounded-xl border border-white/5 bg-slate-950/60 p-3.5 sm:p-4 text-left'>
+          <span class='text-xs font-semibold uppercase tracking-wider text-slate-400 block'>Schedule</span>
           <span class='mt-1 block text-sm font-bold text-slate-200'>
             {formatOverviewDate(d.opensAt)}
           </span>
@@ -169,25 +169,25 @@
       {:else if pageState.variant === 'last-closed' && pageState.lastClosed}
         {@const c = pageState.lastClosed}
         {@const totalVotes = c.results.reduce((s, r) => s + r.totalVotes, 0)}
-        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
           <CheckCircle size={14} class="text-emerald-400" />
           <span>Past election</span>
         </div>
-        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>{c.name}</h1>
-        <p class='mt-2 text-sm text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
-        
-        <hr class='my-6 border-white/10' />
+        <h1 class='text-xl sm:text-2xl font-bold tracking-tight text-slate-100 mt-2'>{c.name}</h1>
+        <p class='mt-2 text-xs sm:text-sm text-slate-400'>{totalVotes} votes cast across {c.results.length} positions.</p>
 
-        <div class='grid grid-cols-2 gap-4 text-left'>
-          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4'>
-            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Schedule</span>
+        <hr class='my-5 sm:my-6 border-white/10' />
+
+        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-left'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/60 p-3.5 sm:p-4'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-400 block'>Schedule</span>
             <span class='mt-1 block text-sm font-bold text-slate-200'>
               Ended {formatOverviewDate(c.closesAt)}
             </span>
           </div>
-          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 flex flex-col justify-between'>
-            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Results</span>
-            <a href='/elections/{c.id}' class='mt-1 block text-sm font-bold text-blue-400 hover:underline'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/60 p-3.5 sm:p-4 flex flex-col justify-between'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-400 block'>Results</span>
+            <a href='/elections/{c.id}' class='min-h-11 inline-flex items-center mt-1 text-sm font-bold text-blue-400 hover:underline'>
               View results →
             </a>
           </div>
@@ -195,47 +195,47 @@
       {:else if pageState.variant === 'both' && pageState.nextDraft && pageState.lastClosed}
         {@const d = pageState.nextDraft}
         {@const c = pageState.lastClosed}
-        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
           <Info size={14} class="text-slate-400" />
           <span>Elections overview</span>
         </div>
-        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>No active election</h1>
-        <p class='mt-2 text-sm text-slate-400'>
+        <h1 class='text-xl sm:text-2xl font-bold tracking-tight text-slate-100 mt-2'>No active election</h1>
+        <p class='mt-2 text-xs sm:text-sm text-slate-400'>
           Latest: {c.name} (ended {formatOverviewDate(c.closesAt)}). Next: {d.name} opens {formatOverviewDate(d.opensAt)}.
         </p>
 
-        <hr class='my-6 border-white/10' />
+        <hr class='my-5 sm:my-6 border-white/10' />
 
-        <div class='grid grid-cols-2 gap-4 text-left'>
-          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4'>
-            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Next Up</span>
+        <div class='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-left'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/60 p-3.5 sm:p-4'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-400 block'>Next Up</span>
             <span class='mt-1 block text-sm font-bold text-slate-200'>{d.name}</span>
           </div>
-          <div class='rounded-xl border border-white/5 bg-slate-950/40 p-4 flex flex-col justify-between'>
-            <span class='text-xs font-semibold uppercase tracking-wider text-slate-500 block'>Past Election</span>
-            <a href='/elections/{c.id}' class='mt-1 block text-sm font-bold text-blue-400 hover:underline'>
+          <div class='rounded-xl border border-white/5 bg-slate-950/60 p-3.5 sm:p-4 flex flex-col justify-between'>
+            <span class='text-xs font-semibold uppercase tracking-wider text-slate-400 block'>Past Election</span>
+            <a href='/elections/{c.id}' class='min-h-11 inline-flex items-center mt-1 text-sm font-bold text-blue-400 hover:underline'>
               View results →
             </a>
           </div>
         </div>
       {:else}
-        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
           <Vote size={14} class="text-slate-400" />
           <span>Status</span>
         </div>
-        <h1 class='text-2xl font-bold tracking-tight text-slate-100 mt-2'>No elections scheduled</h1>
-        <p class='mt-2 text-sm text-slate-400'>Check back later.</p>
+        <h1 class='text-xl sm:text-2xl font-bold tracking-tight text-slate-100 mt-2'>No elections scheduled</h1>
+        <p class='mt-2 text-xs sm:text-sm text-slate-400'>Check back later.</p>
       {/if}
     </div>
 
     {#if pageState.isAdmin}
-      <div class='w-full max-w-md mt-8'>
-        <div class='border-t border-white/10 pt-6'>
-          <p class='text-xs font-semibold uppercase tracking-wider text-slate-500'>Admin actions</p>
-          <a href='/admin/elections' class='mt-2 inline-block text-blue-400 hover:underline font-medium text-sm'>
+      <div class='w-full max-w-md mt-6 sm:mt-8'>
+        <div class='border-t border-white/10 pt-5 sm:pt-6'>
+          <p class='text-xs font-semibold uppercase tracking-wider text-slate-400'>Admin actions</p>
+          <a href='/admin/elections' class='min-h-11 inline-flex items-center mt-1 text-blue-400 hover:underline font-medium text-sm'>
             Open election management →
           </a>
-          <p class='mt-3 text-xs text-slate-500 leading-relaxed'>
+          <p class='mt-2 text-xs text-slate-500 leading-relaxed'>
             As an administrator, you can create, configure, or transition elections from the management portal. Voters will only see the ballot interface when an election is actively open.
           </p>
         </div>
@@ -243,37 +243,47 @@
     {/if}
   </div>
 {:else if pageState.kind === 'voted'}
-  <div class='flex min-h-[60vh] items-center justify-center p-8'>
-    <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+  <div class='flex min-h-[60vh] items-center justify-center p-4 sm:p-8'>
+    <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-6 sm:p-8 text-center shadow-2xl backdrop-blur-md'>
       <Vote size={48} class='mx-auto mb-4 text-emerald-400' />
-      <h1 class='text-2xl font-bold text-slate-100'>Thank you for voting!</h1>
-      <p class='mt-2 text-slate-400'>Your vote in "{pageState.election.name}" has been recorded.</p>
-      <a href='/elections/{pageState.election.id}' class='mt-6 inline-block text-blue-400 hover:underline'>View results →</a>
+      <h1 class='text-xl sm:text-2xl font-bold text-slate-100'>Thank you for voting!</h1>
+      <p class='mt-2 text-sm text-slate-400'>Your vote in &ldquo;{pageState.election.name}&rdquo; has been recorded.</p>
+      <a
+        href='/elections/{pageState.election.id}'
+        class='min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white transition hover:bg-blue-500 shadow-lg shadow-blue-500/25 mt-6'
+      >
+        View results →
+      </a>
     </div>
   </div>
 {:else if pageState.kind === 'admin'}
-  <div class='flex min-h-[60vh] items-center justify-center p-8'>
-    <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+  <div class='flex min-h-[60vh] items-center justify-center p-4 sm:p-8'>
+    <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-6 sm:p-8 text-center shadow-2xl backdrop-blur-md'>
       <Info size={48} class='mx-auto mb-4 text-sky-400' />
-      <h1 class='text-2xl font-bold text-slate-100'>Election is open</h1>
-      <p class='mt-2 text-slate-400'>Administrators cannot cast ballots. Manage the election from the administration portal.</p>
-      <a href='/admin/elections/{pageState.election.id}' class='mt-6 inline-block text-blue-400 hover:underline'>Manage election →</a>
+      <h1 class='text-xl sm:text-2xl font-bold text-slate-100'>Election is open</h1>
+      <p class='mt-2 text-sm text-slate-400'>Administrators cannot cast ballots. Manage the election from the administration portal.</p>
+      <a
+        href='/admin/elections/{pageState.election.id}'
+        class='min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-6 py-2.5 font-semibold text-white transition hover:bg-sky-500 shadow-lg shadow-sky-500/25 mt-6'
+      >
+        Manage election →
+      </a>
     </div>
   </div>
 {:else}
   <div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>
-    <div class='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+    <div class='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4'>
       <div>
-        <h1 class='text-3xl font-black text-slate-100'>{pageState.election.name}</h1>
+        <h1 class='text-2xl sm:text-3xl font-black text-slate-100'>{pageState.election.name}</h1>
         {#if pageState.election.description}
-          <p class='mt-2 text-slate-400'>{pageState.election.description}</p>
+          <p class='mt-1 sm:mt-2 text-xs sm:text-sm text-slate-400'>{pageState.election.description}</p>
         {/if}
       </div>
       {#if pageState.election.closesAt}
         <Countdown
           targetUnixSeconds={pageState.election.closesAt}
           prefix="Closes in "
-          class="text-amber-400 bg-amber-500/5 border border-amber-500/20 px-3.5 py-1.5 rounded-xl self-start sm:self-center"
+          class="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-xl self-start sm:self-center font-mono text-xs sm:text-sm font-semibold"
           onZero={async () => {
             await guardedAutoRefresh()
             addToast('info', 'This election has closed.')
@@ -282,11 +292,11 @@
       {/if}
     </div>
 
-    <div class='mt-6 flex items-start gap-3 rounded-xl border border-sky-500/20 bg-sky-950/20 p-4 text-sky-100'>
+    <div class='mt-4 sm:mt-6 flex items-start gap-3 rounded-xl border border-sky-500/20 bg-sky-950/20 p-3.5 sm:p-4 text-sky-100'>
       <Info size={18} class='mt-0.5 shrink-0 text-sky-400' />
       <div>
-        <p class='font-semibold'>Vote first to view live results</p>
-        <p class='mt-1 text-sm text-sky-200/80'>Please cast your ballot below. Once your vote is submitted, you can view the live results.</p>
+        <p class='font-semibold text-xs sm:text-sm'>Vote first to view live results</p>
+        <p class='mt-0.5 sm:mt-1 text-xs text-sky-200/80'>Please cast your ballot below. Once your vote is submitted, you can view the live results.</p>
       </div>
     </div>
 

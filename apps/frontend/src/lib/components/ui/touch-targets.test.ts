@@ -41,6 +41,18 @@ const commonPositionsModalSource = readFileSync(
   fileURLToPath(new URL("../admin/common-positions-modal.svelte", import.meta.url)),
   "utf8",
 );
+const ballotStepperSource = readFileSync(
+  fileURLToPath(new URL("./ballot-stepper.svelte", import.meta.url)),
+  "utf8",
+);
+const ballotReviewSource = readFileSync(
+  fileURLToPath(new URL("./ballot-review.svelte", import.meta.url)),
+  "utf8",
+);
+const votingCandidateCardSource = readFileSync(
+  fileURLToPath(new URL("./voting-candidate-card.svelte", import.meta.url)),
+  "utf8",
+);
 
 describe("mobile touch targets", () => {
   it("keeps header action controls at least 44px square", () => {
@@ -147,5 +159,51 @@ describe("mobile touch targets", () => {
     expect(buttonTags.length).toBeGreaterThan(0);
     expect(labelTags.every((tag) => tag.includes("min-h-11"))).toBe(true);
     expect(buttonTags.every((tag) => tag.includes("min-h-11"))).toBe(true);
+  });
+
+  it("keeps ballot stepper fast-fill and clear selection buttons at least 44px tall with safe bottom spacing", () => {
+    expect(ballotStepperSource).toContain("min-h-11 flex-1 sm:flex-initial inline-flex");
+    expect(ballotStepperSource).toContain(
+      "min-h-11 inline-flex items-center justify-center rounded-xl border border-slate-700",
+    );
+    expect(ballotStepperSource).toContain(
+      "min-h-11 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-800",
+    );
+    expect(ballotStepperSource).toContain("calc(5.5rem + env(safe-area-inset-bottom, 0px))");
+  });
+
+  it("keeps ballot review action triggers at least 44px tall with human-friendly labels", () => {
+    const actionButtons = ballotReviewSource.match(/<button[\s\S]*?<\/button>/g) ?? [];
+    expect(actionButtons.length).toBeGreaterThan(0);
+    expect(actionButtons.every((tag) => tag.includes("min-h-11"))).toBe(true);
+    expect(ballotReviewSource).toContain("Edit selection");
+    expect(ballotReviewSource).toContain("Choose candidate");
+    expect(ballotReviewSource).not.toContain("Edit_selection");
+    expect(ballotReviewSource).not.toContain("Choose_candidate");
+  });
+
+  it("positions mobile stepper progress banner below sticky header with safe margins and touch-friendly quick-jump tabs", () => {
+    expect(stepperProgressSource).toContain("top-[calc(4rem+1px)] sm:top-[calc(4.25rem+1px)]");
+    expect(stepperProgressSource).toContain("-mx-4 mb-6");
+    expect(stepperProgressSource).toContain("sm:-mx-6 sm:px-6");
+    expect(stepperProgressSource).toContain("min-h-11 min-w-11");
+    expect(stepperProgressSource).toContain('<nav class="mt-2.5');
+    expect(stepperProgressSource).toContain("aria-current={isActive ? 'step' : undefined}");
+    expect(stepperProgressSource).not.toContain('role="tablist"');
+    expect(stepperProgressSource).not.toContain('role="tab"');
+  });
+
+  it("docks stepper navigation with safe area padding and touch-friendly controls", () => {
+    expect(stepperNavigationSource).toContain(
+      "max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+    );
+    expect(stepperNavigationSource).toContain("max-md:pt-3");
+    expect(stepperNavigationSource).toContain("max-md:backdrop-blur-xl");
+  });
+
+  it("ensures candidate card party badge on mobile provides an accessible touch area", () => {
+    expect(votingCandidateCardSource).toContain("min-h-11");
+    expect(votingCandidateCardSource).not.toContain("min-h-9");
+    expect(votingCandidateCardSource).toContain("max-sm:max-h-56");
   });
 });

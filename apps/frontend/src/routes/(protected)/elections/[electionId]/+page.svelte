@@ -98,35 +98,35 @@
   <!-- Main Content Area -->
   <main class='flex-1 space-y-8'>
     {#if !election}
-      <div class='flex min-h-[40vh] items-center justify-center p-8'>
-        <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+      <div class='flex min-h-[40vh] items-center justify-center p-4 sm:p-8'>
+        <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-6 sm:p-8 text-center shadow-2xl'>
           <Info size={48} class='mx-auto mb-4 text-slate-500' />
           <h2 class='text-xl font-bold text-slate-100'>Election not found</h2>
-          <p class='mt-2 text-slate-400'>The election you are looking for does not exist or has been deleted.</p>
+          <p class='mt-2 text-sm text-slate-400'>The election you are looking for does not exist or has been deleted.</p>
         </div>
       </div>
     {:else if effectiveStatus === 'open' && !hasVoted}
       <!-- Unvoted user view for open election -->
-      <div class='flex min-h-[40vh] items-center justify-center p-8'>
-        <div class='max-w-md rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl backdrop-blur-xl'>
+      <div class='flex min-h-[40vh] items-center justify-center p-4 sm:p-8'>
+        <div class='w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-6 sm:p-8 text-center shadow-2xl backdrop-blur-xl'>
           <Vote size={48} class='mx-auto mb-4 text-sky-400' />
-          <h2 class='text-2xl font-bold text-slate-100'>Voting required</h2>
-          <p class='mt-2 text-slate-400'>
+          <h2 class='text-xl sm:text-2xl font-bold text-slate-100'>Voting required</h2>
+          <p class='mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed'>
             Results for active elections are only visible after you have cast your vote to ensure election fairness.
           </p>
           <a
             href='/voting'
-            class='mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 shadow-lg shadow-blue-500/25'
+            class='mt-6 min-h-11 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white transition hover:bg-blue-500 shadow-lg shadow-blue-500/25 active:scale-95'
           >
             Go to Voting
           </a>
         </div>
       </div>
     {:else if results.length === 0}
-      <div class='rounded-2xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl'>
+      <div class='rounded-2xl border border-white/10 bg-slate-900/80 p-6 sm:p-8 text-center shadow-2xl'>
         <BarChart3 size={48} class='mx-auto mb-4 text-slate-500' />
         <h2 class='text-xl font-bold text-slate-100'>No votes cast yet</h2>
-        <p class='mt-2 text-slate-400'>No ballots have been submitted for this election.</p>
+        <p class='mt-2 text-sm text-slate-400'>No ballots have been submitted for this election.</p>
       </div>
     {:else}
       <ResultsPanel {election} {results} {turnout} status={effectiveStatus} />

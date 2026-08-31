@@ -28,7 +28,7 @@
 </script>
 
 <div
-  class="group relative flex w-full flex-col gap-5 rounded-2xl border p-5 text-left transition-all duration-200 overflow-hidden {selected ? 'border-blue-500/80 bg-blue-950/20 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/40' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-xl'} focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500/50 sm:flex-row"
+  class="group relative flex w-full flex-col gap-4 sm:gap-5 rounded-2xl border p-4 sm:p-5 text-left transition-all duration-200 overflow-hidden active:scale-[0.99] sm:active:scale-100 {selected ? 'border-blue-500 bg-blue-950/25 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/50' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900/60 hover:-translate-y-0.5 hover:shadow-xl'} focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500/50 sm:flex-row"
 >
   <button
     type="button"
@@ -39,7 +39,7 @@
   ></button>
 
   <!-- Left Section: Fixed-Size Candidate Portrait Frame -->
-  <div class="relative z-10 pointer-events-none w-full shrink-0 aspect-[3/4] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center sm:w-44 md:w-48">
+  <div class="relative z-10 pointer-events-none w-full shrink-0 aspect-[3/4] max-sm:max-h-56 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center sm:w-44 md:w-48 shadow-inner">
     {#if candidate.imageUrl && !imageError}
       <img
         src={candidate.imageUrl}
@@ -79,21 +79,21 @@
             href="/elections/{electionId}/parties/{party.id}"
             aria-label="View {party.name} platform"
             onclick={(event) => event.stopPropagation()}
-            class="relative z-20 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="relative z-20 min-h-11 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-3 py-1 rounded-full border shadow-lg backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-blue-400 active:scale-95 transition-transform"
             style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
           >
             {party.code}
           </a>
         {:else}
           <span
-            class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-lg backdrop-blur-md"
+            class="inline-flex items-center text-[10px] font-mono font-bold px-3 py-1 rounded-full border shadow-lg backdrop-blur-md"
             style="background: {party.color ? party.color + '30' : 'rgba(15,23,42,0.85)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
           >
             {party.code}
           </span>
         {/if}
       {:else}
-        <span class="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-slate-700/80 bg-slate-950/80 text-slate-300 shadow-lg backdrop-blur-md">
+        <span class="inline-flex items-center text-[10px] font-mono font-bold px-3 py-1 rounded-full border border-slate-700/80 bg-slate-950/80 text-slate-300 shadow-lg backdrop-blur-md">
           INDEPENDENT
         </span>
       {/if}
@@ -102,7 +102,7 @@
     <!-- Top-Right Floating Selection Check Indicator on Mobile only -->
     <div class="absolute top-3 right-3 z-10 sm:hidden">
       <div
-        class="flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 {selected ? 'border-blue-400 bg-blue-500 text-white scale-110 shadow-[0_0_10px_rgba(59,130,246,0.6)]' : 'border-slate-700 bg-slate-950/80 text-transparent scale-100'}"
+        class="flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 {selected ? 'border-blue-400 bg-blue-500 text-white scale-110 shadow-[0_0_12px_rgba(59,130,246,0.6)]' : 'border-slate-700 bg-slate-950/80 text-transparent scale-100'}"
       >
         <Check size={16} class="stroke-[3]" />
       </div>
@@ -113,10 +113,10 @@
   <div class="relative z-10 pointer-events-none flex flex-1 min-w-0 flex-col justify-between">
     <div>
       <!-- Header row: Name + Party badge + Desktop Checkmark -->
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex flex-col gap-1.5 min-w-0">
-          <div class="flex items-center gap-2.5 flex-wrap">
-            <h3 class="font-bold text-slate-100 text-lg sm:text-xl group-hover:text-white transition-colors tracking-tight">
+      <div class="flex items-start justify-between gap-3 sm:gap-4">
+        <div class="flex flex-col gap-1.5 min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="font-bold text-slate-100 text-base sm:text-xl group-hover:text-white transition-colors tracking-tight">
               {candidate.fullName}
             </h3>
             <div class="hidden sm:inline-flex">
@@ -126,7 +126,7 @@
                     href="/elections/{electionId}/parties/{party.id}"
                     aria-label="View {party.name} platform"
                     onclick={(event) => event.stopPropagation()}
-                    class="relative z-20 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    class="relative z-20 inline-flex pointer-events-auto items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition hover:scale-105"
                     style="background: {party.color ? party.color + '20' : 'rgba(59,130,246,0.15)'}; border-color: {party.color || '#3B82F6'}; color: {party.color || '#60A5FA'}"
                   >
                     {party.code}
@@ -157,9 +157,9 @@
       </div>
 
       <!-- Platform Manifesto -->
-      <div class="mt-3 w-full border-t border-white/5 pt-3">
+      <div class="mt-3 w-full border-t border-white/5 pt-2.5 sm:pt-3">
         <div class="flex items-center justify-between mb-1.5">
-          <p class="font-mono text-[10px] uppercase tracking-wider text-slate-500">platform manifesto</p>
+          <p class="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">platform manifesto</p>
           {#if candidate.manifesto && candidate.manifesto.length > 150}
             <button
               type="button"
@@ -173,18 +173,18 @@
             </button>
           {/if}
         </div>
-        <p class="text-slate-300 text-sm font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
+        <p class="text-slate-300 text-xs sm:text-sm font-normal leading-relaxed transition-all duration-200 {isExpanded ? '' : 'line-clamp-3'}">
           {candidate.manifesto || 'No platform manifesto provided for this candidate.'}
         </p>
       </div>
     </div>
 
     <!-- IDE commit branch footer decoration -->
-    <div class="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-      <span class="text-[11px] font-mono {selected ? 'text-blue-400 font-semibold' : 'text-slate-500'}">
+    <div class="mt-3 sm:mt-4 flex items-center justify-between gap-2 border-t border-white/5 pt-2">
+      <span class="text-[11px] font-mono {selected ? 'text-blue-400 font-semibold' : 'text-slate-400'}">
         {selected ? '● Selected on ballot' : '○ Click to select candidate'}
       </span>
-      <span class="font-mono text-[8px] text-slate-600 group-hover:text-slate-500 transition-colors uppercase tracking-wider">
+      <span class="font-mono text-[8px] text-slate-500 group-hover:text-slate-400 transition-colors uppercase tracking-wider truncate max-w-[45%] text-right">
         feat/{candidate.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}
       </span>
     </div>
