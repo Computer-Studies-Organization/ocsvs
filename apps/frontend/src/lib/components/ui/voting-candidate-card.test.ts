@@ -135,4 +135,42 @@ describe("VotingCandidateCard component", () => {
     expect(body).toContain("Leading innovation in Computer Studies.");
     expect(body).toContain("feat/john-roben-garote-manayon");
   });
+
+  it("renders compact density layout with thumbnail and compact structure", () => {
+    const { body } = render(VotingCandidateCard, {
+      props: {
+        candidate: baseCandidate,
+        partyLists: sampleParties,
+        selected: true,
+        density: "compact",
+        onclick: () => {},
+      },
+    });
+
+    expect(body).toContain("w-20 sm:w-28");
+    expect(body).toContain("aspect-[3/4]");
+    expect(body).toContain("TECH");
+    expect(body).toContain('aria-pressed="true"');
+    expect(body).toContain("John Roben Garote Manayon");
+  });
+
+  it("renders Read More toggle button for long manifesto in compact mode", () => {
+    const longManifestoCandidate = {
+      ...baseCandidate,
+      manifesto:
+        "This is a comprehensive and detailed campaign manifesto outlining various initiatives for technology advocacy, student workshops, open-source development, community building, and hackathon organization.",
+    };
+
+    const { body } = render(VotingCandidateCard, {
+      props: {
+        candidate: longManifestoCandidate,
+        partyLists: sampleParties,
+        selected: false,
+        density: "compact",
+        onclick: () => {},
+      },
+    });
+
+    expect(body).toContain("Read More");
+  });
 });

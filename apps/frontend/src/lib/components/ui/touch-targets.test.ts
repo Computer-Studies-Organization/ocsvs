@@ -206,4 +206,16 @@ describe("mobile touch targets", () => {
     expect(votingCandidateCardSource).not.toContain("min-h-9");
     expect(votingCandidateCardSource).toContain("max-sm:max-h-56");
   });
+
+  it("keeps density toggle controls touch-friendly with accessible labels", () => {
+    expect(ballotStepperSource).toMatch(
+      /aria-label='Switch to detailed card view'[\s\S]*?class="[^"]*min-h-11[^"]*min-w-11/,
+    );
+    expect(ballotStepperSource).toMatch(
+      /aria-label='Switch to compact card view'[\s\S]*?class="[^"]*min-h-11[^"]*min-w-11/,
+    );
+    expect(ballotStepperSource).toContain("aria-label='Ballot density'");
+    expect(ballotStepperSource).toContain("title='Detailed view'");
+    expect(ballotStepperSource).toContain("title='Compact view'");
+  });
 });

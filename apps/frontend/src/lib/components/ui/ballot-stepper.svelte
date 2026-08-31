@@ -12,7 +12,7 @@
     type TStepperVotingState,
   } from '$lib/voting-stepper-logic'
   import type { TPartyList } from '$lib/types'
-  import { Flag, X, Zap } from 'lucide-svelte'
+  import { Flag, LayoutGrid, List, X, Zap } from 'lucide-svelte'
   import VotingCandidateCard from './voting-candidate-card.svelte'
   import BallotReview from './ballot-review.svelte'
   import StepperNavigation from './stepper-navigation.svelte'
@@ -43,6 +43,26 @@
     onapplyparty?: (party: TPartyList) => void
     onsubmit: () => void
   } = $props()
+
+  let density = $state<'compact' | 'detailed'>('detailed')
+
+  $effect(() => {
+    try {
+      const stored = localStorage.getItem('ocsvs_ballot_density')
+      if (stored === 'compact' || stored === 'detailed') {
+        density = stored
+      } else if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 639px)').matches) {
+        density = 'compact'
+      }
+    } catch {}
+  })
+
+  function setDensity(mode: 'compact' | 'detailed') {
+    density = mode
+    try {
+      localStorage.setItem('ocsvs_ballot_density', mode)
+    } catch {}
+  }
 
   const totalPositions = $derived(positions.length)
   const isReview = $derived(isReviewStep(voting, totalPositions))
@@ -120,15 +140,47 @@
   {#if !isReview}
     {#if currentPosition}
       <div class={compact ? 'rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 shadow-xl backdrop-blur-md' : 'mt-6 sm:mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 shadow-xl backdrop-blur-md'}>
-        {#if showStepLabel}
-          <div class='flex items-start justify-between gap-3 mb-1'>
-            <h2 class='text-lg sm:text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
-            <span class='font-mono text-xs text-slate-400'>Step {voting.currentPositionIndex + 1} of {totalPositions}</span>
+        <div class='flex items-start justify-between gap-3 mb-3 sm:mb-4'>
+          <div class='min-w-0 flex-1'>
+            {#if showStepLabel}
+              <div class='flex items-center gap-2 flex-wrap'>
+                <h2 class='text-lg sm:text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
+                <span class='font-mono text-xs text-slate-400'>&bull; Step {voting.currentPositionIndex + 1} of {totalPositions}</span>
+              </div>
+            {:else}
+              <h2 class='text-lg sm:text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
+            {/if}
+            <p class='mt-0.5 text-xs sm:text-sm text-slate-400'>Select one candidate for this position.</p>
           </div>
-        {:else}
-          <h2 class='text-lg sm:text-xl font-bold text-slate-100'>{currentPosition.name}</h2>
-        {/if}
-        <p class={showStepLabel ? 'text-xs sm:text-sm text-slate-400' : 'mt-1 text-xs sm:text-sm text-slate-400'}>Select one candidate for this position.</p>
+
+          <!-- Slim compact icon button group at top right -->
+          <div
+            class='flex items-center rounded-lg border border-slate-800/80 bg-slate-950/60 p-0.5 shadow-sm shrink-0'
+            role='group'
+            aria-label='Ballot density'
+          >
+            <button
+              type='button'
+              onclick={() => setDensity('detailed')}
+              aria-pressed={density === 'detailed'}
+              aria-label='Switch to detailed card view'
+              title='Detailed view'
+              class="min-h-11 min-w-11 inline-flex items-center justify-center rounded-md transition-all cursor-pointer {density === 'detailed' ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border border-transparent'}"
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              type='button'
+              onclick={() => setDensity('compact')}
+              aria-pressed={density === 'compact'}
+              aria-label='Switch to compact card view'
+              title='Compact view'
+              class="min-h-11 min-w-11 inline-flex items-center justify-center rounded-md transition-all cursor-pointer {density === 'compact' ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border border-transparent'}"
+            >
+              <List size={14} />
+            </button>
+          </div>
+        </div>
 
         <div class='mt-4 sm:mt-6 flex flex-col gap-3.5 sm:gap-4'>
           {#each currentPosition.candidates as candidate (candidate.id)}
@@ -136,6 +188,7 @@
               {candidate}
               {partyLists}
               {electionId}
+              {density}
               selected={voting.selectedVotes[currentPosition.id] === candidate.id}
               onclick={() => selectAt(currentPosition.id, candidate.id)}
             />
