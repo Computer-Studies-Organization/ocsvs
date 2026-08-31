@@ -268,4 +268,75 @@ describe("admin election party controls", () => {
       expect(body).not.toContain('aria-label="Edit President position"');
     },
   );
+
+  it("displays 'No candidates' badge and header warning when a position has 0 candidates in draft election", () => {
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election,
+          positions: [position],
+          partyLists: [],
+          candidates: [],
+        },
+      },
+    });
+
+    expect(body).toContain("No candidates");
+    expect(body).toContain("1 needs candidates");
+  });
+
+  it("displays '0 active (1 inactive)' badge when a position has only inactive candidates", () => {
+    const inactiveCandidate: TCandidate = {
+      id: "candidate-inactive",
+      fullName: "Inactive Only",
+      accountId: "account-inactive",
+      positionId: position.id,
+      partyId: null,
+      manifesto: "",
+      isActive: 0,
+      imageUrl: null,
+    };
+
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election,
+          positions: [position],
+          partyLists: [],
+          candidates: [inactiveCandidate],
+        },
+      },
+    });
+
+    expect(body).toContain("0 active (1 inactive)");
+    expect(body).toContain("1 needs candidates");
+  });
+
+  it("displays candidate count for positions with active candidates and hides header empty alert when all positions are filled", () => {
+    const activeCandidate: TCandidate = {
+      id: "candidate-active",
+      fullName: "Active Candidate",
+      accountId: "account-active",
+      positionId: position.id,
+      partyId: null,
+      manifesto: "",
+      isActive: 1,
+      imageUrl: null,
+    };
+
+    const { body } = render(Page, {
+      props: {
+        data: {
+          election,
+          positions: [position],
+          partyLists: [],
+          candidates: [activeCandidate],
+        },
+      },
+    });
+
+    expect(body).toContain("1 candidate");
+    expect(body).not.toContain("No candidates");
+    expect(body).not.toContain("needs candidates");
+  });
 });

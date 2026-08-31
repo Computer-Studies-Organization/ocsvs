@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Flag, ListOrdered, Plus, MoreHorizontal } from 'lucide-svelte'
+  import { ArrowLeft, ChevronDown, Edit, ExternalLink, Flag, ListOrdered, Plus, MoreHorizontal, AlertCircle } from 'lucide-svelte'
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
@@ -20,6 +20,12 @@
   const partyLists = $derived(data.partyLists)
   const candidates = $derived(data.candidates)
   const displayStatus = $derived(getEffectiveElectionStatus(election))
+  const emptyPositionsCount = $derived(
+    positions.filter((p) => {
+      const posCandidates = candidates.filter((c) => c.positionId === p.id)
+      return !posCandidates.some((c) => c.isActive !== 0)
+    }).length
+  )
 
   let isCreateOpen = $state(false)
   let isCommonPositionsOpen = $state(false)
@@ -371,7 +377,15 @@
           style='background: oklch(0.20 0.022 250); border-color: oklch(0.25 0.025 250)'
         >
           <div class='flex flex-wrap items-center justify-between mb-4 gap-3'>
-            <h2 class='text-lg font-black' style='color: oklch(0.95 0.008 250)'>Positions</h2>
+            <div class='flex items-center gap-2.5 flex-wrap'>
+              <h2 class='text-lg font-black' style='color: oklch(0.95 0.008 250)'>Positions</h2>
+              {#if election.status === 'draft' && emptyPositionsCount > 0}
+                <span class='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-500/40 bg-amber-500/10 text-amber-400'>
+                  <AlertCircle size={13} class='shrink-0' />
+                  {emptyPositionsCount} {emptyPositionsCount === 1 ? 'needs candidates' : 'need candidates'}
+                </span>
+              {/if}
+            </div>
             {#if election.status === 'draft'}
               <div class='flex flex-wrap items-center gap-2'>
                 <button
@@ -397,6 +411,9 @@
 
           <ul class='space-y-2'>
             {#each positions as p (p.id)}
+              {@const posCandidates = candidates.filter((c) => c.positionId === p.id)}
+              {@const activeCount = posCandidates.filter((c) => c.isActive !== 0).length}
+              {@const inactiveCount = posCandidates.length - activeCount}
               <li>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -405,9 +422,27 @@
                   class='flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-all hover:shadow-lg cursor-pointer hover:border-slate-700/80 hover:scale-[1.005]'
                   style='background: oklch(0.18 0.022 250); border-color: oklch(0.25 0.025 250)'
                 >
-                  <div class='min-w-0'>
-                    <p class='font-bold truncate' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
-                    <p class='text-xs' style='color: oklch(0.60 0.015 250)'>Order: {p.displayOrder}</p>
+                  <div class='min-w-0 flex-1'>
+                    <div class='flex items-center gap-2 flex-wrap'>
+                      <p class='font-bold truncate' style='color: oklch(0.95 0.008 250)'>{p.name}</p>
+                      {#if posCandidates.length === 0}
+                        <span class='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 shrink-0'>
+                          <AlertCircle size={12} class='shrink-0' />
+                          No candidates
+                        </span>
+                      {:else if activeCount === 0}
+                        <span class='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 shrink-0'>
+                          <AlertCircle size={12} class='shrink-0' />
+                          0 active ({inactiveCount} inactive)
+                        </span>
+                      {/if}
+                    </div>
+                    <p class='text-xs mt-0.5' style='color: oklch(0.60 0.015 250)'>
+                      Order: {p.displayOrder}
+                      {#if activeCount > 0}
+                        &middot; {activeCount} {activeCount === 1 ? 'candidate' : 'candidates'}{#if inactiveCount > 0} ({inactiveCount} inactive){/if}
+                      {/if}
+                    </p>
                   </div>
                   <div class='flex items-center gap-3 shrink-0'>
                     {#if election.status === 'draft'}
