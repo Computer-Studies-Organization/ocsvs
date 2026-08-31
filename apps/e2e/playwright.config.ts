@@ -58,7 +58,7 @@ export default defineConfig({
           {
             command: "turso dev --db-file ../../apps/backend/local.db --port 8080",
             url: `${offlineDatabaseUrl}/health`,
-            reuseExistingServer: !process.env.CI,
+            reuseExistingServer: false,
             timeout: 120_000,
           },
         ]
@@ -68,7 +68,7 @@ export default defineConfig({
         ? "pnpm --filter @cso-voting/backend e2e:worker:offline"
         : "pnpm --filter @cso-voting/backend exec wrangler dev --env test --var TURSO_DATABASE_URL:http://127.0.0.1:8080 --port 8787",
       url: "http://localhost:8787/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

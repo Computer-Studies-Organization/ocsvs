@@ -105,6 +105,19 @@ export const TEST_USERS = {
     yearLevel: "1st Year",
     role: "user",
   },
+  candidateVoter: {
+    accountId: "e2e-candidate-voter-account-id",
+    userId: "e2e-candidate-voter-user-id",
+    username: "e2e_candidate_voter",
+    email: "e2e_candidate_voter@cso.dev",
+    password: "Voter123!",
+    studentId: "C25-01-99999-BSC003",
+    firstName: "E2ECandidateVoter",
+    lastName: "User",
+    course: "BSCS",
+    yearLevel: "1st Year",
+    role: "user",
+  },
   votedVoter: {
     accountId: "e2e-voted-voter-account-id",
     userId: "e2e-voted-voter-user-id",
@@ -133,7 +146,7 @@ export async function seedTestUsers() {
 
   const now = Math.floor(Date.now() / 1000);
 
-  for (const userKey of ["admin", "voter", "votedVoter"] as const) {
+  for (const userKey of ["admin", "voter", "candidateVoter", "votedVoter"] as const) {
     const u = TEST_USERS[userKey];
     const existing = await client.execute({
       sql: "SELECT id FROM accounts WHERE username = ? OR id = ?",
@@ -340,6 +353,20 @@ export async function seedDraftCandidate() {
   const now = Math.floor(Date.now() / 1000);
 
   await client.batch([
+    {
+      sql: `UPDATE candidates
+            SET is_active = 0, updated_at = ?
+            WHERE position_id = ?
+              AND account_id IN (?, ?, ?)
+              AND is_active = 1`,
+      args: [
+        now,
+        DRAFT_CANDIDATE.positionId,
+        TEST_USERS.voter.accountId,
+        TEST_USERS.candidateVoter.accountId,
+        TEST_USERS.votedVoter.accountId,
+      ],
+    },
     {
       sql: `INSERT OR IGNORE INTO elections (id, name, description, status, created_at, updated_at)
             VALUES (?, ?, ?, 'draft', ?, ?)`,

@@ -2,6 +2,7 @@
   import { Upload, X, ImageIcon } from "lucide-svelte";
   import { addToast } from "$lib/stores/toast.svelte";
   import { onDestroy } from "svelte";
+  import { IMAGE_FILE_ACCEPT, IMAGE_FILE_HINT, validateImageFile } from "$lib/validation/image-file";
 
   let {
     currentImageUrl = null,
@@ -48,16 +49,9 @@
   async function processFile(file: File) {
     error = null;
 
-    // Validate type
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      error = "Invalid file type. Allowed: JPEG, PNG, WebP";
-      return;
-    }
-
-    // Validate size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      error = "File too large. Maximum size: 5MB";
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      error = validationError;
       return;
     }
 
@@ -161,7 +155,7 @@
       bind:this={fileInput}
       id="candidate-photo-input"
       type="file"
-      accept="image/jpeg,image/png,image/webp"
+      accept={IMAGE_FILE_ACCEPT}
       onchange={handleFileSelect}
       class="hidden"
       {disabled}
@@ -173,6 +167,6 @@
   {/if}
 
   <p class="text-xs text-slate-500">
-    JPEG, PNG, or WebP. Max 5MB.
+    {IMAGE_FILE_HINT}
   </p>
 </div>

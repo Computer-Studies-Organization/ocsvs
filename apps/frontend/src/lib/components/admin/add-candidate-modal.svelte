@@ -1,13 +1,14 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte'
   import { invalidate } from '$app/navigation'
-  import { createCandidate } from '$lib/api/candidates'
+  import { createCandidate, uploadCandidateImage } from '$lib/api/candidates'
   import { fetchUsers } from '$lib/api/users'
   import { getCandidateUserLabel } from '$lib/adminUsers'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { validate } from '$lib/validation/helpers'
   import { createCandidateSchema } from '$lib/validation/candidate'
+  import { IMAGE_FILE_ACCEPT, IMAGE_FILE_HINT, validateImageFile } from '$lib/validation/image-file'
   import Modal from '$lib/components/ui/modal.svelte'
   import { Loader, Search, X } from 'lucide-svelte'
   import { appCache } from '$lib/cache'
@@ -42,6 +43,9 @@
   let createManifesto = $state('')
   let createBusy = $state(false)
   let createErrors = $state<Record<string, string>>({})
+  let selectedPhoto = $state<File | null>(null)
+  let photoError = $state('')
+  let photoInput: HTMLInputElement | undefined = $state()
 
   let searchTimeout: ReturnType<typeof setTimeout> | undefined
   let searchRequestId = 0
@@ -153,8 +157,36 @@
     ++searchRequestId
   })
 
+  function handlePhotoChange(e: Event) {
+    const input = e.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) {
+      selectedPhoto = null
+      photoError = ''
+      return
+    }
+
+    const validationError = validateImageFile(file)
+    if (validationError) {
+      photoError = validationError
+      selectedPhoto = null
+      input.value = ''
+      return
+    }
+
+    photoError = ''
+    selectedPhoto = file
+  }
+
+  function clearPhotoSelection() {
+    selectedPhoto = null
+    photoError = ''
+    if (photoInput) photoInput.value = ''
+  }
+
   async function submitCreate(e: SubmitEvent) {
     e.preventDefault()
+    if (createBusy) return
     const result = validate(createCandidateSchema, {
       fullName: createFullName.trim(),
       manifesto: createManifesto.trim(),
@@ -167,27 +199,47 @@
       createErrors = { ...createErrors, user: 'User is required' }
       return
     }
+    if (photoError) {
+      return
+    }
     createErrors = {}
     createBusy = true
+    let candidate: Awaited<ReturnType<typeof createCandidate>>
     try {
-      await createCandidate({
+      candidate = await createCandidate({
         fullName: createFullName.trim(),
         accountId: createAccountId,
         positionId: positionId,
         partyId: createPartyId || null,
         manifesto: createManifesto.trim(),
       })
+    } catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to add candidate'))
+      createBusy = false
+      return
+    }
+
+    let postCreateFailed = false
+    if (selectedPhoto) {
+      try {
+        await uploadCandidateImage(candidate.id, selectedPhoto)
+      } catch {
+        postCreateFailed = true
+        addToast('error', 'Candidate added, but photo upload failed. Retry the photo from candidate editing.')
+      }
+    }
+
+    try {
       appCache.invalidate({ params: { electionId } })
       await invalidate('app:position')
-      addToast('success', 'Candidate added')
-      onsuccess()
+    } catch {
+      postCreateFailed = true
+      addToast('error', 'Candidate added, but the candidate list could not refresh. Refresh the page to see the latest data.')
     }
-    catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to add candidate'))
-    }
-    finally {
-      createBusy = false
-    }
+
+    if (!postCreateFailed) addToast('success', 'Candidate added')
+    createBusy = false
+    onsuccess()
   }
 
   function handleClose() {
@@ -335,6 +387,56 @@
     </div>
 
     <div class="space-y-2">
+      {#if selectedPhoto}
+        <p class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+          Photo <span style="color: oklch(0.55 0.015 250)">(optional)</span>
+        </p>
+        <div
+          class="flex min-h-11 items-center justify-between gap-3 rounded-xl border-2 px-4 py-3"
+          style="background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)"
+        >
+          <div class="min-w-0">
+            <p class="truncate font-semibold text-sm">{selectedPhoto.name}</p>
+            <p class="text-xs" style="color: oklch(0.60 0.015 250)">{(selectedPhoto.size / 1024).toFixed(1)} KB</p>
+          </div>
+          <button
+            type="button"
+            onclick={clearPhotoSelection}
+            disabled={createBusy}
+            class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-sm font-bold transition hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+            style="color: oklch(0.70 0.15 225)"
+            aria-label="Remove photo"
+          >
+            <X size={15} />
+            Remove
+          </button>
+        </div>
+      {:else}
+        <label for="candidatePhoto" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
+          Photo <span style="color: oklch(0.55 0.015 250)">(optional)</span>
+        </label>
+        <input
+          id="candidatePhoto"
+          type="file"
+          accept={IMAGE_FILE_ACCEPT}
+          bind:this={photoInput}
+          onchange={handlePhotoChange}
+          disabled={createBusy}
+          aria-invalid={photoError ? 'true' : 'false'}
+          aria-describedby={photoError ? 'candidate-photo-error' : 'candidate-photo-hint'}
+          class="block w-full text-sm font-semibold file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:cursor-pointer transition focus:outline-none file:disabled:opacity-50 file:disabled:cursor-not-allowed cursor-pointer"
+          style="color: oklch(0.80 0.015 250); file:background: oklch(0.28 0.035 250); file:color: oklch(0.95 0.008 250)"
+        />
+        <p id="candidate-photo-hint" class="text-xs" style="color: oklch(0.60 0.015 250)">
+          {IMAGE_FILE_HINT}
+        </p>
+      {/if}
+      {#if photoError}
+        <p id="candidate-photo-error" class="text-xs mt-1" style="color: oklch(0.65 0.15 25)">{photoError}</p>
+      {/if}
+    </div>
+
+    <div class="space-y-2">
       <label for="createManifesto" class="block text-xs font-bold uppercase tracking-wider" style="color: oklch(0.70 0.015 250)">
         Manifesto <span style="color: oklch(0.55 0.015 250)">(optional)</span>
       </label>
@@ -364,7 +466,7 @@
       </button>
       <button
         type="submit"
-        disabled={createBusy || !createAccountId || !createFullName.trim()}
+        disabled={createBusy || !createAccountId || !createFullName.trim() || Boolean(photoError)}
         class="flex-1 px-4 py-3 rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style="background: oklch(0.55 0.15 250); color: oklch(0.98 0.005 250); box-shadow: 0 10px 25px -5px oklch(0.55 0.15 250 / 0.3)"
       >
