@@ -33,8 +33,8 @@ describe("VotingCandidateCard component", () => {
     expect(body).toContain("<img");
     expect(body).toContain('src="https://example.com/candidate.jpg"');
     expect(body).toContain('alt="John Roben Garote Manayon"');
-    expect(body).toContain("aspect-[4/3]");
-    expect(body).toContain("object-cover object-top");
+    expect(body).toContain("aspect-[3/4]");
+    expect(body).toContain("object-cover object-center");
   });
 
   it("renders a candidate silhouette fallback when imageUrl is null", () => {
@@ -50,7 +50,7 @@ describe("VotingCandidateCard component", () => {
     expect(body).not.toContain("<img");
     expect(body).toContain('data-testid="candidate-portrait-silhouette"');
     expect(body).toContain("<svg");
-    expect(body).toContain("aspect-[4/3]");
+    expect(body).toContain("aspect-[3/4]");
   });
 
   it("renders the party badge code when partyId is linked", () => {

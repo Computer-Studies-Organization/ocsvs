@@ -39,12 +39,12 @@
   ></button>
 
   <!-- Left Section: Fixed-Size Candidate Portrait Frame -->
-  <div class="relative z-10 pointer-events-none w-full shrink-0 aspect-[4/3] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center sm:w-52 md:w-60">
+  <div class="relative z-10 pointer-events-none w-full shrink-0 aspect-[3/4] overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 flex items-center justify-center sm:w-44 md:w-48">
     {#if candidate.imageUrl && !imageError}
       <img
         src={candidate.imageUrl}
         alt={candidate.fullName}
-        class="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+        class="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
         loading="lazy"
         onerror={() => {
           imageError = true

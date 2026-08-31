@@ -50,7 +50,7 @@
                 <img
                   src={selectedCandidate.imageUrl}
                   alt={selectedCandidate.fullName}
-                  class="h-9 w-9 rounded-lg object-cover object-top border border-slate-800"
+                  class="h-9 w-9 rounded-lg object-cover border border-slate-800"
                 />
               {:else}
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 border border-slate-800 text-slate-400">
