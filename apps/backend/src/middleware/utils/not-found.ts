@@ -29,7 +29,7 @@ function getAssetRequest(c: Context<AppBindings>): Request {
   if (isNavigation(c)) {
     const url = new URL(c.req.url);
     url.pathname = "/";
-    return new Request(url, c.req.raw);
+    return new Request(url, { method: c.req.method, headers: c.req.raw.headers });
   }
 
   return c.req.raw;

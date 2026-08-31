@@ -31,7 +31,9 @@ app.use("*", async (c, next) => {
   if (isNavigation && c.env?.ASSETS) {
     const url = new URL(c.req.url);
     url.pathname = "/";
-    const assetResponse = await c.env.ASSETS.fetch(new Request(url, c.req.raw));
+    const assetResponse = await c.env.ASSETS.fetch(
+      new Request(url, { method: c.req.method, headers: c.req.raw.headers }),
+    );
 
     if (assetResponse.status !== 404) {
       return assetResponse;
