@@ -3,16 +3,19 @@
   import { type TCourse, type TUsersData, type TYearLevel, YEAR_LEVEL_VALUES, COURSE_VALUES, UserRole } from '$lib/types'
   import { goto, invalidate } from '$app/navigation'
   import { onDestroy, untrack } from 'svelte'
-  import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser } from '$lib/api/users'
+  import { deleteUser, hardDeleteUser, restoreUser, updateUser, createUser, unlockUser, resetUserPassword } from '$lib/api/users'
   import { authStore } from '$lib/stores/auth.svelte'
   import { appCache } from '$lib/cache'
   import { slide } from 'svelte/transition'
   import {
     Archive,
     ArrowUpDown,
+    Check,
+    Copy,
     Edit,
     Eye,
     EyeOff,
+    KeyRound,
     Loader,
     MoreHorizontal,
     Plus,
@@ -102,6 +105,14 @@
   let archiveConfirmUser = $state<TUsersData | null>(null)
   let restoreConfirmUser = $state<TUsersData | null>(null)
   let unlockConfirmUser = $state<TUsersData | null>(null)
+  let resetPasswordUser = $state<TUsersData | null>(null)
+  let resetPasswordInput = $state('')
+  let resetPasswordVisible = $state(false)
+  let isResetSaving = $state(false)
+  let resetMsg = $state('')
+  let resetSuccessDetails = $state<{ studentId: string; username: string; password: string } | null>(null)
+  let resetCopied = $state(false)
+  let resetRequestToken = 0
   let hardDeleteConfirmUser = $state<TUsersData | null>(null)
   let hardDeleteConfirmText = $state('')
   let isActionLoading = $state(false)
@@ -528,6 +539,103 @@
     queueMobileAction(() => unlockConfirmUser = u)
   }
 
+  function startMobileResetPassword(u: TUsersData) {
+    queueMobileAction(() => openResetPassword(u))
+  }
+
+  function generateResetPassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$'
+    const maxUnbiasedByte = 256 - (256 % chars.length)
+    let pass = ''
+    while (pass.length < 10) {
+      const randomBytes = new Uint8Array(10)
+      crypto.getRandomValues(randomBytes)
+      for (const byte of randomBytes) {
+        if (byte < maxUnbiasedByte) {
+          pass += chars.charAt(byte % chars.length)
+        }
+        if (pass.length === 10) {
+          break
+        }
+      }
+    }
+    resetPasswordInput = pass
+    resetPasswordVisible = true
+  }
+
+  function clearResetPasswordState() {
+    resetPasswordInput = ''
+    resetPasswordVisible = false
+    resetMsg = ''
+    resetSuccessDetails = null
+    resetCopied = false
+    isResetSaving = false
+  }
+
+  function openResetPassword(u: TUsersData) {
+    resetRequestToken += 1
+    clearResetPasswordState()
+    resetPasswordUser = u
+  }
+
+  function closeResetModal() {
+    if (isResetSaving) return
+    resetRequestToken += 1
+    clearResetPasswordState()
+    resetPasswordUser = null
+  }
+
+  async function handleResetPasswordSave() {
+    if (!resetPasswordUser) return
+    const userId = resetPasswordUser.id
+    const password = resetPasswordInput.trim()
+    if (password && password.length < 8) {
+      resetMsg = 'Password must be at least 8 characters'
+      return
+    }
+
+    const requestToken = ++resetRequestToken
+    isResetSaving = true
+    resetMsg = ''
+    try {
+      const res = await resetUserPassword(userId, {
+        password: password || undefined,
+      })
+      if (requestToken !== resetRequestToken || resetPasswordUser?.id !== userId) return
+      resetSuccessDetails = res.credentials
+      addToast('success', 'Password reset successfully')
+      try {
+        appCache.invalidate({ resource: 'users' })
+        await invalidate('app:users')
+      } catch {
+        // Reset succeeded; refreshing the user list is best effort.
+      }
+    } catch (e: unknown) {
+      if (requestToken !== resetRequestToken || resetPasswordUser?.id !== userId) return
+      resetMsg = extractErrorMessage(e, 'Failed to reset password')
+      addToast('error', resetMsg)
+    } finally {
+      if (requestToken === resetRequestToken && resetPasswordUser?.id === userId) {
+        isResetSaving = false
+      }
+    }
+  }
+
+  async function copyResetCredentials() {
+    if (!resetSuccessDetails) return
+    const textToCopy = `Student ID: ${resetSuccessDetails.studentId}\nUsername: ${resetSuccessDetails.username}\nPassword: ${resetSuccessDetails.password}`
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+      resetCopied = true
+      addToast('success', 'Credentials copied to clipboard')
+      setTimeout(() => {
+        resetCopied = false
+      }, 2000)
+    } catch {
+      addToast('error', 'Failed to copy credentials')
+    }
+  }
+
   function startMobileHardDelete(u: TUsersData) {
     queueMobileAction(() => {
       hardDeleteConfirmUser = u
@@ -624,6 +732,10 @@
       case 'user.unlock':
         title = 'Account unlocked'
         subtitle = `Performed by ${entry.actorUsernameSnapshot}.`
+        break
+      case 'user.reset_password':
+        title = 'Password reset'
+        subtitle = entry.description || `Performed by ${entry.actorUsernameSnapshot}.`
         break
       case 'user.soft_delete':
         title = 'Account archived'
@@ -1158,6 +1270,15 @@
                 Unlock
               </button>
               {/if}
+              <button
+                type="button"
+                disabled={viewUser.deletedAt !== null || authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+                onclick={() => startMobileResetPassword(viewUser!)}
+                class="rounded-xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-900/30 text-amber-300 py-3 text-sm font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <KeyRound size={16} />
+                <span>Reset Password</span>
+              </button>
             </div>
 
             <!-- Danger Zone -->
@@ -1283,6 +1404,16 @@
               >
                 Unlock Account
               </button>
+            {/if}
+            <button
+              type="button"
+              disabled={viewUser.deletedAt !== null || authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
+              onclick={() => startMobileResetPassword(viewUser!)}
+              class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-amber-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
+            >
+              Reset Password
+            </button>
+            {#if !viewUser.deletedAt}
               <button
                 type="button"
                 disabled={authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
@@ -1406,6 +1537,132 @@
         {#if isActionLoading}<Loader class='animate-spin' size={14} />{/if}
         Unlock Account
       </button>
+    </div>
+  {/if}
+</Modal>
+
+<!-- Reset Password Modal -->
+<Modal open={Boolean(resetPasswordUser)} onclose={closeResetModal} ariaLabelledby="reset-password-title" presentation="sheet">
+  <div class='mb-4 flex items-center justify-between'>
+    <h3 id="reset-password-title" class='text-lg font-bold text-slate-50'>
+      {resetSuccessDetails ? 'Password Reset Successful' : 'Reset User Password'}
+    </h3>
+  </div>
+
+  {#if resetSuccessDetails}
+    <div class='space-y-4'>
+      <div class='p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 text-sm font-semibold'>
+        Password reset successfully! Please copy the credentials below to share with the voter.
+      </div>
+      <div class='space-y-2 text-sm'>
+        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+          <span class='text-slate-400'>Student ID</span>
+          <span class='font-mono font-semibold text-slate-50 select-all'>{resetSuccessDetails.studentId}</span>
+        </div>
+        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+          <span class='text-slate-400'>Username</span>
+          <span class='font-mono font-semibold text-slate-50 select-all'>{resetSuccessDetails.username}</span>
+        </div>
+        <div class='flex items-center justify-between rounded-lg border border-slate-800 px-3 py-2'>
+          <span class='text-slate-400'>New Password</span>
+          <span class='font-mono font-semibold text-amber-300 select-all'>{resetSuccessDetails.password}</span>
+        </div>
+      </div>
+      <p class='text-xs text-slate-500'>
+        ⚠️ For security, this password will not be displayed again once you close this window.
+      </p>
+      <div class='flex items-center justify-between pt-2'>
+        <button
+          type='button'
+          onclick={copyResetCredentials}
+          class='min-h-11 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-800 transition cursor-pointer'
+        >
+          {#if resetCopied}
+            <Check size={16} class='text-emerald-400' />
+            <span class='text-emerald-400 font-bold'>Copied!</span>
+          {:else}
+            <Copy size={16} />
+            <span>Copy Credentials</span>
+          {/if}
+        </button>
+        <button
+          type='button'
+          onclick={closeResetModal}
+          disabled={isResetSaving}
+          class='min-h-11 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition cursor-pointer'
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  {:else if resetPasswordUser}
+    <div class='space-y-4'>
+      <p class='text-sm text-slate-400'>
+        Set a new password for
+        <span class='font-semibold text-slate-200'>{resetPasswordUser.firstName} {resetPasswordUser.lastName}</span>
+        (Student ID: <span class='font-mono text-slate-300'>{resetPasswordUser.studentId}</span>,
+        Username: <span class='font-mono text-slate-300'>{resetPasswordUser.username}</span>).
+      </p>
+      <p class='text-xs text-slate-500'>
+        This will invalidate all active sessions and clear any failed login lockouts for this user.
+      </p>
+
+      <div class='space-y-1.5'>
+        <div class='flex items-center justify-between'>
+          <label for='reset-password-input' class='text-xs font-bold uppercase tracking-wider text-slate-400'>New Password</label>
+          <button
+            type='button'
+            onclick={generateResetPassword}
+            class='text-xs font-semibold text-sky-400 hover:text-sky-300 transition cursor-pointer'
+          >
+            Generate Password
+          </button>
+        </div>
+        <div class='relative'>
+          <input
+            id='reset-password-input'
+            type={resetPasswordVisible ? 'text' : 'password'}
+            bind:value={resetPasswordInput}
+            placeholder='Enter or generate new password (min 8 chars)'
+            class='w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-2.5 pr-10 text-sm font-semibold text-slate-50 focus:border-sky-400 focus:outline-none'
+          />
+          <button
+            type='button'
+            onclick={() => resetPasswordVisible = !resetPasswordVisible}
+            class='absolute right-1 top-1/2 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-200 cursor-pointer'
+            aria-label={resetPasswordVisible ? 'Hide password' : 'Show password'}
+          >
+            {#if resetPasswordVisible}
+              <EyeOff size={16} />
+            {:else}
+              <Eye size={16} />
+            {/if}
+          </button>
+        </div>
+        {#if resetMsg}
+          <p class='text-xs text-rose-400 font-semibold'>{resetMsg}</p>
+        {/if}
+      </div>
+
+      <div class='flex gap-2 justify-end pt-2'>
+        <button
+          type='button'
+          onclick={closeResetModal}
+          disabled={isResetSaving}
+          class='min-h-11 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer'
+        >
+          Cancel
+        </button>
+        <button
+          type='button'
+          onclick={handleResetPasswordSave}
+          disabled={isResetSaving}
+          class='min-h-11 flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-500 disabled:opacity-60 cursor-pointer transition'
+        >
+          {#if isResetSaving}<Loader class='animate-spin' size={14} />{/if}
+          Reset Password
+        </button>
+      </div>
     </div>
   {/if}
 </Modal>
@@ -1713,6 +1970,24 @@
         <span>Unlock Account</span>
       </button>
     {/if}
+
+    <!-- Reset Password Action -->
+    <button
+      type='button'
+      disabled={activeDropdownUser.deletedAt !== null || authStore.user?.id === activeDropdownUser.accountId || (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin'))}
+      onclick={() => { openResetPassword(activeDropdownUser!); activeDropdownUserId = null; activeDropdownUser = null; }}
+      title={activeDropdownUser.deletedAt !== null
+        ? 'Restore this user before resetting the password'
+        : authStore.user?.id === activeDropdownUser.accountId
+        ? 'You cannot reset your own password here'
+        : (authStore.user?.role !== 'super_admin' && (activeDropdownUser.role === 'admin' || activeDropdownUser.role === 'super_admin'))
+        ? 'Only super admins can reset admin accounts'
+        : 'Reset Password'}
+      class='w-full min-h-11 flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-amber-400 hover:bg-amber-500/10 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+    >
+      <KeyRound size={14} />
+      <span>Reset Password</span>
+    </button>
 
     <!-- Divider -->
     <div class='my-1 h-px bg-slate-800/60'></div>

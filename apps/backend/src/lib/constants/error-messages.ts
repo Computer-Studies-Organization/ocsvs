@@ -41,6 +41,8 @@ export const ERROR_MESSAGES = {
     "Import failed: a username conflict was detected due to a concurrent import. Please retry.",
   VOTE_ALREADY_CAST: "You have already voted",
   CANNOT_DELETE_SELF: "You cannot delete your own account",
+  CANNOT_RESET_SELF: "You cannot reset your own password via this endpoint",
+  CANNOT_RESET_ARCHIVED_USER: "Cannot reset password for an archived account",
   CANNOT_DELETE_LAST_ADMIN: "Cannot delete the last admin account",
   CANNOT_DELETE_ADMIN: "Only super admins can delete admin accounts",
   CANNOT_RESTORE_ADMIN: "Only super admins can restore admin accounts",
@@ -50,6 +52,7 @@ export const ERROR_MESSAGES = {
 
   // Validation errors
   INVALID_REQUEST: "Invalid request",
+  PASSWORD_TOO_SHORT: "Password must be at least 8 characters",
   CROSS_SITE_REQUEST_FORBIDDEN: "Cross-site request forbidden",
   INVALID_CREDENTIALS: "Invalid credentials",
   INVALID_CANDIDATE: "Invalid candidate",
@@ -89,6 +92,7 @@ export const ERROR_MESSAGES = {
   VOTE_SUBMITTED_SUCCESSFULLY: "Vote submitted successfully",
   PROFILE_UPDATED_SUCCESSFULLY: "Profile updated successfully",
   PASSWORD_CHANGED_SUCCESSFULLY: "Password changed successfully",
+  PASSWORD_RESET_SUCCESSFULLY: "Password reset successfully",
   PASSWORD_CHANGED_PLEASE_RE_LOGIN: "Password changed successfully. Please log in again.",
 
   // Server errors

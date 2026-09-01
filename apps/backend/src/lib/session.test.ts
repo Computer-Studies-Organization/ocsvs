@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSession,
+  createSessionIfPasswordUnchanged,
   getSessionAccount,
   deleteSession,
   setSessionCookie,
@@ -20,6 +21,7 @@ describe("session utilities", () => {
 
     insertChain = {
       values: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
       run: vi.fn().mockResolvedValue({} as any),
     };
 
@@ -58,6 +60,30 @@ describe("session utilities", () => {
         expiresAt: session.expiresAt,
       });
       expect(insertChain.run).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("createSessionIfPasswordUnchanged", () => {
+    it("creates a session when the expected password hash still matches", async () => {
+      insertChain.run.mockResolvedValueOnce({ rowsAffected: 1 });
+
+      const session = await createSessionIfPasswordUnchanged(
+        mockDb,
+        "test-account-id",
+        "expected-hash",
+      );
+
+      expect(session?.accountId).toBe("test-account-id");
+      expect(insertChain.select).toHaveBeenCalledWith(selectChain);
+      expect(insertChain.run).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not create a session when the password hash changed", async () => {
+      insertChain.run.mockResolvedValueOnce({ rowsAffected: 0 });
+
+      await expect(
+        createSessionIfPasswordUnchanged(mockDb, "test-account-id", "old-hash"),
+      ).resolves.toBeNull();
     });
   });
 

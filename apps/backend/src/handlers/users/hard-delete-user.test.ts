@@ -21,6 +21,7 @@ vi.mock("@/middleware/auth", () => ({
     return next();
   }),
   requireAdmin: vi.fn((c: any, next: any) => next()),
+  withAdmin: (handler: any) => async (c: any, next: any) => handler(c, next),
 }));
 
 // Mock repositories

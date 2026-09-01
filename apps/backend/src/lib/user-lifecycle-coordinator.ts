@@ -10,7 +10,7 @@ import {
   isPasswordHashSupported,
   CURRENT_COST_DUMMY_HASH,
 } from "@/lib/password";
-import { deleteSession, createSession } from "@/lib/session";
+import { deleteSession, createSessionIfPasswordUnchanged } from "@/lib/session";
 import { auditLogRepo } from "@/database/repositories/audit-log.repository";
 import { validateProfanity } from "@/lib/profanity";
 import { candidateRepo } from "@/database/repositories/candidates.repository";
@@ -764,11 +764,17 @@ export class UserLifecycleCoordinator {
     }
 
     // 4. Rehash legacy/below-current hashes with the current policy on successful login
+    let verifiedPasswordHash = result.password_hash;
     if (needsRehash(result.password_hash)) {
       try {
-        await voterAccountStore.updateAccount(db, result.id, {
-          password_hash: await hashPassword(password),
-        });
+        const rehashedPassword = await hashPassword(password);
+        const rehashed = await voterAccountStore.updatePasswordIfUnchanged(
+          db,
+          result.id,
+          result.password_hash,
+          rehashedPassword,
+        );
+        if (rehashed) verifiedPasswordHash = rehashedPassword;
       } catch {
         // Rehashing is opportunistic; verified credentials must still be allowed to log in.
       }
@@ -779,7 +785,14 @@ export class UserLifecycleCoordinator {
       lastLogin: Math.floor(Date.now() / 1000),
     });
     await loginAttemptRepo.clearAttempts(db, studentNumber);
-    const session = await createSession(db as any, result.id);
+    const session = await createSessionIfPasswordUnchanged(
+      db as any,
+      result.id,
+      verifiedPasswordHash,
+    );
+    if (!session) {
+      throw new UserLifecycleError("INVALID_CREDENTIALS", 401);
+    }
 
     return {
       accountId: result.id,
@@ -815,6 +828,64 @@ export class UserLifecycleCoordinator {
         actorUsernameSnapshot: actor.username,
         description: `Unlocked account for student: ${user.studentId}`,
       });
+    });
+  }
+
+  async resetPassword(
+    db: DbClient,
+    userId: string,
+    newPassword: string | null | undefined,
+    actor: ActorInfo,
+  ): Promise<{ studentId: string; username: string; password: string }> {
+    if (actor.role !== "admin" && actor.role !== "super_admin") {
+      throw new UserLifecycleError("FORBIDDEN", 403);
+    }
+
+    return await db.transaction(async (tx) => {
+      const user = await voterAccountStore.findById(tx, userId);
+      if (!user) {
+        throw new UserLifecycleError("USER_NOT_FOUND", 404);
+      }
+
+      if (actor.id === user.accountId) {
+        throw new UserLifecycleError("FORBIDDEN", 400, ERROR_MESSAGES.CANNOT_RESET_SELF);
+      }
+
+      if (user.deletedAt !== null) {
+        throw new UserLifecycleError("FORBIDDEN", 400, ERROR_MESSAGES.CANNOT_RESET_ARCHIVED_USER);
+      }
+
+      const isTargetAdmin = user.role === "admin" || user.role === "super_admin";
+      if (isTargetAdmin && actor.role !== "super_admin") {
+        throw new UserLifecycleError("FORBIDDEN", 403, ERROR_MESSAGES.CANNOT_UPDATE_ADMIN);
+      }
+
+      const resolvedPassword =
+        newPassword && newPassword.trim() ? newPassword.trim() : this.generateRandomPassword();
+      if (resolvedPassword.length < 8) {
+        throw new UserLifecycleError("FORBIDDEN", 400, ERROR_MESSAGES.PASSWORD_TOO_SHORT);
+      }
+
+      const passwordHash = await hashPassword(resolvedPassword);
+
+      await voterAccountStore.updateAccount(tx, user.accountId, { password_hash: passwordHash });
+      await tx.delete(sessions).where(eq(sessions.accountId, user.accountId)).run();
+      await loginAttemptRepo.clearAttempts(tx, user.studentId);
+
+      await auditLogRepo.insert(tx, {
+        action: "user.reset_password",
+        targetType: "user",
+        targetId: userId,
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+        description: `Password reset for user: ${user.username} (${user.studentId})`,
+      });
+
+      return {
+        studentId: user.studentId,
+        username: user.username,
+        password: resolvedPassword,
+      };
     });
   }
 }

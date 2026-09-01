@@ -177,6 +177,22 @@ export const voterAccountStore = {
       .run();
   },
 
+  /** Update a password only if it has not changed since it was read. */
+  async updatePasswordIfUnchanged(
+    db: DbClient,
+    accountId: string,
+    expectedPasswordHash: string,
+    passwordHash: string,
+  ): Promise<boolean> {
+    const result = await db
+      .update(accounts)
+      .set({ password_hash: passwordHash, updatedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(accounts.id, accountId), eq(accounts.password_hash, expectedPasswordHash)))
+      .run();
+
+    return result.rowsAffected === 1;
+  },
+
   /** Update user profile fields */
   async updateUser(
     db: DbClient,

@@ -139,6 +139,13 @@ describe("mobile touch targets", () => {
     expect(actionMenuButtons.length).toBeGreaterThan(0);
     expect(addModalButtons.every((tag) => tag.includes("min-h-11"))).toBe(true);
     expect(actionMenuButtons.every((tag) => tag.includes("min-h-11"))).toBe(true);
+
+    const resetVisibilityButton = usersSource.match(
+      /<button[\s\S]*?onclick=\{\(\) => resetPasswordVisible = !resetPasswordVisible\}[\s\S]*?<\/button>/,
+    )?.[0];
+    expect(resetVisibilityButton).toBeDefined();
+    expect(resetVisibilityButton).toContain("min-h-11");
+    expect(resetVisibilityButton).toContain("min-w-11");
   });
 
   it("keeps student-import row deletion touchable", () => {

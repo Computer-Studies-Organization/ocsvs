@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { accounts, sessions } from "@/database/schema";
 import type { Database } from "@/database/repositories/database.type";
 
@@ -45,6 +45,41 @@ export async function createSession(db: Database, accountId: string): Promise<Se
   await db.insert(sessions).values({ id, accountId, expiresAt }).run();
 
   return { id, accountId, expiresAt };
+}
+
+/**
+ * Creates a session only while the account still has the hash used to verify
+ * the login. The conditional insert closes the password-reset race window.
+ */
+export async function createSessionIfPasswordUnchanged(
+  db: Database,
+  accountId: string,
+  expectedPasswordHash: string,
+): Promise<SessionData | null> {
+  const id = crypto.randomUUID();
+  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION_DAYS * 24 * 60 * 60;
+  const result = await db
+    .insert(sessions)
+    .select(
+      db
+        .select({
+          id: sql<string>`${id}`.as("id"),
+          accountId: accounts.id,
+          expiresAt: sql<number>`${expiresAt}`.as("expires_at"),
+          createdAt: sql<number>`(unixepoch())`.as("created_at"),
+        })
+        .from(accounts)
+        .where(
+          and(
+            eq(accounts.id, accountId),
+            eq(accounts.password_hash, expectedPasswordHash),
+            isNull(accounts.deletedAt),
+          ),
+        ),
+    )
+    .run();
+
+  return result.rowsAffected === 1 ? { id, accountId, expiresAt } : null;
 }
 
 /**

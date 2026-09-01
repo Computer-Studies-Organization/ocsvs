@@ -20,6 +20,12 @@ vi.mock("@/middleware/auth", () => ({
   requireAdmin: async (_c: any, next: any) => {
     await next();
   },
+  withAdmin: (handler: any) => async (c: any, next: any) => {
+    if (c.get("authUser")?.role !== "admin" && c.get("authUser")?.role !== "super_admin") {
+      return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, 403);
+    }
+    return handler(c, next);
+  },
 }));
 
 const { mockDb, mockDbAll, mockDbValues } = vi.hoisted(() => {
@@ -1094,6 +1100,173 @@ describe("users Routes", () => {
           targetId: "some-user-id",
         }),
       );
+    });
+  });
+
+  describe("POST /users/:userId/reset-password", () => {
+    const mockResetUser = (overrides: Record<string, unknown> = {}) => {
+      mockFindById.mockResolvedValueOnce({
+        id: "target-user",
+        accountId: "target-account",
+        studentId: "C25-01-1001",
+        username: "voter.one",
+        role: "user",
+        deletedAt: null,
+        ...overrides,
+      });
+    };
+
+    it("should reject non-admin requests", async () => {
+      mockAuthUser.role = "user";
+      const res = await router.request("/users/some-user-id/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "newpassword123" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.FORBIDDEN);
+    });
+
+    it("should return 404 if user not found", async () => {
+      mockAuthUser.role = "admin";
+      mockFindById.mockResolvedValue(null);
+
+      const res = await router.request("/users/missing-user-id/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "newpassword123" }),
+      });
+
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.USER_NOT_FOUND);
+    });
+
+    it("should return 400 if target user is self", async () => {
+      mockAuthUser.id = "admin-acc-id";
+      mockAuthUser.role = "admin";
+      mockResetUser({ id: "self-user-id", accountId: "admin-acc-id", role: "admin" });
+
+      const res = await router.request("/users/self-user-id/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "newpassword123" }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESET_SELF);
+    });
+
+    it("should return 400 if user is archived", async () => {
+      mockAuthUser.id = "admin-acc-id";
+      mockAuthUser.role = "admin";
+      mockResetUser({
+        id: "archived-user-id",
+        accountId: "voter-archived-acc",
+        deletedAt: 1234567,
+      });
+
+      const res = await router.request("/users/archived-user-id/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "newpassword123" }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESET_ARCHIVED_USER);
+    });
+
+    it("should return 403 if regular admin attempts to reset admin password", async () => {
+      mockAuthUser.id = "admin-acc-1";
+      mockAuthUser.role = "admin";
+      mockResetUser({ id: "admin-user-2", accountId: "admin-acc-2", role: "admin" });
+
+      const res = await router.request("/users/admin-user-2/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "newpassword123" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_UPDATE_ADMIN);
+    });
+
+    it("should return 422 if password is provided but shorter than 8 characters", async () => {
+      mockAuthUser.role = "admin";
+      const res = await router.request("/users/some-user-id/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "short" }),
+      });
+
+      expect(res.status).toBe(422);
+    });
+
+    it("should successfully reset voter password with custom password", async () => {
+      mockAuthUser.id = "admin-acc-1";
+      mockAuthUser.username = "adminuser";
+      mockAuthUser.role = "admin";
+      mockResetUser({ id: "voter-user-1", accountId: "voter-acc-1" });
+      mockUpdateAccount.mockResolvedValue(undefined);
+      mockClearAttempts.mockResolvedValue(undefined);
+      mockAuditLogInsert.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/voter-user-1/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "customPassword123" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
+      expect(body.credentials).toEqual({
+        studentId: "C25-01-1001",
+        username: "voter.one",
+        password: "customPassword123",
+      });
+      expect(mockAuditLogInsert).toHaveBeenCalledWith(
+        mockDb,
+        expect.objectContaining({
+          action: "user.reset_password",
+          targetType: "user",
+          targetId: "voter-user-1",
+          actorAccountIdSnapshot: "admin-acc-1",
+        }),
+      );
+    });
+
+    it("should successfully reset voter password with auto-generated password when omitted", async () => {
+      mockAuthUser.id = "admin-acc-1";
+      mockAuthUser.username = "adminuser";
+      mockAuthUser.role = "admin";
+      mockResetUser({
+        id: "voter-user-2",
+        accountId: "voter-acc-2",
+        studentId: "C25-01-1002",
+        username: "voter.two",
+      });
+      mockUpdateAccount.mockResolvedValue(undefined);
+      mockClearAttempts.mockResolvedValue(undefined);
+      mockAuditLogInsert.mockResolvedValue(undefined);
+
+      const res = await router.request("/users/voter-user-2/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.message).toBe(ERROR_MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
+      expect(body.credentials.studentId).toBe("C25-01-1002");
+      expect(body.credentials.username).toBe("voter.two");
+      expect(body.credentials.password).toHaveLength(10);
     });
   });
 });

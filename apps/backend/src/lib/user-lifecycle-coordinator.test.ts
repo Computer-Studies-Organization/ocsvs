@@ -6,6 +6,7 @@ const {
   mockAccountCreate,
   mockUsernameExists,
   mockUpdateAccount,
+  mockUpdatePasswordIfUnchanged,
   mockCountActiveAdminsAndSuperAdmins,
   mockAccountSoftDelete,
   mockAccountRestore,
@@ -32,6 +33,7 @@ const {
   mockAccountCreate: vi.fn(),
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
+  mockUpdatePasswordIfUnchanged: vi.fn(),
   mockCountActiveAdminsAndSuperAdmins: vi.fn(),
   mockAccountSoftDelete: vi.fn(),
   mockAccountRestore: vi.fn(),
@@ -62,6 +64,7 @@ vi.mock("@/database/repositories/voter-account-store", () => ({
     create: mockAccountCreate,
     usernameExists: mockUsernameExists,
     updateAccount: mockUpdateAccount,
+    updatePasswordIfUnchanged: mockUpdatePasswordIfUnchanged,
     updateUser: mockUpdateUser,
     countActiveAdminsAndSuperAdmins: mockCountActiveAdminsAndSuperAdmins,
     softDelete: mockAccountSoftDelete,
@@ -84,6 +87,7 @@ vi.mock("@/lib/password", () => ({
 
 vi.mock("@/lib/session", () => ({
   createSession: mockCreateSessionFn,
+  createSessionIfPasswordUnchanged: mockCreateSessionFn,
   deleteSession: mockDeleteSessionFn,
 }));
 
@@ -216,6 +220,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockVerifyPassword.mockResolvedValueOnce(true);
       mockNeedsRehash.mockReturnValueOnce(true);
       mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$100000$salt$new-hash");
+      mockUpdatePasswordIfUnchanged.mockResolvedValueOnce(true);
       mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
 
       const result = await coordinator.authenticate(
@@ -226,9 +231,12 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       );
 
       expect(mockHashPassword).toHaveBeenCalledWith("password123");
-      expect(mockUpdateAccount).toHaveBeenCalledWith(mockDb, "acc-123", {
-        password_hash: "pbkdf2-sha256$100000$salt$new-hash",
-      });
+      expect(mockUpdatePasswordIfUnchanged).toHaveBeenCalledWith(
+        mockDb,
+        "acc-123",
+        "legacy-hash",
+        "pbkdf2-sha256$100000$salt$new-hash",
+      );
       expect(result.sessionId).toBe("sess-123");
     });
 
@@ -245,7 +253,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockVerifyPassword.mockResolvedValueOnce(true);
       mockNeedsRehash.mockReturnValueOnce(true);
       mockHashPassword.mockResolvedValueOnce("pbkdf2-sha256$600000$salt$new-hash");
-      mockUpdateAccount.mockRejectedValueOnce(new Error("database unavailable"));
+      mockUpdatePasswordIfUnchanged.mockRejectedValueOnce(new Error("database unavailable"));
       mockCreateSessionFn.mockResolvedValueOnce({ id: "sess-123", expiresAt: 9999 });
 
       const result = await coordinator.authenticate(
@@ -256,7 +264,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       );
 
       expect(result.sessionId).toBe("sess-123");
-      expect(mockCreateSessionFn).toHaveBeenCalledWith(mockDb, "acc-123");
+      expect(mockCreateSessionFn).toHaveBeenCalledWith(mockDb, "acc-123", "legacy-hash");
     });
 
     it("does not rehash when the stored hash already uses current policy", async () => {
@@ -322,6 +330,25 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockRecordAttempt).toHaveBeenCalledWith(mockDb, "student-123", "127.0.0.1");
       expect(mockUpdateAccount).not.toHaveBeenCalled();
       expect(mockCreateSessionFn).not.toHaveBeenCalled();
+    });
+
+    it("rejects a verified login if the password changed before session creation", async () => {
+      mockGetRecentAttempts.mockResolvedValueOnce([]);
+      mockFindByStudentId.mockResolvedValueOnce({
+        id: "acc-123",
+        username: "johndoe",
+        email: "john@example.com",
+        role: "user",
+        password_hash: "old-hash",
+        deletedAt: null,
+      });
+      mockVerifyPassword.mockResolvedValueOnce(true);
+      mockCreateSessionFn.mockResolvedValueOnce(null);
+
+      await expect(
+        coordinator.authenticate(mockDb, "student-123", "password123", "127.0.0.1"),
+      ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS", statusCode: 401 });
+      expect(mockCreateSessionFn).toHaveBeenCalledWith(mockDb, "acc-123", "old-hash");
     });
 
     it("does not create a session when last-login persistence fails", async () => {
@@ -962,6 +989,166 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
         },
       ]);
       expect(mockDbInsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("resetPassword", () => {
+    const actorAdmin: any = { id: "actor-admin-acc", username: "adminuser", role: "admin" };
+    const actorSuperAdmin: any = {
+      id: "actor-super-acc",
+      username: "superadmin",
+      role: "super_admin",
+    };
+    const actorVoter: any = { id: "actor-voter-acc", username: "voteruser", role: "user" };
+    const mockResetUser = (overrides: Record<string, unknown> = {}) => {
+      mockFindById.mockResolvedValueOnce({
+        id: "target-user",
+        accountId: "target-account",
+        studentId: "C25-01-1001",
+        username: "voter.one",
+        role: "user",
+        deletedAt: null,
+        ...overrides,
+      });
+    };
+
+    it("rejects non-admin actor with 403", async () => {
+      await expect(
+        coordinator.resetPassword(mockDb, "target-user-1", "newpassword123", actorVoter),
+      ).rejects.toMatchObject({
+        statusCode: 403,
+      });
+    });
+
+    it("rejects if target user is not found with 404", async () => {
+      mockFindById.mockResolvedValueOnce(null);
+
+      await expect(
+        coordinator.resetPassword(mockDb, "target-user-missing", "newpassword123", actorAdmin),
+      ).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    });
+
+    it("rejects self-reset with 400 CANNOT_RESET_SELF", async () => {
+      mockResetUser({ id: "target-self", accountId: "actor-admin-acc", role: "admin" });
+
+      await expect(
+        coordinator.resetPassword(mockDb, "target-self", "newpassword123", actorAdmin),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: ERROR_MESSAGES.CANNOT_RESET_SELF,
+      });
+    });
+
+    it("rejects resetting archived user with 400 CANNOT_RESET_ARCHIVED_USER", async () => {
+      mockResetUser({ id: "target-archived", accountId: "archived-acc", deletedAt: 12345678 });
+
+      await expect(
+        coordinator.resetPassword(mockDb, "target-archived", "newpassword123", actorAdmin),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: ERROR_MESSAGES.CANNOT_RESET_ARCHIVED_USER,
+      });
+    });
+
+    it("rejects regular admin attempting to reset admin password with 403", async () => {
+      mockResetUser({ id: "target-other-admin", accountId: "other-admin-acc", role: "admin" });
+
+      await expect(
+        coordinator.resetPassword(mockDb, "target-other-admin", "newpassword123", actorAdmin),
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: ERROR_MESSAGES.CANNOT_UPDATE_ADMIN,
+      });
+    });
+
+    it("rejects custom password shorter than 8 characters", async () => {
+      mockResetUser({ id: "target-user-1", accountId: "voter-acc-1" });
+
+      await expect(
+        coordinator.resetPassword(mockDb, "target-user-1", "short", actorAdmin),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: ERROR_MESSAGES.PASSWORD_TOO_SHORT,
+      });
+    });
+
+    it("successfully resets voter password with custom password and clears sessions & lockouts", async () => {
+      mockResetUser({ id: "target-user-1", accountId: "voter-acc-1" });
+      mockHashPassword.mockResolvedValueOnce("new-hashed-password");
+
+      const result = await coordinator.resetPassword(
+        mockDb,
+        "target-user-1",
+        "customPass123",
+        actorAdmin,
+      );
+
+      expect(result).toEqual({
+        studentId: "C25-01-1001",
+        username: "voter.one",
+        password: "customPass123",
+      });
+      expect(mockHashPassword).toHaveBeenCalledWith("customPass123");
+      expect(mockUpdateAccount).toHaveBeenCalledWith(mockDb, "voter-acc-1", {
+        password_hash: "new-hashed-password",
+      });
+      expect(mockDbDelete).toHaveBeenCalled();
+      expect(mockClearAttempts).toHaveBeenCalledWith(mockDb, "C25-01-1001");
+      expect(mockGetAccountDeleteStatus).not.toHaveBeenCalled();
+      expect(mockAuditLoggerInsert).toHaveBeenCalledWith(mockDb, {
+        action: "user.reset_password",
+        targetType: "user",
+        targetId: "target-user-1",
+        actorAccountIdSnapshot: "actor-admin-acc",
+        actorUsernameSnapshot: "adminuser",
+        description: "Password reset for user: voter.one (C25-01-1001)",
+      });
+    });
+
+    it("successfully resets with auto-generated password when password is not provided", async () => {
+      mockResetUser({
+        id: "target-user-2",
+        accountId: "voter-acc-2",
+        username: "voter.two",
+        studentId: "C25-01-1002",
+      });
+      mockHashPassword.mockResolvedValueOnce("generated-hashed-password");
+
+      const result = await coordinator.resetPassword(
+        mockDb,
+        "target-user-2",
+        undefined,
+        actorAdmin,
+      );
+
+      expect(result.studentId).toBe("C25-01-1002");
+      expect(result.username).toBe("voter.two");
+      expect(result.password).toHaveLength(10);
+      expect(mockHashPassword).toHaveBeenCalledWith(result.password);
+    });
+
+    it("allows super_admin to reset admin password", async () => {
+      mockResetUser({
+        id: "target-admin-user",
+        accountId: "target-admin-acc",
+        username: "admin.two",
+        studentId: "A25-01-2001",
+        role: "admin",
+      });
+      mockHashPassword.mockResolvedValueOnce("super-reset-hash");
+
+      const result = await coordinator.resetPassword(
+        mockDb,
+        "target-admin-user",
+        "superReset123",
+        actorSuperAdmin,
+      );
+
+      expect(result.studentId).toBe("A25-01-2001");
+      expect(result.username).toBe("admin.two");
+      expect(result.password).toBe("superReset123");
     });
   });
 });

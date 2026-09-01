@@ -1,7 +1,7 @@
 import * as auditHandlers from "@/handlers/audit-log/audit-log.handler";
 import * as handlers from "@/handlers/users/users.handler";
 import { createRouter } from "@/lib/create-app";
-import { requireAdmin, requireAuth } from "@/middleware/auth";
+import { requireAdmin, requireAuth, withAdmin } from "@/middleware/auth";
 import { getUserAuditRoute } from "./audit.routes";
 import {
   createUserRoute,
@@ -13,6 +13,7 @@ import {
   restoreUserRoute,
   updateUserRoute,
   unlockUserRoute,
+  resetUserPasswordRoute,
 } from "./routes";
 
 const router = createRouter();
@@ -27,6 +28,7 @@ router.openapi(deleteUserRoute, handlers.deleteUser);
 router.openapi(restoreUserRoute, handlers.restoreUser);
 router.openapi(hardDeleteUserRoute, handlers.hardDeleteUser);
 router.openapi(unlockUserRoute, handlers.unlockUser);
+router.openapi(resetUserPasswordRoute, withAdmin(handlers.resetUserPassword));
 
 // ── Audit routes ──────────────────────────────────────────────────────────
 // Admin guard is enforced by the `requireAdmin` middleware above and

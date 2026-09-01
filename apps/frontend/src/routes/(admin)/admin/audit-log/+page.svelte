@@ -46,6 +46,7 @@
     "user.restore": "User restored",
     "user.hard_delete": "User permanently deleted",
     "user.unlock": "User unlocked",
+    "user.reset_password": "User password reset",
   };
 
   function formatAuditAction(action: string): string {

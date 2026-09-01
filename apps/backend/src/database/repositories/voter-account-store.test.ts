@@ -6,6 +6,7 @@ const deleteChain: any = {
 const updateChain: any = {
   set: vi.fn(() => updateChain),
   where: vi.fn(() => updateChain),
+  run: vi.fn(),
 };
 const accountInsertChain: any = { values: vi.fn(() => accountInsertChain) };
 const userInsertChain: any = { values: vi.fn(() => userInsertChain) };
@@ -102,6 +103,40 @@ describe("voterAccountStore.changePasswordAndInvalidateSessions", () => {
     expect(mockDb.update).toHaveBeenCalledTimes(1);
     expect(mockBatch).toHaveBeenCalledTimes(1);
     expect(mockBatch).toHaveBeenCalledWith([deleteChain, updateChain]);
+  });
+});
+
+describe("voterAccountStore.updatePasswordIfUnchanged", () => {
+  it("reports whether the expected hash matched", async () => {
+    updateChain.run.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    await expect(
+      voterAccountStore.updatePasswordIfUnchanged(
+        mockDb as any,
+        "account-id",
+        "old-hash",
+        "new-hash",
+      ),
+    ).resolves.toBe(true);
+
+    expect(updateChain.set).toHaveBeenCalledWith({
+      password_hash: "new-hash",
+      updatedAt: expect.any(Number),
+    });
+    expect(updateChain.where).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports false when another password update won the race", async () => {
+    updateChain.run.mockResolvedValueOnce({ rowsAffected: 0 });
+
+    await expect(
+      voterAccountStore.updatePasswordIfUnchanged(
+        mockDb as any,
+        "account-id",
+        "old-hash",
+        "new-hash",
+      ),
+    ).resolves.toBe(false);
   });
 });
 

@@ -5,7 +5,7 @@ import { getElectionAuditRoute, getPositionAuditRoute } from "@/routes/elections
 import { getCandidateAuditRoute } from "@/routes/candidates/audit.routes";
 import { getUserAuditRoute } from "@/routes/users/audit.routes";
 import { loginRoute } from "@/routes/auth/routes";
-import { createUserRoute, importUsersRoute } from "@/routes/users/routes";
+import { createUserRoute, importUsersRoute, resetUserPasswordRoute } from "@/routes/users/routes";
 import {
   listCandidateAudit,
   listElectionAudit,
@@ -85,5 +85,18 @@ describe("OpenAPI doc for student-ID constraints", () => {
     expect(loginStudentNumber.pattern).toBe(expectedPattern);
     expect(importStudentId.pattern).toBe(expectedPattern);
     expect(createStudentId.pattern).toBe(expectedPattern);
+  });
+});
+
+describe("OpenAPI doc for reset-password validation", () => {
+  it("documents the 422 response produced by the validation hook", async () => {
+    const app = createRouter();
+    app.openapi(resetUserPasswordRoute, ((c: any) => c.json({})) as any);
+    app.doc("/docs", { openapi: "3.0.0", info: { title: "Test", version: "1.0.0" } });
+
+    const doc = (await (await app.request("/docs")).json()) as any;
+    const responses = doc.paths["/users/{userId}/reset-password"].post.responses;
+
+    expect(responses["422"]).toBeDefined();
   });
 });

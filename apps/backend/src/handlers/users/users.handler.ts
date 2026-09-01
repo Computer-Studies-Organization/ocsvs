@@ -9,6 +9,7 @@ import type {
   restoreUserRoute,
   updateUserRoute,
   unlockUserRoute,
+  resetUserPasswordRoute,
 } from "@/routes/users/routes";
 import { createDb } from "@/config/db";
 import { voterAccountStore } from "@/database/repositories/voter-account-store";
@@ -275,6 +276,37 @@ export const unlockUser: AppRouteHandler<typeof unlockUserRoute> = async (c) => 
   try {
     await userLifecycleCoordinator.unlock(db, userId, actor);
     return c.json({ message: "User unlocked successfully" }, httpStatusCodes.OK);
+  } catch (error) {
+    if (error instanceof UserLifecycleError) {
+      return c.json({ message: error.message }, error.statusCode as any);
+    }
+    throw error;
+  }
+};
+
+export const resetUserPassword: AppRouteHandler<typeof resetUserPasswordRoute> = async (c) => {
+  const { db } = createDb(c);
+  const { userId } = c.req.valid("param");
+  const { password } = c.req.valid("json");
+  const actor = {
+    id: c.var.authUser.id,
+    username: c.var.authUser.username,
+    role: c.var.authUser.role,
+  };
+
+  try {
+    const result = await userLifecycleCoordinator.resetPassword(db, userId, password, actor);
+    return c.json(
+      {
+        message: ERROR_MESSAGES.PASSWORD_RESET_SUCCESSFULLY,
+        credentials: {
+          studentId: result.studentId,
+          username: result.username,
+          password: result.password,
+        },
+      },
+      httpStatusCodes.OK,
+    );
   } catch (error) {
     if (error instanceof UserLifecycleError) {
       return c.json({ message: error.message }, error.statusCode as any);

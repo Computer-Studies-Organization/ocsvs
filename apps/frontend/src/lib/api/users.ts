@@ -133,3 +133,22 @@ export async function createUser(data: {
 export async function unlockUser(userId: string): Promise<{ message: string }> {
   return apiFetch(`/users/${userId}/unlock`, { method: "POST" });
 }
+
+export interface ResetUserPasswordResponse {
+  message: string;
+  credentials: {
+    studentId: string;
+    username: string;
+    password: string;
+  };
+}
+
+export async function resetUserPassword(
+  userId: string,
+  data: { password?: string } = {},
+): Promise<ResetUserPasswordResponse> {
+  return apiFetch(`/users/${userId}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

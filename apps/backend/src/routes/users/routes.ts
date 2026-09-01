@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { STUDENT_ID_PATTERN } from "@cso-voting/student-csv-parser";
 import { AdminUserApiSchema } from "@/database/openapi-schemas";
 import { booleanQuery } from "@/lib/validation/boolean-query";
+import validationErrorSchema from "@/middleware/utils/create-error-schema";
 import jsonContent from "@/middleware/utils/json-content";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -409,6 +410,57 @@ export const unlockUserRoute = createRoute({
       }),
       "User unlocked successfully",
     ),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "User not found",
+    ),
+    [httpStatusCodes.UNAUTHORIZED]: jsonContent(z.object({ message: z.string() }), "Unauthorized"),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(z.object({ message: z.string() }), "Forbidden"),
+  },
+});
+
+export const resetUserPasswordBodySchema = z
+  .object({
+    password: z.string().min(8).nullish().or(z.literal("")),
+  })
+  .openapi("ResetUserPasswordBody");
+
+export const resetUserPasswordResponseSchema = z
+  .object({
+    message: z.string(),
+    credentials: z.object({
+      studentId: z.string(),
+      username: z.string(),
+      password: z.string(),
+    }),
+  })
+  .openapi("ResetUserPasswordResponse");
+
+export const resetUserPasswordRoute = createRoute({
+  tags: ["Users"],
+  method: "post",
+  path: "/users/{userId}/reset-password",
+  security: [{ sessionAuth: [] }],
+  request: {
+    params: z.object({
+      userId: z.string(),
+    }),
+    body: jsonContent(resetUserPasswordBodySchema, "Password reset payload"),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      resetUserPasswordResponseSchema,
+      "Password reset successfully",
+    ),
+    [httpStatusCodes.BAD_REQUEST]: jsonContent(
+      z.object({
+        message: z.string(),
+      }),
+      "Invalid request",
+    ),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
     [httpStatusCodes.NOT_FOUND]: jsonContent(
       z.object({
         message: z.string(),

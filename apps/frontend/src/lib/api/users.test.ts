@@ -9,6 +9,7 @@ import {
   fetchUsers,
   importUsers,
   importUsersInBatches,
+  resetUserPassword,
   type ImportUsersResponse,
 } from "./users";
 
@@ -101,4 +102,23 @@ it("submits 300-record batches sequentially and keeps earlier results when a lat
     body: JSON.stringify({ users: users.slice(300) }),
   });
   expect(batchResults).toEqual([firstResult]);
+});
+
+it("calls resetUserPassword endpoint with user id and optional password", async () => {
+  mockApiFetch.mockResolvedValueOnce({
+    message: "Password reset successfully",
+    credentials: {
+      studentId: "C25-01-1001",
+      username: "user.one",
+      password: "generatedPassword1",
+    },
+  });
+
+  const res = await resetUserPassword("user-id-1", { password: "customPassword123" });
+
+  expect(mockApiFetch).toHaveBeenCalledWith("/users/user-id-1/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ password: "customPassword123" }),
+  });
+  expect(res.credentials.password).toBe("generatedPassword1");
 });

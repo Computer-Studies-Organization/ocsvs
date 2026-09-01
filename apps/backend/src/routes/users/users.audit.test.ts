@@ -24,6 +24,12 @@ vi.mock("@/middleware/auth", () => ({
     }
     await next();
   },
+  withAdmin: (handler: any) => async (c: any, next: any) => {
+    if (c.get("authUser")?.role !== "admin" && c.get("authUser")?.role !== "super_admin") {
+      return c.json({ message: "Forbidden" }, 403);
+    }
+    return handler(c, next);
+  },
 }));
 
 const { mockListByTarget, mockGetAccountId } = vi.hoisted(() => ({

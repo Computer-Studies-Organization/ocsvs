@@ -20,6 +20,7 @@ export const AUDIT_ACTIONS = [
   "user.restore",
   "user.hard_delete",
   "user.unlock",
+  "user.reset_password",
 ] as const;
 
 export const AUDIT_TARGET_TYPES = ["election", "position", "candidate", "party", "user"] as const;
