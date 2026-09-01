@@ -7,23 +7,27 @@ export const ROLES = z.enum(["user", "admin", "super_admin"]);
 export const ELECTION_STATUS = z.enum(["draft", "open", "closed", "archived"]);
 export type TElectionStatus = z.infer<typeof ELECTION_STATUS>;
 
-export const accounts = sqliteTable("accounts", {
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  lastLogin: integer("last_login")
-    .notNull()
-    .default(sql`(unixepoch())`),
-  deletedAt: integer("deleted_at"),
-  id: text("id").primaryKey(),
-  role: text("role").notNull().default("user"),
-  username: text("username").notNull().unique(),
-  email: text("email"),
-  password_hash: text("password_hash").notNull(),
-});
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    lastLogin: integer("last_login")
+      .notNull()
+      .default(sql`(unixepoch())`),
+    deletedAt: integer("deleted_at"),
+    id: text("id").primaryKey(),
+    role: text("role").notNull().default("user"),
+    username: text("username").notNull().unique(),
+    email: text("email"),
+    password_hash: text("password_hash").notNull(),
+  },
+  (table) => [index("idx_accounts_role_deleted_at").on(table.role, table.deletedAt)],
+);
 
 export const users = sqliteTable(
   "users",
@@ -206,6 +210,7 @@ export const votes = sqliteTable(
       .references(() => elections.id, { onDelete: "restrict" }),
   },
   (table) => [
+    index("idx_votes_election_candidate").on(table.electionId, table.candidateId),
     index("idx_votes_candidate_id").on(table.candidateId),
     uniqueIndex("votes_user_candidate_unique_idx").on(table.userId, table.candidateId),
     uniqueIndex("votes_user_position_election_unique_idx").on(

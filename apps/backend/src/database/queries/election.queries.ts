@@ -199,48 +199,50 @@ export const electionQueries = {
   },
 
   async getTurnout(db: DbClient, electionId: string): Promise<ElectionTurnout> {
-    const [electionResult, snapshotsResult, participationResult, legacyResult, voteResult] =
-      await Promise.all([
-        db
-          .select({ eligibleVotersCount: elections.eligibleVotersCount })
-          .from(elections)
-          .where(eq(elections.id, electionId))
-          .get(),
-        db
-          .select({ count: count() })
-          .from(ballotSnapshots)
-          .where(eq(ballotSnapshots.electionId, electionId))
-          .get(),
-        db
-          .select({ count: count() })
-          .from(voterElectionParticipation)
-          .where(eq(voterElectionParticipation.electionId, electionId))
-          .get(),
-        db
-          .select({ count: sql<number>`count(distinct ${votes.userId})` })
-          .from(votes)
-          .where(and(eq(votes.electionId, electionId), isNotNull(votes.userId)))
-          .get(),
-        db.select({ count: count() }).from(votes).where(eq(votes.electionId, electionId)).get(),
-      ]);
+    const [electionResult, snapshotsResult, participationResult, legacyResult] = await Promise.all([
+      db
+        .select({ eligibleVotersCount: elections.eligibleVotersCount })
+        .from(elections)
+        .where(eq(elections.id, electionId))
+        .get(),
+      db
+        .select({ count: count() })
+        .from(ballotSnapshots)
+        .where(eq(ballotSnapshots.electionId, electionId))
+        .get(),
+      db
+        .select({ count: count() })
+        .from(voterElectionParticipation)
+        .where(eq(voterElectionParticipation.electionId, electionId))
+        .get(),
+      db
+        .select({ count: sql<number>`count(distinct ${votes.userId})` })
+        .from(votes)
+        .where(and(eq(votes.electionId, electionId), isNotNull(votes.userId)))
+        .get(),
+    ]);
 
     const participationCount = Number(participationResult?.count ?? 0);
     const legacyBallotCount = Number(legacyResult?.count ?? 0);
-    const voteCount = Number(voteResult?.count ?? 0);
     const snapshotCount = Number(snapshotsResult?.count ?? 0);
 
     // Participation and linked legacy ballots are disjoint during the
     // anonymisation window. Snapshots overlap new participation, so use them
     // only when no voter-level source exists. Anonymous vote rows alone cannot
     // reveal how many ballots they represent.
-    const totalBallotsCast =
-      participationCount > 0 || legacyBallotCount > 0
-        ? participationCount + legacyBallotCount
-        : snapshotCount > 0
-          ? snapshotCount
-          : voteCount > 0
-            ? null
-            : 0;
+    let totalBallotsCast: number | null;
+    if (participationCount > 0 || legacyBallotCount > 0) {
+      totalBallotsCast = participationCount + legacyBallotCount;
+    } else if (snapshotCount > 0) {
+      totalBallotsCast = snapshotCount;
+    } else {
+      const voteResult = await db
+        .select({ count: count() })
+        .from(votes)
+        .where(eq(votes.electionId, electionId))
+        .get();
+      totalBallotsCast = Number(voteResult?.count ?? 0) > 0 ? null : 0;
+    }
     const totalEligibleVoters = electionResult?.eligibleVotersCount ?? null;
     const turnoutPercentage =
       totalEligibleVoters !== null && totalBallotsCast !== null && totalEligibleVoters > 0

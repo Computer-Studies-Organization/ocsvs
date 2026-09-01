@@ -82,6 +82,14 @@ describe("Case 13: Voter Deletion Turnout & Anonymization Integrity", () => {
       }
     }
 
+    const performanceIndexes = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('idx_votes_election_candidate', 'idx_accounts_role_deleted_at') ORDER BY name",
+    );
+    expect(performanceIndexes.rows.map((row) => row.name)).toEqual([
+      "idx_accounts_role_deleted_at",
+      "idx_votes_election_candidate",
+    ]);
+
     const db = drizzle(client, { schema });
 
     // 2. Seed Admin, Super Admin, and an Election

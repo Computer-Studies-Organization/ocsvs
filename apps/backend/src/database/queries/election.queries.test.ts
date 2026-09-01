@@ -337,8 +337,7 @@ describe("electionQueries", () => {
         .mockReturnValueOnce({ eligibleVotersCount: 100 })
         .mockReturnValueOnce({ count: 75 })
         .mockReturnValueOnce({ count: 75 })
-        .mockReturnValueOnce({ count: 0 })
-        .mockReturnValueOnce({ count: 75 });
+        .mockReturnValueOnce({ count: 0 });
       const result = await electionQueries.getTurnout(mockDb as any, "e1");
       expect(result).toEqual({
         electionId: "e1",
@@ -346,6 +345,7 @@ describe("electionQueries", () => {
         totalBallotsCast: 75,
         turnoutPercentage: 75,
       });
+      expect(mockDb.select).toHaveBeenCalledTimes(4);
     });
 
     it("returns 0% turnout when total eligible voters is 0", async () => {
@@ -369,8 +369,7 @@ describe("electionQueries", () => {
         .mockReturnValueOnce({ eligibleVotersCount: null })
         .mockReturnValueOnce({ count: 0 })
         .mockReturnValueOnce({ count: 3 })
-        .mockReturnValueOnce({ count: 0 })
-        .mockReturnValueOnce({ count: 6 });
+        .mockReturnValueOnce({ count: 0 });
 
       await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
         electionId: "e1",
@@ -385,8 +384,7 @@ describe("electionQueries", () => {
         .mockReturnValueOnce({ eligibleVotersCount: 100 })
         .mockReturnValueOnce({ count: 2 })
         .mockReturnValueOnce({ count: 0 })
-        .mockReturnValueOnce({ count: 3 })
-        .mockReturnValueOnce({ count: 6 });
+        .mockReturnValueOnce({ count: 3 });
 
       await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
         electionId: "e1",
@@ -401,8 +399,7 @@ describe("electionQueries", () => {
         .mockReturnValueOnce({ eligibleVotersCount: 100 })
         .mockReturnValueOnce({ count: 4 })
         .mockReturnValueOnce({ count: 7 })
-        .mockReturnValueOnce({ count: 0 })
-        .mockReturnValueOnce({ count: 6 });
+        .mockReturnValueOnce({ count: 0 });
 
       await expect(electionQueries.getTurnout(mockDb as any, "e1")).resolves.toEqual({
         electionId: "e1",
@@ -426,6 +423,7 @@ describe("electionQueries", () => {
         totalBallotsCast: null,
         turnoutPercentage: null,
       });
+      expect(mockDb.select).toHaveBeenCalledTimes(5);
     });
   });
 });

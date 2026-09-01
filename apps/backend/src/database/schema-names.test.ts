@@ -12,6 +12,7 @@ import {
   UserApiSchema,
 } from "./openapi-schemas";
 import {
+  accounts,
   auditLog,
   candidates,
   elections,
@@ -95,6 +96,9 @@ describe("candidate API schema", () => {
 
 describe("lookup indexes", () => {
   it("defines indexes for the account, position, and candidate lookup paths", () => {
+    expect(getTableConfig(accounts).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_accounts_role_deleted_at",
+    );
     expect(getTableConfig(users).indexes.map((idx) => idx.config.name)).toContain(
       "idx_users_account_id",
     );
@@ -106,6 +110,9 @@ describe("lookup indexes", () => {
     );
     expect(getTableConfig(votes).indexes.map((idx) => idx.config.name)).toContain(
       "idx_votes_candidate_id",
+    );
+    expect(getTableConfig(votes).indexes.map((idx) => idx.config.name)).toContain(
+      "idx_votes_election_candidate",
     );
   });
 });
