@@ -67,6 +67,9 @@
   const totalPositions = $derived(positions.length)
   const isReview = $derived(isReviewStep(voting, totalPositions))
   const currentPosition = $derived(positions[voting.currentPositionIndex])
+  const nextPosition = $derived(
+    !isReview ? positions[voting.currentPositionIndex + 1] : undefined,
+  )
 
   function selectAt(positionId: string, candidateId: string) {
     onvotingchange(selectCandidate(voting, positionId, candidateId))
@@ -93,6 +96,16 @@
     onvotingchange({ ...voting, currentPositionIndex: idx })
   }
 </script>
+
+<svelte:head>
+  {#if nextPosition}
+    {#each nextPosition.candidates as candidate (candidate.id)}
+      {#if candidate.imageUrl}
+        <link rel='prefetch' as='image' href={candidate.imageUrl} />
+      {/if}
+    {/each}
+  {/if}
+</svelte:head>
 
 <div class={compact ? 'space-y-6' : ''}>
   {#if partyLists.length > 0}
