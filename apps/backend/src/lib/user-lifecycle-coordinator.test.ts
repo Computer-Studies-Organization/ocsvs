@@ -399,6 +399,13 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
   });
 
   describe("register", () => {
+    const adminActor = { id: "admin-id", username: "admin", role: "admin" as const };
+    const superAdminActor = {
+      id: "super-admin-id",
+      username: "super-admin",
+      role: "super_admin" as const,
+    };
+
     it("rejects voter creation while an election is scheduled to open in the future", async () => {
       const now = Math.floor(Date.now() / 1000);
       mockFindOpenElection.mockResolvedValueOnce({
@@ -409,14 +416,18 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       });
 
       await expect(
-        coordinator.register(mockDb, {
-          firstName: "John",
-          lastName: "Doe",
-          studentId: "student-123",
-          course: "BSCS",
-          yearLevel: "1st Year",
-          username: "johndoe",
-        }),
+        coordinator.register(
+          mockDb,
+          {
+            firstName: "John",
+            lastName: "Doe",
+            studentId: "student-123",
+            course: "BSCS",
+            yearLevel: "1st Year",
+            username: "johndoe",
+          },
+          adminActor,
+        ),
       ).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
         statusCode: 400,
@@ -430,14 +441,18 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockFindOpenElection.mockResolvedValueOnce({ id: "open-election", status: "open" });
 
       await expect(
-        coordinator.register(mockDb, {
-          firstName: "John",
-          lastName: "Doe",
-          studentId: "student-123",
-          course: "BSCS",
-          yearLevel: "1st Year",
-          username: "johndoe",
-        }),
+        coordinator.register(
+          mockDb,
+          {
+            firstName: "John",
+            lastName: "Doe",
+            studentId: "student-123",
+            course: "BSCS",
+            yearLevel: "1st Year",
+            username: "johndoe",
+          },
+          adminActor,
+        ),
       ).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
         statusCode: 400,
@@ -459,14 +474,18 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       mockHashPassword.mockResolvedValueOnce("hashed-password");
 
       await expect(
-        coordinator.register(mockDb, {
-          firstName: "John",
-          lastName: "Doe",
-          studentId: "student-123",
-          course: "BSCS",
-          yearLevel: "1st Year",
-          username: "johndoe",
-        }),
+        coordinator.register(
+          mockDb,
+          {
+            firstName: "John",
+            lastName: "Doe",
+            studentId: "student-123",
+            course: "BSCS",
+            yearLevel: "1st Year",
+            username: "johndoe",
+          },
+          adminActor,
+        ),
       ).rejects.toMatchObject({
         code: "ELECTION_IS_OPEN",
         statusCode: 400,
@@ -476,26 +495,38 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
       expect(mockAccountCreate).not.toHaveBeenCalled();
     });
 
-    it("allows admin account creation while an election is open", async () => {
-      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
-      mockAccountExists.mockResolvedValueOnce(false);
-      mockDbGet.mockResolvedValueOnce(null);
-      mockHashPassword.mockResolvedValueOnce("hashed-password");
+    it.each(["scheduled", "active"] as const)(
+      "allows super admin voter creation while an election is %s",
+      async (window) => {
+        const now = Math.floor(Date.now() / 1000);
+        mockFindOpenElection.mockResolvedValue({
+          id: `${window}-election`,
+          status: "open",
+          opensAt: window === "scheduled" ? now + 3600 : now - 3600,
+          closesAt: now + 7200,
+        });
+        mockAccountExists.mockResolvedValueOnce(false);
+        mockDbGet.mockResolvedValueOnce(null);
+        mockHashPassword.mockResolvedValueOnce("hashed-password");
 
-      await coordinator.register(mockDb, {
-        firstName: "Admin",
-        lastName: "User",
-        studentId: "admin-123",
-        course: "BSCS",
-        yearLevel: "1st Year",
-        username: "admin.user",
-        role: "admin",
-      });
+        await coordinator.register(
+          mockDb,
+          {
+            firstName: "John",
+            lastName: "Doe",
+            studentId: "student-123",
+            course: "BSCS",
+            yearLevel: "1st Year",
+            username: "johndoe",
+            role: "user",
+          },
+          superAdminActor,
+        );
 
-      expect(mockAccountCreate).toHaveBeenCalled();
-      expect(mockFindOpenElection).not.toHaveBeenCalled();
-      mockFindOpenElection.mockResolvedValue(null);
-    });
+        expect(mockAccountCreate).toHaveBeenCalled();
+        expect(mockFindOpenElection).not.toHaveBeenCalled();
+      },
+    );
 
     it("successfully registers a user", async () => {
       mockAccountExists.mockResolvedValueOnce(false);
@@ -532,8 +563,9 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
           username: "johndoe",
         },
         {
-          actorAccountIdSnapshot: "admin-id",
-          actorUsernameSnapshot: "admin",
+          id: "admin-id",
+          username: "admin",
+          role: "admin",
         },
       );
 
@@ -884,7 +916,7 @@ describe("UserLifecycleCoordinator Unit Tests", () => {
   describe("bulkImport", () => {
     const actor = { id: "admin-1", username: "admin", role: "super_admin" as const };
 
-    it("rejects voter import while an election is open", async () => {
+    it("keeps super admin voter import frozen while an election is open", async () => {
       mockDbAll.mockResolvedValueOnce([]); // existing student IDs check
       mockDbAll.mockResolvedValueOnce([]); // existing usernames check
       mockHashPassword.mockResolvedValue("hashed-pwd");

@@ -51,14 +51,6 @@ export interface RegisterUserInput {
 }
 
 /**
- * Immutable administrator details captured before a single-user creation.
- */
-export interface RegisterAuditContext {
-  actorAccountIdSnapshot: string;
-  actorUsernameSnapshot: string;
-}
-
-/**
  * Input for updating user details.
  */
 export interface UpdateUserInput {
@@ -192,9 +184,9 @@ export class UserLifecycleCoordinator {
   async register(
     db: Database,
     input: RegisterUserInput,
-    auditContext?: RegisterAuditContext,
+    actor?: ActorInfo,
   ): Promise<{ accountId: string; userId: string; username: string }> {
-    if (!input.role || input.role === "user") {
+    if (actor?.role !== "super_admin") {
       await assertElectorateMutable(db);
     }
 
@@ -255,7 +247,7 @@ export class UserLifecycleCoordinator {
 
     try {
       await db.transaction(async (tx) => {
-        if (!input.role || input.role === "user") {
+        if (actor?.role !== "super_admin") {
           await assertElectorateMutable(tx);
         }
 
@@ -274,11 +266,12 @@ export class UserLifecycleCoordinator {
             yearLevel: input.yearLevel,
             role: input.role,
           },
-          auditContext && {
+          actor && {
             action: "user.create",
             targetType: "user",
             targetId: userId,
-            ...auditContext,
+            actorAccountIdSnapshot: actor.id,
+            actorUsernameSnapshot: actor.username,
             description: `Created user account: ${username} (${input.studentId})`,
           },
         );

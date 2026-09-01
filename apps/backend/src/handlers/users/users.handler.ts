@@ -199,16 +199,18 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
-  const creatorRole = c.var.authUser.role;
-  const actorAccountId = c.var.authUser.id;
-  const actorUsername = c.var.authUser.username;
+  const actor = {
+    id: c.var.authUser.id,
+    username: c.var.authUser.username,
+    role: c.var.authUser.role,
+  };
 
   const { firstName, lastName, email, username, password, studentId, course, yearLevel, role } =
     c.req.valid("json");
   const normalizedEmail = email?.trim() || null;
 
   // Assertion: Only super admins can create admin/super_admin accounts.
-  if (role !== "user" && creatorRole !== "super_admin") {
+  if (role !== "user" && actor.role !== "super_admin") {
     return c.json({ message: ERROR_MESSAGES.FORBIDDEN }, httpStatusCodes.FORBIDDEN);
   }
 
@@ -228,10 +230,7 @@ export const createUser: AppRouteHandler<typeof createUserRoute> = async (c) => 
         yearLevel,
         role,
       },
-      {
-        actorAccountIdSnapshot: actorAccountId,
-        actorUsernameSnapshot: actorUsername,
-      },
+      actor,
     );
 
     return c.json(

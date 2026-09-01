@@ -147,10 +147,18 @@ vi.mock("@/database/repositories/candidates.repository", () => ({
   },
 }));
 
+const mockFindOpenElection = vi.hoisted(() => vi.fn());
+vi.mock("@/database/repositories/election.repository", () => ({
+  electionRepo: {
+    findOpen: mockFindOpenElection,
+  },
+}));
+
 describe("users Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthUser.role = "admin";
+    mockFindOpenElection.mockResolvedValue(null);
   });
 
   it("should return paginated list of users", async () => {
@@ -907,6 +915,63 @@ describe("users Routes", () => {
         }),
       );
       expect(mockAuditLogInsert).not.toHaveBeenCalled();
+    });
+
+    it("should reject regular admin voter creation while an election is open", async () => {
+      mockAuthUser.role = "admin";
+      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_IS_OPEN });
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("should allow super_admin voter creation while an election is open", async () => {
+      mockAuthUser.role = "super_admin";
+      mockFindOpenElection.mockResolvedValue({ id: "open-election", status: "open" });
+      mockAccountExists.mockResolvedValue(false);
+      mockCreate.mockResolvedValue(undefined);
+
+      const res = await router.request("/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: "John",
+          lastName: "Doe",
+          username: "johndoe",
+          password: "password123",
+          studentId: "C23-01-1234-CSA001",
+          course: "BSCS",
+          yearLevel: "1st Year",
+          role: "user",
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(mockFindOpenElection).not.toHaveBeenCalled();
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          actorAccountIdSnapshot: "test-user-id",
+          actorUsernameSnapshot: "testuser",
+        }),
+      );
     });
 
     it("should reject regular admin trying to create an admin account", async () => {
