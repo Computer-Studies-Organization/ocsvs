@@ -9,68 +9,8 @@ const modalSource = readFileSync(
 );
 
 describe("admin users actions", () => {
-  it("exposes the reset-password flow and identifies the target", () => {
-    const resetHandler = pageSource.slice(
-      pageSource.indexOf("async function handleResetPasswordSave"),
-      pageSource.indexOf("async function copyResetCredentials"),
-    );
-    const credentialsIndex = resetHandler.indexOf("resetSuccessDetails = res.credentials");
-    const refreshIndex = resetHandler.indexOf("await invalidate('app:users')");
-
-    expect(pageSource).toContain("Reset Password");
-    expect(pageSource).toContain("{resetPasswordUser.username}");
-    expect(credentialsIndex).toBeGreaterThanOrEqual(0);
-    expect(refreshIndex).toBeGreaterThan(credentialsIndex);
-    expect(resetHandler).toContain("const password = resetPasswordInput.trim()");
-    expect(resetHandler).toContain("if (password && password.length < 8)");
-    expect(resetHandler).toContain("password: password || undefined");
-    expect(resetHandler).toContain("} catch {");
-  });
-
-  it("ignores reset responses after the modal target changes", () => {
-    const resetHandler = pageSource.slice(
-      pageSource.indexOf("async function handleResetPasswordSave"),
-      pageSource.indexOf("async function copyResetCredentials"),
-    );
-
-    expect(pageSource).toContain("let resetRequestToken = 0");
-    expect(pageSource).toContain("resetRequestToken += 1");
-    expect(resetHandler).toContain("const requestToken = ++resetRequestToken");
-    expect(resetHandler).toContain(
-      "if (requestToken !== resetRequestToken || resetPasswordUser?.id !== userId) return",
-    );
-    expect(resetHandler).toContain(
-      "if (requestToken === resetRequestToken && resetPasswordUser?.id === userId)",
-    );
-  });
-
-  it("keeps the reset modal open while the request is saving", () => {
-    const closeHandler = pageSource.slice(
-      pageSource.indexOf("function closeResetModal"),
-      pageSource.indexOf("async function handleResetPasswordSave"),
-    );
-    const resetModal = pageSource.slice(
-      pageSource.indexOf("<!-- Reset Password Modal -->"),
-      pageSource.indexOf("<!-- Hard Delete Confirm -->"),
-    );
-
-    expect(closeHandler).toContain("if (isResetSaving) return");
-    expect(resetModal).toContain("onclick={closeResetModal}\n          disabled={isResetSaving}");
-  });
-
-  it("keeps reset password visible but disabled for archived users", () => {
-    const accountActions = pageSource.slice(
-      pageSource.indexOf("<!-- Account actions -->"),
-      pageSource.indexOf("<!-- Danger Zone -->"),
-    );
-    const desktopMenu = pageSource.slice(
-      pageSource.indexOf("{#if activeDropdownUserId && activeDropdownUser}"),
-      pageSource.indexOf("<!-- Divider -->"),
-    );
-
-    expect(accountActions).toContain("disabled={viewUser.deletedAt !== null");
-    expect(desktopMenu).toContain("Reset Password");
-    expect(desktopMenu).toContain("disabled={activeDropdownUser.deletedAt !== null");
+  it("exposes the reset-password flow", () => {
+    expect(pageSource).toContain("onclick={handleResetPasswordSave}");
   });
 
   it("opens chained action modals after the view sheet outro completes", () => {

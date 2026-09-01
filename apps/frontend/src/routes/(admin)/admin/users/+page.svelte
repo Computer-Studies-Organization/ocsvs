@@ -10,7 +10,6 @@
   import {
     Archive,
     ArrowUpDown,
-    Check,
     Copy,
     Edit,
     Eye,
@@ -111,8 +110,6 @@
   let isResetSaving = $state(false)
   let resetMsg = $state('')
   let resetSuccessDetails = $state<{ studentId: string; username: string; password: string } | null>(null)
-  let resetCopied = $state(false)
-  let resetRequestToken = 0
   let hardDeleteConfirmUser = $state<TUsersData | null>(null)
   let hardDeleteConfirmText = $state('')
   let isActionLoading = $state(false)
@@ -568,19 +565,16 @@
     resetPasswordVisible = false
     resetMsg = ''
     resetSuccessDetails = null
-    resetCopied = false
     isResetSaving = false
   }
 
   function openResetPassword(u: TUsersData) {
-    resetRequestToken += 1
     clearResetPasswordState()
     resetPasswordUser = u
   }
 
   function closeResetModal() {
     if (isResetSaving) return
-    resetRequestToken += 1
     clearResetPasswordState()
     resetPasswordUser = null
   }
@@ -594,30 +588,19 @@
       return
     }
 
-    const requestToken = ++resetRequestToken
     isResetSaving = true
     resetMsg = ''
     try {
       const res = await resetUserPassword(userId, {
         password: password || undefined,
       })
-      if (requestToken !== resetRequestToken || resetPasswordUser?.id !== userId) return
       resetSuccessDetails = res.credentials
       addToast('success', 'Password reset successfully')
-      try {
-        appCache.invalidate({ resource: 'users' })
-        await invalidate('app:users')
-      } catch {
-        // Reset succeeded; refreshing the user list is best effort.
-      }
     } catch (e: unknown) {
-      if (requestToken !== resetRequestToken || resetPasswordUser?.id !== userId) return
       resetMsg = extractErrorMessage(e, 'Failed to reset password')
       addToast('error', resetMsg)
     } finally {
-      if (requestToken === resetRequestToken && resetPasswordUser?.id === userId) {
-        isResetSaving = false
-      }
+      isResetSaving = false
     }
   }
 
@@ -626,11 +609,7 @@
     const textToCopy = `Student ID: ${resetSuccessDetails.studentId}\nUsername: ${resetSuccessDetails.username}\nPassword: ${resetSuccessDetails.password}`
     try {
       await navigator.clipboard.writeText(textToCopy)
-      resetCopied = true
       addToast('success', 'Credentials copied to clipboard')
-      setTimeout(() => {
-        resetCopied = false
-      }, 2000)
     } catch {
       addToast('error', 'Failed to copy credentials')
     }
@@ -1405,14 +1384,6 @@
                 Unlock Account
               </button>
             {/if}
-            <button
-              type="button"
-              disabled={viewUser.deletedAt !== null || authStore.user?.id === viewUser.accountId || (authStore.user?.role !== 'super_admin' && (viewUser.role === 'admin' || viewUser.role === 'super_admin'))}
-              onclick={() => startMobileResetPassword(viewUser!)}
-              class="min-h-11 w-full text-left px-3 py-2 text-xs font-semibold text-amber-400 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 cursor-pointer"
-            >
-              Reset Password
-            </button>
             {#if !viewUser.deletedAt}
               <button
                 type="button"
@@ -1577,13 +1548,8 @@
           onclick={copyResetCredentials}
           class='min-h-11 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-800 transition cursor-pointer'
         >
-          {#if resetCopied}
-            <Check size={16} class='text-emerald-400' />
-            <span class='text-emerald-400 font-bold'>Copied!</span>
-          {:else}
-            <Copy size={16} />
-            <span>Copy Credentials</span>
-          {/if}
+          <Copy size={16} />
+          <span>Copy Credentials</span>
         </button>
         <button
           type='button'

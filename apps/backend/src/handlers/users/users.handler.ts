@@ -288,22 +288,18 @@ export const resetUserPassword: AppRouteHandler<typeof resetUserPasswordRoute> =
   const { db } = createDb(c);
   const { userId } = c.req.valid("param");
   const { password } = c.req.valid("json");
-  const actor = {
-    id: c.var.authUser.id,
-    username: c.var.authUser.username,
-    role: c.var.authUser.role,
-  };
 
   try {
-    const result = await userLifecycleCoordinator.resetPassword(db, userId, password, actor);
+    const result = await userLifecycleCoordinator.resetPassword(
+      db,
+      userId,
+      password,
+      c.var.authUser,
+    );
     return c.json(
       {
         message: ERROR_MESSAGES.PASSWORD_RESET_SUCCESSFULLY,
-        credentials: {
-          studentId: result.studentId,
-          username: result.username,
-          password: result.password,
-        },
+        credentials: result,
       },
       httpStatusCodes.OK,
     );

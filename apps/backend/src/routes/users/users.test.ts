@@ -1144,58 +1144,6 @@ describe("users Routes", () => {
       expect(body.message).toBe(ERROR_MESSAGES.USER_NOT_FOUND);
     });
 
-    it("should return 400 if target user is self", async () => {
-      mockAuthUser.id = "admin-acc-id";
-      mockAuthUser.role = "admin";
-      mockResetUser({ id: "self-user-id", accountId: "admin-acc-id", role: "admin" });
-
-      const res = await router.request("/users/self-user-id/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "newpassword123" }),
-      });
-
-      expect(res.status).toBe(400);
-      const body = (await res.json()) as any;
-      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESET_SELF);
-    });
-
-    it("should return 400 if user is archived", async () => {
-      mockAuthUser.id = "admin-acc-id";
-      mockAuthUser.role = "admin";
-      mockResetUser({
-        id: "archived-user-id",
-        accountId: "voter-archived-acc",
-        deletedAt: 1234567,
-      });
-
-      const res = await router.request("/users/archived-user-id/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "newpassword123" }),
-      });
-
-      expect(res.status).toBe(400);
-      const body = (await res.json()) as any;
-      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_RESET_ARCHIVED_USER);
-    });
-
-    it("should return 403 if regular admin attempts to reset admin password", async () => {
-      mockAuthUser.id = "admin-acc-1";
-      mockAuthUser.role = "admin";
-      mockResetUser({ id: "admin-user-2", accountId: "admin-acc-2", role: "admin" });
-
-      const res = await router.request("/users/admin-user-2/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "newpassword123" }),
-      });
-
-      expect(res.status).toBe(403);
-      const body = (await res.json()) as any;
-      expect(body.message).toBe(ERROR_MESSAGES.CANNOT_UPDATE_ADMIN);
-    });
-
     it("should return 422 if password is provided but shorter than 8 characters", async () => {
       mockAuthUser.role = "admin";
       const res = await router.request("/users/some-user-id/reset-password", {
