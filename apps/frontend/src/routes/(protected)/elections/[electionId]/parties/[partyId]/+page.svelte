@@ -55,7 +55,7 @@
 
         if (visible?.target instanceof HTMLElement) activeSectionId = visible.target.id
       },
-      { rootMargin: '-6rem 0px -50% 0px' },
+      { rootMargin: '-96px 0px -50% 0px' },
     )
 
     sections.forEach((section) => observer.observe(section))
