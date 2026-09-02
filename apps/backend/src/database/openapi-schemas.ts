@@ -350,6 +350,15 @@ export const TransitionBodySchema = z
   })
   .openapi("TransitionBody");
 
+export const ExtendElectionBodySchema = z
+  .object({
+    closesAt: z.number().int().openapi({
+      description: "New later election closing time (Unix seconds)",
+      example: 1738608400,
+    }),
+  })
+  .openapi("ExtendElectionBody");
+
 export const ListElectionsQuerySchema = z
   .object({
     status: z.enum(["draft", "open", "closed", "archived"]).optional().openapi({

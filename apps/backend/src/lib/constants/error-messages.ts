@@ -30,6 +30,9 @@ export const ERROR_MESSAGES = {
     "Cannot open an election with a position that has no active candidates",
   ELECTION_NOT_IN_DRAFT: "This operation is only allowed while the election is in draft",
   ELECTION_NOT_OPEN: "This election is not currently open for voting",
+  ELECTION_EXTENSION_NOT_LATER: "New closing time must be later than the current closing time",
+  ELECTION_EXTENSION_CONFLICT:
+    "Election closing time changed by a concurrent request. Please try again.",
   ELECTION_TRANSITION_CONFLICT:
     "Election status changed by a concurrent request. Please try again.",
   ELECTION_HAS_BALLOTS: "Cannot reopen an election after ballots have been cast",
@@ -77,6 +80,7 @@ export const ERROR_MESSAGES = {
   ELECTION_CLOSED_SUCCESSFULLY: "Election closed successfully",
   ELECTION_CREATED_SUCCESSFULLY: "Election created successfully",
   ELECTION_OPENED_SUCCESSFULLY: "Election opened successfully",
+  ELECTION_EXTENDED_SUCCESSFULLY: "Election closing time extended successfully",
   ELECTION_REOPENED_SUCCESSFULLY: "Election reopened for editing",
   ELECTION_UPDATED_SUCCESSFULLY: "Election updated successfully",
   PARTY_LIST_CREATED_SUCCESSFULLY: "Party list created successfully",

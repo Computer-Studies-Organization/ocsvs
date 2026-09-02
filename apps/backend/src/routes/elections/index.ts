@@ -1,6 +1,7 @@
 import { listElectionAudit, listPositionAudit } from "@/handlers/audit-log/audit-log.handler";
 import {
   createElectionHandler,
+  extendElectionHandler,
   getCurrentElectionHandler,
   getElectionHandler,
   listElectionsHandler,
@@ -30,6 +31,7 @@ import { getElectionResultsRoute } from "./results.routes";
 import { votingStateRoute } from "./voting-state.routes";
 import {
   createElectionRoute,
+  extendElectionRoute,
   getCurrentElectionRoute,
   getElectionRoute,
   listElectionsRoute,
@@ -54,6 +56,7 @@ router.openapi(listPositionsRoute, listPositionsHandler);
 router.openapi(createElectionRoute, withAdmin(createElectionHandler));
 router.openapi(updateElectionRoute, withAdmin(updateElectionHandler));
 router.openapi(transitionElectionRoute, withAdmin(transitionElectionHandler));
+router.openapi(extendElectionRoute, withAdmin(extendElectionHandler));
 router.openapi(createPositionRoute, withAdmin(createPositionHandler));
 router.openapi(updatePositionRoute, withAdmin(updatePositionHandler));
 router.openapi(reorderPositionsRoute, withAdmin(reorderPositionsHandler));

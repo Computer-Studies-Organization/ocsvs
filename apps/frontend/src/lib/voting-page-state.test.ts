@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   buildStepperPositions,
@@ -6,6 +6,8 @@ import {
   hasVotedIn,
   pickEmptyCardVariant,
   preserveVotingState,
+  refreshExpiredElectionState,
+  shouldNotifyElectionClosed,
 } from "./voting-page-state";
 import type { TVotingPageState } from "./voting-page-state";
 import type { TCandidate, TElection, TPosition, TVotingState } from "./types";
@@ -114,6 +116,57 @@ const apiStateVoted: TVotingState = {
   ...apiStateWithOpen,
   myVotes: { electionId: "e1", hasVoted: true },
 };
+
+test("notifies closure when refreshed state has no open election", () => {
+  expect(shouldNotifyElectionClosed(base, "e1")).toBe(true);
+});
+
+test("does not notify closure when the same election returns with a later deadline", () => {
+  expect(
+    shouldNotifyElectionClosed(
+      {
+        ...apiStateWithOpen,
+        open: { ...openElection, closesAt: openElection.closesAt! + 3600 },
+      },
+      "e1",
+    ),
+  ).toBe(false);
+});
+
+test("retries after the inclusive server deadline while the same expired election remains open", async () => {
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(200_000);
+    const stillOpen = { ...apiStateWithOpen, open: { ...openElection, closesAt: 200 } };
+    const closed = { ...base, open: null };
+    const refresh = vi.fn().mockResolvedValueOnce(stillOpen).mockResolvedValueOnce(closed);
+
+    const result = refreshExpiredElectionState(refresh, "e1", 200);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(result).resolves.toBe(closed);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("stops after one boundary retry if the expired election remains open", async () => {
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(200_000);
+    const stillOpen = { ...apiStateWithOpen, open: { ...openElection, closesAt: 200 } };
+    const refresh = vi.fn().mockResolvedValue(stillOpen);
+
+    const result = refreshExpiredElectionState(refresh, "e1", 200);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(result).resolves.toBe(stillOpen);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
 
 const samplePositions: TPosition[] = [
   { id: "p2", electionId: "e1", name: "Vice", displayOrder: 2, createdAt: 1, updatedAt: 1 },

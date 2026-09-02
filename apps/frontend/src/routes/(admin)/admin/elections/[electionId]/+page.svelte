@@ -13,6 +13,7 @@
   import AddPartyModal from '$lib/components/admin/add-party-modal.svelte'
   import EditPartyModal from '$lib/components/admin/edit-party-modal.svelte'
   import EditElectionModal from '$lib/components/admin/edit-election-modal.svelte'
+  import ExtendElectionButton from '$lib/components/admin/extend-election-button.svelte'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
 
   let { data } = $props()
@@ -329,6 +330,7 @@
           Preview ballot
         </a>
         <TransitionButton {election} onsuccess={handleTransitionSuccess} />
+        <ExtendElectionButton {election} onsuccess={handleTransitionSuccess} />
       </div>
     </div>
 

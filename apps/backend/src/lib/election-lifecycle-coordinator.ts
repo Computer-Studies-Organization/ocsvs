@@ -10,6 +10,7 @@ import {
   assertTransition,
   getEffectiveElectionStatus,
   isElectionEditable,
+  isElectionCurrentlyOpen,
   TransitionError,
 } from "@/lib/election-lifecycle";
 import { isUniqueConstraintError } from "@/lib/errors";
@@ -30,6 +31,11 @@ export interface TransitionParams {
   actor: { id: string; username: string };
   opensAt?: number;
   closesAt?: number;
+}
+
+export interface ExtendClosingTimeParams {
+  closesAt: number;
+  actor: { id: string; username: string };
 }
 
 /**
@@ -111,6 +117,45 @@ export const ElectionLifecycleCoordinator = {
       });
 
       return updated;
+    });
+  },
+
+  async extendClosingTime(
+    db: DbClient,
+    electionId: string,
+    params: ExtendClosingTimeParams,
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      const existing = await electionRepo.findById(tx, electionId);
+      if (!existing) {
+        throw new TransitionError("ELECTION_NOT_FOUND", 404);
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (!isElectionCurrentlyOpen(existing, now) || existing.closesAt === null) {
+        throw new TransitionError("ELECTION_NOT_OPEN", 409);
+      }
+      if (params.closesAt <= existing.closesAt) {
+        throw new TransitionError("ELECTION_EXTENSION_NOT_LATER", 409);
+      }
+
+      const previousClosesAt = existing.closesAt;
+      const updated = await electionRepo.extendClosingTime(tx, electionId, {
+        expectedClosesAt: previousClosesAt,
+        closesAt: params.closesAt,
+      });
+      if (!updated) {
+        throw new TransitionError("ELECTION_EXTENSION_CONFLICT", 409);
+      }
+
+      await auditLogRepo.insert(tx, {
+        action: "election.update",
+        targetType: "election",
+        targetId: electionId,
+        actorAccountIdSnapshot: params.actor.id,
+        actorUsernameSnapshot: params.actor.username,
+        description: `closesAt: ${previousClosesAt} → ${params.closesAt}`,
+      });
     });
   },
 

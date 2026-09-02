@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import {
   CreateElectionBodySchema,
   ElectionSchema,
+  ExtendElectionBodySchema,
   ListElectionsQuerySchema,
   TransitionBodySchema,
   UpdateElectionBodySchema,
@@ -102,5 +103,27 @@ export const transitionElectionRoute = createRoute({
     [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorSchema, "Election not found"),
     [httpStatusCodes.CONFLICT]: jsonContent(ErrorSchema, "Invalid transition or conflict"),
     [httpStatusCodes.BAD_REQUEST]: jsonContent(ErrorSchema, "Invalid transition body"),
+  },
+});
+
+export const extendElectionRoute = createRoute({
+  method: "post",
+  path: "/elections/{id}/extensions",
+  tags: ["Elections"],
+  security: [{ sessionAuth: [] }],
+  request: {
+    params: IdParams,
+    body: jsonContent(ExtendElectionBodySchema, "Later election closing time"),
+  },
+  responses: {
+    [httpStatusCodes.OK]: jsonContent(
+      MessageResponse,
+      ERROR_MESSAGES.ELECTION_EXTENDED_SUCCESSFULLY,
+    ),
+    [httpStatusCodes.FORBIDDEN]: jsonContent(ErrorSchema, ERROR_MESSAGES.FORBIDDEN),
+    [httpStatusCodes.NOT_FOUND]: jsonContent(ErrorSchema, ERROR_MESSAGES.ELECTION_NOT_FOUND),
+    [httpStatusCodes.BAD_REQUEST]: jsonContent(ErrorSchema, ERROR_MESSAGES.INVALID_REQUEST),
+    [httpStatusCodes.CONFLICT]: jsonContent(ErrorSchema, "Election cannot be extended"),
+    [httpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(validationErrorSchema, "Validation failed"),
   },
 });

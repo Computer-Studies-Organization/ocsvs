@@ -65,6 +65,7 @@ const {
   mockCreate,
   mockUpdateStatus,
   mockUpdateMetadata,
+  mockExtendClosingTime,
   mockGetCurrentElection,
   mockCountPositions,
   mockCountPositionsWithActiveCandidates,
@@ -74,6 +75,7 @@ const {
   mockCreate: vi.fn(),
   mockUpdateStatus: vi.fn(),
   mockUpdateMetadata: vi.fn(),
+  mockExtendClosingTime: vi.fn(),
   mockGetCurrentElection: vi.fn(),
   mockCountPositions: vi.fn(),
   mockCountPositionsWithActiveCandidates: vi.fn(),
@@ -87,6 +89,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
     create: mockCreate,
     updateStatus: mockUpdateStatus,
     updateMetadata: mockUpdateMetadata,
+    extendClosingTime: mockExtendClosingTime,
   },
 }));
 
@@ -125,6 +128,7 @@ describe("elections routes", () => {
     mockCreate.mockReset();
     mockUpdateStatus.mockReset();
     mockUpdateMetadata.mockReset();
+    mockExtendClosingTime.mockReset();
     mockGetCurrentElection.mockReset();
     mockCountPositions.mockReset();
     mockCountPositionsWithActiveCandidates.mockReset();
@@ -373,6 +377,81 @@ describe("elections routes", () => {
         headers: { "Content-Type": "application/json" },
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("pOST /elections/:id/extensions (extendElection)", () => {
+    it.each(["admin", "super_admin"])("extends an active election for %s", async (role) => {
+      TEST_USER = { ...TEST_USER, role };
+      const now = Math.floor(Date.now() / 1000);
+      mockFindById.mockResolvedValueOnce(
+        makeElection({ status: "open", opensAt: now - 60, closesAt: now + 60 }),
+      );
+      mockExtendClosingTime.mockResolvedValueOnce(true);
+
+      const res = await router.request(`/elections/${electionId}/extensions`, {
+        method: "POST",
+        body: JSON.stringify({ closesAt: now + 3600 }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_EXTENDED_SUCCESSFULLY });
+      expect(mockExtendClosingTime).toHaveBeenCalledWith(mockDb, electionId, {
+        expectedClosesAt: now + 60,
+        closesAt: now + 3600,
+      });
+    });
+
+    it("returns 403 for a voter", async () => {
+      setUser();
+
+      const res = await router.request(`/elections/${electionId}/extensions`, {
+        method: "POST",
+        body: JSON.stringify({ closesAt: 1738608400 }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(403);
+      expect(mockFindById).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 when the election is missing", async () => {
+      mockFindById.mockResolvedValueOnce(null);
+
+      const res = await router.request(`/elections/${electionId}/extensions`, {
+        method: "POST",
+        body: JSON.stringify({ closesAt: 1738608400 }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(404);
+      expect((await res.json()) as any).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_FOUND });
+    });
+
+    it("returns 422 for an invalid deadline", async () => {
+      const res = await router.request(`/elections/${electionId}/extensions`, {
+        method: "POST",
+        body: JSON.stringify({ closesAt: "later" }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(422);
+      expect(mockFindById).not.toHaveBeenCalled();
+    });
+
+    it("returns 409 when the election is no longer open", async () => {
+      mockFindById.mockResolvedValueOnce(makeElection({ status: "open", opensAt: 1, closesAt: 2 }));
+
+      const res = await router.request(`/elections/${electionId}/extensions`, {
+        method: "POST",
+        body: JSON.stringify({ closesAt: 1738608400 }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ message: ERROR_MESSAGES.ELECTION_NOT_OPEN });
+      expect(mockExtendClosingTime).not.toHaveBeenCalled();
     });
   });
 

@@ -19,6 +19,32 @@ export function hasVotedIn(state: TVotingState, electionId: string | null | unde
   return state.myVotes.hasVoted;
 }
 
+export function shouldNotifyElectionClosed(
+  refreshedState: TVotingState | null,
+  electionId: string,
+): boolean {
+  return refreshedState !== null && refreshedState.open?.id !== electionId;
+}
+
+export async function refreshExpiredElectionState(
+  refresh: () => Promise<TVotingState | null>,
+  electionId: string,
+  closesAt: number,
+): Promise<TVotingState | null> {
+  let state = await refresh();
+  if (
+    state?.open?.id === electionId &&
+    state.open.closesAt === closesAt &&
+    Date.now() >= closesAt * 1000
+  ) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.max(1000, (closesAt + 1) * 1000 - Date.now())),
+    );
+    state = await refresh();
+  }
+  return state;
+}
+
 export type TVotingPageState =
   | { kind: "loading" }
   | { kind: "error"; message: string }

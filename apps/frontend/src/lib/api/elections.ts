@@ -44,6 +44,13 @@ export async function transitionElection(
   });
 }
 
+export async function extendElection(id: string, closesAt: number): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/elections/${id}/extensions`, {
+    method: "POST",
+    body: JSON.stringify({ closesAt }),
+  });
+}
+
 export async function listResults(
   electionId: string,
   options?: ApiFetchOptions,

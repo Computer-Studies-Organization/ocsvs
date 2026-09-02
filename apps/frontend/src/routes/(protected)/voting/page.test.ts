@@ -119,6 +119,15 @@ describe("voting page result access notice", () => {
   });
 });
 
+describe("voting deadline reconciliation", () => {
+  it("retries the expired deadline before showing the closure toast", () => {
+    expect(pageSource).toContain("const refreshedState = await refreshExpiredElectionState(");
+    expect(pageSource).not.toContain("lastAutoFetch");
+    expect(pageSource).toContain("shouldNotifyElectionClosed(refreshedState, electionId)");
+    expect(pageSource).toContain("addToast('info', 'This election has closed.')");
+  });
+});
+
 describe("voting page layout stability", () => {
   it("enforces w-full on page containers so width is stable and does not shrink-wrap candidate contents", () => {
     expect(pageSource).toContain("<div class='w-full mx-auto max-w-4xl p-4 sm:p-6'>");

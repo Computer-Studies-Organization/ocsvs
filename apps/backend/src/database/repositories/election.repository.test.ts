@@ -197,6 +197,89 @@ describe("electionRepo", () => {
     expect(await electionRepo.updateMetadata(mockDb as any, "e1", { name: "New" })).toBe(true);
   });
 
+  it("extends only the matching active election deadline", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
+      );
+      const db = drizzle(client, { schema });
+      const clock = await client.execute("SELECT unixepoch() AS now");
+      const now = Number(clock.rows[0].now);
+      await db.insert(schema.elections).values({
+        id: "active",
+        name: "Active",
+        description: null,
+        status: "open",
+        opensAt: now - 50,
+        closesAt: now + 50,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+
+      expect(
+        await electionRepo.extendClosingTime(db, "active", {
+          expectedClosesAt: now + 50,
+          closesAt: now + 100,
+        }),
+      ).toBe(true);
+      expect((await electionRepo.findById(db, "active"))?.closesAt).toBe(now + 100);
+
+      expect(
+        await electionRepo.extendClosingTime(db, "active", {
+          expectedClosesAt: now + 50,
+          closesAt: now + 150,
+        }),
+      ).toBe(false);
+      expect(
+        await electionRepo.extendClosingTime(db, "active", {
+          expectedClosesAt: now + 100,
+          closesAt: now + 100,
+        }),
+      ).toBe(false);
+      expect((await electionRepo.findById(db, "active"))?.closesAt).toBe(now + 100);
+    } finally {
+      client.close();
+    }
+  });
+
+  it("does not extend an election whose deadline passes before the update", async () => {
+    const client = createClient({ url: "file::memory:" });
+
+    try {
+      await client.execute(
+        "CREATE TABLE elections (created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL, opens_at INTEGER, closes_at INTEGER, eligible_voters_count INTEGER)",
+      );
+      const db = drizzle(client, { schema });
+      const result = await client.execute("SELECT unixepoch() AS now");
+      const now = Number(result.rows[0].now);
+
+      await db.insert(schema.elections).values({
+        id: "expiring",
+        name: "Expiring",
+        description: null,
+        status: "open",
+        opensAt: now - 60,
+        closesAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1_100));
+
+      expect(
+        await electionRepo.extendClosingTime(db, "expiring", {
+          expectedClosesAt: now,
+          closesAt: now + 3600,
+        }),
+      ).toBe(false);
+      expect((await electionRepo.findById(db, "expiring"))?.closesAt).toBe(now);
+    } finally {
+      client.close();
+    }
+  });
+
   it("returns a scheduled draft before an unscheduled draft", async () => {
     const client = createClient({ url: "file::memory:" });
 

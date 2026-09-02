@@ -6,6 +6,7 @@ const {
   mockCreate,
   mockUpdateStatus,
   mockUpdateMetadata,
+  mockExtendClosingTime,
   mockFindOpen,
   mockCountPositions,
   mockCountPositionsWithActiveCandidates,
@@ -15,6 +16,7 @@ const {
   mockCreate: vi.fn(),
   mockUpdateStatus: vi.fn(),
   mockUpdateMetadata: vi.fn(),
+  mockExtendClosingTime: vi.fn(),
   mockFindOpen: vi.fn(),
   mockCountPositions: vi.fn(),
   mockCountPositionsWithActiveCandidates: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock("@/database/repositories/election.repository", () => ({
     create: mockCreate,
     updateStatus: mockUpdateStatus,
     updateMetadata: mockUpdateMetadata,
+    extendClosingTime: mockExtendClosingTime,
     findOpen: mockFindOpen,
   },
 }));
@@ -126,6 +129,109 @@ describe("ElectionLifecycleCoordinator", () => {
           { id: "admin-id", username: "admin" },
         ),
       ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_IN_DRAFT", status: 409 }));
+    });
+  });
+
+  describe("extendClosingTime", () => {
+    const actor = { id: "admin-id", username: "admin" };
+
+    it("extends an active election and writes the audit entry in the transaction", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "open",
+        opensAt: now - 60,
+        closesAt: now + 60,
+      });
+      mockExtendClosingTime.mockResolvedValueOnce(true);
+
+      await ElectionLifecycleCoordinator.extendClosingTime(mockDb, "e1", {
+        closesAt: now + 3600,
+        actor,
+      });
+
+      expect(mockExtendClosingTime).toHaveBeenCalledWith(mockDb, "e1", {
+        expectedClosesAt: now + 60,
+        closesAt: now + 3600,
+      });
+      expect(mockAuditInsert).toHaveBeenCalledWith(mockDb, {
+        action: "election.update",
+        targetType: "election",
+        targetId: "e1",
+        actorAccountIdSnapshot: actor.id,
+        actorUsernameSnapshot: actor.username,
+        description: `closesAt: ${now + 60} → ${now + 3600}`,
+      });
+    });
+
+    it.each([
+      ["scheduled", { status: "open", opensAt: 200, closesAt: 300 }],
+      ["expired", { status: "open", opensAt: 1, closesAt: 99 }],
+      ["draft", { status: "draft", opensAt: 1, closesAt: 300 }],
+      ["closed", { status: "closed", opensAt: 1, closesAt: 300 }],
+      ["archived", { status: "archived", opensAt: 1, closesAt: 300 }],
+    ])("rejects a %s election", async (_label, election) => {
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(100_000);
+      mockFindById.mockResolvedValueOnce({ id: "e1", ...election });
+
+      try {
+        await expect(
+          ElectionLifecycleCoordinator.extendClosingTime(mockDb, "e1", {
+            closesAt: 400,
+            actor,
+          }),
+        ).rejects.toThrow(expect.objectContaining({ code: "ELECTION_NOT_OPEN", status: 409 }));
+      } finally {
+        nowSpy.mockRestore();
+      }
+
+      expect(mockExtendClosingTime).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it.each([200, 199])("rejects non-increasing deadline %s", async (closesAt) => {
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(100_000);
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "open",
+        opensAt: 1,
+        closesAt: 200,
+      });
+
+      try {
+        await expect(
+          ElectionLifecycleCoordinator.extendClosingTime(mockDb, "e1", { closesAt, actor }),
+        ).rejects.toThrow(
+          expect.objectContaining({ code: "ELECTION_EXTENSION_NOT_LATER", status: 409 }),
+        );
+      } finally {
+        nowSpy.mockRestore();
+      }
+
+      expect(mockExtendClosingTime).not.toHaveBeenCalled();
+      expect(mockAuditInsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects a concurrent deadline change without auditing", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "open",
+        opensAt: now - 60,
+        closesAt: now + 60,
+      });
+      mockExtendClosingTime.mockResolvedValueOnce(false);
+
+      await expect(
+        ElectionLifecycleCoordinator.extendClosingTime(mockDb, "e1", {
+          closesAt: now + 3600,
+          actor,
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({ code: "ELECTION_EXTENSION_CONFLICT", status: 409 }),
+      );
+
+      expect(mockAuditInsert).not.toHaveBeenCalled();
     });
   });
 

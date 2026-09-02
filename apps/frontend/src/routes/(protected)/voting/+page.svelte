@@ -7,6 +7,8 @@
   import {
     deriveVotingPageState,
     preserveVotingState,
+    refreshExpiredElectionState,
+    shouldNotifyElectionClosed,
     type TVotingPageState,
   } from '$lib/voting-page-state'
   import {
@@ -56,20 +58,16 @@
     pageState = preserveVotingState(next, current)
   })
 
-  let lastAutoFetch = 0
-  async function guardedAutoRefresh() {
-    const nowMs = Date.now()
-    if (nowMs - lastAutoFetch < 10000) {
-      return
-    }
-    lastAutoFetch = nowMs
+  async function autoRefresh(): Promise<TVotingState | null> {
     try {
-      await appCache.get('votingState', { includeBallot: true }).fetch(true)
+      const refreshedState = await appCache.get('votingState', { includeBallot: true }).fetch(true)
       await invalidate('app:voting')
+      return refreshedState
     }
     catch (e) {
       captureException(e)
       console.error('Failed to auto-refresh voting state', e)
+      return null
     }
   }
 
@@ -154,7 +152,7 @@
             targetUnixSeconds={d.opensAt}
             prefix="Opens in "
             class="text-sky-400 text-sm font-semibold justify-center mt-2"
-            onZero={guardedAutoRefresh}
+            onZero={autoRefresh}
           />
         {/if}
 
@@ -285,8 +283,18 @@
           prefix="Closes in "
           class="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-xl self-start sm:self-center font-mono text-xs sm:text-sm font-semibold"
           onZero={async () => {
-            await guardedAutoRefresh()
-            addToast('info', 'This election has closed.')
+            if (pageState.kind !== 'stepper') return
+            const electionId = pageState.election.id
+            const closesAt = pageState.election.closesAt
+            if (closesAt === null) return
+            const refreshedState = await refreshExpiredElectionState(
+              autoRefresh,
+              electionId,
+              closesAt,
+            )
+            if (shouldNotifyElectionClosed(refreshedState, electionId)) {
+              addToast('info', 'This election has closed.')
+            }
           }}
         />
       {/if}

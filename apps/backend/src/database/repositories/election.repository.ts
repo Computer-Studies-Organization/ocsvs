@@ -1,5 +1,5 @@
 import type { DbClient } from "./database.type";
-import { and, asc, desc, eq, gte, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { elections, type TElectionStatus } from "@/database/schema";
 
 export type ElectionRow = typeof elections.$inferSelect;
@@ -112,6 +112,32 @@ export const electionRepo = {
       .update(elections)
       .set({ ...data, updatedAt: now })
       .where(eq(elections.id, id))
+      .run();
+    return result.rowsAffected > 0;
+  },
+
+  async extendClosingTime(
+    db: DbClient,
+    id: string,
+    data: { expectedClosesAt: number; closesAt: number },
+  ): Promise<boolean> {
+    const now = sql<number>`unixepoch()`;
+    const result = await db
+      .update(elections)
+      .set({
+        closesAt: data.closesAt,
+        updatedAt: sql`max(${now}, ${elections.updatedAt} + 1)`,
+      })
+      .where(
+        and(
+          eq(elections.id, id),
+          eq(elections.status, "open"),
+          lte(elections.opensAt, now),
+          gte(elections.closesAt, now),
+          eq(elections.closesAt, data.expectedClosesAt),
+          lt(elections.closesAt, data.closesAt),
+        ),
+      )
       .run();
     return result.rowsAffected > 0;
   },

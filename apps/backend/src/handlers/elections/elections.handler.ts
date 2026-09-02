@@ -1,6 +1,7 @@
 import type { AppRouteHandler } from "@/lib/types/app-types";
 import type {
   createElectionRoute,
+  extendElectionRoute,
   getCurrentElectionRoute,
   getElectionRoute,
   listElectionsRoute,
@@ -135,6 +136,25 @@ export const transitionElectionHandler: AppRouteHandler<typeof transitionElectio
       actor: { id: actorAccountId, username: actorUsername },
     });
     return c.json({ message: ERROR_MESSAGES[result.messageKey] }, httpStatusCodes.OK);
+  } catch (err) {
+    if (err instanceof TransitionError) {
+      return c.json({ message: err.message }, err.status);
+    }
+    throw err;
+  }
+};
+
+export const extendElectionHandler: AppRouteHandler<typeof extendElectionRoute> = async (c) => {
+  const { db } = createDb(c);
+  const { id } = c.req.valid("param");
+  const { closesAt } = c.req.valid("json");
+
+  try {
+    await ElectionLifecycleCoordinator.extendClosingTime(db, id, {
+      closesAt,
+      actor: { id: c.var.authUser.id, username: c.var.authUser.username },
+    });
+    return c.json({ message: ERROR_MESSAGES.ELECTION_EXTENDED_SUCCESSFULLY }, httpStatusCodes.OK);
   } catch (err) {
     if (err instanceof TransitionError) {
       return c.json({ message: err.message }, err.status);
