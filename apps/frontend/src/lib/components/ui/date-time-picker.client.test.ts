@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount, tick, unmount, type ComponentProps } from "svelte";
+import { extendElection } from "$lib/api/elections";
 import ExtendElectionButton from "../admin/extend-election-button.svelte";
 import DateTimePicker from "./date-time-picker.svelte";
 
@@ -160,6 +161,7 @@ describe("DateTimePicker interactions", () => {
     expect(target.querySelector("button[aria-label='Clear date']")?.className).toContain(
       "min-h-11",
     );
+    expect(target.querySelector("button[aria-haspopup='dialog']")?.className).toContain("pr-12");
     expect(findButton(target, "Preset").className).toContain("min-w-11");
     expect(target.querySelector("button[aria-label='Previous month']")?.className).toContain(
       "min-w-11",
@@ -215,5 +217,39 @@ describe("DateTimePicker interactions", () => {
 
     expect(target.querySelector("[aria-label='Date and time selector']")).toBeNull();
     expect(target.querySelector("#extend-election-title")).not.toBeNull();
+  });
+
+  it("submits the closing timestamp selected through the picker", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(localTimestamp(2026, 0, 15, 9) * 1000);
+    vi.mocked(extendElection).mockClear();
+
+    const election = {
+      id: "election-2",
+      name: "Election",
+      description: null,
+      status: "open" as const,
+      opensAt: localTimestamp(2026, 0, 15, 8),
+      closesAt: localTimestamp(2026, 0, 15, 10),
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const target = document.createElement("div");
+    document.body.append(target);
+    const component = mount(ExtendElectionButton, { target, props: { election } });
+    mounted.add(component);
+
+    findButton(target, "Extend voting").click();
+    await tick();
+    target.querySelector<HTMLButtonElement>("button[aria-haspopup='dialog']")!.click();
+    await tick();
+
+    findButton(target, "16").click();
+    await tick();
+    findButton(target, "PM").click();
+    await tick();
+    target.querySelector<HTMLButtonElement>("form button[type='submit']")!.click();
+    await tick();
+
+    expect(extendElection).toHaveBeenCalledWith(election.id, localTimestamp(2026, 0, 16, 23));
   });
 });

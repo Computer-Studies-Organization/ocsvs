@@ -314,7 +314,7 @@
       aria-controls={dialogId}
       bind:this={triggerEl}
       class='min-h-11 w-full flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50'
-      class:pr-9={value !== null && !disabled && !required}
+      class:pr-12={value !== null && !disabled && !required}
       style='background: oklch(0.16 0.020 250); border-color: {isOpen ? "oklch(0.55 0.15 250)" : "oklch(0.28 0.025 250)"}; color: {formattedDisplay ? "oklch(0.95 0.008 250)" : "oklch(0.60 0.015 250)"}'
     >
       <div class='flex items-center gap-2.5 truncate'>
