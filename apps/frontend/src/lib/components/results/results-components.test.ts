@@ -234,6 +234,54 @@ describe("Results Components", () => {
       expect(body).toContain("submitted");
       expect(body).not.toContain("null%");
     });
+
+    it("renders full closing date and time for open and closed elections", () => {
+      const closesAt = 1772510520;
+      const expectedDatePart = new Date(closesAt * 1000).toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const expectedTimePart = new Date(closesAt * 1000).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const expectedFormatted = `${expectedDatePart} at ${expectedTimePart}`;
+
+      const openResult = render(TurnoutBanner, {
+        props: {
+          election: {
+            id: "e1",
+            name: "CSO 2026",
+            status: "open" as const,
+            opensAt: closesAt - 3600,
+            closesAt,
+            createdAt: 100,
+            updatedAt: 200,
+            description: null,
+          },
+          status: "open" as const,
+        },
+      });
+      expect(openResult.body).toContain(`Closes on ${expectedFormatted}`);
+
+      const closedResult = render(TurnoutBanner, {
+        props: {
+          election: {
+            id: "e1",
+            name: "CSO 2026",
+            status: "closed" as const,
+            opensAt: closesAt - 3600,
+            closesAt,
+            createdAt: 100,
+            updatedAt: 200,
+            description: null,
+          },
+          status: "closed" as const,
+        },
+      });
+      expect(closedResult.body).toContain(`Ended on ${expectedFormatted}`);
+    });
   });
 
   describe("PositionResultCard", () => {

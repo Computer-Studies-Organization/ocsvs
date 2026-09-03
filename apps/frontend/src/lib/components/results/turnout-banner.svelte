@@ -23,6 +23,20 @@
   const hasTurnout = $derived(turnoutPercentage !== null)
   const hasBallots = $derived(totalBallots !== null)
   const progressPercentage = $derived(Math.max(0, Math.min(100, turnoutPercentage ?? 0)))
+
+  function formatDateTime(unixSeconds: number): string {
+    const d = new Date(unixSeconds * 1000)
+    const datePart = d.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+    const timePart = d.toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit'
+    })
+    return `${datePart} at ${timePart}`
+  }
 </script>
 
 <div class="space-y-3.5" data-testid="turnout-banner">
@@ -42,11 +56,7 @@
 
     {#if election?.closesAt}
       <span class="text-xs text-slate-400">
-        {#if isOpen}
-          Closes at {new Date(election.closesAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        {:else}
-          Ended on {new Date(election.closesAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-        {/if}
+        {isOpen ? 'Closes on' : 'Ended on'} {formatDateTime(election.closesAt)}
       </span>
     {/if}
   </div>
