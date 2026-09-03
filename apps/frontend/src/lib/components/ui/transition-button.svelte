@@ -1,8 +1,9 @@
 <script lang='ts'>
   import type { TElection, TElectionStatus } from '$lib/types'
   import { transitionElection } from '$lib/api/elections'
-  import { canTransition, fromLocalDateTime, getEffectiveElectionStatus, toLocalDateTime } from '$lib/election-lifecycle-client'
+  import { canTransition, getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import Modal from './modal.svelte'
+  import DateTimePicker, { type DateTimePreset } from './date-time-picker.svelte'
   import { addToast } from '$lib/stores/toast.svelte'
   import { formatTimestamp } from '$lib/utils'
 
@@ -16,9 +17,10 @@
   let busy = $state(false)
   let error = $state('')
   let activeTarget = $state<TElectionStatus | null>(null)
-  let opensAtInput = $state('')
-  let closesAtInput = $state('')
+  let opensAtValue = $state<number | null>(null)
+  let closesAtValue = $state<number | null>(null)
   let now = $state(Math.floor(Date.now() / 1000))
+  const minimumClosesAt = $derived((opensAtValue ?? 0) + 60)
 
   $effect(() => {
     const interval = setInterval(() => {
@@ -27,8 +29,6 @@
     return () => clearInterval(interval)
   })
 
-  const selectedOpensAt = $derived(fromLocalDateTime(opensAtInput))
-  const selectedClosesAt = $derived(fromLocalDateTime(closesAtInput))
   const isExpiredOpen = $derived(election.status === 'open' && getEffectiveElectionStatus(election, now) === 'closed')
   const isScheduledOpen = $derived(
     election.status === 'open' &&
@@ -46,11 +46,67 @@
     archived: 'Archived'
   }
 
+  const openPresets: DateTimePreset[] = [
+    {
+      label: 'Right now',
+      getTimestamp: () => Math.floor(Date.now() / 1000)
+    },
+    {
+      label: 'Today 8:00 AM',
+      getTimestamp: () => {
+        const d = new Date()
+        d.setHours(8, 0, 0, 0)
+        return Math.floor(d.getTime() / 1000)
+      }
+    },
+    {
+      label: 'Tomorrow 8:00 AM',
+      getTimestamp: () => {
+        const d = new Date()
+        d.setDate(d.getDate() + 1)
+        d.setHours(8, 0, 0, 0)
+        return Math.floor(d.getTime() / 1000)
+      }
+    }
+  ]
+
+  const closePresets: DateTimePreset[] = [
+    {
+      label: '+2 hours',
+      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 2 * 3600
+    },
+    {
+      label: '+4 hours',
+      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 4 * 3600
+    },
+    {
+      label: '+8 hours',
+      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 8 * 3600
+    },
+    {
+      label: 'Today 5:00 PM',
+      getTimestamp: () => {
+        const d = new Date()
+        d.setHours(17, 0, 0, 0)
+        return Math.floor(d.getTime() / 1000)
+      }
+    },
+    {
+      label: 'Tomorrow 5:00 PM',
+      getTimestamp: () => {
+        const d = new Date()
+        d.setDate(d.getDate() + 1)
+        d.setHours(17, 0, 0, 0)
+        return Math.floor(d.getTime() / 1000)
+      }
+    }
+  ]
+
   function openConfirm(target: TElectionStatus) {
     activeTarget = target
     error = ''
-    opensAtInput = target === 'open' ? toLocalDateTime(election.opensAt) : ''
-    closesAtInput = target === 'open' ? toLocalDateTime(election.closesAt) : ''
+    opensAtValue = target === 'open' ? (election.opensAt ?? now) : null
+    closesAtValue = target === 'open' ? (election.closesAt ?? (now + 8 * 3600)) : null
     open = true
   }
 
@@ -62,12 +118,12 @@
     try {
       const body: { to: TElectionStatus, opensAt?: number, closesAt?: number } = { to: activeTarget }
       if (activeTarget === 'open') {
-        if (selectedOpensAt === null || selectedClosesAt === null || selectedClosesAt <= selectedOpensAt) {
-          error = 'Closing time must be after opening time'
+        if (opensAtValue === null || closesAtValue === null || closesAtValue < minimumClosesAt) {
+          error = 'Closing time must be at least one minute after opening time'
           return
         }
-        body.opensAt = selectedOpensAt
-        body.closesAt = selectedClosesAt
+        body.opensAt = opensAtValue
+        body.closesAt = closesAtValue
       }
       await transitionElection(election.id, body)
       open = false
@@ -108,34 +164,26 @@
     </p>
     {#if activeTarget === 'open'}
       <div class='grid gap-4 mb-4 sm:grid-cols-2'>
-        <label class='space-y-2 text-sm font-semibold' style='color: oklch(0.80 0.015 250)'>
-          <span>Opening time</span>
-          <input
-            type='datetime-local'
-            bind:value={opensAtInput}
-            required
-            disabled={busy}
-            class='min-h-11 w-full rounded-lg border px-3 py-2'
-            style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
-          />
-        </label>
-        <label class='space-y-2 text-sm font-semibold' style='color: oklch(0.80 0.015 250)'>
-          <span>Closing time</span>
-          <input
-            type='datetime-local'
-            bind:value={closesAtInput}
-            min={opensAtInput || undefined}
-            required
-            disabled={busy}
-            class='min-h-11 w-full rounded-lg border px-3 py-2'
-            style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
-          />
-        </label>
+        <DateTimePicker
+          label='Opening time'
+          bind:value={opensAtValue}
+          disabled={busy}
+          presets={openPresets}
+          required
+        />
+        <DateTimePicker
+          label='Closing time'
+          bind:value={closesAtValue}
+          min={minimumClosesAt}
+          disabled={busy}
+          presets={closePresets}
+          required
+        />
       </div>
-      {#if selectedOpensAt !== null && selectedClosesAt !== null}
+      {#if opensAtValue !== null && closesAtValue !== null}
         <div class='mb-4 rounded-lg border px-3 py-2 text-sm' style='border-color: oklch(0.28 0.025 250); color: oklch(0.75 0.015 250)'>
-          <p>Opens: <strong>{formatTimestamp(selectedOpensAt)}</strong></p>
-          <p>Closes: <strong>{formatTimestamp(selectedClosesAt)}</strong></p>
+          <p>Opens: <strong>{formatTimestamp(opensAtValue)}</strong></p>
+          <p>Closes: <strong>{formatTimestamp(closesAtValue)}</strong></p>
         </div>
       {/if}
     {/if}

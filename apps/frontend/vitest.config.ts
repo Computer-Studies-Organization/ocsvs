@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [sveltekit(), tsconfigPaths()],
+  resolve: {
+    conditions: ["browser"],
+  },
   test: {
     include: ["src/lib/**/*.test.ts", "src/routes/**/*.test.ts"],
   },

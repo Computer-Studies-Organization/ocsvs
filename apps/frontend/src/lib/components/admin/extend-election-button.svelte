@@ -1,19 +1,20 @@
 <script lang="ts">
   import { Clock, Loader } from 'lucide-svelte'
   import { extendElection } from '$lib/api/elections'
-  import { getEffectiveElectionStatus, fromLocalDateTime, toLocalDateTime } from '$lib/election-lifecycle-client'
+  import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
   import { extractErrorMessage } from '$lib/mutation-feedback-utils'
   import { addToast } from '$lib/stores/toast.svelte'
   import { formatTimestamp } from '$lib/utils'
   import type { TElection } from '$lib/types'
   import Modal from '$lib/components/ui/modal.svelte'
+  import DateTimePicker, { type DateTimePreset } from '$lib/components/ui/date-time-picker.svelte'
 
   let { election, onsuccess = () => {} }: { election: TElection; onsuccess?: () => void } = $props()
 
   let open = $state(false)
   let busy = $state(false)
   let error = $state('')
-  let closesAtInput = $state('')
+  let closesAtValue = $state<number | null>(null)
   let now = $state(Math.floor(Date.now() / 1000))
 
   $effect(() => {
@@ -22,12 +23,34 @@
   })
 
   const isEffectivelyOpen = $derived(getEffectiveElectionStatus(election, now) === 'open')
-  const selectedClosesAt = $derived(fromLocalDateTime(closesAtInput))
   const minimumClosesAt = $derived(election.closesAt === null ? null : Math.floor(election.closesAt / 60) * 60 + 60)
+
+  const extensionPresets: DateTimePreset[] = [
+    {
+      label: '+15m',
+      getTimestamp: () => (election.closesAt ?? Math.floor(Date.now() / 1000)) + 15 * 60
+    },
+    {
+      label: '+30m',
+      getTimestamp: () => (election.closesAt ?? Math.floor(Date.now() / 1000)) + 30 * 60
+    },
+    {
+      label: '+1h',
+      getTimestamp: () => (election.closesAt ?? Math.floor(Date.now() / 1000)) + 3600
+    },
+    {
+      label: '+2h',
+      getTimestamp: () => (election.closesAt ?? Math.floor(Date.now() / 1000)) + 7200
+    },
+    {
+      label: '+4h',
+      getTimestamp: () => (election.closesAt ?? Math.floor(Date.now() / 1000)) + 14400
+    }
+  ]
 
   function openForm() {
     error = ''
-    closesAtInput = toLocalDateTime(election.closesAt)
+    closesAtValue = election.closesAt === null ? null : election.closesAt + 3600
     open = true
   }
 
@@ -37,7 +60,7 @@
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()
-    if (selectedClosesAt === null || election.closesAt === null || selectedClosesAt <= election.closesAt) {
+    if (closesAtValue === null || election.closesAt === null || closesAtValue <= election.closesAt) {
       error = 'New closing time must be later than the current closing time'
       return
     }
@@ -45,7 +68,7 @@
     busy = true
     error = ''
     try {
-      await extendElection(election.id, selectedClosesAt)
+      await extendElection(election.id, closesAtValue)
       open = false
       addToast('success', 'Election closing time extended successfully')
       try {
@@ -87,20 +110,17 @@
       Current close: <strong class="text-slate-100">{formatTimestamp(election.closesAt)}</strong>
     </div>
 
-    <label class="block space-y-2 text-sm font-semibold text-slate-300">
-      <span>New closing time</span>
-      <input
-        type="datetime-local"
-        bind:value={closesAtInput}
-        min={toLocalDateTime(minimumClosesAt)}
-        required
-        disabled={busy}
-        class="min-h-11 w-full rounded-xl border-2 border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500"
-      />
-    </label>
+    <DateTimePicker
+      label="New closing time"
+      bind:value={closesAtValue}
+      min={minimumClosesAt}
+      disabled={busy}
+      presets={extensionPresets}
+      required
+    />
 
-    {#if selectedClosesAt !== null && election.closesAt !== null && selectedClosesAt > election.closesAt}
-      <p class="text-sm text-slate-300">New close: <strong class="text-slate-100">{formatTimestamp(selectedClosesAt)}</strong></p>
+    {#if closesAtValue !== null && election.closesAt !== null && closesAtValue > election.closesAt}
+      <p class="text-sm text-slate-300">New close: <strong class="text-slate-100">{formatTimestamp(closesAtValue)}</strong></p>
     {/if}
 
     {#if error}
