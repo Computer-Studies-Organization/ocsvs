@@ -236,6 +236,38 @@ describe("ElectionLifecycleCoordinator", () => {
   });
 
   describe("transition", () => {
+    it("preserves an expired scheduled deadline when finalizing closure", async () => {
+      const now = 1_700_000_000;
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+      const scheduledDeadline = now - 3600;
+      mockFindById.mockResolvedValueOnce({
+        id: "e1",
+        status: "open",
+        opensAt: now - 7200,
+        closesAt: scheduledDeadline,
+      });
+      mockCountPositions.mockResolvedValueOnce(2);
+      mockUpdateStatus.mockResolvedValueOnce(true);
+
+      try {
+        const result = await ElectionLifecycleCoordinator.transition(mockDb, "e1", {
+          to: "closed",
+          actor: { id: "admin-id", username: "admin" },
+        });
+
+        expect(result.closesAt).toBe(scheduledDeadline);
+        expect(mockUpdateStatus).toHaveBeenCalledWith(mockDb, "e1", {
+          existingStatus: "open",
+          status: "closed",
+          opensAt: now - 7200,
+          closesAt: scheduledDeadline,
+          eligibleVotersCount: undefined,
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
     it("snapshots the electorate when scheduling a draft election to open", async () => {
       const now = Math.floor(Date.now() / 1000);
       mockFindById.mockResolvedValueOnce({

@@ -228,7 +228,7 @@ export const ElectionLifecycleCoordinator = {
           : params.closesAt !== undefined
             ? params.closesAt
             : toStatus === "closed"
-              ? now
+              ? Math.min(existing.closesAt ?? now, now)
               : (existing.closesAt ?? null);
 
       // 5. Assert transition (using resolved dates). Validation must run AFTER
