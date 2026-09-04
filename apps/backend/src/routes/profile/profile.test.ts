@@ -39,7 +39,7 @@ const {
   mockUsernameExists: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockGetPasswordHash: vi.fn(),
-  mockChangePasswordAndInvalidateSessions: vi.fn().mockResolvedValue(undefined),
+  mockChangePasswordAndInvalidateSessions: vi.fn().mockResolvedValue(true),
   mockFindByAccountId: vi.fn(),
   mockUpdateUser: vi.fn(),
   mockGetProfile: vi.fn(),
@@ -176,7 +176,7 @@ describe("profile Routes", () => {
   it("should change password", async () => {
     mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
     mockVerifyPassword.mockResolvedValue(true);
-    mockChangePasswordAndInvalidateSessions.mockResolvedValue(undefined);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(true);
 
     const res = await router.request("/me/password", {
       method: "POST",
@@ -194,10 +194,32 @@ describe("profile Routes", () => {
     expect(mockChangePasswordAndInvalidateSessions).toHaveBeenCalledWith(
       expect.anything(),
       "test-user-id",
+      "current-hashed-password",
       "new-hashed-password",
     );
     expect(mockCreateSession).toHaveBeenCalled();
     expect(mockSetSessionCookie).toHaveBeenCalled();
+  });
+
+  it("rejects a password change if the verified hash is stale", async () => {
+    mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(false);
+
+    const res = await router.request("/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: "oldpassword",
+        newPassword: "newpassword123",
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    expect((await res.json()) as any).toEqual({
+      message: "Current password is incorrect",
+    });
+    expect(mockCreateSession).not.toHaveBeenCalled();
   });
 
   // Error path tests
@@ -341,7 +363,7 @@ describe("profile Routes", () => {
   it("should return success message asking user to re-login if session regeneration fails", async () => {
     mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
     mockVerifyPassword.mockResolvedValue(true);
-    mockChangePasswordAndInvalidateSessions.mockResolvedValue(undefined);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(true);
     mockCreateSession.mockRejectedValueOnce(new Error("DB Connection failed"));
 
     const res = await router.request("/me/password", {

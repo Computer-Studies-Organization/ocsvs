@@ -147,13 +147,22 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
     );
   }
 
-  // Invalidate all existing sessions and update the password atomically.
-  // libSQL runs the batch as a single implicit transaction: either both the
-  // session deletion and the password update apply, or neither does. This
-  // closes the window where one write could succeed while the other fails.
+  // Update only if the verified hash is still current, then invalidate all
+  // existing sessions atomically.
   const newPasswordHash = await hashPassword(newPassword);
   try {
-    await voterAccountStore.changePasswordAndInvalidateSessions(db, authUser.id, newPasswordHash);
+    const changed = await voterAccountStore.changePasswordAndInvalidateSessions(
+      db,
+      authUser.id,
+      account.password_hash,
+      newPasswordHash,
+    );
+    if (!changed) {
+      return c.json(
+        { message: ERROR_MESSAGES.CURRENT_PASSWORD_INCORRECT },
+        httpStatusCodes.UNAUTHORIZED,
+      );
+    }
   } catch (error) {
     c.var.logger?.error(
       { error, accountId: authUser.id },

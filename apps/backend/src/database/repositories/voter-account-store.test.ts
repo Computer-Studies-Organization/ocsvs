@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const deleteChain: any = {
   where: vi.fn(() => deleteChain),
+  run: vi.fn(),
 };
 const updateChain: any = {
   set: vi.fn(() => updateChain),
@@ -19,6 +20,7 @@ const mockDb = {
   update: vi.fn(() => updateChain),
   delete: vi.fn(() => deleteChain),
   batch: mockBatch,
+  transaction: vi.fn(async (cb: (db: typeof mockDb) => unknown) => await cb(mockDb)),
 };
 vi.mock("@/config/db", () => ({ createDb: () => ({ db: mockDb }) }));
 import { voterAccountStore } from "./voter-account-store";
@@ -92,17 +94,37 @@ describe("voterAccountStore.create", () => {
 });
 
 describe("voterAccountStore.changePasswordAndInvalidateSessions", () => {
-  it("batches session delete and account password update together", async () => {
-    await voterAccountStore.changePasswordAndInvalidateSessions(
-      mockDb as any,
-      "account-id",
-      "new-hash",
-    );
+  it("conditionally updates the password and invalidates sessions in one transaction", async () => {
+    updateChain.run.mockResolvedValueOnce({ rowsAffected: 1 });
 
+    await expect(
+      voterAccountStore.changePasswordAndInvalidateSessions(
+        mockDb as any,
+        "account-id",
+        "old-hash",
+        "new-hash",
+      ),
+    ).resolves.toBe(true);
+
+    expect(mockDb.transaction).toHaveBeenCalledTimes(1);
     expect(mockDb.delete).toHaveBeenCalledTimes(1);
-    expect(mockDb.update).toHaveBeenCalledTimes(1);
-    expect(mockBatch).toHaveBeenCalledTimes(1);
-    expect(mockBatch).toHaveBeenCalledWith([deleteChain, updateChain]);
+    expect(deleteChain.run).toHaveBeenCalledTimes(1);
+    expect(mockBatch).not.toHaveBeenCalled();
+  });
+
+  it("does not invalidate sessions when another password update won", async () => {
+    updateChain.run.mockResolvedValueOnce({ rowsAffected: 0 });
+
+    await expect(
+      voterAccountStore.changePasswordAndInvalidateSessions(
+        mockDb as any,
+        "account-id",
+        "old-hash",
+        "new-hash",
+      ),
+    ).resolves.toBe(false);
+
+    expect(mockDb.delete).not.toHaveBeenCalled();
   });
 });
 

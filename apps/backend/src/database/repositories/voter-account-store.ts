@@ -212,20 +212,25 @@ export const voterAccountStore = {
       .run();
   },
 
-  /** Change password and invalidate sessions atomically */
+  /** Change password only if unchanged, then invalidate sessions atomically. */
   async changePasswordAndInvalidateSessions(
     db: Database,
     accountId: string,
+    expectedPasswordHash: string,
     passwordHash: string,
-  ): Promise<void> {
-    const now = Math.floor(Date.now() / 1000);
-    await db.batch([
-      db.delete(sessions).where(eq(sessions.accountId, accountId)),
-      db
-        .update(accounts)
-        .set({ password_hash: passwordHash, updatedAt: now })
-        .where(eq(accounts.id, accountId)),
-    ]);
+  ): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      const changed = await voterAccountStore.updatePasswordIfUnchanged(
+        tx,
+        accountId,
+        expectedPasswordHash,
+        passwordHash,
+      );
+      if (!changed) return false;
+
+      await tx.delete(sessions).where(eq(sessions.accountId, accountId)).run();
+      return true;
+    });
   },
 
   /** Get password hash for account */
