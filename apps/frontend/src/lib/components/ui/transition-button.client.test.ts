@@ -42,6 +42,9 @@ describe("TransitionButton interactions", () => {
 
     try {
       await click("Transition to Open");
+      expect(
+        [...target.querySelectorAll("label")].every((label) => !label.querySelector("button")),
+      ).toBe(true);
       await click("+2 hours");
       await click("Confirm");
 
@@ -76,9 +79,9 @@ describe("TransitionButton interactions", () => {
         .find((button) => button.textContent?.trim() === "Transition to Open")!
         .click();
       await tick();
-      [...target.querySelectorAll("button")]
-        .find((button) => button.textContent?.trim() === "Confirm")!
-        .click();
+      target
+        .querySelector<HTMLFormElement>("form")!
+        .dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
       await tick();
 
       expect(transitionElection).not.toHaveBeenCalled();

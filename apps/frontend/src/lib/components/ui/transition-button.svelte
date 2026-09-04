@@ -1,9 +1,8 @@
 <script lang='ts'>
   import type { TElection, TElectionStatus } from '$lib/types'
   import { transitionElection } from '$lib/api/elections'
-  import { canTransition, getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
+  import { canTransition, fromLocalDateTime, getEffectiveElectionStatus, toLocalDateTime } from '$lib/election-lifecycle-client'
   import Modal from './modal.svelte'
-  import DateTimePicker, { type DateTimePreset } from './date-time-picker.svelte'
   import { addToast } from '$lib/stores/toast.svelte'
   import { formatTimestamp } from '$lib/utils'
 
@@ -17,10 +16,13 @@
   let busy = $state(false)
   let error = $state('')
   let activeTarget = $state<TElectionStatus | null>(null)
-  let opensAtValue = $state<number | null>(null)
-  let closesAtValue = $state<number | null>(null)
+  let opensAtInput = $state('')
+  let closesAtInput = $state('')
   let now = $state(Math.floor(Date.now() / 1000))
-  const minimumClosesAt = $derived((opensAtValue ?? 0) + 60)
+
+  const selectedOpensAt = $derived(fromLocalDateTime(opensAtInput))
+  const selectedClosesAt = $derived(fromLocalDateTime(closesAtInput))
+  const minimumClosesAt = $derived((selectedOpensAt ?? 0) + 60)
 
   $effect(() => {
     const interval = setInterval(() => {
@@ -46,7 +48,7 @@
     archived: 'Archived'
   }
 
-  const openPresets: DateTimePreset[] = [
+  const openPresets = [
     {
       label: 'Right now',
       getTimestamp: () => Math.floor(Date.now() / 1000)
@@ -70,18 +72,18 @@
     }
   ]
 
-  const closePresets: DateTimePreset[] = [
+  const closePresets = [
     {
       label: '+2 hours',
-      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 2 * 3600
+      getTimestamp: () => (selectedOpensAt ?? Math.floor(Date.now() / 1000)) + 2 * 3600
     },
     {
       label: '+4 hours',
-      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 4 * 3600
+      getTimestamp: () => (selectedOpensAt ?? Math.floor(Date.now() / 1000)) + 4 * 3600
     },
     {
       label: '+8 hours',
-      getTimestamp: () => (opensAtValue ?? Math.floor(Date.now() / 1000)) + 8 * 3600
+      getTimestamp: () => (selectedOpensAt ?? Math.floor(Date.now() / 1000)) + 8 * 3600
     },
     {
       label: 'Today 5:00 PM',
@@ -105,8 +107,8 @@
   function openConfirm(target: TElectionStatus) {
     activeTarget = target
     error = ''
-    opensAtValue = target === 'open' ? (election.opensAt ?? now) : null
-    closesAtValue = target === 'open' ? (election.closesAt ?? (now + 8 * 3600)) : null
+    opensAtInput = target === 'open' ? toLocalDateTime(election.opensAt ?? now) : ''
+    closesAtInput = target === 'open' ? toLocalDateTime(election.closesAt ?? (now + 8 * 3600)) : ''
     open = true
   }
 
@@ -118,12 +120,12 @@
     try {
       const body: { to: TElectionStatus, opensAt?: number, closesAt?: number } = { to: activeTarget }
       if (activeTarget === 'open') {
-        if (opensAtValue === null || closesAtValue === null || closesAtValue < minimumClosesAt) {
+        if (selectedOpensAt === null || selectedClosesAt === null || selectedClosesAt < minimumClosesAt) {
           error = 'Closing time must be at least one minute after opening time'
           return
         }
-        body.opensAt = opensAtValue
-        body.closesAt = closesAtValue
+        body.opensAt = selectedOpensAt
+        body.closesAt = selectedClosesAt
       }
       await transitionElection(election.id, body)
       open = false
@@ -164,26 +166,64 @@
     </p>
     {#if activeTarget === 'open'}
       <div class='grid gap-4 mb-4 sm:grid-cols-2'>
-        <DateTimePicker
-          label='Opening time'
-          bind:value={opensAtValue}
-          disabled={busy}
-          presets={openPresets}
-          required
-        />
-        <DateTimePicker
-          label='Closing time'
-          bind:value={closesAtValue}
-          min={minimumClosesAt}
-          disabled={busy}
-          presets={closePresets}
-          required
-        />
+        <div>
+          <label class='block space-y-2 text-sm font-semibold' style='color: oklch(0.80 0.015 250)'>
+            <span>Opening time</span>
+            <input
+              type='datetime-local'
+              bind:value={opensAtInput}
+              required
+              disabled={busy}
+              class='min-h-11 w-full rounded-lg border px-3 py-2'
+              style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+            />
+          </label>
+          <div class='flex flex-wrap gap-1.5'>
+            {#each openPresets as preset (preset.label)}
+              <button
+                type='button'
+                disabled={busy}
+                onclick={() => (opensAtInput = toLocalDateTime(preset.getTimestamp()))}
+                class='min-h-11 min-w-11 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 active:scale-95'
+                style='background: oklch(0.18 0.025 250); border-color: oklch(0.30 0.025 250); color: oklch(0.85 0.015 250)'
+              >
+                {preset.label}
+              </button>
+            {/each}
+          </div>
+        </div>
+        <div>
+          <label class='block space-y-2 text-sm font-semibold' style='color: oklch(0.80 0.015 250)'>
+            <span>Closing time</span>
+            <input
+              type='datetime-local'
+              bind:value={closesAtInput}
+              min={selectedOpensAt === null ? undefined : toLocalDateTime(minimumClosesAt)}
+              required
+              disabled={busy}
+              class='min-h-11 w-full rounded-lg border px-3 py-2'
+              style='background: oklch(0.16 0.020 250); border-color: oklch(0.28 0.025 250); color: oklch(0.95 0.008 250)'
+            />
+          </label>
+          <div class='flex flex-wrap gap-1.5'>
+            {#each closePresets as preset (preset.label)}
+              <button
+                type='button'
+                disabled={busy}
+                onclick={() => (closesAtInput = toLocalDateTime(Math.max(minimumClosesAt, preset.getTimestamp())))}
+                class='min-h-11 min-w-11 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 active:scale-95'
+                style='background: oklch(0.18 0.025 250); border-color: oklch(0.30 0.025 250); color: oklch(0.85 0.015 250)'
+              >
+                {preset.label}
+              </button>
+            {/each}
+          </div>
+        </div>
       </div>
-      {#if opensAtValue !== null && closesAtValue !== null}
+      {#if selectedOpensAt !== null && selectedClosesAt !== null}
         <div class='mb-4 rounded-lg border px-3 py-2 text-sm' style='border-color: oklch(0.28 0.025 250); color: oklch(0.75 0.015 250)'>
-          <p>Opens: <strong>{formatTimestamp(opensAtValue)}</strong></p>
-          <p>Closes: <strong>{formatTimestamp(closesAtValue)}</strong></p>
+          <p>Opens: <strong>{formatTimestamp(selectedOpensAt)}</strong></p>
+          <p>Closes: <strong>{formatTimestamp(selectedClosesAt)}</strong></p>
         </div>
       {/if}
     {/if}

@@ -30,5 +30,19 @@ export function toLocalDateTime(timestamp: number | null): string {
 
 export function fromLocalDateTime(value: string): number | null {
   const milliseconds = new Date(value).getTime();
-  return Number.isFinite(milliseconds) ? Math.floor(milliseconds / 1000) : null;
+  if (!Number.isFinite(milliseconds)) return null;
+
+  const timestamp = Math.floor(milliseconds / 1000);
+  const offset = new Date(milliseconds).getTimezoneOffset();
+  if (toLocalDateTime(timestamp) !== value) return null;
+
+  // Reject nonexistent or ambiguous wall-clock times instead of silently changing the instant.
+  for (const nearbyMilliseconds of [milliseconds - 86_400_000, milliseconds + 86_400_000]) {
+    const nearbyOffset = new Date(nearbyMilliseconds).getTimezoneOffset();
+    const alternateTimestamp = timestamp + (nearbyOffset - offset) * 60;
+    if (alternateTimestamp !== timestamp && toLocalDateTime(alternateTimestamp) === value)
+      return null;
+  }
+
+  return timestamp;
 }

@@ -6,7 +6,7 @@ import {
 } from "./election-lifecycle-client";
 
 describe("election schedule conversion", () => {
-  it("round-trips a datetime-local value without changing the selected minute", () => {
+  it("round-trips an unambiguous datetime-local value without changing the selected minute", () => {
     const timestamp = 1_800_000_000 - (1_800_000_000 % 60);
     expect(fromLocalDateTime(toLocalDateTime(timestamp))).toBe(timestamp);
   });
@@ -14,6 +14,14 @@ describe("election schedule conversion", () => {
   it("keeps missing or invalid values empty", () => {
     expect(toLocalDateTime(null)).toBe("");
     expect(fromLocalDateTime("")).toBeNull();
+  });
+
+  it("rejects an ambiguous fall-back time when the runtime timezone has DST", () => {
+    const beforeTransition = new Date("2026-11-01T00:30").getTimezoneOffset();
+    const afterTransition = new Date("2026-11-01T02:30").getTimezoneOffset();
+    if (beforeTransition === afterTransition) return;
+
+    expect(fromLocalDateTime("2026-11-01T01:30")).toBeNull();
   });
 
   it("reports an expired open election as closed", () => {
