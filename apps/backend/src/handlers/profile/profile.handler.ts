@@ -9,7 +9,7 @@ import { voterAccountStore } from "@/database/repositories/voter-account-store";
 import { ERROR_MESSAGES } from "@/lib/constants/error-messages";
 import { isUniqueConstraintError } from "@/lib/errors";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { createSession, setSessionCookie } from "@/lib/session";
+import { createSessionIfPasswordUnchanged, setSessionCookie } from "@/lib/session";
 import { validateProfanity } from "@/lib/profanity";
 import * as httpStatusCodes from "@/openapi/http-status-codes";
 
@@ -175,22 +175,24 @@ export const changePassword: AppRouteHandler<typeof changePasswordRoute> = async
   }
 
   try {
-    // Create a new session for the current user
-    const session = await createSession(db, authUser.id);
-    setSessionCookie(c, session.id, session.expiresAt);
+    // A reset after the password change committed must not revive a session.
+    const session = await createSessionIfPasswordUnchanged(db, authUser.id, newPasswordHash);
+    if (session) {
+      setSessionCookie(c, session.id, session.expiresAt);
+      return c.json(
+        { message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY, sessionRotated: true },
+        httpStatusCodes.OK,
+      );
+    }
   } catch (error) {
     c.var.logger?.error(
       { error, accountId: authUser.id },
       "Failed to regenerate session after password change",
     );
-    return c.json(
-      { message: ERROR_MESSAGES.PASSWORD_CHANGED_PLEASE_RE_LOGIN, sessionRotated: false },
-      httpStatusCodes.OK,
-    );
   }
 
   return c.json(
-    { message: ERROR_MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY, sessionRotated: true },
+    { message: ERROR_MESSAGES.PASSWORD_CHANGED_PLEASE_RE_LOGIN, sessionRotated: false },
     httpStatusCodes.OK,
   );
 };

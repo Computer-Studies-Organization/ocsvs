@@ -96,7 +96,7 @@ const { mockCreateSession, mockSetSessionCookie } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/session", () => ({
-  createSession: mockCreateSession,
+  createSessionIfPasswordUnchanged: mockCreateSession,
   setSessionCookie: mockSetSessionCookie,
   getSessionIdFromCookie: vi.fn(),
   getSessionAccount: vi.fn(),
@@ -197,7 +197,11 @@ describe("profile Routes", () => {
       "current-hashed-password",
       "new-hashed-password",
     );
-    expect(mockCreateSession).toHaveBeenCalled();
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      expect.anything(),
+      "test-user-id",
+      "new-hashed-password",
+    );
     expect(mockSetSessionCookie).toHaveBeenCalled();
   });
 
@@ -220,6 +224,34 @@ describe("profile Routes", () => {
       message: "Current password is incorrect",
     });
     expect(mockCreateSession).not.toHaveBeenCalled();
+  });
+
+  it("asks the voter to log in again when a reset wins after the password change commits", async () => {
+    mockGetPasswordHash.mockResolvedValue({ password_hash: "current-hashed-password" });
+    mockVerifyPassword.mockResolvedValue(true);
+    mockChangePasswordAndInvalidateSessions.mockResolvedValue(true);
+    mockCreateSession.mockResolvedValueOnce(null);
+
+    const res = await router.request("/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: "oldpassword",
+        newPassword: "newpassword123",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      message: "Password changed successfully. Please log in again.",
+      sessionRotated: false,
+    });
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      expect.anything(),
+      "test-user-id",
+      "new-hashed-password",
+    );
+    expect(mockSetSessionCookie).not.toHaveBeenCalled();
   });
 
   // Error path tests

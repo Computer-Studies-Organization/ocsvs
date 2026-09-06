@@ -126,7 +126,6 @@ const { mockCreateSession, mockGetSessionIdFromCookie, mockDeleteSession } = vi.
 }));
 
 vi.mock("@/lib/session", () => ({
-  createSession: mockCreateSession,
   createSessionIfPasswordUnchanged: mockCreateSession,
   setSessionCookie: vi.fn(),
   clearSessionCookie: vi.fn(),

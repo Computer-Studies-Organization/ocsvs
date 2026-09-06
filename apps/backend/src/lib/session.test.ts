@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createSession,
   createSessionIfPasswordUnchanged,
   getSessionAccount,
   deleteSession,
@@ -9,6 +8,54 @@ import {
   getSessionIdFromCookie,
 } from "./session";
 import { sessions, accounts } from "@/database/schema";
+import * as schema from "@/database/schema";
+import { voterAccountStore } from "@/database/repositories/voter-account-store";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+it("cannot revive a session after a reset supersedes a committed password change", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "session-reset-test-"));
+  const client = createClient({ url: `file:${join(directory, "test.db")}` });
+  try {
+    await client.executeMultiple(`
+      CREATE TABLE accounts (
+        id TEXT PRIMARY KEY, password_hash TEXT NOT NULL,
+        updated_at INTEGER, deleted_at INTEGER
+      );
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id),
+        expires_at INTEGER NOT NULL, created_at INTEGER DEFAULT (unixepoch())
+      );
+      INSERT INTO accounts (id, password_hash) VALUES ('voter', 'old-hash');
+    `);
+    const db = drizzle(client, { schema });
+    expect(await createSessionIfPasswordUnchanged(db, "voter", "old-hash")).not.toBeNull();
+    expect(
+      await voterAccountStore.changePasswordAndInvalidateSessions(
+        db,
+        "voter",
+        "old-hash",
+        "changed-hash",
+      ),
+    ).toBe(true);
+
+    // The admin reset commits before the password-change request resumes issuance.
+    await client.batch([
+      "UPDATE accounts SET password_hash = 'reset-hash' WHERE id = 'voter'",
+      "DELETE FROM sessions WHERE account_id = 'voter'",
+    ]);
+
+    expect(await createSessionIfPasswordUnchanged(db, "voter", "changed-hash")).toBeNull();
+    expect(await db.select().from(sessions)).toEqual([]);
+    expect(await createSessionIfPasswordUnchanged(db, "voter", "reset-hash")).not.toBeNull();
+  } finally {
+    client.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 describe("session utilities", () => {
   let mockDb: any;
@@ -20,7 +67,6 @@ describe("session utilities", () => {
     vi.clearAllMocks();
 
     insertChain = {
-      values: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       run: vi.fn().mockResolvedValue({} as any),
     };
@@ -44,25 +90,6 @@ describe("session utilities", () => {
     };
   });
 
-  describe("createSession", () => {
-    it("should insert a new session and return session data", async () => {
-      const accountId = "test-account-id";
-      const session = await createSession(mockDb, accountId);
-
-      expect(session.id).toBeDefined();
-      expect(session.accountId).toBe(accountId);
-      expect(session.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
-
-      expect(mockDb.insert).toHaveBeenCalledWith(sessions);
-      expect(insertChain.values).toHaveBeenCalledWith({
-        id: session.id,
-        accountId: session.accountId,
-        expiresAt: session.expiresAt,
-      });
-      expect(insertChain.run).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe("createSessionIfPasswordUnchanged", () => {
     it("creates a session when the expected password hash still matches", async () => {
       insertChain.run.mockResolvedValueOnce({ rowsAffected: 1 });
@@ -74,6 +101,9 @@ describe("session utilities", () => {
       );
 
       expect(session?.accountId).toBe("test-account-id");
+      expect(session?.id).toBeDefined();
+      expect(session?.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
+      expect(mockDb.insert).toHaveBeenCalledWith(sessions);
       expect(insertChain.select).toHaveBeenCalledWith(selectChain);
       expect(insertChain.run).toHaveBeenCalledTimes(1);
     });

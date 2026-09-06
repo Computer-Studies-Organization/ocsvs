@@ -86,7 +86,6 @@ vi.mock("@/lib/password", () => ({
 }));
 
 vi.mock("@/lib/session", () => ({
-  createSession: mockCreateSessionFn,
   createSessionIfPasswordUnchanged: mockCreateSessionFn,
   deleteSession: mockDeleteSessionFn,
 }));

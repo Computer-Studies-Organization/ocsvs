@@ -35,21 +35,9 @@ export interface SessionData {
 }
 
 /**
- * Creates a new session for the given account.
- * Returns the session ID and expiration timestamp.
- */
-export async function createSession(db: Database, accountId: string): Promise<SessionData> {
-  const id = crypto.randomUUID();
-  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION_DAYS * 24 * 60 * 60;
-
-  await db.insert(sessions).values({ id, accountId, expiresAt }).run();
-
-  return { id, accountId, expiresAt };
-}
-
-/**
- * Creates a session only while the account still has the hash used to verify
- * the login. The conditional insert closes the password-reset race window.
+ * Creates a session only while the account is active and its password hash
+ * matches the caller's verified or newly written hash. A concurrent password
+ * reset or account archival returns null instead of reviving a session.
  */
 export async function createSessionIfPasswordUnchanged(
   db: Database,
