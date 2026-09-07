@@ -8,7 +8,7 @@
 
   let { election, onsuccess = () => {}, class: className = '' }: {
     election: TElection
-    onsuccess?: () => void
+    onsuccess?: () => void | Promise<void>
     class?: string
   } = $props()
 
@@ -130,8 +130,7 @@
       await transitionElection(election.id, body)
       open = false
       activeTarget = null
-      onsuccess()
-      addToast('success', 'Election transitioned')
+      await onsuccess()
     } catch (e) {
       error = e instanceof Error ? e.message : 'Transition failed'
       addToast('error', e instanceof Error ? e.message : 'Transition failed')

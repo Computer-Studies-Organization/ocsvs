@@ -3,9 +3,8 @@
   import { goto, invalidate } from '$app/navigation'
   import StatusBadge from '$lib/components/ui/status-badge.svelte'
   import EmptyState from '$lib/components/ui/empty-state.svelte'
-  import TransitionButton from '$lib/components/ui/transition-button.svelte'
+  import ElectionLifecycleControls from '$lib/components/admin/election-lifecycle-controls.svelte'
   import type { TElection, TPartyList, TPosition } from '$lib/types'
-  import { appCache } from '$lib/cache'
   import { reorderAndRefreshPositions } from './reorder'
   import AddPositionModal from '$lib/components/admin/add-position-modal.svelte'
   import EditPositionModal from '$lib/components/admin/edit-position-modal.svelte'
@@ -13,7 +12,6 @@
   import AddPartyModal from '$lib/components/admin/add-party-modal.svelte'
   import EditPartyModal from '$lib/components/admin/edit-party-modal.svelte'
   import EditElectionModal from '$lib/components/admin/edit-election-modal.svelte'
-  import ExtendElectionButton from '$lib/components/admin/extend-election-button.svelte'
   import { getEffectiveElectionStatus } from '$lib/election-lifecycle-client'
 
   let { data } = $props()
@@ -86,14 +84,6 @@
 
   async function handleEditSuccess() {
     closeEdit()
-    await invalidate('app:election')
-  }
-
-  async function handleTransitionSuccess() {
-    appCache.invalidate({ resource: 'elections' })
-    appCache.invalidate({ resource: 'election', params: { id: election.id } })
-    appCache.invalidate({ params: { electionId: election.id } })
-    appCache.invalidate({ resource: 'votingState' })
     await invalidate('app:election')
   }
 
@@ -329,8 +319,9 @@
           <Eye size={16} />
           Preview ballot
         </a>
-        <TransitionButton {election} onsuccess={handleTransitionSuccess} />
-        <ExtendElectionButton {election} onsuccess={handleTransitionSuccess} />
+        {#key election.id}
+          <ElectionLifecycleControls {election} />
+        {/key}
       </div>
     </div>
 

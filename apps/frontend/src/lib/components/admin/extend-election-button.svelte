@@ -8,7 +8,7 @@
   import type { TElection } from '$lib/types'
   import Modal from '$lib/components/ui/modal.svelte'
 
-  let { election, onsuccess = () => {} }: { election: TElection; onsuccess?: () => void } = $props()
+  let { election, onsuccess = () => {} }: { election: TElection; onsuccess?: () => void | Promise<void> } = $props()
 
   let open = $state(false)
   let busy = $state(false)
@@ -72,13 +72,7 @@
     try {
       await extendElection(election.id, selectedClosesAt)
       open = false
-      addToast('success', 'Election closing time extended successfully')
-      try {
-        await onsuccess()
-      }
-      catch {
-        addToast('error', 'Election extended, but the page could not refresh. Refresh the page to see the latest data.')
-      }
+      await onsuccess()
     }
     catch (err: unknown) {
       error = extractErrorMessage(err, 'Failed to extend election')
